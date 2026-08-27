@@ -20,13 +20,12 @@ import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import { getCapacityType } from '~/utils/capacityUtils';
 
-
 export interface RootCapacityAutoStagingResult {
   capacity: string;
   direction: 'to-weight' | 'to-percentage';
 }
 
-export interface ResolveRootCapacityStagingOptions {
+export interface RootCapacityAutoStagingContext {
   queuePath: string;
   changedData: Record<string, string>;
   getQueuePropertyValue: (
@@ -40,7 +39,7 @@ function canAutoStageRootCapacity({
   queuePath,
   changedData,
   configData,
-}: ResolveRootCapacityStagingOptions): boolean {
+}: RootCapacityAutoStagingContext): boolean {
   if (queuePath !== SPECIAL_VALUES.ROOT_QUEUE_NAME) {
     return false;
   }
@@ -53,7 +52,7 @@ function canAutoStageRootCapacity({
 }
 
 function resolveRootCapacityStagingWhenEnablingFlexibleAutoCreation(
-  options: ResolveRootCapacityStagingOptions,
+  options: RootCapacityAutoStagingContext,
 ): RootCapacityAutoStagingResult | null {
   if (!canAutoStageRootCapacity(options)) {
     return null;
@@ -75,7 +74,7 @@ function resolveRootCapacityStagingWhenEnablingFlexibleAutoCreation(
 }
 
 function resolveRootCapacityStagingWhenDisablingFlexibleAutoCreation(
-  options: ResolveRootCapacityStagingOptions,
+  options: RootCapacityAutoStagingContext,
 ): RootCapacityAutoStagingResult | null {
   if (!canAutoStageRootCapacity(options)) {
     return null;
@@ -106,15 +105,15 @@ function resolveRootCapacityStagingWhenDisablingFlexibleAutoCreation(
 }
 
 /**
- * Restore root capacity when flexible auto-creation is toggled.
+ * Restore root capacity when flexible auto-queue-creation is toggled.
  * Convert 100% -> 1w when the toggle is turned on.
- * onvert 1w -> 100% when the toggle is turned off.
+ * Convert 1w -> 100% when the toggle is turned off.
  */
-export function resolveRootCapacityStagingForFlexibleAutoCreation(
-  options: ResolveRootCapacityStagingOptions,
+export function resolveRootCapacityStagingWhenAutoQueueCreationIsToggled(
+  context: RootCapacityAutoStagingContext,
 ): RootCapacityAutoStagingResult | null {
   return (
-    resolveRootCapacityStagingWhenEnablingFlexibleAutoCreation(options) ??
-    resolveRootCapacityStagingWhenDisablingFlexibleAutoCreation(options)
+    resolveRootCapacityStagingWhenEnablingFlexibleAutoCreation(context) ??
+    resolveRootCapacityStagingWhenDisablingFlexibleAutoCreation(context)
   );
 }

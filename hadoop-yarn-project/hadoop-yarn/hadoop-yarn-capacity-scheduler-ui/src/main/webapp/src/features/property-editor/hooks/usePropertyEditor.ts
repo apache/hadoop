@@ -74,7 +74,6 @@ import { validatePropertyChange } from '~/features/validation/crossQueue';
 import { buildPropertyKey } from '~/utils/propertyUtils';
 import { CONFIG_PREFIXES } from '~/types';
 import { resolveInheritedValue, type InheritedValueInfo } from '~/utils/resolveInheritedValue';
-import { resolveRootCapacityStagingForFlexibleAutoCreation } from '~/features/property-editor/utils/rootFlexibleAutoCreation';
 
 function createFormSchema(
   properties: Array<
@@ -143,8 +142,14 @@ export function usePropertyEditor({
   queuePath,
   properties = queuePropertyDefinitions,
 }: UsePropertyEditorOptions) {
-  const { getQueuePropertyValue, stageQueueChange, clearQueueChanges, schedulerData, configData } =
-    useSchedulerStore();
+  const {
+    getQueuePropertyValue,
+    stageQueueChange,
+    clearQueueChanges,
+    schedulerData,
+    configData,
+    resolveRootCapacityStagingForFlexibleAutoCreation,
+  } = useSchedulerStore();
 
   const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
   const cleanResetRef = useRef(false);
@@ -462,12 +467,10 @@ export function usePropertyEditor({
         }
       });
 
-      const stagedRootCapacity = resolveRootCapacityStagingForFlexibleAutoCreation({
+      const stagedRootCapacity = resolveRootCapacityStagingForFlexibleAutoCreation(
         queuePath,
         changedData,
-        getQueuePropertyValue,
-        configData,
-      });
+      );
       if (stagedRootCapacity) {
         changedData.capacity = stagedRootCapacity.capacity;
       }
