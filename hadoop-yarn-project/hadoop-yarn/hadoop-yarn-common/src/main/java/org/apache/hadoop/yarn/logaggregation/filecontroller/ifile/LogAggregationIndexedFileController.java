@@ -29,6 +29,7 @@ import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -95,6 +96,12 @@ import org.slf4j.LoggerFactory;
 /**
  * The Indexed Log Aggregation File Format implementation.
  *
+ * <p>Write methods ({@link #initializeWriter}, {@link #write}, {@link #postWrite},
+ * {@link #closeWriter}) must be used as a single lifecycle on one thread; callers
+ * must not invoke {@link #write} or {@link #postWrite} unless the preceding
+ * {@link #initializeWriter} completed successfully. Read-path methods are stateless
+ * with respect to the application id and may be invoked on a shared controller
+ * instance (for example on the Job History Server).
  */
 @Private
 @Unstable
@@ -181,14 +188,12 @@ public class LogAggregationIndexedFileController
     final ApplicationId appId = context.getAppId();
     final Path remoteLogFile = context.getRemoteNodeLogFileForApp();
 
-    // Allocate a fresh WriteSession for every initializeWriter call.
-    // The write lifecycle (initializeWriter → write → postWrite → closeWriter)
-    // is always single-threaded: the NodeManager's AppLogAggregatorImpl calls
-    // these methods sequentially within one thread per application, so
-    // concurrent write sessions for the same controller instance are not
-    // possible in practice. The read-path methods (readAggregatedLogsMeta,
-    // readAggregatedLogs, getApplicationOwner, getApplicationAcls) do not
-    // access writeSession at all, so reads and writes are also independent.
+    // End any prior session before allocating a new one.
+    closeWriter();
+
+    // One write lifecycle per initializeWriter call (initializeWriter → write →
+    // postWrite → closeWriter), single-threaded per controller in
+    // AppLogAggregatorImpl. Read-path methods do not touch writeSession.
     final WriteSession session = new WriteSession(createUUID(appId));
     session.ugi = userUgi;
     session.logAggregationSuccessfullyInThisCyCle = false;
@@ -260,10 +265,20 @@ public class LogAggregationIndexedFileController
           return null;
         }
       });
+
+      this.writeSession = session;
+
     } catch (Exception e) {
-      throw new IOException(e);
+      // writeSession is not assigned yet; closeWriter() would not reach this stream.
+      IOUtils.cleanupWithLogger(LOG, session.fsDataOStream);
+
+      Throwable cause = (e instanceof PrivilegedActionException)
+          ? ((PrivilegedActionException) e).getException() : e;
+      if (cause instanceof IOException) {
+        throw (IOException) cause;
+      }
+      throw new IOException(cause.getMessage(), cause);
     }
-    this.writeSession = session;
   }
 
   /**
@@ -382,11 +397,20 @@ public class LogAggregationIndexedFileController
   public void closeWriter() {
     if (writeSession != null) {
       IOUtils.cleanupWithLogger(LOG, writeSession.fsDataOStream);
+      writeSession = null;
     }
+  }
+
+  private WriteSession requireWriteSession() throws IOException {
+    if (writeSession == null) {
+      throw new IOException("No active write session; call initializeWriter first");
+    }
+    return writeSession;
   }
 
   @Override
   public void write(LogKey logKey, LogValue logValue) throws IOException {
+    WriteSession session = requireWriteSession();
     String containerId = logKey.toString();
     Set<File> pendingUploadFiles = logValue
         .getPendingLogFilesToUploadForThisContainer();
@@ -404,8 +428,8 @@ public class LogAggregationIndexedFileController
       IndexedFileOutputStreamState outputStreamState = null;
       try {
         outputStreamState = new IndexedFileOutputStreamState(
-            this.compressAlgo, writeSession.fsDataOStream, conf,
-            writeSession.currentOffSet);
+            this.compressAlgo, session.fsDataOStream, conf,
+            session.currentOffSet);
         byte[] buf = new byte[65535];
         int len = 0;
         long bytesLeft = fileLength;
@@ -426,7 +450,7 @@ public class LogAggregationIndexedFileController
           LOG.warn("Aggregated logs truncated by approximately "+
               (newLength-fileLength) +" bytes.");
         }
-        writeSession.logAggregationSuccessfullyInThisCyCle = true;
+        session.logAggregationSuccessfullyInThisCyCle = true;
       } catch (IOException e) {
         String message = logErrorMessage(logFile, e);
         if (outputStreamState != null &&
@@ -450,24 +474,25 @@ public class LogAggregationIndexedFileController
       meta.setLastModifiedTime(logFile.lastModified());
       metas.add(meta);
     }
-    writeSession.logsMetaInThisCycle.addContainerLogMeta(containerId, metas);
+    session.logsMetaInThisCycle.addContainerLogMeta(containerId, metas);
   }
 
   @Override
   public void postWrite(LogAggregationFileControllerContext record)
       throws Exception {
+    WriteSession session = requireWriteSession();
     // always aggregate the previous logsMeta, and append them together
     // at the end of the file
-    writeSession.indexedLogsMeta.addLogMeta(writeSession.logsMetaInThisCycle);
-    byte[] b = SerializationUtils.serialize(writeSession.indexedLogsMeta);
-    writeSession.fsDataOStream.write(b);
+    session.indexedLogsMeta.addLogMeta(session.logsMetaInThisCycle);
+    byte[] b = SerializationUtils.serialize(session.indexedLogsMeta);
+    session.fsDataOStream.write(b);
     int length = b.length;
-    writeSession.fsDataOStream.writeInt(length);
-    writeSession.fsDataOStream.write(writeSession.uuid);
-    if (writeSession.logAggregationSuccessfullyInThisCyCle &&
+    session.fsDataOStream.writeInt(length);
+    session.fsDataOStream.write(session.uuid);
+    if (session.logAggregationSuccessfullyInThisCyCle &&
         record.isLogAggregationInRolling()) {
-      deleteFileWithRetries(writeSession.fc, writeSession.ugi,
-          writeSession.remoteLogCheckSumFile);
+      deleteFileWithRetries(session.fc, session.ugi,
+          session.remoteLogCheckSumFile);
     }
   }
 
@@ -911,12 +936,16 @@ public class LogAggregationIndexedFileController
   public String getApplicationOwner(Path aggregatedLogPath,
       ApplicationId appId)
       throws IOException {
+    // Read from the log file each time; do not cache on the controller instance
+    // because it may be shared across applications (e.g. on the JHS).
     return loadIndexedLogsMeta(aggregatedLogPath, appId).getUser();
   }
 
   @Override
   public Map<ApplicationAccessType, String> getApplicationAcls(
       Path aggregatedLogPath, ApplicationId appId) throws IOException {
+    // Read from the log file each time; do not cache on the controller instance
+    // because it may be shared across applications (e.g. on the JHS).
     return loadIndexedLogsMeta(aggregatedLogPath, appId).getAcls();
   }
 

@@ -43,14 +43,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.local.TrackingLocalFs;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -78,6 +81,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -910,5 +914,179 @@ public class TestLogAggregationIndexedFileController
       }
     }
 
+  }
+
+  /** Rolling init: failure after aggregated-log stream open (checksum create). */
+  @Test
+  @ResourceLock(TrackingLocalFs.RESOURCE_LOCK)
+  @Timeout(value = 15, unit = TimeUnit.SECONDS)
+  void testInitializeWriterClosesStreamWhenPostOpenOperationThrows()
+      throws Exception {
+    runWithTrackingLocalFs(() -> {
+      TrackingLocalFs.setFailOnPathSuffix(
+          LogAggregationIndexedFileController.CHECK_SUM_FILE_SUFFIX);
+
+      LogAggregationIndexedFileController fileFormat =
+          setupTrackingController();
+      LogAggregationFileControllerContext context =
+          newWriterContext(fileFormat, /*logAggregationInRolling=*/true);
+
+      assertThrows(IOException.class,
+          () -> fileFormat.initializeWriter(context),
+          "initializeWriter must propagate the injected failure");
+      assertTrue(TrackingLocalFs.wasFailureInjected(),
+          "Expected failure when creating the checksum file");
+      assertTrue(TrackingLocalFs.CREATE_CALLS.get() >= 2,
+          "Expected at least two createInternal() calls (aggregated log + "
+              + "checksum), got " + TrackingLocalFs.CREATE_CALLS.get());
+
+      assertStreamsClosedByInitializeWriterCatch(fileFormat);
+    });
+  }
+
+  /** Non-rolling init: failure on flush after aggregated-log stream open. */
+  @Test
+  @ResourceLock(TrackingLocalFs.RESOURCE_LOCK)
+  @Timeout(value = 15, unit = TimeUnit.SECONDS)
+  void testInitializeWriterClosesStreamWhenNonRollingFlushThrows()
+      throws Exception {
+    runWithTrackingLocalFs(() -> {
+      TrackingLocalFs.setFailOnFlushExcludingPathSuffix(
+          LogAggregationIndexedFileController.CHECK_SUM_FILE_SUFFIX, 1);
+
+      LogAggregationIndexedFileController fileFormat =
+          setupTrackingController();
+      LogAggregationFileControllerContext context =
+          newWriterContext(fileFormat, /*logAggregationInRolling=*/false);
+
+      assertThrows(IOException.class,
+          () -> fileFormat.initializeWriter(context),
+          "initializeWriter must propagate the injected flush failure");
+      assertTrue(TrackingLocalFs.wasFailureInjected(),
+          "Expected failure on the aggregated-log flush");
+      assertEquals(1, TrackingLocalFs.CREATE_CALLS.get(),
+          "Non-rolling init should open exactly one output stream");
+
+      assertStreamsClosedByInitializeWriterCatch(fileFormat);
+    });
+  }
+
+  /** Rolling append init: failure on flush after append stream open. */
+  @Test
+  @ResourceLock(TrackingLocalFs.RESOURCE_LOCK)
+  @Timeout(value = 15, unit = TimeUnit.SECONDS)
+  void testInitializeWriterClosesStreamWhenRollingAppendFlushThrows()
+      throws Exception {
+    runWithTrackingLocalFs(() -> {
+      LogAggregationIndexedFileController fileFormat =
+          setupTrackingController();
+      uploadAppLogsWithController(fileFormat, appId, containerId,
+          USER_UGI.getShortUserName(), /*deleteRemoteLogDir=*/false);
+      TrackingLocalFs.reset();
+
+      TrackingLocalFs.setFailOnFlushExcludingPathSuffix(
+          LogAggregationIndexedFileController.CHECK_SUM_FILE_SUFFIX, 1);
+      LogAggregationFileControllerContext context =
+          newWriterContext(fileFormat, /*logAggregationInRolling=*/true);
+
+      assertThrows(IOException.class,
+          () -> fileFormat.initializeWriter(context),
+          "initializeWriter must propagate the injected flush failure");
+      assertTrue(TrackingLocalFs.wasFailureInjected(),
+          "Expected failure on append-path aggregated-log flush");
+
+      assertStreamsClosedByInitializeWriterCatch(fileFormat);
+    });
+  }
+
+  /** Re-init without closeWriter must close the previous session's stream. */
+  @Test
+  @ResourceLock(TrackingLocalFs.RESOURCE_LOCK)
+  @Timeout(value = 15, unit = TimeUnit.SECONDS)
+  void testInitializeWriterClosesStaleSessionOnReInit() throws Exception {
+    runWithTrackingLocalFs(() -> {
+      LogAggregationIndexedFileController fileFormat =
+          setupTrackingController();
+      LogAggregationFileControllerContext context =
+          newWriterContext(fileFormat, /*logAggregationInRolling=*/true);
+
+      fileFormat.initializeWriter(context);
+      assertEquals(1, TrackingLocalFs.OPEN_STREAMS.size(),
+          "Successful init should leave one aggregated-log stream open");
+
+      fileFormat.initializeWriter(context);
+      assertEquals(1, TrackingLocalFs.OPEN_STREAMS.size(),
+          "Re-init must close the prior stream, not accumulate a second one");
+
+      fileFormat.closeWriter();
+      assertTrue(TrackingLocalFs.OPEN_STREAMS.isEmpty(),
+          "closeWriter must close the active session stream");
+    });
+  }
+
+  @FunctionalInterface
+  private interface TrackingLocalFsTest {
+    void run() throws Exception;
+  }
+
+  private void runWithTrackingLocalFs(TrackingLocalFsTest test) throws Exception {
+    TrackingLocalFs.reset();
+    try {
+      test.run();
+    } finally {
+      TrackingLocalFs.reset();
+    }
+  }
+
+  private Configuration newTrackingConf() {
+    Configuration conf = getTestConf();
+    conf.setClass("fs.AbstractFileSystem.file.impl",
+        TrackingLocalFs.class, AbstractFileSystem.class);
+    conf.set(YarnConfiguration.NM_LOG_AGG_COMPRESSION_TYPE, "none");
+    return conf;
+  }
+
+  private LogAggregationIndexedFileController setupTrackingController()
+      throws IOException {
+    Configuration conf = newTrackingConf();
+    if (fs.exists(rootLocalLogDirPath)) {
+      fs.delete(rootLocalLogDirPath, true);
+    }
+    assertTrue(fs.mkdirs(rootLocalLogDirPath));
+
+    LogAggregationIndexedFileController fileFormat =
+        new LogAggregationIndexedFileController();
+    fileFormat.initialize(conf, "Indexed");
+
+    FileContext fc = FileContext.getFileContext(conf);
+    Path appDir = fileFormat.getRemoteAppLogDir(appId,
+        USER_UGI.getShortUserName());
+    if (fc.util().exists(appDir)) {
+      fc.delete(appDir, true);
+    }
+    fc.mkdir(appDir, FileContext.DEFAULT_PERM, true);
+    return fileFormat;
+  }
+
+  private LogAggregationFileControllerContext newWriterContext(
+      LogAggregationIndexedFileController fileFormat,
+      boolean logAggregationInRolling) throws IOException {
+    Path logPath = fileFormat.getRemoteNodeLogFileForApp(
+        appId, USER_UGI.getShortUserName(), nodeId);
+    Map<ApplicationAccessType, String> appAcls = new HashMap<>();
+    return new LogAggregationFileControllerContext(
+        logPath, logPath, logAggregationInRolling, 1000,
+        appId, appAcls, nodeId, USER_UGI);
+  }
+
+  /** Failed init must close streams in the catch block, not in closeWriter. */
+  private void assertStreamsClosedByInitializeWriterCatch(
+      LogAggregationIndexedFileController fileFormat) {
+    assertTrue(TrackingLocalFs.OPEN_STREAMS.isEmpty(),
+        "initializeWriter catch must close all opened streams, but "
+            + TrackingLocalFs.OPEN_STREAMS.size() + " remained open");
+    fileFormat.closeWriter();
+    assertTrue(TrackingLocalFs.OPEN_STREAMS.isEmpty(),
+        "closeWriter must remain a no-op after a failed initializeWriter");
   }
 }
