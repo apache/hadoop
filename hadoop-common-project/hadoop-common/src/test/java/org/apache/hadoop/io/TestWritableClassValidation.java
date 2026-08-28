@@ -29,6 +29,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.io.ObjectWritable.E_MAX_DEPTH;
+import static org.apache.hadoop.io.ObjectWritable.MAX_NESTING_DEPTH;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -139,7 +140,7 @@ public class TestWritableClassValidation extends AbstractHadoopTestBase {
   public void testDeepNestingRejected() throws Exception {
     DataOutputBuffer out = new DataOutputBuffer();
     String arrayClass = Object[].class.getName();
-    for (int i = 0; i < 110; i++) {   // each level: an Object[] of length 1
+    for (int i = 0; i < MAX_NESTING_DEPTH + 10; i++) {   // each level: an Object[] of length 1
       UTF8.writeString(out, arrayClass);
       out.writeInt(1);
     }

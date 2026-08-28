@@ -48,7 +48,7 @@ public class ObjectWritable implements Writable, Configurable {
    * This is also used as the max size of array list to allocate even if the header declares
    * a larger value.
    */
-  private static final int MAX_NESTING_DEPTH = 100;
+  static final int MAX_NESTING_DEPTH = 100;
 
   @VisibleForTesting
   static final String E_MAX_DEPTH =

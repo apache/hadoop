@@ -495,5 +495,4 @@ public final class WritableUtils  {
     in.readFully(bytes, 0, length);
     return Text.decode(bytes);
   }
-
 }
