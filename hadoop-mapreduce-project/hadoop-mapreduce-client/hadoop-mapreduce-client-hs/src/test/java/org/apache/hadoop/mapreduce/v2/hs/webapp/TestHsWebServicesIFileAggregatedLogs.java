@@ -70,7 +70,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 /**
- * Regression tests for HADOOP-15984: singleton {@link HsWebServices} reuses
+ * Regression tests for MAPREDUCE-7539: singleton {@link HsWebServices} reuses
  * {@link LogAggregationIndexedFileController} across requests, so IFile log
  * reads must not rely on per-instance UUID state from a prior application.
  */
