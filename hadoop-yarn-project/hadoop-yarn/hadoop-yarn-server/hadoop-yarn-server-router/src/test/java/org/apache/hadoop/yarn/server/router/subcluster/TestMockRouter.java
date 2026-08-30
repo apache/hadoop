@@ -101,12 +101,13 @@ public class TestMockRouter {
     // at a lower priority than the Router hook above: ShutdownHookManager runs
     // the highest priority first, so the Router is stopped before the store
     // goes away. That ordering relies on the Router stopping its background
-    // users of the facade: RouterClientRMService#serviceStop stops the
-    // delegation token secret manager's ExpiredTokenRemover. An RPC already
-    // being handled when the IPC server stops can still reach the store -
-    // Server#stop does not wait for its handlers - and may then fail against a
-    // closed store, which is harmless while the JVM is exiting. Registered
-    // before start() so the store is closed even if starting the Router fails.
+    // users of the facade: Router#serviceStop shuts down the SubClusterCleaner's
+    // executor and RouterClientRMService#serviceStop stops the delegation token
+    // secret manager's ExpiredTokenRemover. An RPC already being handled when
+    // the IPC server stops can still reach the store - Server#stop does not
+    // wait for its handlers - and may then fail against a closed store, which
+    // is harmless while the JVM is exiting. Registered before start() so the
+    // store is closed even if starting the Router fails.
     ShutdownHookManager.get().addShutdownHook(() -> {
       try {
         stateStore.close();
