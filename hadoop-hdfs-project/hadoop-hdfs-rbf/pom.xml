@@ -332,6 +332,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>.gitattributes</exclude>
             <exclude>.idea/**</exclude>
             <exclude>dev-support/findbugsExcludeFile.xml</exclude>
+            <exclude>src/main/java/org/apache/hadoop/hdfs/server/federation/metrics/JSON.java</exclude>
             <exclude>src/main/webapps/router/robots.txt</exclude>
             <exclude>src/site/resources/images/*</exclude>
           </excludes>
