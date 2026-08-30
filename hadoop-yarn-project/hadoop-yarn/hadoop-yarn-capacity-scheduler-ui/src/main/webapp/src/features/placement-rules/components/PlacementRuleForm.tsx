@@ -77,7 +77,8 @@ interface PlacementRuleFormProps {
 
 export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: PlacementRuleFormProps) {
   const schedulerData = useSchedulerStore((state) => state.schedulerData);
-  const parentQueues = getAllParentQueues(schedulerData);
+  const getQueuePropertyValue = useSchedulerStore((state) => state.getQueuePropertyValue);
+  const parentQueues = getAllParentQueues(schedulerData, getQueuePropertyValue);
   const allQueues = getAllQueues(schedulerData);
 
   const form = useForm<PlacementRuleFormData>({
