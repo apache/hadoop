@@ -345,12 +345,6 @@ public class TestHadoopArchiveLogs {
     }
   }
 
-  @Test
-  @Timeout(value = 10)
-  public void testGenerateScriptQuotesUntrustedValues() throws Exception {
-
-  }
-
   /**
    * If this test failes, then a new Log Aggregation Status was added.  Make
    * sure that {@link HadoopArchiveLogs#filterAppsByAggregatedStatus()} and this test
