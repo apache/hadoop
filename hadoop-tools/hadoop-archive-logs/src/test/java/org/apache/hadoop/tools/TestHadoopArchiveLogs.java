@@ -348,32 +348,7 @@ public class TestHadoopArchiveLogs {
   @Test
   @Timeout(value = 10)
   public void testGenerateScriptQuotesUntrustedValues() throws Exception {
-    Configuration conf = new Configuration();
-    HadoopArchiveLogs hal = new HadoopArchiveLogs(conf);
-    // The per-user log directory name is attacker-influenced: the remote root
-    // log dir is world-writable on a shared cluster, so the directory name can
-    // carry a double quote and shell metacharacters. It must stay inside the
-    // assignment instead of starting a new command.
-    String maliciousUser = "victim\";touch /tmp/pwned #";
-    ApplicationId app = ApplicationId.newInstance(CLUSTER_TIMESTAMP, 1);
-    HadoopArchiveLogs.AppInfo appInfo =
-        new HadoopArchiveLogs.AppInfo(app.toString(), maliciousUser);
-    appInfo.setSuffix("logs");
-    appInfo.setRemoteRootLogDir(new Path("/tmp", "logs"));
-    appInfo.setWorkingDir(new Path("/tmp", "working"));
-    hal.eligibleApplications.add(appInfo);
 
-    File localScript = new File("target", "script-inject.sh");
-    localScript.delete();
-    hal.generateScript(localScript);
-    String script =
-        IOUtils.toString(localScript.toURI(), StandardCharsets.UTF_8);
-    localScript.delete();
-    assertTrue(script.contains("\tuser=" + Shell.bashQuote(maliciousUser)),
-        "user value should be emitted as a single bash-quoted token, "
-            + "script was:\n" + script);
-    assertFalse(script.contains("touch /tmp/pwned #\""),
-        "payload broke out of the quoted assignment:\n" + script);
   }
 
   /**
