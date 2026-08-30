@@ -103,7 +103,10 @@ public class TestMockRouter {
     // connection outlives the process unless we close it ourselves. Registered
     // at a lower priority than the Router hook above: ShutdownHookManager runs
     // the highest priority first, so the Router is fully stopped before the
-    // store it may still be using goes away.
+    // store it may still be using goes away. That ordering is only sound
+    // because RouterClientRMService#serviceStop stops the delegation token
+    // secret manager's ExpiredTokenRemover, which would otherwise still be
+    // reaching the facade after the Router has stopped.
     ShutdownHookManager.get().addShutdownHook(() -> {
       try {
         stateStore.close();
