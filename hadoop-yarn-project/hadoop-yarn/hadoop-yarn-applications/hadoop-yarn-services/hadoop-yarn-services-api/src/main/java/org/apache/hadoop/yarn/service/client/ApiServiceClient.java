@@ -227,6 +227,11 @@ public class ApiServiceClient extends AppAdminClient {
         .equalsIgnoreCase("simple")) {
       String username = UserGroupInformation.getCurrentUser()
             .getShortUserName();
+      // Not byte-for-byte what Jetty's UrlEncoded produced: it left '~'
+      // literal and escaped '*', and URLEncoder does the opposite. Both forms
+      // decode to the same user name, so what the server reads is unchanged;
+      // every other character a short user name can hold, '@' and non-ASCII
+      // among them, encodes identically.
       builder.append("?user.name=").append(
           URLEncoder.encode(username, StandardCharsets.UTF_8));
     }

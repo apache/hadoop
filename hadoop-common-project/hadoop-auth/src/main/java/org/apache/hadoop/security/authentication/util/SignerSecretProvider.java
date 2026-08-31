@@ -32,6 +32,17 @@ import org.apache.hadoop.classification.InterfaceStability;
  * implementation overrides it, so providers written against it keep working
  * unchanged; it is deprecated and will be removed with the move to the jakarta
  * servlet namespace.
+ * <p>
+ * One consequence for code that reflects over these classes: the providers
+ * shipped here override
+ * {@link #initialize(Properties, SecretProviderContext, long)} rather than
+ * {@link #init(Properties, ServletContext, long)}, so init is no longer among
+ * their declared methods. Calls and overrides are unaffected - init is
+ * inherited from this class and resolves as it always did - but
+ * Class#getDeclaredMethod("init", ...) on a subclass such as
+ * {@link FileSignerSecretProvider} now raises NoSuchMethodException where it
+ * used to succeed. Class#getMethod, which searches superclasses, still finds
+ * it.
  */
 @InterfaceStability.Unstable
 @InterfaceAudience.Private

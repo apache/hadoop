@@ -18,6 +18,7 @@
 package org.apache.hadoop.security.authentication.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -114,4 +115,36 @@ public class TestCertificateUtil {
     }
   }
 
+  /**
+   * The deprecated entry point reports the CertificateException the parse
+   * raised, not the one toRSAPublicKey wraps it in. Routing through the new
+   * method must not lengthen the chain a caller walks.
+   */
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testDeprecatedEntryPointDoesNotDeepenTheCauseChain() {
+    try {
+      CertificateUtil.parseRSAPublicKey("not a certificate");
+      fail("Should not have thrown ServletException");
+    } catch (ServletException se) {
+      Throwable cause = se.getCause();
+      assertNotNull(cause, "the ServletException should carry a cause");
+      assertTrue(cause instanceof CertificateException,
+          "expected a CertificateException, got " + cause.getClass());
+      assertFalse(cause.getCause() instanceof CertificateException,
+          "the wrapper toRSAPublicKey adds must not appear in the chain;"
+              + " chain was " + chainOf(se));
+    }
+  }
+
+  private static String chainOf(Throwable t) {
+    StringBuilder sb = new StringBuilder();
+    for (Throwable c = t; c != null; c = c.getCause()) {
+      if (sb.length() > 0) {
+        sb.append(" -> ");
+      }
+      sb.append(c.getClass().getSimpleName());
+    }
+    return sb.toString();
+  }
 }
