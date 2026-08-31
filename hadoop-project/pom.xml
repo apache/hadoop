@@ -37,6 +37,12 @@
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     <jetty.version>9.4.58.v20250814</jetty.version>
+    <!--
+      Jetty's build of the Servlet 4.0 API. The classes are javax.servlet, the
+      same ones jakarta.servlet:jakarta.servlet-api:4.0.x publishes; this is the
+      coordinate jetty-ee8 depends on, and 4.0.9 is the version Jetty 12 pins.
+    -->
+    <jetty-servlet-api.version>4.0.9</jetty-servlet-api.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -969,9 +975,9 @@
         <version>${jetty.version}</version>
       </dependency>
       <dependency>
-        <groupId>jakarta.servlet</groupId>
-        <artifactId>jakarta.servlet-api</artifactId>
-        <version>4.0.4</version>
+        <groupId>org.eclipse.jetty.toolchain</groupId>
+        <artifactId>jetty-servlet-api</artifactId>
+        <version>${jetty-servlet-api.version}</version>
       </dependency>
 
       <dependency>
@@ -2191,11 +2197,30 @@
         <groupId>org.glassfish.jersey.test-framework</groupId>
         <artifactId>jersey-test-framework-core</artifactId>
         <version>${jersey2.version}</version>
+        <exclusions>
+          <!--
+            It declares the servlet API under the jakarta.servlet coordinate.
+            Those are the same javax.servlet classes jetty-servlet-api carries,
+            so letting it through puts two of them on the test classpath and
+            which one a module compiles against comes down to jar order.
+          -->
+          <exclusion>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.glassfish.jersey.test-framework.providers</groupId>
         <artifactId>jersey-test-framework-provider-jdk-http</artifactId>
         <version>${jersey2.version}</version>
+        <exclusions>
+          <!-- Reaches the servlet API again through jersey-test-framework-core. -->
+          <exclusion>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.glassfish.jersey.media</groupId>
