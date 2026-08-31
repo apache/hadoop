@@ -50,7 +50,12 @@ public class CertificateUtil {
     try {
       return toRSAPublicKey(pem);
     } catch (CertificateException ce) {
-      throw new ServletException(ce.getMessage(), ce);
+      // Report the exception toRSAPublicKey wrapped, not the wrapper, so that
+      // the cause a caller sees is the one this method has always reported:
+      // the CertificateException the parse itself raised. Wrapping the wrapper
+      // would add a level to the chain that was not there before.
+      Throwable cause = ce.getCause() == null ? ce : ce.getCause();
+      throw new ServletException(ce.getMessage(), cause);
     }
   }
 
