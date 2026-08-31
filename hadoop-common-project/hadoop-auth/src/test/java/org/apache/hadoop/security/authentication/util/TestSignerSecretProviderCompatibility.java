@@ -16,6 +16,7 @@ package org.apache.hadoop.security.authentication.util;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -186,6 +187,33 @@ public class TestSignerSecretProviderCompatibility {
     provider.seen.setAttribute("a", "value");
     assertSame("value", provider.seen.getAttribute("a"));
     assertFalse(provider.seen instanceof ServletSecretProviderContext);
+  }
+
+  /**
+   * A provider that shares an object through the store - which in this tree
+   * means ZKSignerSecretProvider and its Curator client - gets a store private
+   * to itself when there is no ServletContext, so a second provider does not
+   * find what the first one put there. That is a real change from the
+   * NullPointerException a null ServletContext used to raise, so it is pinned
+   * here rather than left to be discovered.
+   */
+  @Test
+  public void testNullServletContextDoesNotShareBetweenProviders()
+      throws Exception {
+    ContextProvider first = new ContextProvider();
+    ContextProvider second = new ContextProvider();
+    first.init(new Properties(), null, 1000);
+    second.init(new Properties(), null, 1000);
+
+    first.seen.setAttribute("shared", "from-first");
+
+    assertNull(second.seen.getAttribute("shared"),
+        "a store backed by no ServletContext is private to its provider");
+    assertTrue(
+        first.seen instanceof ServletSecretProviderContext
+            .MapSecretProviderContext,
+        "expected the private map store, got "
+            + first.seen.getClass().getName());
   }
 
   @Test

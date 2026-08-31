@@ -18,6 +18,9 @@ import java.util.Map;
 import javax.servlet.ServletContext;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Presents a ServletContext to a {@link SignerSecretProvider} as a
@@ -37,6 +40,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 @InterfaceAudience.Private
 final class ServletSecretProviderContext implements SecretProviderContext {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ServletSecretProviderContext.class);
 
   private final ServletContext servletContext;
 
@@ -77,7 +83,8 @@ final class ServletSecretProviderContext implements SecretProviderContext {
    * Attributes live as long as the provider does and are seen by nothing else,
    * which is what passing a null ServletContext already meant.
    */
-  private static final class MapSecretProviderContext
+  @VisibleForTesting
+  static final class MapSecretProviderContext
       implements SecretProviderContext {
 
     private final Map<String, Object> attributes = new HashMap<>();
@@ -87,8 +94,23 @@ final class ServletSecretProviderContext implements SecretProviderContext {
       return attributes.get(name);
     }
 
+    /**
+     * Stores the attribute, and says so.
+     * <p>
+     * A provider only writes here to share an object with the rest of the
+     * application - the CuratorFramework client of
+     * {@link ZKSignerSecretProvider} is the one case in this tree. There is
+     * nothing to share it with: this store is private to the provider, so a
+     * second provider in the same JVM builds a second client rather than
+     * finding this one. Before there was a store at all a null ServletContext
+     * threw, which was at least loud; this keeps it visible.
+     */
     @Override
     public void setAttribute(String name, Object value) {
+      LOG.warn("SignerSecretProvider was initialized without a ServletContext,"
+          + " so the attribute {} is being stored in a map private to this"
+          + " provider. Anything that expects to share it - including another"
+          + " provider in this JVM - will not find it there.", name);
       attributes.put(name, value);
     }
   }
