@@ -36,12 +36,18 @@
     <!--Whether to proceed to next module if any test failures exist-->
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>12.0.37</jetty.version>
+    <!--
+      The 12.1.x line, not 12.0.x: Jetty has said 12.0 stops receiving updates
+      during 2026 in favour of 12.1, and both carry the ee8 environment this
+      tree depends on.
+    -->
+    <jetty.version>12.1.12</jetty.version>
     <!--
       Jetty's own build of the Servlet 4.0 API. Jetty 12's ee8 environment
       resolves the web.xml schemas out of whatever archive javax.servlet.Servlet
       came from, and this is the only artifact that carries both. It tracks the
-      servlet spec, not the Jetty release, so it has its own version.
+      servlet spec, not the Jetty release, so it has its own version - 12.0 and
+      12.1 pin the same 4.0.9.
     -->
     <jetty-servlet-api.version>4.0.9</jetty-servlet-api.version>
     <test.exclude>_</test.exclude>
