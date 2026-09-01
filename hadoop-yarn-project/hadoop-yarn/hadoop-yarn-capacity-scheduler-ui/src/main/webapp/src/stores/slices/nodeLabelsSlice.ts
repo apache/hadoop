@@ -30,10 +30,8 @@ import {
 } from '~/lib/errors';
 import { createReadOnlyBlockedError } from '~/lib/errors/readOnlyGuard';
 import { normalizeNodeLabels, normalizeNodeToLabels } from '~/lib/normalizers/nodeDataNormalizers';
-import {
-  getHostWildcardToClearOnUnassign
-} from '~/features/node-labels/utils/hostWildcardValidation';
 import { validateLabelRemoval } from '~/features/node-labels/utils/labelValidation';
+import { getNodeIdsToClearOnUnassign } from '~/lib/nodeLabels/nodeLabelHostWildcard';
 import type { NodeLabelsSlice, SchedulerStore } from './types';
 
 export const createNodeLabelsSlice: StateCreator<
@@ -212,15 +210,12 @@ export const createNodeLabelsSlice: StateCreator<
     });
 
     try {
-      const labels = labelName ? [labelName] : [];
-      const nodeToLabelsReplacement = [{ nodeId, labels }];
-
-      if (!labelName) {
-        const hostWildcardToClearOnUnassign = getHostWildcardToClearOnUnassign(nodeId, get().nodeToLabels)
-        if (hostWildcardToClearOnUnassign) {
-          nodeToLabelsReplacement.push({ nodeId: hostWildcardToClearOnUnassign, labels: [] });
-        }
-      }
+      const nodeToLabelsReplacement = labelName
+        ? [{ nodeId, labels: [labelName] }]
+        : getNodeIdsToClearOnUnassign(nodeId, get().nodeToLabels).map((id) => ({
+            nodeId: id,
+            labels: [],
+          }));
       await get().apiClient.replaceNodeToLabels(nodeToLabelsReplacement);
       // Refresh node-to-label mappings
       const nodeToLabels = await get().apiClient.getNodeToLabels();
