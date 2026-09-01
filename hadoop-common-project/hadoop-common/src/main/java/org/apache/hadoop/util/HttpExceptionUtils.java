@@ -211,18 +211,25 @@ public class HttpExceptionUtils {
    * For a response that carries the JSON envelope this class writes, prefer
    * {@link #validateResponse}, which rebuilds the original exception. This is
    * for everything else: a container's error page, or a plain-text reason.
+   * A JSON body is therefore left alone here and the phrase reported instead:
+   * the envelope is sent with {@code setStatus} rather than sendError, so its
+   * phrase was the canonical text for the status code before Jetty 12 and
+   * still is, and quoting the envelope back as free text would replace a
+   * readable "Forbidden" with a line of JSON.
    *
    * @param conn a connection whose response status has been read
    * @return a description of the failure, never null
    */
   public static String getResponseDetail(HttpURLConnection conn) {
     String body = "";
-    try (InputStream es = conn.getErrorStream()) {
-      if (es != null) {
-        body = toPlainText(readCapped(es));
+    if (!isJson(conn.getContentType())) {
+      try (InputStream es = conn.getErrorStream()) {
+        if (es != null) {
+          body = toPlainText(readCapped(es));
+        }
+      } catch (IOException ex) {
+        // nothing to add: fall through to the reason phrase
       }
-    } catch (IOException ex) {
-      // nothing to add: fall through to the reason phrase
     }
     if (!body.isEmpty()) {
       return body;
@@ -233,6 +240,16 @@ public class HttpExceptionUtils {
     } catch (IOException ex) {
       return "";
     }
+  }
+
+  /**
+   * Whether the content type names the JSON error envelope. The header can
+   * carry parameters - "application/json; charset=utf-8" - so this matches a
+   * prefix rather than the whole value.
+   */
+  private static boolean isJson(String contentType) {
+    return contentType != null
+        && contentType.trim().toLowerCase().startsWith(APPLICATION_JSON_MIME);
   }
 
   private static String readCapped(InputStream in) throws IOException {

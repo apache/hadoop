@@ -80,6 +80,13 @@ public class AuthenticatedURL {
   /** How much of a failed response body is worth quoting back. */
   private static final int MAX_RESPONSE_DETAIL_BYTES = 4096;
 
+  /**
+   * Content type of the JSON error envelope. Spelled out rather than taken
+   * from HttpExceptionUtils, which lives in hadoop-common and so is below this
+   * module rather than above it.
+   */
+  private static final String APPLICATION_JSON_MIME = "application/json";
+
   // a lightweight cookie handler that will be attached to url connections.
   // client code is not required to extract or inject auth cookies.
   private static class AuthCookieHandler extends CookieHandler {
@@ -421,8 +428,20 @@ public class AuthenticatedURL {
    * phrase on the wire, so {@link HttpURLConnection#getResponseMessage()} now
    * only ever returns the canonical text for the status code and the reason is
    * in the body. Read the body, and fall back to the phrase when it is empty.
+   * <p>
+   * A JSON body is left alone. That is the envelope
+   * HttpExceptionUtils#createServletExceptionResponse writes, and a refusal
+   * that carries it never carried a reason phrase of its own - it is sent with
+   * setStatus, not sendError, so the phrase was the canonical text for the
+   * status code before Jetty 12 and still is. Quoting the envelope back as
+   * free text would replace a readable "Forbidden" with a line of JSON, and
+   * the callers that want what is inside it parse it with
+   * HttpExceptionUtils#validateResponse instead.
    */
   private static String responseDetail(HttpURLConnection conn) {
+    if (isJson(conn.getContentType())) {
+      return responsePhrase(conn);
+    }
     try (InputStream es = conn.getErrorStream()) {
       if (es != null) {
         byte[] body = new byte[MAX_RESPONSE_DETAIL_BYTES];
@@ -442,6 +461,21 @@ public class AuthenticatedURL {
     } catch (IOException ex) {
       // nothing to add: fall through to the reason phrase
     }
+    return responsePhrase(conn);
+  }
+
+  /**
+   * Whether the content type names the JSON error envelope. The header can
+   * carry parameters - "application/json; charset=utf-8" - so this matches a
+   * prefix rather than the whole value.
+   */
+  private static boolean isJson(String contentType) {
+    return contentType != null
+        && contentType.trim().toLowerCase().startsWith(APPLICATION_JSON_MIME);
+  }
+
+  /** The reason phrase, or null if it cannot be read. */
+  private static String responsePhrase(HttpURLConnection conn) {
     try {
       return conn.getResponseMessage();
     } catch (IOException ex) {
