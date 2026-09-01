@@ -486,6 +486,18 @@ public class WebHdfsFileSystem extends FileSystem
     if (c.getContentLength() == 0) {
       return null;
     }
+    // Checked before the stream is opened: a body this method will not read
+    // is left intact for the caller to report, and getInputStream is not
+    // called for a response that has no input stream to give.
+    final String contentType = c.getContentType();
+    if (contentType != null) {
+      final MediaType parsed = MediaType.valueOf(contentType);
+      if (!MediaType.APPLICATION_JSON_TYPE.isCompatible(parsed)) {
+        throw new IOException("Content-Type \"" + contentType
+            + "\" is incompatible with \"" + MediaType.APPLICATION_JSON
+            + "\" (parsed=\"" + parsed + "\")");
+      }
+    }
     final InputStream in = useErrorStream ?
         c.getErrorStream() : c.getInputStream();
     if (in == null) {
@@ -493,15 +505,6 @@ public class WebHdfsFileSystem extends FileSystem
           " stream is null.");
     }
     try {
-      final String contentType = c.getContentType();
-      if (contentType != null) {
-        final MediaType parsed = MediaType.valueOf(contentType);
-        if (!MediaType.APPLICATION_JSON_TYPE.isCompatible(parsed)) {
-          throw new IOException("Content-Type \"" + contentType
-              + "\" is incompatible with \"" + MediaType.APPLICATION_JSON
-              + "\" (parsed=\"" + parsed + "\")");
-        }
-      }
       return JsonSerialization.mapReader().readValue(in);
     } finally {
       in.close();
@@ -529,13 +532,13 @@ public class WebHdfsFileSystem extends FileSystem
       } catch(Exception e) {
         throw new IOException("Unexpected HTTP response: code=" + code + " != "
             + op.getExpectedHttpResponseCode() + ", " + op.toQueryString()
-            + ", message=" + conn.getResponseMessage(), e);
+            + ", message=" + HttpExceptionUtils.getResponseDetail(conn), e);
       }
 
       if (m == null) {
         throw new IOException("Unexpected HTTP response: code=" + code + " != "
             + op.getExpectedHttpResponseCode() + ", " + op.toQueryString()
-            + ", message=" + conn.getResponseMessage());
+            + ", message=" + HttpExceptionUtils.getResponseDetail(conn));
       } else if (m.get(RemoteException.class.getSimpleName()) == null) {
         return m;
       }

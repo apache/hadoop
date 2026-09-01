@@ -450,10 +450,8 @@ public class AuthenticatedURL {
             && (n = es.read(body, read, body.length - read)) != -1) {
           read += n;
         }
-        // A container renders sendError as an HTML page; the reason is in
-        // there among the markup, which is no use in a one-line message.
-        String text = new String(body, 0, read, StandardCharsets.UTF_8)
-            .replaceAll("(?s)<[^>]*>", " ").replaceAll("\\s+", " ").trim();
+        String text = toPlainText(
+            new String(body, 0, read, StandardCharsets.UTF_8));
         if (!text.isEmpty()) {
           return text;
         }
@@ -472,6 +470,27 @@ public class AuthenticatedURL {
   private static boolean isJson(String contentType) {
     return contentType != null
         && contentType.trim().toLowerCase().startsWith(APPLICATION_JSON_MIME);
+  }
+
+  /**
+   * Reduces a response body to something readable in a one-line message. A
+   * container renders sendError as an HTML page, so the reason arrives buried
+   * in markup.
+   * <p>
+   * Kept in step with {@code HttpExceptionUtils.toPlainText}, which does the
+   * same job for the same bodies one module up. The duplication is forced:
+   * hadoop-common depends on this module, not the other way round.
+   */
+  private static String toPlainText(String body) {
+    String text = body;
+    if (text.indexOf('<') >= 0) {
+      text = text.replaceAll("(?s)<(script|style)\\b.*?</\\1>", " ")
+          .replaceAll("(?s)<[^>]*>", " ");
+    }
+    text = text.replace("&lt;", "<").replace("&gt;", ">")
+        .replace("&quot;", "\"").replace("&#39;", "'")
+        .replace("&amp;", "&");
+    return text.replaceAll("\\s+", " ").trim();
   }
 
   /** The reason phrase, or null if it cannot be read. */

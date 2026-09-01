@@ -111,10 +111,81 @@ public class TestHttpExceptionUtils {
     when(conn.getErrorStream()).thenReturn(is);
     when(conn.getResponseMessage()).thenReturn("msg");
     when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
+    // The body wins over the reason phrase: a servlet's reason travels in the
+    // body now, so "stream" is the detail and "msg" is only the canonical
+    // text for the status code.
     LambdaTestUtils.interceptAndValidateMessageContains(IOException.class,
-        Arrays.asList(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), "msg",
+        Arrays.asList(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), "stream",
         "com.fasterxml.jackson.core.JsonParseException"),
         () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
+  }
+
+  @Test
+  public void testValidateResponseHtmlErrorPageReportsTheReason()
+      throws Exception {
+    // What AuthenticationFilter's sendError looks like on the wire.
+    String page = "<html><head><title>Error 403 Invalid signature</title>"
+        + "<style>h1 {color: red}</style></head><body>"
+        + "<h1>HTTP ERROR 403</h1><p>Reason: Invalid signature</p>"
+        + "</body></html>";
+    HttpURLConnection conn = connectionReturning(page, "Forbidden", "text/html");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+    LambdaTestUtils.interceptAndValidateMessageContains(IOException.class,
+        Arrays.asList("Invalid signature"),
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK));
+  }
+
+  @Test
+  public void testValidateResponseFallsBackToThePhraseWithNoBody()
+      throws Exception {
+    HttpURLConnection conn = connectionReturning(null, "Forbidden", "text/html");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+    LambdaTestUtils.interceptAndValidateMessageContains(IOException.class,
+        Arrays.asList("Forbidden"),
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK));
+  }
+
+  @Test
+  public void testValidateResponseStillRebuildsTheEnvelopeException()
+      throws Exception {
+    // The rewind must not disturb the envelope path: a JSON body still
+    // reconstructs its exception rather than being quoted back as text.
+    Map<String, Object> json = new HashMap<String, Object>();
+    json.put(HttpExceptionUtils.ERROR_EXCEPTION_JSON,
+        IllegalStateException.class.getSimpleName());
+    json.put(HttpExceptionUtils.ERROR_CLASSNAME_JSON,
+        IllegalStateException.class.getName());
+    json.put(HttpExceptionUtils.ERROR_MESSAGE_JSON, "EX");
+    Map<String, Object> response = new HashMap<String, Object>();
+    response.put(HttpExceptionUtils.ERROR_JSON, json);
+    String body = new ObjectMapper().writeValueAsString(response);
+    HttpURLConnection conn =
+        connectionReturning(body, "Forbidden", "application/json");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+    LambdaTestUtils.intercept(IllegalStateException.class, "EX",
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK));
+  }
+
+  @Test
+  public void testValidateResponseParsesAnEnvelopeTooLargeToRewind()
+      throws Exception {
+    // Larger than the rewind buffer: the parser reads straight through, so the
+    // exception is still rebuilt - only the text fallback is given up.
+    Map<String, Object> json = new HashMap<String, Object>();
+    json.put(HttpExceptionUtils.ERROR_EXCEPTION_JSON,
+        IllegalStateException.class.getSimpleName());
+    json.put(HttpExceptionUtils.ERROR_CLASSNAME_JSON,
+        IllegalStateException.class.getName());
+    json.put(HttpExceptionUtils.ERROR_MESSAGE_JSON,
+        "x".repeat(64 * 1024));
+    Map<String, Object> response = new HashMap<String, Object>();
+    response.put(HttpExceptionUtils.ERROR_JSON, json);
+    String body = new ObjectMapper().writeValueAsString(response);
+    HttpURLConnection conn =
+        connectionReturning(body, "Forbidden", "application/json");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK));
   }
 
   @Test
