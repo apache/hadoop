@@ -37,8 +37,6 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -111,10 +109,81 @@ public class TestHttpExceptionUtils {
     when(conn.getErrorStream()).thenReturn(is);
     when(conn.getResponseMessage()).thenReturn("msg");
     when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
+    // The body wins over the reason phrase: a servlet's reason travels in the
+    // body now, so "stream" is the detail and "msg" is only the canonical
+    // text for the status code.
     LambdaTestUtils.interceptAndValidateMessageContains(IOException.class,
-        Arrays.asList(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), "msg",
+        Arrays.asList(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), "stream",
         "com.fasterxml.jackson.core.JsonParseException"),
         () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
+  }
+
+  @Test
+  public void testValidateResponseHtmlErrorPageReportsTheReason()
+      throws Exception {
+    // What AuthenticationFilter's sendError looks like on the wire.
+    String page = "<html><head><title>Error 403 Invalid signature</title>"
+        + "<style>h1 {color: red}</style></head><body>"
+        + "<h1>HTTP ERROR 403</h1><p>Reason: Invalid signature</p>"
+        + "</body></html>";
+    HttpURLConnection conn = connectionReturning(page, "Forbidden", "text/html");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+    LambdaTestUtils.interceptAndValidateMessageContains(IOException.class,
+        Arrays.asList("Invalid signature"),
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK));
+  }
+
+  @Test
+  public void testValidateResponseFallsBackToThePhraseWithNoBody()
+      throws Exception {
+    HttpURLConnection conn = connectionReturning(null, "Forbidden", "text/html");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+    LambdaTestUtils.interceptAndValidateMessageContains(IOException.class,
+        Arrays.asList("Forbidden"),
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK));
+  }
+
+  @Test
+  public void testValidateResponseStillRebuildsTheEnvelopeException()
+      throws Exception {
+    // The rewind must not disturb the envelope path: a JSON body still
+    // reconstructs its exception rather than being quoted back as text.
+    Map<String, Object> json = new HashMap<String, Object>();
+    json.put(HttpExceptionUtils.ERROR_EXCEPTION_JSON,
+        IllegalStateException.class.getSimpleName());
+    json.put(HttpExceptionUtils.ERROR_CLASSNAME_JSON,
+        IllegalStateException.class.getName());
+    json.put(HttpExceptionUtils.ERROR_MESSAGE_JSON, "EX");
+    Map<String, Object> response = new HashMap<String, Object>();
+    response.put(HttpExceptionUtils.ERROR_JSON, json);
+    String body = new ObjectMapper().writeValueAsString(response);
+    HttpURLConnection conn =
+        connectionReturning(body, "Forbidden", "application/json");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+    LambdaTestUtils.intercept(IllegalStateException.class, "EX",
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK));
+  }
+
+  @Test
+  public void testValidateResponseParsesAnEnvelopeTooLargeToRewind()
+      throws Exception {
+    // Larger than the rewind buffer: the parser reads straight through, so the
+    // exception is still rebuilt - only the text fallback is given up.
+    Map<String, Object> json = new HashMap<String, Object>();
+    json.put(HttpExceptionUtils.ERROR_EXCEPTION_JSON,
+        IllegalStateException.class.getSimpleName());
+    json.put(HttpExceptionUtils.ERROR_CLASSNAME_JSON,
+        IllegalStateException.class.getName());
+    json.put(HttpExceptionUtils.ERROR_MESSAGE_JSON,
+        "x".repeat(64 * 1024));
+    Map<String, Object> response = new HashMap<String, Object>();
+    response.put(HttpExceptionUtils.ERROR_JSON, json);
+    String body = new ObjectMapper().writeValueAsString(response);
+    HttpURLConnection conn =
+        connectionReturning(body, "Forbidden", "application/json");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK));
   }
 
   @Test
@@ -211,8 +280,65 @@ public class TestHttpExceptionUtils {
         + "</body>\n</html>\n";
     String detail = HttpExceptionUtils.getResponseDetail(
         connectionReturning(page, "Forbidden"));
-    assertTrue(detail.contains("the real reason"), detail);
-    assertFalse(detail.contains("<"), "markup survived: " + detail);
+    assertEquals("the real reason", detail);
+  }
+
+  /**
+   * Jetty's error page repeats the reason in its title, its heading and its
+   * MESSAGE row, next to the URI, the status and the servlet. The detail is
+   * the MESSAGE row alone - what the reason phrase carried on Jetty 9.4 - not
+   * the whole page flattened into one line.
+   */
+  @Test
+  public void testResponseDetailTakesTheMessageOfAJettyErrorPage()
+      throws Exception {
+    // as served by a NameNode on Jetty 12 for a PUT refused by the CSRF filter
+    String page = "<html>\n<head>\n<meta http-equiv=\"Content-Type\""
+        + " content=\"text/html;charset=ISO-8859-1\"/>\n"
+        + "<title>Error 400 Missing Required Header for CSRF Vulnerability"
+        + " Protection</title>\n</head>\n<body><h2>HTTP ERROR 400 Missing"
+        + " Required Header for CSRF Vulnerability Protection</h2>\n<table>\n"
+        + "<tr><th>URI:</th><td>/webhdfs/v1/tmp/dir</td></tr>\n"
+        + "<tr><th>STATUS:</th><td>400</td></tr>\n"
+        + "<tr><th>MESSAGE:</th><td>Missing Required Header for CSRF"
+        + " Vulnerability Protection</td></tr>\n"
+        + "<tr><th>SERVLET:</th><td>webservices-driver</td></tr>\n"
+        + "</table>\n\n</body>\n</html>\n";
+    assertEquals("Missing Required Header for CSRF Vulnerability Protection",
+        HttpExceptionUtils.getResponseDetail(
+            connectionReturning(page, "Bad Request", "text/html")));
+
+    // validateResponse, which rewinds the body after the JSON parse fails,
+    // reports the same text
+    HttpURLConnection conn =
+        connectionReturning(page, "Bad Request", "text/html");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
+    LambdaTestUtils.interceptAndValidateMessageContains(IOException.class,
+        Arrays.asList("message [Missing Required Header for CSRF"
+            + " Vulnerability Protection]"),
+        () -> HttpExceptionUtils.validateResponse(conn,
+            HttpURLConnection.HTTP_OK));
+  }
+
+  @Test
+  public void testResponseDetailUnescapesTheMessage() throws Exception {
+    String page = "<table><tr><th>MESSAGE:</th>"
+        + "<td>User &lt;dr.who&gt; can&#39;t &amp; won&#39;t</td></tr></table>";
+    assertEquals("User <dr.who> can't & won't",
+        HttpExceptionUtils.getResponseDetail(
+            connectionReturning(page, "Forbidden", "text/html")));
+  }
+
+  /** A page with no MESSAGE row, another container's, is still stripped. */
+  @Test
+  public void testResponseDetailStripsAPageWithoutAMessageRow()
+      throws Exception {
+    String page = "<html><body><h1>HTTP Status 403 - Forbidden</h1>"
+        + "<p><b>Message</b> Anonymous requests are disallowed</p>"
+        + "</body></html>";
+    assertEquals("HTTP Status 403 - Forbidden Message Anonymous requests are"
+        + " disallowed", HttpExceptionUtils.getResponseDetail(
+            connectionReturning(page, "Forbidden", "text/html")));
   }
 
   @Test
