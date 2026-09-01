@@ -23,6 +23,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.BufferedInputStream;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -136,6 +138,11 @@ public class HttpExceptionUtils {
    * <p>
    * <b>NOTE:</b> this method will throw the deserialized exception even if not
    * declared in the <code>throws</code> of the method signature.
+   * <p>
+   * When the response does not carry the JSON envelope - a container error
+   * page, say - the detail is taken from the body via
+   * {@link #getResponseDetail}, because that is where a servlet's reason now
+   * is: Jetty 12 no longer puts one in the HTTP reason phrase.
    *
    * @param conn the <code>HttpURLConnection</code>.
    * @param expectedStatus the expected HTTP status code.
@@ -149,8 +156,12 @@ public class HttpExceptionUtils {
       Exception toThrow;
       InputStream es = null;
       try {
-        es = conn.getErrorStream();
-        Map json = JsonSerialization.mapReader().readValue(es);
+        InputStream raw = conn.getErrorStream();
+        if (raw != null) {
+          es = new BufferedInputStream(raw);
+          es.mark(ERROR_BODY_REWIND_LIMIT);
+        }
+        Map json = JsonSerialization.mapReader().readValue(shielded(es));
         json = (Map) json.get(ERROR_JSON);
         String exClass = (String) json.get(ERROR_CLASSNAME_JSON);
         String exMsg = (String) json.get(ERROR_MESSAGE_JSON);
@@ -177,7 +188,7 @@ public class HttpExceptionUtils {
       } catch (Exception ex) {
         toThrow = new IOException(String.format(
             "HTTP status [%d], message [%s], URL [%s], exception [%s]",
-            conn.getResponseCode(), conn.getResponseMessage(), conn.getURL(),
+            conn.getResponseCode(), rewoundDetail(es, conn), conn.getURL(),
             ex.toString()), ex);
       } finally {
         if (es != null) {
@@ -194,6 +205,17 @@ public class HttpExceptionUtils {
 
   /** How much of a failed response body is worth quoting back. */
   private static final int MAX_RESPONSE_DETAIL_CHARS = 4096;
+
+  /**
+   * How much of an error body {@link #validateResponse} keeps buffered so it
+   * can be rewound and read as text once the JSON parse has failed. Sized to
+   * hold {@link #MAX_RESPONSE_DETAIL_CHARS} characters of any UTF-8 body. A
+   * body longer than this still parses - the reader runs straight through it -
+   * it just cannot be rewound, which leaves the reason phrase as the fallback,
+   * as it was before.
+   */
+  private static final int ERROR_BODY_REWIND_LIMIT =
+      4 * MAX_RESPONSE_DETAIL_CHARS;
 
   /**
    * Describes why a request failed, preferring the response body over the HTTP
@@ -234,12 +256,64 @@ public class HttpExceptionUtils {
     if (!body.isEmpty()) {
       return body;
     }
+    return responsePhrase(conn);
+  }
+
+  /**
+   * Describes a failure whose body has already been read - and failed - as the
+   * JSON envelope. The body is the only place a servlet's reason can be now,
+   * so rewind and read it as text. The envelope guard {@link
+   * #getResponseDetail} applies does not belong here: nothing that parsed as
+   * the envelope reaches this point, so there is no envelope to protect.
+   *
+   * @param es the buffered error stream, marked at its start, or null
+   * @param conn the connection it came from
+   * @return a description of the failure, never null
+   */
+  private static String rewoundDetail(InputStream es, HttpURLConnection conn) {
+    if (es != null) {
+      try {
+        es.reset();
+        String body = toPlainText(readCapped(es));
+        if (!body.isEmpty()) {
+          return body;
+        }
+      } catch (IOException ex) {
+        // read too far to rewind: fall through to the reason phrase
+      }
+    }
+    return responsePhrase(conn);
+  }
+
+  /**
+   * The HTTP reason phrase, or "" when there is none. Since Jetty 12 this is
+   * always the canonical text for the status code.
+   */
+  private static String responsePhrase(HttpURLConnection conn) {
     try {
       String phrase = conn.getResponseMessage();
       return phrase == null ? "" : phrase;
     } catch (IOException ex) {
       return "";
     }
+  }
+
+  /**
+   * Hides {@link InputStream#close()} from a reader that would otherwise close
+   * the stream on its way out. The JSON reader closes its source even when the
+   * parse failed, and a closed stream can no longer be rewound and read as
+   * text. The caller keeps ownership and closes the real stream itself.
+   */
+  private static InputStream shielded(InputStream in) {
+    if (in == null) {
+      return null;
+    }
+    return new FilterInputStream(in) {
+      @Override
+      public void close() {
+        // the caller owns the stream
+      }
+    };
   }
 
   /**
