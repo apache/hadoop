@@ -90,8 +90,8 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
-import org.eclipse.jetty.ee8.nested.ErrorHandler;
 import org.eclipse.jetty.ee8.nested.SessionHandler;
+import org.eclipse.jetty.ee8.servlet.ErrorPageErrorHandler;
 import org.eclipse.jetty.ee8.servlet.FilterHolder;
 import org.eclipse.jetty.ee8.servlet.FilterMapping;
 import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
@@ -811,7 +811,10 @@ public final class HttpServer2 implements FilterContainer {
     // because the detail also travelled in the reason phrase, which Jetty 12
     // no longer puts on the wire, and losing both leaves a client with nothing
     // but the status code.
-    ErrorHandler errorHandler = new ErrorHandler() {
+    // Subclasses the handler a WebAppContext installs for itself, so that
+    // <error-page> and <exception-type> mappings from a webapp's web.xml keep
+    // working; a plain ErrorHandler here would silently drop them.
+    ErrorPageErrorHandler errorHandler = new ErrorPageErrorHandler() {
       @Override
       public boolean errorPageForMethod(String method) {
         return true;
