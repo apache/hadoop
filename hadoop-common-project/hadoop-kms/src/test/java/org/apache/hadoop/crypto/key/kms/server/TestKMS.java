@@ -33,6 +33,10 @@ import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.KMSDelegationToken;
 import org.apache.hadoop.crypto.key.kms.LoadBalancingKMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.ValueQueue;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.server.AuthenticationToken;
+import org.apache.hadoop.security.authentication.util.SignerException;
+import org.apache.hadoop.security.token.delegation.web.PseudoDelegationTokenAuthenticationHandler;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
@@ -61,6 +65,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.security.auth.login.AppConfigurationEntry;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -91,6 +97,8 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -1431,6 +1439,74 @@ public class TestKMS {
             return null;
           }
         });
+  }
+
+  /**
+   * Refuses one request, once armed, with the reason an invalid signature
+   * produces, so that a test can drive the branch of KMSClientProvider's retry
+   * that reads it.
+   * <p>
+   * The refusal is thrown from managementOperation rather than from
+   * authenticate because authenticate is reached only by a request that
+   * carries no valid token, and such a request is answered 401, not 403. An
+   * AuthenticationException out of managementOperation is what makes
+   * AuthenticationFilter answer 403 - with the reason in the body only.
+   */
+  public static class FailWhenArmedAuthenticationHandler
+      extends PseudoDelegationTokenAuthenticationHandler {
+
+    private static final AtomicBoolean ARMED = new AtomicBoolean();
+    private static final AtomicInteger REFUSALS = new AtomicInteger();
+
+    @Override
+    public boolean managementOperation(AuthenticationToken token,
+        HttpServletRequest request, HttpServletResponse response)
+        throws IOException, AuthenticationException {
+      if (ARMED.compareAndSet(true, false)) {
+        REFUSALS.incrementAndGet();
+        throw new AuthenticationException(
+            new SignerException("Invalid signature"));
+      }
+      return super.managementOperation(token, request, response);
+    }
+  }
+
+  @Test
+  public void testKMSAuthFailureRetryOn403() throws Exception {
+    // The reason for a refusal reaches the client in the response body, not in
+    // the HTTP reason phrase: Jetty 12 never puts a phrase on the wire. A
+    // client that reads only the phrase sees "Forbidden", fails to recognise
+    // an authentication failure, and gives up without re-authenticating.
+    Configuration conf = new Configuration();
+    File confDir = getTestDir();
+    conf = createBaseKMSConf(confDir, conf);
+    conf.set("hadoop.kms.authentication.type",
+        FailWhenArmedAuthenticationHandler.class.getName());
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k1.ALL", "*");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k2.ALL", "*");
+    writeConf(confDir, conf);
+    FailWhenArmedAuthenticationHandler.ARMED.set(false);
+    FailWhenArmedAuthenticationHandler.REFUSALS.set(0);
+
+    runServer(null, null, confDir, new KMSCallable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        final Configuration conf = new Configuration();
+        conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 128);
+        final URI uri = createKMSUri(getKMSUrl());
+        KeyProvider kp = createProvider(uri, conf);
+        // Establish a token first, so the refusal below is the only thing
+        // standing between the client and a successful call.
+        kp.createKey("k1", new KeyProvider.Options(conf));
+
+        FailWhenArmedAuthenticationHandler.ARMED.set(true);
+        // Succeeds only if the 403 was recognised and the call retried.
+        kp.createKey("k2", new KeyProvider.Options(conf));
+        assertEquals(1, FailWhenArmedAuthenticationHandler.REFUSALS.get(),
+            "the armed request should have been refused exactly once");
+        return null;
+      }
+    });
   }
 
   @Test

@@ -31,6 +31,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * The {@link AuthenticatedURL} class enables the use of the JDK {@link URL} class
@@ -450,10 +452,8 @@ public class AuthenticatedURL {
             && (n = es.read(body, read, body.length - read)) != -1) {
           read += n;
         }
-        // A container renders sendError as an HTML page; the reason is in
-        // there among the markup, which is no use in a one-line message.
-        String text = new String(body, 0, read, StandardCharsets.UTF_8)
-            .replaceAll("(?s)<[^>]*>", " ").replaceAll("\\s+", " ").trim();
+        String text = toPlainText(
+            new String(body, 0, read, StandardCharsets.UTF_8));
         if (!text.isEmpty()) {
           return text;
         }
@@ -472,6 +472,39 @@ public class AuthenticatedURL {
   private static boolean isJson(String contentType) {
     return contentType != null
         && contentType.trim().toLowerCase().startsWith(APPLICATION_JSON_MIME);
+  }
+
+  /**
+   * The MESSAGE row of the error page Jetty renders for sendError - the same
+   * on 9.4 and on 12 - which holds the reason and nothing else.
+   */
+  private static final Pattern ERROR_PAGE_MESSAGE = Pattern.compile(
+      "<th>\\s*MESSAGE:\\s*</th>\\s*<td>(.*?)</td>",
+      Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
+  /**
+   * Reduces a response body to something readable in a one-line message. A
+   * container renders sendError as an HTML page, so the reason arrives buried
+   * in markup. From Jetty's error page take the message row alone, which is
+   * the text the reason phrase used to carry; from any other page strip the
+   * markup.
+   * <p>
+   * Kept in step with {@code HttpExceptionUtils.toPlainText}, which does the
+   * same job for the same bodies one module up. The duplication is forced:
+   * hadoop-common depends on this module, not the other way round.
+   */
+  private static String toPlainText(String body) {
+    Matcher message = ERROR_PAGE_MESSAGE.matcher(body);
+    String text = message.find() && !message.group(1).trim().isEmpty()
+        ? message.group(1) : body;
+    if (text.indexOf('<') >= 0) {
+      text = text.replaceAll("(?s)<(script|style)\\b.*?</\\1>", " ")
+          .replaceAll("(?s)<[^>]*>", " ");
+    }
+    text = text.replace("&lt;", "<").replace("&gt;", ">")
+        .replace("&quot;", "\"").replace("&#39;", "'")
+        .replace("&amp;", "&");
+    return text.replaceAll("\\s+", " ").trim();
   }
 
   /** The reason phrase, or null if it cannot be read. */
