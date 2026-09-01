@@ -183,10 +183,16 @@ public class TestHttpExceptionUtils {
 
   private static HttpURLConnection connectionReturning(String body,
       String phrase) throws IOException {
+    return connectionReturning(body, phrase, null);
+  }
+
+  private static HttpURLConnection connectionReturning(String body,
+      String phrase, String contentType) throws IOException {
     HttpURLConnection conn = mock(HttpURLConnection.class);
     when(conn.getErrorStream()).thenReturn(body == null ? null
         : new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)));
     when(conn.getResponseMessage()).thenReturn(phrase);
+    when(conn.getContentType()).thenReturn(contentType);
     return conn;
   }
 
@@ -221,5 +227,39 @@ public class TestHttpExceptionUtils {
   public void testResponseDetailIsNeverNull() throws Exception {
     assertEquals("", HttpExceptionUtils.getResponseDetail(
         connectionReturning(null, null)));
+  }
+
+  /**
+   * A refusal carrying the JSON envelope is reported by its reason phrase, not
+   * by the envelope. Such a response is sent with setStatus rather than
+   * sendError - see {@link HttpExceptionUtils#createServletExceptionResponse}
+   * - so it never had a reason of its own in the phrase, and quoting the JSON
+   * back would replace a readable "Forbidden" with a line of markup. Callers
+   * that want what is inside it use validateResponse.
+   */
+  @Test
+  public void testResponseDetailLeavesTheJsonEnvelopeAlone() throws Exception {
+    String envelope = "{\"RemoteException\":{\"message\":\"User: client is not"
+        + " allowed to impersonate foo1\",\"exception\":\"AuthorizationException\","
+        + "\"javaClassName\":\"org.apache.hadoop.security.authorize."
+        + "AuthorizationException\"}}";
+
+    assertEquals("Forbidden", HttpExceptionUtils.getResponseDetail(
+        connectionReturning(envelope, "Forbidden", "application/json")));
+    // the header may carry parameters
+    assertEquals("Forbidden", HttpExceptionUtils.getResponseDetail(
+        connectionReturning(envelope, "Forbidden",
+            "application/json; charset=utf-8")));
+  }
+
+  /**
+   * A body that is not JSON is still preferred, which is the case the reader
+   * exists for: Jetty 12 puts what sendError was given in the body and leaves
+   * the phrase canonical.
+   */
+  @Test
+  public void testResponseDetailStillPrefersANonJsonBody() throws Exception {
+    assertEquals("the real reason", HttpExceptionUtils.getResponseDetail(
+        connectionReturning("the real reason", "Forbidden", "text/plain")));
   }
 }
