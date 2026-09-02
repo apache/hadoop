@@ -53,7 +53,8 @@ public class ITestS3ADeleteNonEmptyDirectoryCapability extends
 
   /**
    * Test that when the option is enabled, the capability is true.
-   * Creates a new S3AFileSystem with the option set and verifies the capability.
+   * Creates a new S3AFileSystem with the option set and verifies the
+   * capability.
    */
   @Test
   public void testCapabilityWhenEnabled() throws Throwable {

@@ -145,8 +145,10 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
    * @param recursive recursive delete?
    * @param callbacks callback provider
    * @param pageSize size of delete pages
-   * @param dirOperationsPurgeUploads Do directory operations purge pending uploads?
-   * @param deleteNonEmptyDirectoryEnabled use single delete for non-empty dirs when supported
+   * @param dirOperationsPurgeUploads Do directory operations purge pending
+   *        uploads?
+   * @param deleteNonEmptyDirectoryEnabled use single delete for non-empty dirs
+   *        when supported
    */
   public DeleteOperation(final StoreContext context,
       final S3AFileStatus status,
@@ -327,8 +329,8 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
       maybeAwaitCompletion(deleteFuture);
       uploadsAborted = waitForCompletionIgnoringExceptions(abortUploads);
     }
-    LOG.debug("Delete \"{}\" completed; deleted {} objects and aborted {} uploads", path,
-        filesDeleted, uploadsAborted.orElse(0L));
+    LOG.debug("Delete \"{}\" completed; deleted {} objects and aborted {} uploads",
+        path, filesDeleted, uploadsAborted.orElse(0L));
   }
 
   /**
