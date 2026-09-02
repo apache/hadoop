@@ -48,6 +48,7 @@ import org.apache.hadoop.security.SecurityUtil.TruststoreKeystore;
 import org.apache.hadoop.security.authentication.util.ZookeeperClient;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
+import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.security.SecurityUtil.getServerPrincipal;
 import static org.apache.hadoop.util.Time.now;
@@ -81,6 +82,10 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       + "zkConnectionTimeout";
   public static final String ZK_DTSM_ZK_SHUTDOWN_TIMEOUT = ZK_CONF_PREFIX
       + "zkShutdownTimeout";
+  // Max time in ms to wait for the key/token cache initial load on startup,
+  // 0 or negative waits indefinitely.
+  public static final String ZK_DTSM_ZK_CACHE_INIT_TIMEOUT = ZK_CONF_PREFIX
+      + "zkCacheInitTimeout";
   public static final String ZK_DTSM_ZNODE_WORKING_PATH = ZK_CONF_PREFIX
       + "znodeWorkingPath";
   public static final String ZK_DTSM_ZK_AUTH_TYPE = ZK_CONF_PREFIX
@@ -113,6 +118,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   public static final int ZK_DTSM_ZK_SESSION_TIMEOUT_DEFAULT = 10000;
   public static final int ZK_DTSM_ZK_CONNECTION_TIMEOUT_DEFAULT = 10000;
   public static final int ZK_DTSM_ZK_SHUTDOWN_TIMEOUT_DEFAULT = 10000;
+  public static final int ZK_DTSM_ZK_CACHE_INIT_TIMEOUT_DEFAULT = 0;
   public static final String ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT = "zkdtsm";
   // By default, increase seq number by 100 each time to reduce overflow
   // speed of znode dataVersion which is 32-integer now.
@@ -120,8 +126,6 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   private static final Logger LOG = LoggerFactory
       .getLogger(ZKDelegationTokenSecretManager.class);
-
-  private static final long CACHE_INITIALIZED_TIMEOUT_SECONDS = 10;
 
   private static final String JAAS_LOGIN_ENTRY_NAME =
       "ZKDelegationTokenSecretManagerClient";
@@ -154,6 +158,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private CuratorCacheBridge keyCache;
   private CuratorCacheBridge tokenCache;
   private final int seqNumBatchSize;
+  private final int cacheInitTimeoutMs;
   private int currentSeqNum;
   private int currentMaxSeqNum;
 
@@ -172,6 +177,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT);
     isTokenWatcherEnabled = conf.getBoolean(ZK_DTSM_TOKEN_WATCHER_ENABLED,
         ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT);
+    cacheInitTimeoutMs = conf.getInt(ZK_DTSM_ZK_CACHE_INIT_TIMEOUT,
+        ZK_DTSM_ZK_CACHE_INIT_TIMEOUT_DEFAULT);
     
     String workPath = conf.get(ZK_DTSM_ZNODE_WORKING_PATH, ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT);
     String nameSpace = workPath + "/" + ZK_DTSM_NAMESPACE;
@@ -244,6 +251,23 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   @Override
   public void startThreads() throws IOException {
+    // Fail fast so the cleanup below never tears down a running instance.
+    Preconditions.checkState(!isRunning(), "Secret manager is already running");
+    try {
+      doStartThreads();
+    } catch (IOException | RuntimeException e) {
+      // The caller does not invoke stopThreads() after a failed start, so
+      // release the caches, counters and Curator client here.
+      try {
+        stopThreads();
+      } catch (RuntimeException ce) {
+        e.addSuppressed(ce);
+      }
+      throw e;
+    }
+  }
+
+  private void doStartThreads() throws IOException {
     if (!isExternalClient) {
       try {
         zkClient.start();
@@ -412,9 +436,14 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private void awaitCacheInitialized(CountDownLatch initialized,
       String cacheName) throws IOException {
     try {
-      if (!initialized.await(CACHE_INITIALIZED_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-        throw new IOException("Timed out waiting for " + cacheName
-            + " cache initialization");
+      if (cacheInitTimeoutMs > 0) {
+        if (!initialized.await(cacheInitTimeoutMs, TimeUnit.MILLISECONDS)) {
+          throw new IOException("Timed out after " + cacheInitTimeoutMs
+              + " ms waiting for " + cacheName + " cache initialization, "
+              + "consider increasing " + ZK_DTSM_ZK_CACHE_INIT_TIMEOUT);
+        }
+      } else {
+        initialized.await();
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -515,8 +544,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   private void createPersistentNode(String nodePath) throws Exception {
     try {
-      // Pass empty data explicitly; Curator 5.2.0+ defaults data-less creates
-      // to the local address, which breaks parsing of the container nodes.
+      // Store empty data instead of Curator's default (the local address);
+      // HADOOP-17835 (3.4.0): CuratorCache includes the root node in the cache.
       zkClient.create().withMode(CreateMode.PERSISTENT).forPath(nodePath, new byte[0]);
     } catch (KeeperException.NodeExistsException ne) {
       LOG.debug(nodePath + " znode already exists !!");

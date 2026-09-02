@@ -105,6 +105,7 @@ public class TestZKDelegationTokenSecretManager {
    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH, "testPath");
    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_AUTH_TYPE, "none");
    conf.setLong(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_SHUTDOWN_TIMEOUT, 100);
+   conf.setLong(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CACHE_INIT_TIMEOUT, 10000);
    conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, DAY_IN_SECS);
    conf.setLong(DelegationTokenManager.MAX_LIFETIME, DAY_IN_SECS);
    conf.setLong(DelegationTokenManager.RENEW_INTERVAL, DAY_IN_SECS);
@@ -522,13 +523,6 @@ public class TestZKDelegationTokenSecretManager {
 
     // The good token should be loaded on startup, and removed after expiry.
     id = smNew.decodeTokenIdentifier(token);
-    final AbstractDelegationTokenIdentifier idGood = id;
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        return zksmNew.getTokenInfoFromMemory(idGood) != null;
-      }
-    }, 100, 5000);
     dtinfo = zksmNew.getTokenInfoFromMemory(id);
     assertNotNull(dtinfo, "good dt should be in memory!");
 
