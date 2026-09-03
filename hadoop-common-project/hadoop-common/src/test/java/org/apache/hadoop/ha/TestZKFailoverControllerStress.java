@@ -131,7 +131,7 @@ public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
     long st = Time.now();
     while (Time.now() - st < runFor) {
       cluster.getTestContext().checkException();
-      serverFactory.closeAll();
+      serverFactory.closeAll(org.apache.zookeeper.server.ServerCnxn.DisconnectReason.CLEAN_UP);
       Thread.sleep(50);
     }
   }

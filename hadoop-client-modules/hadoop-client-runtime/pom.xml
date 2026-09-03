@@ -165,6 +165,7 @@
                       <exclude>org.xerial.snappy:*</exclude>
                     </excludes>
                   </artifactSet>
+                  <shadedArtifactAttached>true</shadedArtifactAttached>
                   <filters>
                     <!-- We need a filter that matches just those things that are included in the api jar -->
                     <filter>
@@ -179,6 +180,13 @@
                       <artifact>*:*</artifact>
                       <excludes>
                         <exclude>**/*.java</exclude>
+                        <exclude>META-INF/*.SF</exclude>
+                        <exclude>META-INF/*.DSA</exclude>
+                        <exclude>META-INF/*.RSA</exclude>
+                        <!-- 新增：丢掉 dnsjava 3.6 的 Multi-Release 条目 -->
+                        <exclude>META-INF/versions/**</exclude>
+                        <!-- 顺手丢掉 dnsjava 的 JDK18+ SPI 声明（JDK8 用不到，且 shade 不 relocate 路径会出问题）-->
+                        <exclude>META-INF/services/java.net.spi.InetAddressResolverProvider</exclude>
                       </excludes>
                     </filter>
                     <!-- We only want one copy of the Localizer class. So long as we keep jasper compiler and runtime on the same version, which one doesn't matter -->

@@ -37,6 +37,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <dependency.locations.enabled>false</dependency.locations.enabled>
         <javascript.test>*Spec</javascript.test>
+        <frontend.skip>true</frontend.skip>
     </properties>
 
     <dependencies>
@@ -267,6 +268,7 @@
                 <artifactId>frontend-maven-plugin</artifactId>
                 <configuration>
                     <workingDirectory>target</workingDirectory>
+                    <skip>${frontend.skip}</skip>
                 </configuration>
                 <executions>
                     <execution>
@@ -455,6 +457,12 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>skip-frontend</id>
+            <properties>
+                <frontend.skip>true</frontend.skip>
+            </properties>
+        </profile>
       <profile>
         <id>parallel-tests</id>
         <build>

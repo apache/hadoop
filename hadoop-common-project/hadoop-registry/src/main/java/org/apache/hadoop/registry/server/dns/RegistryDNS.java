@@ -233,13 +233,8 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       }
       ResolverConfig.refresh();
       ExtendedResolver resolver;
-      try {
         resolver = new ExtendedResolver();
-      } catch (UnknownHostException e) {
-        LOG.error("Can not resolve DNS servers: ", e);
-        return;
-      }
-      for (Resolver check : resolver.getResolvers()) {
+        for (Resolver check : resolver.getResolvers()) {
         if (check instanceof SimpleResolver) {
           InetAddress address = ((SimpleResolver) check).getAddress()
               .getAddress();
@@ -260,9 +255,9 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       }
       StringBuilder message = new StringBuilder();
       message.append("DNS servers: ");
-      if (ResolverConfig.getCurrentConfig().servers() != null) {
-        for (String server : ResolverConfig.getCurrentConfig()
-            .servers()) {
+      List<InetSocketAddress> servers = ResolverConfig.getCurrentConfig().servers();
+      if (servers  != null) {
+        for (InetSocketAddress  server : servers) {
           message.append(server);
           message.append(" ");
         }
@@ -334,8 +329,8 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
         Iterator itor = zone.iterator();
         while (itor.hasNext()) {
           RRset rRset = (RRset) itor.next();
-          Iterator sigs = rRset.sigs();
-          if (!sigs.hasNext()) {
+          List<RRSIGRecord> sigs = rRset.sigs();
+          if (!sigs.isEmpty()) {
             try {
               signSiteRecord(zone, rRset.first());
             } catch (DNSSEC.DNSSECException e) {
@@ -1403,11 +1398,10 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
           response.getHeader().setFlag(Flags.AA);
         }
       } else if (sr.isSuccessful()) {
-        RRset[] rrsets = sr.answers();
+        List<RRset> rrsets = sr.answers();
         LOG.info("found answers {}", rrsets);
-        for (int i = 0; i < rrsets.length; i++) {
-          addRRset(name, response, rrsets[i],
-              Section.ANSWER, flags);
+        for (int i = 0; i < rrsets.size(); i++) {
+          addRRset(name, response, rrsets.get(i), Section.ANSWER, flags);
         }
         addNS(response, zone, flags);
         if (iterations == 0) {
@@ -1515,9 +1509,8 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       }
     }
     if ((flags & FLAG_SIGONLY) == 0) {
-      Iterator it = rrset.rrs();
-      while (it.hasNext()) {
-        Record r = (Record) it.next();
+      List<Record> records = rrset.rrs();
+      for (Record r : records) {             // foreach 遍历
         if (r.getName().isWild() && !name.isWild()) {
           r = r.withName(name);
         }
@@ -1525,9 +1518,8 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       }
     }
     if ((flags & (FLAG_SIGONLY | FLAG_DNSSECOK)) != 0) {
-      Iterator it = rrset.sigs();
-      while (it.hasNext()) {
-        Record r = (Record) it.next();
+      List<RRSIGRecord> sigs = rrset.sigs();
+      for (Record r : sigs) {                   // foreach 遍历
         if (r.getName().isWild() && !name.isWild()) {
           r = r.withName(name);
         }
