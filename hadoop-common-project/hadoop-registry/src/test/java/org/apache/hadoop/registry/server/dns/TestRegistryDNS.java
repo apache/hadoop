@@ -31,6 +31,7 @@ import org.xbill.DNS.CNAMERecord;
 import org.xbill.DNS.DClass;
 import org.xbill.DNS.DNSKEYRecord;
 import org.xbill.DNS.DNSSEC;
+import org.xbill.DNS.EDNSOption;
 import org.xbill.DNS.Flags;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Name;
