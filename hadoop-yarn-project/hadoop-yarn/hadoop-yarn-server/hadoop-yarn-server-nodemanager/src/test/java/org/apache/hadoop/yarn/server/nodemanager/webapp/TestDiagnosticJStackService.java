@@ -61,12 +61,12 @@ public class TestDiagnosticJStackService {
   private static final ApplicationACLsManager MOCK_ACLS_MANAGER =
       mock(ApplicationACLsManager.class);
 
-  private static final NodeManager.NMContext nmContext = new NodeManager.NMContext(
-      null ,null ,null
-      ,MOCK_ACLS_MANAGER ,null ,false ,new Configuration()
+  private static final NodeManager.NMContext NM_CONTEXT = new NodeManager.NMContext(
+      null, null, null,
+          MOCK_ACLS_MANAGER, null, false, new Configuration()
   );
   private static final DiagnosticJStackService DIAGNOSTIC_JSTACK_SERVICE =
-      spy(new DiagnosticJStackService(nmContext));
+      spy(new DiagnosticJStackService(NM_CONTEXT));
 
 
   @Test
@@ -88,7 +88,8 @@ public class TestDiagnosticJStackService {
       HttpServletRequest mockRequest = mock(HttpServletRequest.class);
       when(MOCK_ACLS_MANAGER.isAdmin(any())).thenReturn(true);
 
-      String result = DIAGNOSTIC_JSTACK_SERVICE.collectNodeThreadDump(NUMBER_OF_JSTACKS, mockRequest);
+      String result =
+          DIAGNOSTIC_JSTACK_SERVICE.collectNodeThreadDump(NUMBER_OF_JSTACKS, mockRequest);
 
       assertEquals(NUMBER_OF_JSTACKS, mockedConstruction.constructed().size(),
           "ShellCommandExecutor should be instantiated relative to Number of JStacks");
@@ -114,7 +115,7 @@ public class TestDiagnosticJStackService {
     List<Long> pids = List.of(23L, 12L, 531L);
 
     Application mockApp = mock(Application.class);
-    nmContext.getApplications().put(APPLICATION_ID, mockApp);
+    NM_CONTEXT.getApplications().put(APPLICATION_ID, mockApp);
 
     when(MOCK_ACLS_MANAGER.checkAccess(any(), any(), any(), any())).thenReturn(true);
 
@@ -138,7 +139,7 @@ public class TestDiagnosticJStackService {
 
       HttpServletRequest mockRequest = mock(HttpServletRequest.class);
       String result = DIAGNOSTIC_JSTACK_SERVICE
-        .collectApplicationThreadDump(APPLICATION_ID_STR, NUMBER_OF_JSTACKS, mockRequest);
+          .collectApplicationThreadDump(APPLICATION_ID_STR, NUMBER_OF_JSTACKS, mockRequest);
 
       assertEquals(pids.size()*NUMBER_OF_JSTACKS, mockedConstruction.constructed().size(),
           "ShellCommandExecutor should be instantiated for each PID time Number Of JStacks");
@@ -157,7 +158,7 @@ public class TestDiagnosticJStackService {
       throw new RuntimeException(e);
     }
 
-    nmContext.getApplications().remove(APPLICATION_ID);
+    NM_CONTEXT.getApplications().remove(APPLICATION_ID);
     // Clean up to avoid side effects on another test
 
   }
@@ -167,18 +168,19 @@ public class TestDiagnosticJStackService {
   public void testCollectApplicationThreadDumpWhenProcessIdNotAlive() throws IOException {
     int numJStacks = 3;
     Application mockApp = mock(Application.class);
-    nmContext.getApplications().put(APPLICATION_ID, mockApp);
+    NM_CONTEXT.getApplications().put(APPLICATION_ID, mockApp);
 
     when(MOCK_ACLS_MANAGER.checkAccess(any(), any(), any(), any())).thenReturn(true);
 
     Map<ContainerId, List<Long>> fakeContainerPids = Map.of(CONTAINER_ID, List.of(23L));
 
-    doReturn(fakeContainerPids).when(DIAGNOSTIC_JSTACK_SERVICE).getApplicationContainerPids(mockApp);
+    doReturn(fakeContainerPids).when(DIAGNOSTIC_JSTACK_SERVICE)
+        .getApplicationContainerPids(mockApp);
 
     HttpServletRequest mockRequest = mock(HttpServletRequest.class);
 
     String result = DIAGNOSTIC_JSTACK_SERVICE
-      .collectApplicationThreadDump(APPLICATION_ID_STR, numJStacks, mockRequest);
+        .collectApplicationThreadDump(APPLICATION_ID_STR, numJStacks, mockRequest);
 
     assertNotNull(result);
     assertTrue(result.contains("Thread Dumps for ContainerId: " + CONTAINER_ID_STR),
@@ -186,7 +188,7 @@ public class TestDiagnosticJStackService {
     assertTrue(result.contains("Status: Skipped Process with PID"),
         "Since we don't mock ProcessHandle.of to return non empty it considers this PID is dead");
 
-    nmContext.getApplications().remove(APPLICATION_ID);
+    NM_CONTEXT.getApplications().remove(APPLICATION_ID);
     // Clean up to avoid side effects on another test
 
   }
