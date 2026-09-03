@@ -1745,6 +1745,16 @@
 </property>
 
 <property>
+  <name>dfs.datanode.read.ahead.cache.bytes.threshold</name>
+  <value>262144</value>
+  <description>
+        Minimum read length, in bytes, for applying DataNode-wide read-ahead
+        and drop-cache defaults to block reads. Client-specified caching
+        strategies continue to take precedence for shorter reads.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.drop.cache.behind.writes</name>
   <value>false</value>
   <description>
@@ -3954,6 +3964,76 @@
     If it is set to zero or negative value, no buffer size will be set
     explicitly, thus enable tcp auto-tuning on some system.
     The default value is 0.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.write.memory.buffer.enabled</name>
+  <value>false</value>
+  <description>
+    Enables an in-memory DataNode write buffer for new replica-being-written
+    block files. When enabled, packet data is accumulated in a per-block buffer
+    and flushed to disk in larger batches.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.write.memory.buffer.last-replica-only</name>
+  <value>true</value>
+  <description>
+    When the in-memory DataNode write buffer is enabled, restrict the buffered
+    write path to the final DataNode in the write pipeline. Earlier replicas
+    continue to use the standard write path.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.write.memory.buffer.max.capacity.mb</name>
+  <value>-1</value>
+  <description>
+    Maximum DataNode heap-derived capacity, in megabytes, that may be used for
+    active write buffers. A value less than or equal to zero uses a small
+    fraction of the DataNode JVM maximum memory.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.write.memory.buffer.min.volumes</name>
+  <value>0</value>
+  <description>
+    Enables the write-memory-buffer path only when the DataNode has more than
+    this many configured storage volumes. A value of zero disables this volume
+    count gate.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.concurrent.flush.mb.per.volume</name>
+  <value>0</value>
+  <description>
+    Per-volume limit, in megabytes, used to derive the number of concurrent
+    write-buffer flushes allowed on a volume. A value of zero disables the
+    flush concurrency limit.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.write.buffer.size.bytes</name>
+  <value>8388608</value>
+  <description>
+    Size, in bytes, of each DataNode in-memory block write buffer. Values below
+    one megabyte are clamped to one megabyte when buffer resources are
+    initialized.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.write.buffer.idle.flush.timeout.ms</name>
+  <value>0</value>
+  <description>
+    If greater than zero, a DataNode using the write-memory-buffer path flushes
+    buffered block data to disk when no packet has been received for this many
+    milliseconds.
   </description>
 </property>
 

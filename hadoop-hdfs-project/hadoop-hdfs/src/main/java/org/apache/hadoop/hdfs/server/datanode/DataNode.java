@@ -144,7 +144,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -178,6 +180,7 @@ import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.net.DomainPeerServer;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
@@ -470,6 +473,8 @@ public class DataNode extends ReconfigurableBase
   private DataSetLockManager dataSetLockManager;
 
   private final ExecutorService xferService;
+  @Nullable
+  private volatile ScheduledExecutorService bufferFlushService;
 
   @Nullable
   private final StorageLocationChecker storageLocationChecker;
@@ -492,6 +497,9 @@ public class DataNode extends ReconfigurableBase
 
   private DataTransferThrottler ecReconstuctReadThrottler;
   private DataTransferThrottler ecReconstuctWriteThrottler;
+  private volatile boolean writeMemoryBufferEnabled;
+  private boolean writeMemoryBufferLastReplicaOnly;
+  private volatile Semaphore maxConcurrentWriteBuffersSemaphore;
 
   /**
    * Creates a dummy DataNode for testing purpose.
@@ -518,6 +526,8 @@ public class DataNode extends ReconfigurableBase
     volumeChecker = new DatasetVolumeChecker(conf, new Timer());
     this.xferService =
         HadoopExecutors.newCachedThreadPool(new Daemon.DaemonFactory());
+    initBufferFlushService(conf);
+    initMemoryBufferConfig(conf);
     double congestionRationTmp = conf.getDouble(DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO,
         DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT);
     this.congestionRatio = congestionRationTmp > 0 ?
@@ -566,6 +576,7 @@ public class DataNode extends ReconfigurableBase
     this.volumeChecker = new DatasetVolumeChecker(conf, new Timer());
     this.xferService =
         HadoopExecutors.newCachedThreadPool(new Daemon.DaemonFactory());
+    initBufferFlushService(conf);
 
     // Determine whether we should try to pass file descriptors to clients.
     if (conf.getBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY,
@@ -610,6 +621,7 @@ public class DataNode extends ReconfigurableBase
             });
 
     initOOBTimeout();
+    initMemoryBufferConfig(conf);
     this.storageLocationChecker = storageLocationChecker;
     long ecReconstuctReadBandwidth = conf.getLongBytes(
         DFSConfigKeys.DFS_DATANODE_EC_RECONSTRUCT_READ_BANDWIDTHPERSEC_KEY,
@@ -625,6 +637,91 @@ public class DataNode extends ReconfigurableBase
         DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT);
     this.congestionRatio = congestionRationTmp > 0 ?
         congestionRationTmp : DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT;
+  }
+
+  private void initBufferFlushService(Configuration conf) {
+    long idleFlushMs = conf.getLong(
+        DFSConfigKeys.DFS_DATANODE_WRITE_BUFFER_IDLE_FLUSH_TIMEOUT_MS,
+        DFSConfigKeys.DFS_DATANODE_WRITE_BUFFER_IDLE_FLUSH_TIMEOUT_MS_DEFAULT);
+    if (idleFlushMs > 0) {
+      LOG.info("Initializing idle buffer-flush service (idle-flush={} ms)",
+          idleFlushMs);
+      this.bufferFlushService =
+          newRemoveOnCancelScheduler("IdleBufferFlush-%d");
+    } else {
+      this.bufferFlushService = null;
+    }
+  }
+
+  /**
+   * Create a daemon {@link ScheduledExecutorService} that removes cancelled
+   * tasks from its delay queue immediately.
+   */
+  private static ScheduledExecutorService newRemoveOnCancelScheduler(
+      String nameFormat) {
+    ScheduledThreadPoolExecutor svc = new ScheduledThreadPoolExecutor(2,
+        new ThreadFactoryBuilder().setNameFormat(nameFormat)
+            .setDaemon(true).build());
+    svc.setRemoveOnCancelPolicy(true);
+    return svc;
+  }
+
+  private void initMemoryBufferConfig(Configuration conf) {
+    boolean configEnabled =
+        conf.getBoolean(DFSConfigKeys.DFS_DATANODE_WRITE_MEMORY_BUFFER_ENABLED,
+            DFSConfigKeys.DFS_DATANODE_WRITE_MEMORY_BUFFER_ENABLED_DEFAULT);
+    int minVolumes = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_WRITE_MEMORY_BUFFER_MIN_VOLUMES,
+        DFSConfigKeys.DFS_DATANODE_WRITE_MEMORY_BUFFER_MIN_VOLUMES_DEFAULT);
+    int volsConfigured = dnConf.getVolsConfigured();
+
+    this.writeMemoryBufferEnabled = configEnabled &&
+        (minVolumes <= 0 || volsConfigured > minVolumes);
+    this.writeMemoryBufferLastReplicaOnly = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_WRITE_MEMORY_BUFFER_LAST_REPLICA_ONLY,
+        DFSConfigKeys.DFS_DATANODE_WRITE_MEMORY_BUFFER_LAST_REPLICA_ONLY_DEFAULT);
+
+    if (configEnabled && !writeMemoryBufferEnabled) {
+      LOG.info(
+          "Write memory buffer is disabled because number of configured "
+              + "volumes ({}) is not greater than minimum required volumes "
+              + "({})",
+          volsConfigured, minVolumes);
+      return;
+    }
+
+    if (writeMemoryBufferEnabled) {
+      initWriteBufferSemaphore(conf);
+      if (writeMemoryBufferLastReplicaOnly) {
+        LOG.info(
+            "{} is enabled; the buffered-write path will only run when this "
+                + "DataNode is the last in the pipeline.",
+            DFSConfigKeys.DFS_DATANODE_WRITE_MEMORY_BUFFER_LAST_REPLICA_ONLY);
+      }
+    }
+  }
+
+  private void initWriteBufferSemaphore(Configuration conf) {
+    int writeMemoryBufferMaxCapacityMB = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_WRITE_MEMORY_BUFFER_MAX_CAPACITY_MB,
+        DFSConfigKeys.DFS_DATANODE_WRITE_MEMORY_BUFFER_MAX_CAPACITY_MB_DEFAULT);
+    int maxWriteBufferCapacity = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_WRITE_BUFFER_SIZE_BYTES,
+        DFSConfigKeys.DFS_DATANODE_WRITE_BUFFER_SIZE_BYTES_DEFAULT);
+    maxWriteBufferCapacity = Math.max(maxWriteBufferCapacity, 1024 * 1024);
+    writeMemoryBufferMaxCapacityMB = writeMemoryBufferMaxCapacityMB > 0
+        ? writeMemoryBufferMaxCapacityMB
+        : (int) ((Runtime.getRuntime().maxMemory() / (1024 * 1024)) / 10);
+    long writeMemoryBufferMaxCapacityBytes =
+        writeMemoryBufferMaxCapacityMB * 1024L * 1024L;
+    int maxConcurrentWrites = Math.max(
+        (int) (writeMemoryBufferMaxCapacityBytes / maxWriteBufferCapacity),
+        1);
+    this.maxConcurrentWriteBuffersSemaphore = new Semaphore(maxConcurrentWrites);
+    LOG.info(
+        "Configuring pooled write buffer with max-concurrent buffers = {}, "
+            + "max-buffer capacity={}MB",
+        maxConcurrentWrites, writeMemoryBufferMaxCapacityMB);
   }
 
   @Override  // ReconfigurableBase
@@ -2596,6 +2693,11 @@ public class DataNode extends ReconfigurableBase
     LOG.info("Waiting up to 30 seconds for transfer threads to complete");
     HadoopExecutors.shutdown(this.xferService, LOG, 15L, TimeUnit.SECONDS);
 
+    if (this.bufferFlushService != null) {
+      HadoopExecutors.shutdown(this.bufferFlushService, LOG, 5L,
+          TimeUnit.SECONDS);
+    }
+
     // wait for all data receiver threads to exit
     if (this.threadGroup != null) {
       int sleepMs = 2;
@@ -4218,6 +4320,14 @@ public class DataNode extends ReconfigurableBase
   }
 
   /**
+   * Returns the DataNode scheduler used by buffered block writers to flush
+   * idle buffers, or null if idle flush is disabled.
+   */
+  public ScheduledExecutorService getBufferFlushService() {
+    return bufferFlushService;
+  }
+
+  /**
    * Allows submission of a disk balancer Job.
    * @param planID  - Hash value of the plan.
    * @param planVersion - Plan version, reserved for future use. We have only
@@ -4387,5 +4497,17 @@ public class DataNode extends ReconfigurableBase
   @VisibleForTesting
   public BlockPoolManager getBlockPoolManager() {
     return blockPoolManager;
+  }
+
+  public boolean isWriteMemoryBufferEnabled() {
+    return writeMemoryBufferEnabled;
+  }
+
+  public boolean isWriteMemoryBufferLastReplicaOnly() {
+    return writeMemoryBufferLastReplicaOnly;
+  }
+
+  public Semaphore getMaxConcurrentWriteBuffers() {
+    return maxConcurrentWriteBuffersSemaphore;
   }
 }
