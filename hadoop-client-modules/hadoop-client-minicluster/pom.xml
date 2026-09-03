@@ -422,7 +422,16 @@
     <!-- skip org.eclipse.jetty.toolchain:jetty-servlet-api because it's in client -->
     <!-- skip jakarta.ws.rs-api:jakarta.ws.rs because it's in client -->
     <!-- Skip commons-logging:commons-logging-api because it looks like nothing actually included it -->
-    <!-- Skip jetty-util because it's in client -->
+    <!-- jetty-util is not in client: hadoop-client-runtime excludes it, along with
+         jetty-server, so that the Jetty classes it ships do not duplicate the ones
+         here. The minicluster is where they belong, and jetty-server already
+         reaches it through hadoop-minicluster. jetty-util is excluded on those
+         same paths, so it is declared here instead. -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-util</artifactId>
+      <optional>true</optional>
+    </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-common</artifactId>
