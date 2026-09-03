@@ -1659,6 +1659,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       DFS_DATANODE_TRANSFER_SOCKET_RECV_BUFFER_SIZE_DEFAULT =
       HdfsConstants.DEFAULT_DATA_SOCKET_SIZE;
 
+  // Timeout for completing an entire block transfer on the DataNode. When no
+  // packet is received for (timeout/2) the stalled transfer is terminated.
+  // Set to 0 (default) or a negative value to disable.
+  public static final String DFS_DATANODE_LAST_PACKET_RECEIVE_TIMEOUT_MS =
+      "dfs.datanode.last.packet.receive.timeout.ms";
+  public static final long DFS_DATANODE_LAST_PACKET_RECEIVE_TIMEOUT_MS_DEFAULT =
+      0;
+
   public static final String
       DFS_DATA_TRANSFER_SERVER_TCPNODELAY =
       "dfs.data.transfer.server.tcpnodelay";

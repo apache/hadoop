@@ -144,6 +144,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -271,6 +272,7 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 import org.slf4j.Logger;
@@ -471,6 +473,11 @@ public class DataNode extends ReconfigurableBase
 
   private final ExecutorService xferService;
 
+  // Shared scheduled executor service for block transfer timeout tasks. Only
+  // initialized if the timeout is configured (lazy initialization).
+  @Nullable
+  private volatile ScheduledExecutorService blockTransferTimeoutService;
+
   @Nullable
   private final StorageLocationChecker storageLocationChecker;
 
@@ -518,6 +525,9 @@ public class DataNode extends ReconfigurableBase
     volumeChecker = new DatasetVolumeChecker(conf, new Timer());
     this.xferService =
         HadoopExecutors.newCachedThreadPool(new Daemon.DaemonFactory());
+
+    // Initialize block transfer timeout service if configured.
+    initBlockTransferTimeoutService(conf);
     double congestionRationTmp = conf.getDouble(DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO,
         DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT);
     this.congestionRatio = congestionRationTmp > 0 ?
@@ -566,6 +576,9 @@ public class DataNode extends ReconfigurableBase
     this.volumeChecker = new DatasetVolumeChecker(conf, new Timer());
     this.xferService =
         HadoopExecutors.newCachedThreadPool(new Daemon.DaemonFactory());
+
+    // Initialize block transfer timeout service if configured.
+    initBlockTransferTimeoutService(conf);
 
     // Determine whether we should try to pass file descriptors to clients.
     if (conf.getBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY,
@@ -2596,6 +2609,12 @@ public class DataNode extends ReconfigurableBase
     LOG.info("Waiting up to 30 seconds for transfer threads to complete");
     HadoopExecutors.shutdown(this.xferService, LOG, 15L, TimeUnit.SECONDS);
 
+    // Shutdown block transfer timeout service.
+    if (this.blockTransferTimeoutService != null) {
+      HadoopExecutors.shutdown(this.blockTransferTimeoutService, LOG, 5L,
+          TimeUnit.SECONDS);
+    }
+
     // wait for all data receiver threads to exit
     if (this.threadGroup != null) {
       int sleepMs = 2;
@@ -4215,6 +4234,38 @@ public class DataNode extends ReconfigurableBase
 
   public Tracer getTracer() {
     return tracer;
+  }
+
+  private void initBlockTransferTimeoutService(Configuration conf) {
+    long timeoutMs = conf.getLong(
+        DFSConfigKeys.DFS_DATANODE_LAST_PACKET_RECEIVE_TIMEOUT_MS,
+        DFSConfigKeys.DFS_DATANODE_LAST_PACKET_RECEIVE_TIMEOUT_MS_DEFAULT);
+    if (timeoutMs > 0) {
+      LOG.info("Initializing block transfer timeout service (timeout: {} ms)",
+          timeoutMs);
+      ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(2,
+          new ThreadFactoryBuilder().setNameFormat("BlockTransferTimeout-%d")
+              .setDaemon(true).build());
+      // Per-block checks are cancelled when a transfer completes; remove the
+      // cancelled futures from the queue immediately (instead of letting them
+      // accumulate until their delay elapses) and do not run delayed tasks
+      // after shutdown.
+      exec.setRemoveOnCancelPolicy(true);
+      exec.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
+      this.blockTransferTimeoutService = exec;
+    } else {
+      this.blockTransferTimeoutService = null;
+    }
+  }
+
+  /**
+   * Returns the shared ScheduledExecutorService for block transfer timeout
+   * tasks. The executor service is initialized at DataNode startup only if the
+   * timeout is configured (&gt; 0).
+   * @return the block transfer timeout service, or null if not configured
+   */
+  public ScheduledExecutorService getBlockTransferTimeoutService() {
+    return blockTransferTimeoutService;
   }
 
   /**

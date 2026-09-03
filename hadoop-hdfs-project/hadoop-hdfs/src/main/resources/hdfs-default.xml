@@ -4839,6 +4839,26 @@
 </property>
 
 <property>
+  <name>dfs.datanode.last.packet.receive.timeout.ms</name>
+  <value>0</value>
+  <description>
+    Timeout in milliseconds for completing an entire block transfer on the
+    DataNode. If no packet is received for (timeout/2) the transfer is treated
+    as stalled and is safely aborted by closing the client socket, which
+    unblocks the stalled receive thread so it can be reclaimed. Data that was
+    already acknowledged to the client is already durable on disk and the
+    replica is left in the RBW state so the NameNode's lease recovery can
+    finalize it without data loss. If a packet is received within (timeout/2)
+    the stream is considered active. The stall is polled every (timeout/2), so a
+    stalled transfer is detected within (timeout/2) to (timeout). Set this well
+    above dfs.datanode.socket.write.timeout / the client socket read timeout so
+    that healthy idle hflush/hsync streams (which send heartbeat packets about
+    every half the socket timeout) are not aborted. Set to 0 or a negative value
+    to disable (default: 0). A typical enabled value is 600000 (10 min).
+  </description>
+</property>
+
+<property>
   <name>dfs.data.transfer.max.packet.size</name>
   <value>16777216</value>
   <description>
