@@ -70,6 +70,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -112,6 +113,23 @@ public class DatanodeManager {
 
   /** Cluster network topology. */
   private final NetworkTopology networktopology;
+
+  /** Configuration retained for building affinity-group topologies. */
+  private final Configuration conf;
+
+  /** Optional affinity manager providing favored DataNodes for block placement. */
+  private DatanodeAffinityManager datanodeAffinityManager;
+
+  /**
+   * {@code "hostname:port"} of DataNodes that currently belong to an affinity
+   * group and have been removed from the default {@link NetworkTopology}.
+   * Maintained by {@link #postAffinityRefresh(Set)} and during incremental
+   * registration. A stable concurrent set mutated in place (never reassigned)
+   * so concurrent add()/remove() from registration and refresh cannot be lost
+   * to a reference swap.
+   */
+  private final Set<String> isolatedAffinityAddresses =
+      ConcurrentHashMap.newKeySet();
 
   /** Host names to datanode descriptors mapping. */
   private final Host2NodesMap host2DatanodeMap = new Host2NodesMap();
@@ -234,6 +252,7 @@ public class DatanodeManager {
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
+    this.conf = conf;
 
     this.useDfsNetworkTopology = conf.getBoolean(
         DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY,
@@ -364,6 +383,9 @@ public class DatanodeManager {
     this.randomNodeOrderEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_RANDOM_NODE_ORDER_ENABLED,
         DFSConfigKeys.DFS_NAMENODE_RANDOM_NODE_ORDER_ENABLED_DEFAULT);
+
+    // Initialise the DatanodeAffinityManager if a class name is configured.
+    initDataNodeAffinityManager(conf);
   }
 
   /**
@@ -492,6 +514,204 @@ public class DatanodeManager {
   /** @return the network topology. */
   public NetworkTopology getNetworkTopology() {
     return networktopology;
+  }
+
+  private void initDataNodeAffinityManager(Configuration conf) {
+    try {
+      String affinityManagerClassName =
+          conf.get(DFSConfigKeys.DFS_DATANODE_AFFINITY_MANAGER_CLASSNAME_KEY);
+      if (StringUtils.isNotBlank(affinityManagerClassName)) {
+        this.datanodeAffinityManager =
+            (DatanodeAffinityManager) ReflectionUtils.newInstance(conf.getClass(
+                DFSConfigKeys.DFS_DATANODE_AFFINITY_MANAGER_CLASSNAME_KEY, null,
+                DatanodeAffinityManager.class), conf);
+        this.datanodeAffinityManager.setDatanodeManager(this);
+        this.datanodeAffinityManager.refresh();
+        LOG.info("DatanodeAffinityManager initialised: {}",
+            affinityManagerClassName);
+      }
+    } catch (Throwable e) {
+      LOG.error("Failed to initialise DatanodeAffinityManager; "
+          + "DataNode affinity will be disabled", e);
+      this.datanodeAffinityManager = null;
+    }
+  }
+
+  @Nullable
+  public DatanodeAffinityManager getDatanodeAffinityManager() {
+    return datanodeAffinityManager;
+  }
+
+  /**
+   * Return a snapshot of all currently known {@link DatanodeDescriptor}s.
+   * Used by {@link DatanodeAffinityManager} implementations to resolve
+   * datanode hostname regex patterns against live cluster nodes.
+   */
+  Collection<DatanodeDescriptor> getAllDatanodes() {
+    synchronized (this) {
+      return new ArrayList<>(datanodeMap.values());
+    }
+  }
+
+  /**
+   * Create a fresh, empty {@link NetworkTopology} for use as a per-group
+   * restricted affinity topology.
+   *
+   * <p>Used by {@link DatanodeAffinityManager} to build per-group restricted
+   * topologies containing only the DataNodes eligible for an affinity group.
+   *
+   * <p><b>Why the group topology must never be a {@link DFSNetworkTopology}:</b>
+   * a per-group topology is populated by {@code add(descriptor)} with the SAME
+   * {@link DatanodeDescriptor} objects that live in the cluster topology. A
+   * {@link DFSNetworkTopology} captures each node's storage-type counts at
+   * {@code add()} time and thereafter maintains them only through the
+   * descriptor's {@code getParent()} back-pointer (storage-report driven
+   * {@code childAddStorage}/{@code childRemoveStorage}). But an affinity node is
+   * deliberately removed from the DEFAULT cluster topology right after it is
+   * added to its group topology (see {@code registerDatanode} /
+   * {@code postAffinityRefresh}), and {@code InnerNodeImpl.remove} nulls the
+   * shared descriptor's parent pointer. With a null parent, later storage
+   * reports can never propagate into the group topology, so a
+   * {@link DFSNetworkTopology} group would freeze whatever counts it had at
+   * {@code add()} time. A DataNode registers (and is added to its group) with an
+   * EMPTY storage map -- storage reports arrive only afterwards -- so the frozen
+   * count is ZERO. Storage-type-gated selection
+   * ({@code DFSNetworkTopology.chooseRandomWithStorageType}) then finds zero
+   * capacity and returns no target, silently breaking group placement after
+   * every NameNode restart (all affinity nodes re-register fresh) until an
+   * operator runs {@code dfsadmin -refreshNodes}.
+   *
+   * <p>So when the cluster uses {@link DFSNetworkTopology}
+   * ({@code dfs.use.dfs.network.topology=true}, the default) we build the group
+   * topology as a PLAIN {@link NetworkTopology} instead: it tracks no storage
+   * counts, and the default placement policy selects a random eligible leaf and
+   * validates the storage type against the LIVE descriptor's storages
+   * ({@code BlockPlacementPolicyDefault.chooseStorage4Block}), which is always
+   * current. Group pools are small, so the marginal cost of the non-storage-aware
+   * random path is negligible, and correctness no longer depends on a
+   * back-pointer that isolation intentionally severs.
+   *
+   * <p>Otherwise ({@code dfs.use.dfs.network.topology=false}) we honor the
+   * configured {@code net.topology.impl} via {@link NetworkTopology#getInstance}.
+   * This is required for a node-group deployment: with
+   * {@code net.topology.impl=NetworkTopologyWithNodeGroup} and
+   * {@code dfs.block.replicator.classname=BlockPlacementPolicyWithNodeGroup},
+   * the per-group placement policy's {@code initialize()} rejects any clusterMap
+   * that is not a {@link org.apache.hadoop.net.NetworkTopologyWithNodeGroup};
+   * hard-coding a plain {@link NetworkTopology} there would make the group policy
+   * construction throw, get swallowed, leave no affinity groups, and silently
+   * fail the isolation feature OPEN. A {@code NetworkTopologyWithNodeGroup}
+   * tracks no storage-type counts, so it is immune to the staleness problem
+   * above.
+   */
+  NetworkTopology createEmptyTopology() throws IOException {
+    try {
+      if (useDfsNetworkTopology) {
+        // Force a plain NetworkTopology: DFSNetworkTopology's captured
+        // storage-type counts would go stale for affinity nodes (see above).
+        return new NetworkTopology();
+      }
+      // Honor net.topology.impl (plain NetworkTopology or a node-group topology)
+      // so a topology-typed replicator's initialize() check passes; these impls
+      // track no storage counts and so are immune to the staleness problem.
+      return NetworkTopology.getInstance(conf);
+    } catch (Exception e) {
+      LOG.warn("Failed to initialize NetworkTopology for affinity group", e);
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * Called by {@link DatanodeAffinityManager#refresh()} after it rebuilds the
+   * affinity-group map.
+   *
+   * <ol>
+   *   <li>Removes newly isolated DataNodes from the default
+   *       {@link NetworkTopology} so the default {@link BlockPlacementPolicy}
+   *       can never select them.</li>
+   *   <li>Re-adds DataNodes that were previously isolated but are no longer
+   *       part of any affinity group.</li>
+   *   <li>Rebuilds the per-group {@link BlockPlacementPolicies} in
+   *       {@link BlockManager}.</li>
+   * </ol>
+   *
+   * @param newAffinityAddresses up-to-date set of {@code "hostname:port"}
+   *        strings belonging to any affinity group (may be empty)
+   */
+  void postAffinityRefresh(Set<String> newAffinityAddresses) {
+    final Collection<DatanodeDescriptor> allDNs = getAllDatanodes();
+
+    // Authoritative, live reconciliation of the default topology against the
+    // affinity membership. For every live DataNode we recompute whether it is
+    // isolated instead of trusting only the point-in-time newAffinityAddresses
+    // snapshot. This closes a concurrent-registration race: a DataNode that
+    // registers *during* DatanodeAffinityManager.internalRefresh() -- after
+    // getAllDatanodes() was snapshotted for the rebuild but before the new
+    // affinity structures are published -- is absent from newAffinityAddresses
+    // and would otherwise be wrongly restored to the default topology (an
+    // isolation leak). Re-matching such a node via onDatanodeRegistered() both
+    // classifies it AND idempotently inserts it into the freshly published
+    // affinity structures, so it is neither leaked into default placement nor
+    // orphaned out of its group.
+    //
+    // isolatedAffinityAddresses is a STABLE concurrent set mutated in place
+    // (never swapped for a new instance): a registration running concurrently
+    // with this refresh may call isolatedAffinityAddresses.add(...), and an
+    // in-place add/remove here guarantees that update is not lost to a
+    // wholesale reference replacement.
+    final Set<String> isolated = this.isolatedAffinityAddresses;
+    for (DatanodeDescriptor dn : allDNs) {
+      String addr = dn.getXferAddrWithHostname();
+      // Always route the LIVE descriptor through onDatanodeRegistered(): it is
+      // idempotent, reconciles a node that registered during the rebuild, AND
+      // swaps a stale descriptor for the live one after a DataNode replacement
+      // (same host:port, new descriptor/UUID). We deliberately do NOT
+      // short-circuit on newAffinityAddresses.contains(addr): that set is keyed
+      // by address, so it cannot detect a descriptor swap and would skip the
+      // topology reconciliation, leaving a dead descriptor selectable. We still
+      // OR in the published-set membership afterwards so a node that registered
+      // mid-refresh -- and is therefore in the freshly published set even if the
+      // live re-match were to miss -- stays isolated. This is an O(nodes x
+      // patterns) pass but runs only on the admin/refresh path, never per block
+      // or per heartbeat.
+      boolean matched = datanodeAffinityManager != null
+          && datanodeAffinityManager.onDatanodeRegistered(dn);
+      boolean nowIsolated = matched || newAffinityAddresses.contains(addr);
+      if (nowIsolated) {
+        // add() returns true only the first time the address is isolated.
+        boolean firstTime = isolated.add(addr);
+        // Remove every affinity-isolated node from the default topology so the
+        // default BlockPlacementPolicy can never select it. Unconditional and
+        // idempotent -- remove() is a no-op when the node is absent -- so it
+        // also re-corrects the rare case where a node that was already isolated
+        // got re-added to the default topology by a concurrent registration
+        // during a torn refresh view.
+        try {
+          networktopology.remove(dn);
+          if (firstTime) {
+            LOG.info("DatanodeManager: removed affinity-isolated DataNode {} "
+                + "from default topology", addr);
+          }
+        } catch (Exception e) {
+          LOG.warn("DatanodeManager: failed to remove affinity-isolated "
+              + "DataNode {} from default topology: {}", addr, e.getMessage());
+        }
+      } else if (isolated.remove(addr)) {
+        // Was isolated but no longer matches any affinity group: restore to the
+        // default topology. remove() returning true gates this so a node that
+        // was never isolated is left untouched.
+        try {
+          networktopology.add(dn);
+          LOG.info("DatanodeManager: restored previously isolated DataNode {} "
+              + "to default topology", addr);
+        } catch (Exception e) {
+          LOG.warn("DatanodeManager: failed to restore DataNode {} to default "
+              + "topology: {}", addr, e.getMessage());
+        }
+      }
+    }
+
+    blockManager.buildAffinityBasedBlockPlacementPolicies();
   }
 
   /** @return the heartbeat manager. */
@@ -887,6 +1107,14 @@ public class DatanodeManager {
       blockManager.removeBlocksAssociatedTo(nodeInfo);
     }
     networktopology.remove(nodeInfo);
+    if (datanodeAffinityManager != null) {
+      // Prune the node from every affinity structure so a stale, unreachable
+      // DataNode is no longer offered as an affinity placement target. Also
+      // drop it from the DatanodeManager-level isolated set so a later
+      // postAffinityRefresh() does not treat its address as still-isolated.
+      datanodeAffinityManager.onDatanodeRemoved(nodeInfo);
+      isolatedAffinityAddresses.remove(nodeInfo.getXferAddrWithHostname());
+    }
     decrementVersionCount(nodeInfo.getSoftwareVersion());
     blockManager.getBlockReportLeaseManager().unregister(nodeInfo);
 
@@ -1270,6 +1498,18 @@ public class DatanodeManager {
           if(shouldCountVersion(nodeS)) {
             decrementVersionCount(nodeS.getSoftwareVersion());
           }
+          // Prune this DataNode's affinity membership under its OLD identity
+          // and network location BEFORE updateRegInfo() mutates the descriptor
+          // in place below. A re-registration can change the transfer address
+          // or the resolved rack; without this, the per-group NetworkTopology
+          // and address sets would keep a stale entry (the new identity is only
+          // add-if-absent'd by onDatanodeRegistered() afterwards). This mirrors
+          // the default-topology remove-before / add-after handling done above.
+          final String oldAffinityAddr = nodeS.getXferAddrWithHostname();
+          if (datanodeAffinityManager != null) {
+            datanodeAffinityManager.onDatanodeRemoved(nodeS);
+            isolatedAffinityAddresses.remove(oldAffinityAddr);
+          }
           nodeS.updateRegInfo(nodeReg);
 
           nodeS.setSoftwareVersion(nodeReg.getSoftwareVersion());
@@ -1297,6 +1537,16 @@ public class DatanodeManager {
           heartbeatManager.register(nodeS);
           incrementVersionCount(nodeS.getSoftwareVersion());
           startAdminOperationIfNecessary(nodeS);
+          if (datanodeAffinityManager != null) {
+            boolean isAffinity =
+                datanodeAffinityManager.onDatanodeRegistered(nodeS);
+            if (isAffinity) {
+              // Remove from the default topology so the default
+              // BlockPlacementPolicy can never select this isolated node.
+              getNetworkTopology().remove(nodeS);
+              isolatedAffinityAddresses.add(nodeS.getXferAddrWithHostname());
+            }
+          }
           success = true;
         } finally {
           if (!success) {
@@ -1335,6 +1585,16 @@ public class DatanodeManager {
         heartbeatManager.updateDnStat(nodeDescr);
         incrementVersionCount(nodeReg.getSoftwareVersion());
         startAdminOperationIfNecessary(nodeDescr);
+        if (datanodeAffinityManager != null) {
+          boolean isAffinity =
+              datanodeAffinityManager.onDatanodeRegistered(nodeDescr);
+          if (isAffinity) {
+            // Remove from the default topology so the default
+            // BlockPlacementPolicy can never select this isolated node.
+            networktopology.remove(nodeDescr);
+            isolatedAffinityAddresses.add(nodeDescr.getXferAddrWithHostname());
+          }
+        }
         success = true;
       } finally {
         if (!success) {
@@ -1364,6 +1624,15 @@ public class DatanodeManager {
    */
   public void refreshNodes(final Configuration conf) throws IOException {
     refreshHostsReader(conf);
+    if (datanodeAffinityManager != null) {
+      try {
+        // refresh() calls postAffinityRefresh(), which handles topology
+        // membership updates and rebuilds per-group BlockPlacementPolicies.
+        datanodeAffinityManager.refresh();
+      } catch (Exception e) {
+        LOG.error("Failed to refresh DatanodeAffinityManager", e);
+      }
+    }
     // processExtraRedundancyBlocksOnInService involves FS in stopMaintenance and stopDecommission.
     namesystem.writeLock(RwLockMode.GLOBAL);
     try {
