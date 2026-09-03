@@ -35,9 +35,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAffinityManager;
 import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,6 +159,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   private boolean showReplicaDetails = false;
   private boolean showUpgradeDomains = false;
   private boolean showMaintenanceState = false;
+  private boolean showFavoredNodes = false;
   private long staleInterval;
   private Tracer tracer;
   private String auditSource;
@@ -269,6 +273,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         this.blockIds = pmap.get("blockId")[0].split(" ");
       } else if (key.equals("replicate")) {
         this.doReplicate = true;
+      } else if (key.equals("favorednodes")) {
+        this.showFavoredNodes = true;
       }
     }
     this.auditSource = (blockIds != null)
@@ -482,7 +488,15 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         }
 
       } else {
-        out.print("\n\nPath '" + path + "' " + NONEXISTENT_STATUS);
+        if (showFavoredNodes) {
+          // Path need not exist in HDFS: DatanodeAffinityManager works purely
+          // on path-regex matching, so no file-system lookup is needed.
+          printFavoredNodes(path);
+          out.print("\n\nThe filesystem under path '" + path + "' "
+              + HEALTHY_STATUS);
+        } else {
+          out.print("\n\nPath '" + path + "' " + NONEXISTENT_STATUS);
+        }
       }
     } catch (Exception e) {
       String errMsg = "Fsck on path '" + path + "' " + FAILURE_STATUS;
@@ -547,6 +561,61 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     final Result r = file.getErasureCodingPolicy() != null ? ecRes: replRes;
     collectFileSummary(path, file, r, blocks);
     collectBlocksSummary(parent, file, r, blocks);
+    if (showFavoredNodes) {
+      printFavoredNodes(path);
+    }
+  }
+
+  /**
+   * Print the affinity-based datanodes for {@code path} by iterating
+   * {@link DatanodeAffinityManager#getFileRegexToDataNodeMap()} and collecting
+   * entries whose regex key matches the given path.
+   *
+   * <p>Output format:
+   * <pre>
+   *   Affinity favored nodes (3): host1:9866, host2:9866, host3:9866
+   *   Affinity favored nodes: none
+   *   Affinity favored nodes: DatanodeAffinityManager not configured
+   * </pre>
+   */
+  private void printFavoredNodes(String path) {
+    DatanodeAffinityManager affinityManager =
+        blockManager.getDatanodeManager().getDatanodeAffinityManager();
+    if (affinityManager == null) {
+      out.println("  Affinity favored nodes: DatanodeAffinityManager "
+          + "not configured");
+      return;
+    }
+    // Collect nodes from every regex key that matches the given path.
+    Set<String> seen = new HashSet<>();
+    List<String> favoredNodes = new ArrayList<>();
+    for (Map.Entry<String, List<String>> entry :
+        affinityManager.getFileRegexToDataNodeMap().entrySet()) {
+      // Guard against a malformed regex key: a single bad key must not abort
+      // the whole fsck for the path.  Keys are validated on refresh, but be
+      // defensive in case the map ever contains an uncompilable pattern.
+      Pattern keyPattern;
+      try {
+        keyPattern = Pattern.compile(entry.getKey());
+      } catch (PatternSyntaxException e) {
+        LOG.warn("fsck -favoredNodes: skipping invalid affinity regex '{}': {}",
+            entry.getKey(), e.getMessage());
+        continue;
+      }
+      if (keyPattern.matcher(path).find()) {
+        for (String addr : entry.getValue()) {
+          if (seen.add(addr)) {
+            favoredNodes.add(addr);
+          }
+        }
+      }
+    }
+    if (favoredNodes.isEmpty()) {
+      out.println("  Affinity favored nodes: none");
+    } else {
+      out.println("  Affinity favored nodes (" + favoredNodes.size() + "): "
+          + String.join(", ", favoredNodes));
+    }
   }
 
   private void checkDir(String path, Result replRes, Result ecRes) throws IOException {

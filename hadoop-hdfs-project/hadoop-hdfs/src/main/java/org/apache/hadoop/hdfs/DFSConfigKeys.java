@@ -763,6 +763,22 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY;
   public static final String  DFS_NAMENODE_HOSTS_PROVIDER_CLASSNAME_KEY =
       "dfs.namenode.hosts.provider.classname";
+  // DataNode affinity manager configuration keys
+  public static final String DFS_DATANODE_AFFINITY_MANAGER_CLASSNAME_KEY =
+      "dfs.datanode.affinity.manager.classname";
+  // File-based implementation: path to the JSON affinity groups file
+  public static final String DFS_DATANODE_AFFINITY_FILE_PATH_KEY =
+      "dfs.datanode.affinity.file.path";
+  // When true, a write to a path that matches an affinity group MUST be placed
+  // within that group: if the group cannot satisfy the required replicas the
+  // write fails (fail-closed) instead of falling back to the shared pool. When
+  // false (default) placement falls back to the default policy for
+  // availability. Fail-closed preserves strict tenant isolation.
+  public static final String DFS_NAMENODE_AFFINITY_STRICT_ISOLATION_KEY =
+      "dfs.namenode.affinity.strict.isolation.enabled";
+  public static final boolean DFS_NAMENODE_AFFINITY_STRICT_ISOLATION_DEFAULT =
+      false;
+
   public static final String  DFS_HOSTS = "dfs.hosts";
   public static final String  DFS_HOSTS_EXCLUDE = "dfs.hosts.exclude";
   public static final String  DFS_HOSTS_TIMEOUT = "dfs.hosts.timeout";

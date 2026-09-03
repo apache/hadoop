@@ -4240,6 +4240,68 @@
 </property>
 
 <property>
+  <name>dfs.datanode.affinity.manager.classname</name>
+  <value></value>
+  <description>
+    Fully-qualified class name of the DatanodeAffinityManager implementation
+    to use for regex-based datanode affinity. Each affinity group maps a source
+    path regex to a datanode hostname regex. Matched datanodes are isolated:
+    they are removed from the default network topology (so the default
+    BlockPlacementPolicy never selects them) and placed into a per-group
+    restricted topology. When a new block's source path matches a group, its
+    blocks are placed only on that group's datanodes; when a path matches no
+    group, the isolated datanodes are excluded from placement. This enforces
+    two-way tenant isolation between affinity pools and the shared pool.
+    Supported built-in implementations:
+      org.apache.hadoop.hdfs.server.blockmanagement.FileDatanodeAffinityManager
+    If empty or absent, no affinity manager is used and BlockPlacementPolicy
+    falls back to its default placement behaviour.
+    The affinity groups can be refreshed without a NameNode restart by running
+    "dfsadmin -refreshNodes".
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.affinity.file.path</name>
+  <value></value>
+  <description>
+    Absolute path to the JSON file used by FileDatanodeAffinityManager.
+    The file must contain a JSON array of affinity group objects, e.g.:
+      [
+        {
+          "affinityGroupName": "tenant-a",
+          "regexPattern":      "^/data/tenant-a/.*",
+          "datanodeRegex":     "^dn-tenant-a[0-9]+\\.example\\.com(:\\d+)?$"
+        }
+      ]
+    regexPattern is matched against the HDFS source path.
+    datanodeRegex is matched (via find()) against each cluster datanode's
+    "hostname:port" address string, e.g. "dn-tenant-a1.example.com:9866", so a
+    fully-anchored ($) pattern must allow the trailing ":port" as shown above.
+    The file is reloaded on every "dfsadmin -refreshNodes" call.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.affinity.strict.isolation.enabled</name>
+  <value>false</value>
+  <description>
+    Controls what happens when a write whose path matches an affinity group
+    cannot be fully placed within that group (e.g. the group is
+    under-provisioned or its DataNodes are down). When false (default), the
+    NameNode falls back to the default placement policy so the write can still
+    succeed using the shared pool, trading strict isolation for availability.
+    When true, initial block placement fails unless ALL requested replicas can
+    be placed within the affinity group, so data for an isolated path is not
+    written outside its group at write time.
+    Note: this governs initial placement only. Background re-replication and EC
+    reconstruction currently use the default placement policy, so a replica
+    repaired after a DataNode failure may be placed outside the affinity group.
+    Only has an effect when dfs.datanode.affinity.manager.classname is set.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.hosts.provider.classname</name>
   <value>org.apache.hadoop.hdfs.server.blockmanagement.HostFileManager</value>
   <description>
