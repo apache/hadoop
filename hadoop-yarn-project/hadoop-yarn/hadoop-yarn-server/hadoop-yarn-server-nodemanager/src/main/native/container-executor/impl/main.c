@@ -66,6 +66,9 @@ static void display_usage(FILE *stream) {
       "%s container-executor --reap-runc-layer-mounts <retain-count>\n", de);
 
   fprintf(stream,
+      "       container-executor --run-jstack <user> <pid> <jstack_path>\n");
+
+  fprintf(stream,
       "       container-executor <user> <yarn-user> <command> <command-args>\n"
       "       where command and command-args: \n" \
       "            initialize container:  %2d appid containerid tokens nm-local-dirs "

@@ -371,6 +371,6 @@ int is_terminal_support_enabled();
 int is_runc_support_enabled();
 
 /**
-* Run jstack as a specific user
-*/
+ * Run jstack as a specific user.
+ */
 int run_jstack_as_user(const char *user, const char *pid, const char *jstack_path);
