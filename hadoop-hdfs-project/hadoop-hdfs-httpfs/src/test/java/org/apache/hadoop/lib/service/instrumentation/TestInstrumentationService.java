@@ -233,6 +233,24 @@ public class TestInstrumentationService extends HTestCase {
   }
 
   @Test
+  public void timerGetValuesBeforeAnyCron() throws Exception {
+    // HDFS-16029: getValues() on a fresh Timer (last == -1) must not throw
+    // ArrayIndexOutOfBoundsException or divide-by-zero; it should return zeros.
+    InstrumentationService.Timer timer = new InstrumentationService.Timer(2);
+    long[] values = timer.getValues();
+    assertEquals(4, values.length);
+    assertEquals(0, values[InstrumentationService.Timer.LAST_TOTAL]);
+    assertEquals(0, values[InstrumentationService.Timer.LAST_OWN]);
+    assertEquals(0, values[InstrumentationService.Timer.AVG_TOTAL]);
+    assertEquals(0, values[InstrumentationService.Timer.AVG_OWN]);
+
+    // toJSONString() also calls getValues() via getJSON() — must not throw either
+    String json = timer.toJSONString();
+    assertNotNull(json);
+    assertTrue(json.contains("lastTotal"));
+  }
+
+  @Test
   public void sampler() throws Exception {
     final long value[] = new long[1];
     Instrumentation.Variable<Long> var = new Instrumentation.Variable<Long>() {
