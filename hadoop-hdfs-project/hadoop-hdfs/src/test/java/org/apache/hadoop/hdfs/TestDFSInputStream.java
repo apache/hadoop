@@ -23,11 +23,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.mockito.AdditionalAnswers.delegatesTo;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -362,6 +367,45 @@ public class TestDFSInputStream {
     } finally {
       DFSClientFaultInjector.set(oldFaultInjector);
       IOUtils.closeStream(out);
+    }
+  }
+
+  @Test
+  @Timeout(value = 60)
+  public void testAvoidsEmptyBufferRead() throws IOException {
+    Configuration conf = new Configuration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      DistributedFileSystem fs = cluster.getFileSystem();
+      DFSClient client = fs.getClient();
+      Path file = new Path("/preadFile");
+      int fileLength = 8192;
+      DFSTestUtil.createFile(fs, file, fileLength, (short) 1, 0L);
+
+      AtomicInteger emptyBufferReads = new AtomicInteger(0);
+      try (DFSInputStream in = new DFSInputStream(client, file.toString(),
+          true, null) {
+        @Override
+        protected BlockReader getBlockReader(LocatedBlock targetBlock,
+            long offsetInBlock, long length, InetSocketAddress targetAddr,
+            StorageType storageType, DatanodeInfo datanode)
+            throws IOException {
+          BlockReader real = super.getBlockReader(targetBlock, offsetInBlock,
+              length, targetAddr, storageType, datanode);
+          BlockReader wrapped = mock(BlockReader.class, delegatesTo(real));
+          doAnswer(inv -> {
+            if (!((ByteBuffer) inv.getArgument(0)).hasRemaining()) {
+              emptyBufferReads.incrementAndGet();
+            }
+            return real.read(inv.getArgument(0));
+          }).when(wrapped).read(any(ByteBuffer.class));
+          return wrapped;
+        }
+      }) {
+        byte[] dest = new byte[fileLength];
+        assertEquals(fileLength, in.read(0L, dest, 0, dest.length));
+        assertEquals(0, emptyBufferReads.get(),
+            "DFSInputStream should not call BlockReader.read with an empty buffer");
+      }
     }
   }
 }

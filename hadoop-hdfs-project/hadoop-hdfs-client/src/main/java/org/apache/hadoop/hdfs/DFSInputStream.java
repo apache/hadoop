@@ -1230,7 +1230,9 @@ public class DFSInputStream extends FSInputStream
         long beginReadMS = Time.monotonicNow();
         int nread = 0;
         int ret;
-        while (true) {
+        // Stop once the slice is filled; an extra read with remaining()==0
+        // can trigger wasted slow-lane I/O in SCR.
+        while (tmp.hasRemaining()) {
           ret = reader.read(tmp);
           if (ret <= 0) {
             break;
