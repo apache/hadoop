@@ -29,6 +29,7 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JsonUtils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -42,18 +43,18 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.MediaType;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
@@ -286,8 +287,12 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
     assertThat(conn.getResponseCode()).isEqualTo(200);
-    final int after = metrics.responses2xx();
-    assertThat(after).isGreaterThan(before);
+    // Drain the response so the server side of the exchange can complete.
+    conn.getInputStream().readAllBytes();
+    // Jetty 12's StatisticsHandler records a response when the exchange
+    // completes on the server, which can lag the client seeing the status
+    // line, so the counter is not guaranteed to have moved yet.
+    GenericTestUtils.waitFor(() -> metrics.responses2xx() > before, 10, 10000);
   }
 
   @Test
@@ -324,8 +329,9 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   /**
    * Jetty StatisticsHandler must be inserted via Server#insertHandler
-   * instead of Server#setHandler. The server fails to start if
-   * the handler is added by setHandler.
+   * instead of Server#setHandler. Under Jetty 12 setHandler replaces the
+   * server's whole handler tree rather than failing the start, so the web
+   * application is silently dropped and never becomes available.
    */
   @Test
   public void testSetStatisticsHandler() throws Exception {
@@ -337,8 +343,12 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     testServer.webServer.setHandler(new StatisticsHandler());
     try {
       testServer.start();
-      fail("IOException should be thrown.");
-    } catch (IOException ignore) {
+      assertFalse(testServer.webAppContext.isStarted(),
+          "setHandler must drop the web app context");
+      assertFalse(testServer.webAppContext.isAvailable(),
+          "web app context must not be available");
+    } finally {
+      testServer.stop();
     }
   }
 

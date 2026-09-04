@@ -22,7 +22,7 @@ import java.util.Date;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 
-import javax.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlElement;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;

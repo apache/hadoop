@@ -19,8 +19,8 @@ package org.apache.hadoop.yarn.webapp.util;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.client.Client;
+import jakarta.ws.rs.client.ClientBuilder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;

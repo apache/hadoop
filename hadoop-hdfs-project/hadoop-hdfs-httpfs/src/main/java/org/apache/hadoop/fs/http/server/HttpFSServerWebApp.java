@@ -35,7 +35,7 @@ import java.io.IOException;
 
 /**
  * Bootstrap class that manages the initialization and destruction of the
- * HttpFSServer server, it is a <code>javax.servlet.ServletContextListener
+ * HttpFSServer server, it is a <code>jakarta.servlet.ServletContextListener
  * </code> implementation that is wired in HttpFSServer's WAR
  * <code>WEB-INF/web.xml</code>.
  * <p>

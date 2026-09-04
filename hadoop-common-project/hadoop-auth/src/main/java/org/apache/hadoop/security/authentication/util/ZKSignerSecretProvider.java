@@ -18,7 +18,7 @@ import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Properties;
 import java.util.Random;
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletContext;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;

@@ -23,7 +23,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.util.MinimalPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
-import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
+import com.fasterxml.jackson.module.jakarta.xmlbind.JakartaXmlBindAnnotationIntrospector;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -110,7 +110,7 @@ public class PluginStoreTestUtils {
   static ObjectMapper createObjectMapper() {
     ObjectMapper mapper = new ObjectMapper();
     mapper.setAnnotationIntrospector(
-        new JaxbAnnotationIntrospector(TypeFactory.defaultInstance()));
+        new JakartaXmlBindAnnotationIntrospector(TypeFactory.defaultInstance()));
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     return mapper;
   }

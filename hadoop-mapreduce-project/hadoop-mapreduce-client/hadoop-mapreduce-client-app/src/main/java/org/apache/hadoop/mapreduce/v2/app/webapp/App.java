@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;

@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import java.io.IOException;
 import java.util.Set;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.ws.rs.core.Response;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;

@@ -87,7 +87,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.eclipse.jetty.util.log.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -95,6 +96,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * Test application master client class to resource manager.
  */
 public class TestAMRMClient extends BaseAMRMClientTest{
+  private static final Logger LOG = LoggerFactory.getLogger(TestAMRMClient.class);
 
   private final static int DEFAULT_ITERATION = 15;
 
@@ -555,7 +557,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       int iterationsLeft = 15;
       while (allocatedContainerCount < 2
           && iterationsLeft-- > 0) {
-        Log.getLog().info("Allocated " + allocatedContainerCount + " containers"
+        LOG.info("Allocated " + allocatedContainerCount + " containers"
             + " with " + iterationsLeft + " iterations left");
         AllocateResponse allocResponse = amClient.allocate(0.1f);
         assertEquals(0, amClient.ask.size());
@@ -752,7 +754,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       throws YarnException, IOException {
     int allocatedContainerCount = 0;
     while (iterationsLeft-- > 0) {
-      Log.getLog().info("Allocated " + allocatedContainerCount + " containers"
+      LOG.info("Allocated " + allocatedContainerCount + " containers"
           + " with " + iterationsLeft + " iterations left");
       AllocateResponse allocResponse = amClient.allocate(0.1f);
       assertEquals(0, amClient.ask.size());

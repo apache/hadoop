@@ -49,8 +49,8 @@ import org.apache.hadoop.security.ssl.SSLFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletContext;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletContext;
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Constructor;

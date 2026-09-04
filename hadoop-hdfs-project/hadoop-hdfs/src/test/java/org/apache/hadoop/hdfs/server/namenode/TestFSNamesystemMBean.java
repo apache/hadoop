@@ -119,10 +119,10 @@ public class TestFSNamesystemMBean {
           new TypeReference<Map<String, Object>>() {});
 
       assertTrue(stat.containsKey("SnapshottableDirectories")
-          && (Integer) stat.get("SnapshottableDirectories") == fsn
+          && (Long) stat.get("SnapshottableDirectories") == fsn
               .getNumSnapshottableDirs());
       assertTrue(stat.containsKey("Snapshots")
-          && (Integer) stat.get("Snapshots") == fsn.getNumSnapshots());
+          && (Long) stat.get("Snapshots") == fsn.getNumSnapshots());
 
       Object pendingDeletionBlocks = mbs.getAttribute(mxbeanName,
         "PendingDeletionBlocks");

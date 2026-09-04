@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 import java.util.Arrays;
 import java.util.EnumSet;
 
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlSeeAlso;
+import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlSeeAlso;
 
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
