@@ -53,6 +53,7 @@ import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.DEFA
 import static org.apache.hadoop.hdfs.server.federation.metrics.NameserviceRPCMetrics.NAMESERVICE_RPC_METRICS_PREFIX;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_MAX_ASYNCCALL_PERMIT_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_OBSERVER_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_QUEUE_SIZE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_RESPONDER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_ACQUIRE_TIMEOUT;
@@ -95,6 +96,7 @@ public class TestRouterAsyncHandlerQueueOverflow {
 
     routerConf.setInt(DFS_ROUTER_ASYNC_RPC_QUEUE_SIZE, QUEUE_CAP);
     routerConf.setInt(DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY, 1);
+    routerConf.setInt(DFS_ROUTER_ASYNC_RPC_OBSERVER_HANDLER_COUNT_KEY, 1);
     routerConf.setInt(DFS_ROUTER_ASYNC_RPC_RESPONDER_COUNT_KEY, 1);
     routerConf.set(DFS_ROUTER_MONITOR_NAMENODE,
         cluster.getNameservices().get(0) + "," + cluster.getNameservices().get(1));
@@ -114,20 +116,23 @@ public class TestRouterAsyncHandlerQueueOverflow {
     FSNamesystem spyNamesystem = NameNodeAdapterMockitoUtil.spyOnNamesystem(nn0.getNamenode());
     // Mock one slow operation. Any public interface from FSNamesystem will do.
     spyNamesystem.writeLock();
-    Mockito.when(spyNamesystem.getFilesBlockingDecom(anyLong(), anyString()))
-        .thenAnswer(invocationOnMock -> {
-          if (testLatch == null) {
+    try {
+      Mockito.when(spyNamesystem.getFilesBlockingDecom(anyLong(), anyString()))
+          .thenAnswer(invocationOnMock -> {
+            if (testLatch == null) {
+              return null;
+            }
+            String invokePath = invocationOnMock.getArgument(1);
+            if (invokePath.startsWith("/veryBigOperation")) {
+              testLatch.await();
+            } else {
+              return invocationOnMock.callRealMethod();
+            }
             return null;
-          }
-          String invokePath = invocationOnMock.getArgument(1);
-          if (invokePath.startsWith("/veryBigOperation")) {
-            testLatch.await();
-          } else {
-            return invocationOnMock.callRealMethod();
-          }
-          return null;
-        });
-    spyNamesystem.writeUnlock();
+          });
+    } finally {
+      spyNamesystem.writeUnlock();
+    }
 
     testLatch = new CountDownLatch(1);
     MiniRouterDFSCluster.RouterContext router = cluster.getRouterContext(ns0, NAMENODES[0]);
@@ -165,7 +170,7 @@ public class TestRouterAsyncHandlerQueueOverflow {
           asyncRpcClient.getOrderedNamenodes(ns0, true);
       // Downstream namespace processing this huge request
       asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
-      ThreadPoolExecutor nsExecutor = routerRpcServer.getAsyncExecutorForNamespace(ns0);
+      ThreadPoolExecutor nsExecutor = routerRpcServer.getAsyncExecutorForNamespace(ns0, true);
       // Successfully sent this request downstream, but all subsequent ones will get stuck
       GenericTestUtils.waitFor(() -> nsExecutor.getQueue().isEmpty(), 50, 500);
       GenericTestUtils.waitFor(() -> nsExecutor.getCompletedTaskCount() == 1, 50, 500);
@@ -197,7 +202,7 @@ public class TestRouterAsyncHandlerQueueOverflow {
     GenericTestUtils.waitFor(() -> {
       try {
         // Ping getAsyncExecutorForNamespace for metrics recording
-        routerRpcServer.getAsyncExecutorForNamespace(ns0);
+        routerRpcServer.getAsyncExecutorForNamespace(ns0, true);
         assertGauge("AsyncHandlerQueueSize", size,
             getMetrics(NAMESERVICE_RPC_METRICS_PREFIX + ns0));
         return true;
