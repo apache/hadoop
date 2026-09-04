@@ -46,6 +46,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
@@ -1475,6 +1476,76 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   @Timeout(value = 30)
   public void testImmediateKill() throws Exception {
     internalKillTest(false);
+  }
+
+  @Test
+  @Timeout(value = 30)
+  public void testNoBashParentProcess() throws Exception {
+    assumeNotWindows();
+    containerManager.start();
+
+    // Construct the Container-id
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 0);
+
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+
+    // set up the rest of the container
+    List<String> commands = Arrays.asList(new String[] {"sleep 30 1>/dev/null 2>/dev/null"});
+    containerLaunchContext.setCommands(commands);
+    Priority priority = Priority.newInstance(10);
+    long createTime = 1234;
+    Token containerToken = createContainerToken(cId, priority, createTime);
+
+    StartContainerRequest scRequest =
+        StartContainerRequest.newInstance(containerLaunchContext,
+          containerToken);
+    List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
+    list.add(scRequest);
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
+
+    NMContainerStatus nmContainerStatus =
+        containerManager.getContext().getContainers().get(cId)
+          .getNMContainerStatus();
+    assertEquals(priority, nmContainerStatus.getPriority());
+
+    int timeoutSecs = 0;
+    String pid = containerManager.getContext().getContainerExecutor().getProcessId(cId);
+    while (pid == null && timeoutSecs++ < 20) {
+      Thread.sleep(1000);
+      pid = containerManager.getContext().getContainerExecutor().getProcessId(cId);
+      LOG.info("Waiting for process start-file to be created");
+    }
+    assertNotNull(pid);
+
+    Process proc = Runtime.getRuntime().exec(new String[] {"ps", "-o", "command=", pid});
+    assertEquals(proc.waitFor(), 0);
+    BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+
+    assertEquals(reader.readLine(), "sleep 30");
+
+    List<ContainerId> containerIds = new ArrayList<ContainerId>();
+    containerIds.add(cId);
+    StopContainersRequest stopRequest =
+        StopContainersRequest.newInstance(containerIds);
+    containerManager.stopContainers(stopRequest);
+
+    BaseContainerManagerTest.waitForContainerState(containerManager, cId,
+        ContainerState.COMPLETE);
+
+    GetContainerStatusesRequest gcsRequest =
+        GetContainerStatusesRequest.newInstance(containerIds);
+
+    ContainerStatus containerStatus =
+        containerManager.getContainerStatuses(gcsRequest)
+          .getContainerStatuses().get(0);
+    assertEquals(ContainerExitStatus.KILLED_BY_APPMASTER,
+        containerStatus.getExitStatus());
   }
 
   @SuppressWarnings("rawtypes")
