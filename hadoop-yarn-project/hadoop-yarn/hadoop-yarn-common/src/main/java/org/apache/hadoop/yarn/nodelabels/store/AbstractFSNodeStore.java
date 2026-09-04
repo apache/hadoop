@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.yarn.nodelabels.store;
 
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.nodelabels.store.op.AddClusterLabelOp;
+import org.apache.hadoop.yarn.nodelabels.store.op.NodeToLabelOp;
+import org.apache.hadoop.yarn.nodelabels.store.op.RemoveClusterLabelOp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -29,9 +34,20 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.yarn.nodelabels.store.op.FSNodeStoreLogOp;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.store.FSStoreOpHandler.StoreType;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos;
+import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReplaceLabelsOnNodeRequestPBImpl;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Abstract class for File System based store.
@@ -40,6 +56,46 @@ import java.io.IOException;
  *           CommonNodeLabelManager.
  */
 public abstract class AbstractFSNodeStore<M> {
+
+  /**
+   * Lightweight state class for merging mirror and edit log.
+   * Used to collect final state without triggering manager events.
+   */
+  protected static class NodeLabelMergeState {
+    private Map<String, NodeLabel> labels = new HashMap<>();
+    private Map<NodeId, Set<String>> nodeToLabels = new HashMap<>();
+    private boolean centralizedConfig = true;
+
+    void addLabel(NodeLabel label) {
+      labels.put(label.getName(), label);
+    }
+
+    void removeLabel(String labelName) {
+      labels.remove(labelName);
+    }
+
+    void replaceNodeToLabels(Map<NodeId, Set<String>> newNodeToLabels) {
+      for (Map.Entry<NodeId, Set<String>> entry : newNodeToLabels.entrySet()) {
+        this.nodeToLabels.put(entry.getKey(), entry.getValue());
+      }
+    }
+
+    List<NodeLabel> getClusterNodeLabels() {
+      return new ArrayList<>(labels.values());
+    }
+
+    void setNodeLabels(Map<NodeId, Set<String>> newNodeToLabels) {
+      this.nodeToLabels = newNodeToLabels;
+    }
+
+    Map<NodeId, Set<String>> getNodeLabels() {
+      return nodeToLabels;
+    }
+
+    boolean isCentralizedConfiguration() {
+      return centralizedConfig;
+    }
+  }
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(AbstractFSNodeStore.class);
@@ -153,6 +209,147 @@ public abstract class AbstractFSNodeStore<M> {
 
   protected StoreType getStoreType() {
     return storeType;
+  }
+
+  /**
+   * Merge mirror and edit log into a new mirror file.
+   * This reads from mirror (or mirror.old), then applies edit log operations,
+   * and writes the result back to mirror.
+   * No events are triggered during this process.
+   */
+  protected void mergeMirrorAndEditLog() throws IOException {
+    Path mirrorPath = new Path(fsWorkingPath, schema.mirrorName);
+    Path oldMirrorPath = new Path(fsWorkingPath, schema.mirrorName + ".old");
+    editLogPath = new Path(fsWorkingPath, schema.editLogName);
+
+    // Create merge state to collect final result
+    NodeLabelMergeState mergeState = new NodeLabelMergeState();
+
+    // Parse mirror file to get initial labels and node-to-labels
+    Path mirrorToRead = fs.exists(mirrorPath) ? mirrorPath :
+        fs.exists(oldMirrorPath) ? oldMirrorPath : null;
+    if (mirrorToRead != null) {
+      parseMirrorToState(mirrorToRead, mergeState);
+    }
+
+    // Parse edit log and apply operations to state
+    if (fs.exists(editLogPath)) {
+      parseEditLogToState(editLogPath, mergeState);
+    }
+
+    // Write new mirror using merge state
+    try (FSDataOutputStream os = fs.create(mirrorPath, true)) {
+      writeMirrorFromState(os, mergeState);
+    }
+
+    // Create new empty editlog file
+    editlogOs = fs.create(editLogPath, true);
+    editlogOs.close();
+    editlogOs = null;
+
+    LOG.info("Merged mirror and edit log to: " + mirrorPath);
+  }
+
+  /**
+   * Parse mirror file and populate merge state.
+   */
+  private void parseMirrorToState(Path mirrorPath, NodeLabelMergeState state)
+      throws IOException {
+    try (FSDataInputStream is = fs.open(mirrorPath)) {
+      // Parse cluster node labels
+      List<NodeLabel> labels = new AddToClusterNodeLabelsRequestPBImpl(
+          YarnServerResourceManagerServiceProtos
+              .AddToClusterNodeLabelsRequestProto
+              .parseDelimitedFrom(is)).getNodeLabels();
+      for (NodeLabel label : labels) {
+        state.addLabel(label);
+      }
+
+      // Parse node-to-labels if exists (check if more data available)
+      try {
+        Map<NodeId, Set<String>> nodeToLabels = new ReplaceLabelsOnNodeRequestPBImpl(
+            YarnServerResourceManagerServiceProtos
+                .ReplaceLabelsOnNodeRequestProto
+                .parseDelimitedFrom(is)).getNodeToLabels();
+        state.setNodeLabels(nodeToLabels);
+      } catch (EOFException e) {
+        // No node-to-labels section, that's ok
+      }
+    }
+  }
+
+  /**
+   * Parse edit log and apply operations to merge state.
+   */
+  private void parseEditLogToState(Path editLogFilePath, NodeLabelMergeState state)
+      throws IOException {
+    try (FSDataInputStream is = fs.open(editLogFilePath)) {
+      while (true) {
+        try {
+          int opCode = is.readInt();
+          if (opCode == AddClusterLabelOp.OPCODE) {
+            List<NodeLabel> labels = new AddToClusterNodeLabelsRequestPBImpl(
+                YarnServerResourceManagerServiceProtos
+                    .AddToClusterNodeLabelsRequestProto
+                    .parseDelimitedFrom(is)).getNodeLabels();
+            for (NodeLabel label : labels) {
+              state.addLabel(label);
+            }
+          } else if (opCode == RemoveClusterLabelOp.OPCODE) {
+            Set<String> labelsToRemove = new HashSet<>(
+                YarnServerResourceManagerServiceProtos
+                    .RemoveFromClusterNodeLabelsRequestProto
+                    .parseDelimitedFrom(is).getNodeLabelsList());
+            for (String labelName : labelsToRemove) {
+              state.removeLabel(labelName);
+            }
+          } else if (opCode == NodeToLabelOp.OPCODE) {
+            Map<NodeId, Set<String>> nodeToLabels = new ReplaceLabelsOnNodeRequestPBImpl(
+                YarnServerResourceManagerServiceProtos
+                    .ReplaceLabelsOnNodeRequestProto
+                    .parseDelimitedFrom(is)).getNodeToLabels();
+            state.replaceNodeToLabels(nodeToLabels);
+          }
+        } catch (EOFException e) {
+          break;
+        }
+      }
+    }
+  }
+
+  /**
+   * Write mirror file from merge state.
+   */
+  private void writeMirrorFromState(FSDataOutputStream os,
+      NodeLabelMergeState state) throws IOException {
+    // Write cluster node labels
+    ((AddToClusterNodeLabelsRequestPBImpl)
+        AddToClusterNodeLabelsRequest.newInstance(state.getClusterNodeLabels()))
+        .getProto().writeDelimitedTo(os);
+
+    // Write node-to-labels if centralized config, filtering out labels
+    // that no longer exist in the cluster
+    if (state.isCentralizedConfiguration()) {
+      Map<NodeId, Set<String>> filteredNodeToLabels = new HashMap<>();
+      Set<String> validLabels = new HashSet<>();
+      for (NodeLabel label : state.getClusterNodeLabels()) {
+        validLabels.add(label.getName());
+      }
+      for (Map.Entry<NodeId, Set<String>> entry : state.getNodeLabels().entrySet()) {
+        Set<String> filteredLabels = new HashSet<>();
+        for (String label : entry.getValue()) {
+          if (validLabels.contains(label)) {
+            filteredLabels.add(label);
+          }
+        }
+        if (!filteredLabels.isEmpty()) {
+          filteredNodeToLabels.put(entry.getKey(), filteredLabels);
+        }
+      }
+      ((ReplaceLabelsOnNodeRequestPBImpl)
+          ReplaceLabelsOnNodeRequest.newInstance(filteredNodeToLabels))
+          .getProto().writeDelimitedTo(os);
+    }
   }
 
   public Path getFsWorkingPath() {
