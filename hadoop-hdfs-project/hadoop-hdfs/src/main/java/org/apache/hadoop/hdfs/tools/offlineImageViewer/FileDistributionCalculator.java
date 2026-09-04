@@ -21,7 +21,7 @@ import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintStream;
+import java.io.Writer;
 import java.io.RandomAccessFile;
 
 import org.apache.hadoop.conf.Configuration;
@@ -67,7 +67,7 @@ final class FileDistributionCalculator {
   private final Configuration conf;
   private final long maxSize;
   private final int steps;
-  private final PrintStream out;
+  private final Writer out;
 
   private final int[] distribution;
   private int totalFiles;
@@ -79,7 +79,7 @@ final class FileDistributionCalculator {
   private boolean formatOutput = false;
 
   FileDistributionCalculator(Configuration conf, long maxSize, int steps,
-      boolean formatOutput, PrintStream out) {
+      boolean formatOutput, Writer out) {
     this.conf = conf;
     this.maxSize = maxSize == 0 ? MAX_SIZE_DEFAULT : maxSize;
     this.steps = steps == 0 ? INTERVAL_DEFAULT : steps;
@@ -145,34 +145,34 @@ final class FileDistributionCalculator {
       }
 
       if (i % (1 << 20) == 0) {
-        out.println("Processed " + i + " inodes.");
+        out.write("Processed " + i + " inodes." + "\n");
       }
     }
   }
 
-  private void output() {
+  private void output() throws IOException {
     // write the distribution into the output file
-    out.print((formatOutput ? "Size Range" : "Size") + "\tNumFiles\n");
+    out.write((formatOutput ? "Size Range" : "Size") + "\tNumFiles\n");
     for (int i = 0; i < distribution.length; i++) {
       if (distribution[i] != 0) {
         if (formatOutput) {
-          out.print((i == 0 ? "[" : "(")
+          out.write((i == 0 ? "[" : "(")
               + StringUtils.byteDesc(((long) (i == 0 ? 0 : i - 1) * steps))
               + ", "
               + StringUtils.byteDesc((long)
                   (i == distribution.length - 1 ? maxFileSize :
                       (long) i * steps)) + "]\t" + distribution[i]);
         } else {
-          out.print(((long) i * steps) + "\t" + distribution[i]);
+          out.write(((long) i * steps) + "\t" + distribution[i]);
         }
 
-        out.print('\n');
+        out.write('\n');
       }
     }
-    out.print("totalFiles = " + totalFiles + "\n");
-    out.print("totalDirectories = " + totalDirectories + "\n");
-    out.print("totalBlocks = " + totalBlocks + "\n");
-    out.print("totalSpace = " + totalSpace + "\n");
-    out.print("maxFileSize = " + maxFileSize + "\n");
+    out.write("totalFiles = " + totalFiles + "\n");
+    out.write("totalDirectories = " + totalDirectories + "\n");
+    out.write("totalBlocks = " + totalBlocks + "\n");
+    out.write("totalSpace = " + totalSpace + "\n");
+    out.write("maxFileSize = " + maxFileSize + "\n");
   }
 }
