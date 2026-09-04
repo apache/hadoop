@@ -16,18 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.test;
+package org.apache.hadoop.fs.s3a.impl.write;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Collections;
 import java.util.List;
-import java.util.function.Supplier;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
@@ -39,123 +36,127 @@ import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3ADataBlocks;
+import org.apache.hadoop.fs.s3a.S3AStore;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
-import org.apache.hadoop.fs.s3a.impl.write.WriteOperationHelperCallbacks;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 
 /**
- * Minimal implementation of writeOperationHelper callbacks.
- * Callbacks which need to talk to S3 use the s3 client resolved
- * on demand from {@link #s3clientSupplier}.
- * if this returns null, the operations raise NPEs.
+ * Callbacks for WriteOperationHelper.
  */
-public class MinimalWriteOperationHelperCallbacks
+public final class WriteOperationHelperCallbacksImpl
     implements WriteOperationHelperCallbacks {
 
   /**
-   * Supplier of the s3 client.
+   * Store through which data is written.
    */
-  private final Supplier<S3Client> s3clientSupplier;
+  private final S3AStore store;
 
-  private final String bucket;
-
-  private final RequestFactory requestFactory;
+  /**
+   * Write operations.
+   */
+  private StoreWriter storeWriter;
 
   /**
    * Constructor.
-   * @param bucket bucket name
-   * @param s3clientSupplier supplier of the S3 client.
+   * @param store store for interaction with.
    */
-  public MinimalWriteOperationHelperCallbacks(
-      final String bucket,
-      final Supplier<S3Client> s3clientSupplier,
-      final RequestFactory requestFactory) {
-    this.s3clientSupplier = s3clientSupplier;
-    this.requestFactory = requestFactory;
-    this.bucket = bucket;
+  public WriteOperationHelperCallbacksImpl(final S3AStore store) {
+    this.store = store;
+    this.storeWriter = store.getStoreWriter();
+  }
+
+  @Retries.OnceRaw
+  @Override
+  public PutObjectResponse putObjectDirect(PutObjectRequest putObjectRequest,
+      PutObjectOptions putOptions,
+      S3ADataBlocks.BlockUploadData uploadData,
+      DurationTrackerFactory durationTrackerFactory)
+      throws SdkException {
+    return storeWriter.putObjectDirect(putObjectRequest, putOptions, uploadData,
+        durationTrackerFactory);
   }
 
   @Override
+  @Retries.OnceRaw
   public CompleteMultipartUploadResponse completeMultipartUpload(
       CompleteMultipartUploadRequest request) {
-    return s3clientSupplier.get().completeMultipartUpload(request);
+    return storeWriter.completeMultipartUpload(request);
   }
 
   @Override
-  public UploadPartResponse uploadPart(final UploadPartRequest request,
+  @Retries.OnceRaw
+  public UploadPartResponse uploadPart(
+      final UploadPartRequest request,
       final RequestBody body,
       final DurationTrackerFactory durationTrackerFactory)
       throws AwsServiceException, UncheckedIOException {
-    return s3clientSupplier.get().uploadPart(request, body);
+    return storeWriter.uploadPart(request, body, durationTrackerFactory);
   }
 
   @Override
-  public PutObjectResponse putObjectDirect(final PutObjectRequest putObjectRequest,
-      final PutObjectOptions putOptions,
-      final S3ADataBlocks.BlockUploadData uploadData,
-      final DurationTrackerFactory durationTrackerFactory) throws SdkException {
-    return null;
+  public void operationRetried(
+      String text,
+      Exception ex,
+      int retries,
+      boolean idempotent) {
+    store.operationRetried(ex);
   }
 
-  @Override
-  public void operationRetried(final String text,
-      final Exception ex,
-      final int retries,
-      final boolean idempotent) {
 
-  }
-
+  @Retries.OnceRaw
   @Override
   public CreateMultipartUploadResponse initiateMultipartUpload(
-      final CreateMultipartUploadRequest request)
-      throws IOException {
-    return s3clientSupplier.get().createMultipartUpload(request);
+      CreateMultipartUploadRequest request) throws IOException {
+    return storeWriter.initiateMultipartUpload(request);
   }
 
   @Override
   public void abortMultipartUpload(final MultipartUpload upload) throws IOException {
-    abortMultipartUpload(upload.key(), upload.uploadId());
+    storeWriter.abortMultipartUpload(upload);
   }
 
+  @Retries.OnceTranslated
   @Override
-  public void abortMultipartUpload(final String destKey, final String uploadId) throws IOException {
-    s3clientSupplier.get().abortMultipartUpload(
-        getRequestFactory().newAbortMultipartUploadRequestBuilder(destKey, uploadId)
-            .build());
+  public void abortMultipartUpload(String destKey, String uploadId) throws IOException {
+    storeWriter.abortMultipartUpload(destKey, uploadId);
   }
 
+  @Retries.RetryTranslated
   @Override
-  public List<MultipartUpload> listMultipartUploads(final String prefix) throws IOException {
-    return Collections.emptyList();
+  public List<MultipartUpload> listMultipartUploads(final String prefix)
+      throws IOException {
+    return storeWriter.listMultipartUploads(prefix);
   }
 
+  @Retries.RetryRaw
   @Override
-  public void deleteObjectAtPath(final String key, final boolean isFile)
+  public void deleteObjectAtPath(
+      String key,
+      boolean isFile)
       throws SdkException, UncheckedIOException {
-    s3clientSupplier.get()
-        .deleteObject(getRequestFactory().newDeleteObjectRequestBuilder(key).build());
+    store.deleteObjectAtPath(key, isFile);
   }
 
   @Override
   public void incrementWriteOperations() {
-
+    store.incrementWriteOperations();
   }
 
   @Override
   public String getBucket() {
-    return bucket;
+    return store.getStoreContext().getBucket();
   }
 
   @Override
   public RequestFactory getRequestFactory() {
-    return requestFactory;
+    return store.getRequestFactory();
   }
 
   @Override
   public Configuration getConf() {
-    return new Configuration();
+    return store.getConfig();
   }
 }
-
