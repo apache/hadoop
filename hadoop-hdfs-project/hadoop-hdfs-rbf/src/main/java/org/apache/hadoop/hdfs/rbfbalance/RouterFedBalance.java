@@ -57,6 +57,9 @@ import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.BANDWIDTH;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.DELAY_DURATION;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.DIFF_THRESHOLD;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.TRASH;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.VERIFY;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.VERIFY_ENABLED;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.VERIFY_ENABLED_DEFAULT;
 
 /**
  * Balance data in router-based federation cluster. From src sub-namespace to
@@ -92,6 +95,8 @@ public class RouterFedBalance extends Configured implements Tool {
     private long delayDuration = TimeUnit.SECONDS.toMillis(1);
     /* Specify the threshold of diff entries. */
     private int diffThreshold = 0;
+    /* Whether to run the optional verification phase. */
+    private boolean verify = false;
     /* The source input. This specifies the source path. */
     private final String inputSrc;
     /* The dst input. This specifies the dst path. */
@@ -157,6 +162,15 @@ public class RouterFedBalance extends Configured implements Tool {
     }
 
     /**
+     * Specify whether the optional verification phase should run.
+     * @param value true if running verification.
+     */
+    public Builder setVerify(boolean value) {
+      this.verify = value;
+      return this;
+    }
+
+    /**
      * Build the balance job.
      */
     public BalanceJob build() throws IOException {
@@ -172,6 +186,8 @@ public class RouterFedBalance extends Configured implements Tool {
           .setForceCloseOpenFiles(forceCloseOpen).setUseMountReadOnly(true)
           .setMapNum(map).setBandwidthLimit(bandwidth).setTrash(trashOpt)
           .setDelayDuration(delayDuration).setDiffThreshold(diffThreshold)
+          .setVerify(verify || getConf().getBoolean(VERIFY_ENABLED,
+              VERIFY_ENABLED_DEFAULT))
           .build();
 
       LOG.info(context.toString());
@@ -280,6 +296,9 @@ public class RouterFedBalance extends Configured implements Tool {
     if (command.hasOption(DIFF_THRESHOLD.getOpt())) {
       builder.setDiffThreshold(Integer.parseInt(
           command.getOptionValue(DIFF_THRESHOLD.getOpt())));
+    }
+    if (command.hasOption(VERIFY.getOpt())) {
+      builder.setVerify(true);
     }
     if (command.hasOption(TRASH.getOpt())) {
       String val = command.getOptionValue(TRASH.getOpt());

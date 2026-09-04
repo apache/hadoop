@@ -201,6 +201,39 @@ public class TestDistCpProcedure {
   }
 
   @Test
+  public void testVerifyContentSummary() throws Exception {
+    String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
+    DistributedFileSystem fs =
+        (DistributedFileSystem) FileSystem.get(URI.create(nnUri), conf);
+    createFiles(fs, testRoot, srcfiles);
+    Path src = new Path(testRoot, SRCDAT);
+    Path dst = new Path(testRoot, DSTDAT);
+
+    FedBalanceContext context = new FedBalanceContext.Builder(src, dst, MOUNT,
+        conf)
+        .setMapNum(10)
+        .setBandwidthLimit(1)
+        .setTrash(TrashOption.TRASH)
+        .setDelayDuration(1000)
+        .setVerify(true)
+        .build();
+    DistCpProcedure dcProcedure =
+        new DistCpProcedure("distcp-procedure", null, 1000, context);
+    executeProcedure(dcProcedure, Stage.DIFF_DISTCP,
+        () -> dcProcedure.initDistCp());
+    executeProcedure(dcProcedure, Stage.VERIFY,
+        () -> dcProcedure.finalDistCp());
+    dcProcedure.verify();
+    assertEquals(Stage.FINISH, dcProcedure.getStage());
+
+    fs.mkdirs(new Path(dst, "extra"));
+    dcProcedure.updateStage(Stage.VERIFY);
+    intercept(IOException.class, "FedBalance verification failed",
+        () -> dcProcedure.verify());
+    cleanup(fs, new Path(testRoot));
+  }
+
+  @Test
   public void testDiffDistCp() throws Exception {
     String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
     DistributedFileSystem fs =
