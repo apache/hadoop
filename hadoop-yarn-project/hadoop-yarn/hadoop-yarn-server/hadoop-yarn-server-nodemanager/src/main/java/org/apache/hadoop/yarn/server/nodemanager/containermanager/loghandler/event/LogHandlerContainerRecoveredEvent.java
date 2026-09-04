@@ -18,10 +18,18 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event;
 
-public enum LogHandlerEventType {
-  APPLICATION_STARTED,
-  CONTAINER_FINISHED,
-  APPLICATION_FINISHED,
-  CONTAINER_RECOVERED,
-  LOG_AGG_TOKEN_UPDATE
+import org.apache.hadoop.yarn.api.records.ContainerId;
+
+public class LogHandlerContainerRecoveredEvent extends LogHandlerEvent {
+
+  private final ContainerId containerId;
+
+  public LogHandlerContainerRecoveredEvent(ContainerId containerId) {
+    super(LogHandlerEventType.CONTAINER_RECOVERED);
+    this.containerId = containerId;
+  }
+
+  public ContainerId getContainerId() {
+    return this.containerId;
+  }
 }
