@@ -264,7 +264,12 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         GenericTestUtils.waitFor(() -> !f.exists(), 1000, 1000 * 50);
         assertFalse(f.exists(), "File [" + f + "] was not deleted");
       }
-      assertFalse(app1LogDir.exists(), "Directory [" + app1LogDir + "] was not deleted");
+      // DeletionService removes the files before the directories that hold
+      // them, so the application log directory can still be there when the
+      // last file has gone.  Wait for it the same way.
+      GenericTestUtils.waitFor(() -> !app1LogDir.exists(), 1000, 1000 * 50);
+      assertFalse(app1LogDir.exists(),
+          "Directory [" + app1LogDir + "] was not deleted");
     } else {
       List<Path> dirList = new ArrayList<>();
       dirList.add(new Path(app1LogDir.toURI()));
