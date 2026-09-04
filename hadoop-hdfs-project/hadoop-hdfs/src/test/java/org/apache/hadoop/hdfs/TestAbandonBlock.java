@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
@@ -27,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -34,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test abandoning blocks, which clients do on pipeline creation failure.
@@ -102,6 +105,43 @@ public class TestAbandonBlock {
         Integer.MAX_VALUE);
     assertEquals(orginalNumBlocks, blocks.locatedBlockCount() + 1, "Blocks " +
         b + " has not been abandoned.");
+  }
+
+  /**
+   * Verify that when the disk-space quota is exceeded during a write, the
+   * DataStreamer propagates the DSQuotaExceededException back to the client
+   * (HDFS-17845).
+   */
+  @Test
+  @Timeout(60)
+  public void testQuotaExceptionPropagatedToClient() throws Exception {
+    // Use a small block size so we can fill it and trigger a second addBlock.
+    final int blockSize = 1024;
+    final Path testDir = new Path(FILE_NAME_PREFIX + "quota_dir");
+    fs.mkdirs(testDir);
+
+    // Create a partial-block file (512 bytes in a 1024-byte block).
+    Path testFile = new Path(testDir, "file");
+    DFSTestUtil.createFile(fs, testFile, 1024, 512, blockSize, (short) 1, 0L);
+
+    // Set quota to 1 byte — the next addBlock call will exceed it.
+    fs.setQuota(testDir, HdfsConstants.QUOTA_DONT_SET, 1L);
+
+    // Append 2*blockSize bytes: the first 512 bytes fill the current block,
+    // and then addBlock for the next block fails due to the quota violation.
+    boolean caughtQuota = false;
+    try (FSDataOutputStream out = fs.append(testFile)) {
+      out.write(new byte[2 * blockSize]);
+      out.close();
+    } catch (IOException e) {
+      Throwable cause = e;
+      while (cause != null && !(cause instanceof DSQuotaExceededException)) {
+        cause = cause.getCause();
+      }
+      caughtQuota = (cause instanceof DSQuotaExceededException);
+    }
+    assertTrue(caughtQuota,
+        "Expected DSQuotaExceededException to be propagated to the client");
   }
 
   @Test
