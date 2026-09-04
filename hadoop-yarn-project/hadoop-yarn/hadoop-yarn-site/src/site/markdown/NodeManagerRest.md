@@ -787,3 +787,115 @@ Response Body:
     "assignedGpuDevices": []
 }
 ```
+
+JStack NodeManager API
+----------------
+With JStack NodeManager API, you can get the JStack of the NodeManager processID.
+
+### URI
+
+Use the following URI to obtain resources on the NodeManager
+
+      * http://nm-http-address:port/ws/v1/node/jstack/{numberOfJStack}
+
+### HTTP Operations Supported
+
+      * GET
+
+### Query Parameters Supported
+
+      None
+
+### GET Response Examples
+
+**PLAIN TEXT response**
+
+HTTP Request:
+
+      GET http://nm-http-address:port/ws/v1/node/jstack/{numberOfJStack}
+
+Response Header:
+
+      Cache-Control: no-cache
+      Pragma: no-cache
+      X-Content-Type-Options: nosniff
+      X-XSS-Protection: 1; mode=block
+      X-Frame-Options: SAMEORIGIN
+      Content-Type: text/plain
+      Vary: Accept-Encoding
+      Content-Encoding: gzip
+      Transfer-Encoding: chunked
+
+
+```text
+--- JStack iteration 0 for PID: 322091 ---
+2026-04-23 14:39:46
+Full thread dump OpenJDK 64-Bit Server VM (17.0.11+9-adhoc.root.jdk17u mixed mode, sharing):
+...............
+...............
+JNI global refs: 66, weak refs: 0
+--- JStack iteration 1 for PID: 322091 ---
+2026-04-23 14:39:46
+Full thread dump OpenJDK 64-Bit Server VM (17.0.11+9-adhoc.root.jdk17u mixed mode, sharing):
+```
+
+JStack Application API
+----------------
+With JStack Application API, you can get the JStack of all java process Containers that belongs to the ApplicationId
+
+### URI
+
+Use the following URI to obtain resources on the NodeManager
+
+      * http://nm-http-address:port/ws/v1/node/apps/{appid}/jstack/{numberOfJStack}
+
+### HTTP Operations Supported
+
+      * GET
+
+### Query Parameters Supported
+
+      None
+
+### GET Response Examples
+
+**PLAIN TEXT response**
+
+HTTP Request:
+
+      GET http://nm-http-address:port/ws/v1/node/apps/{appid}/jstack/{numberOfJStack}
+
+Response Header:
+
+      Cache-Control: no-cache
+      Pragma: no-cache
+      X-Content-Type-Options: nosniff
+      X-XSS-Protection: 1; mode=block
+      X-Frame-Options: SAMEORIGIN
+      Content-Type: text/plain
+      Vary: Accept-Encoding
+      Content-Encoding: gzip
+      Transfer-Encoding: chunked
+
+
+```text
+=== Thread Dumps for ContainerId: container_e09_1776934843524_0002_01_000001, PID: 358474 ===
+--- JStack iteration 0 for PID: 358474 ---
+2026-04-23 14:54:47
+Full thread dump OpenJDK 64-Bit Server VM (17.0.11+9-adhoc.root.jdk17u mixed mode, sharing):
+...............
+...............
+Failed to run jstack on PID: 362652 at iteration: 3 (Process likely exited before/during running jstack): Exception in thread "main" java.io.IOException: Premature EOF
+at jdk.attach/sun.tools.attach.HotSpotVirtualMachine.readInt(HotSpotVirtualMachine.java:341)
+at jdk.attach/sun.tools.attach.VirtualMachineImpl.execute(VirtualMachineImpl.java:197)
+at jdk.attach/sun.tools.attach.HotSpotVirtualMachine.executeCommand(HotSpotVirtualMachine.java:310)
+at jdk.attach/sun.tools.attach.HotSpotVirtualMachine.remoteDataDump(HotSpotVirtualMachine.java:267)
+at jdk.jcmd/sun.tools.jstack.JStack.runThreadDump(JStack.java:130)
+at jdk.jcmd/sun.tools.jstack.JStack.main(JStack.java:109)
+
+=== Thread Dumps for ContainerId: container_e09_1776934843524_0002_01_000038, PID: 362667 ===
+Failed to run jstack on PID: 362667 at iteration: 0 (Process likely exited before/during running jstack): 362667: No such process
+
+=== Thread Dumps for ContainerId: container_e09_1776934843524_0002_01_000039, PID: 362658 ===
+Status: Skipped Process with PID Process with PID 362658 is no longer exists
+```
