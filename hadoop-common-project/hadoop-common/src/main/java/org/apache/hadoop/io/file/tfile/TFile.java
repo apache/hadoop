@@ -48,6 +48,7 @@ import org.apache.hadoop.io.file.tfile.Chunk.ChunkEncoder;
 import org.apache.hadoop.io.file.tfile.CompareUtils.BytesComparator;
 import org.apache.hadoop.io.file.tfile.CompareUtils.MemcmpRawComparator;
 import org.apache.hadoop.io.file.tfile.Utils.Version;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -2105,14 +2106,11 @@ public class TFile {
         String compClassName =
             comparator.substring(COMPARATOR_JCLASS.length()).trim();
         try {
-          // Resolve without running the class initializer, confirm it really
-          // is a RawComparator, and only then load and construct it.
-          Class<?> compClass =
-              Class.forName(compClassName, false, conf.getClassLoader());
-          RawComparator<Object> rawComparator =
-              (RawComparator<Object>) compClass.asSubclass(RawComparator.class)
-                  .getDeclaredConstructor().newInstance();
-          return new BytesComparator(rawComparator);
+          Class<? extends RawComparator> compClass = ReflectionUtils.loadUninitedClass(
+              TFile.class.getClassLoader(), compClassName, RawComparator.class);
+          // use its default ctor to create an instance
+          return new BytesComparator((RawComparator<Object>) compClass
+              .newInstance());
         } catch (Exception e) {
           throw new IllegalArgumentException(
               "Failed to instantiate comparator: " + comparator + "("

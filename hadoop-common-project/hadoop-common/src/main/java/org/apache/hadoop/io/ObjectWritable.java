@@ -27,10 +27,12 @@ import java.util.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.ProtoUtil;
 
 import org.apache.hadoop.thirdparty.protobuf.Message;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /** A polymorphic Writable that writes an instance with it's class name.
  * Handles arrays, strings and primitive types without a Writable wrapper.
@@ -38,6 +40,20 @@ import org.apache.hadoop.thirdparty.protobuf.Message;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class ObjectWritable implements Writable, Configurable {
+
+
+  /**
+   * Maximum object nesting depth permitted when reading, to bound recursion
+   * from a stream of deeply nested arrays.
+   * This is also used as the max size of array list to allocate even if the header declares
+   * a larger value.
+   */
+  static final int MAX_NESTING_DEPTH = 100;
+
+  @VisibleForTesting
+  static final String E_MAX_DEPTH =
+      "Maximum object nesting depth exceeded: " + MAX_NESTING_DEPTH;
+
 
   private Class declaredClass;
   private Object instance;
@@ -245,22 +261,43 @@ public class ObjectWritable implements Writable, Configurable {
    */
   public static Object readObject(DataInput in, Configuration conf)
     throws IOException {
-    return readObject(in, null, conf);
+    return readObject(in, null, conf, 0);
   }
-    
+
   /**
    * Read a {@link Writable}, {@link String}, primitive type, or an array of
-   * the preceding.
+   * these.
    *
    * @param in DataInput.
-   * @param objectWritable objectWritable.
+   * @param objectWritable object Writable.
    * @param conf configuration.
-   * @return Object.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException raised on errors performing I/O, or if the contents is rejected
+   *         as the depth is exceeded or the array size is negative
    */
-  @SuppressWarnings("unchecked")
   public static Object readObject(DataInput in, ObjectWritable objectWritable, Configuration conf)
     throws IOException {
+    return readObject(in, objectWritable, conf, 0);
+  }
+
+
+  /**
+   * Read a {@link Writable}, {@link String}, primitive type, or an array of
+   * these.
+   * @param in DataInput.
+   * @param objectWritable object Writable.
+   * @param conf configuration.
+   * @param depth depth of recursion
+   * @return Object.
+   * @throws IOException raised on errors performing I/O, or if the contents is rejected
+   *         as the depth is exceeded or the array size is negative
+   */
+  @SuppressWarnings("unchecked")
+  private static Object readObject(DataInput in, ObjectWritable objectWritable,
+      Configuration conf, int depth) throws IOException {
+
+    if (depth > MAX_NESTING_DEPTH) {
+      throw new IOException(E_MAX_DEPTH);
+    }
     String className = UTF8.readString(in);
     Class<?> declaredClass = PRIMITIVE_NAMES.get(className);
     if (declaredClass == null) {
@@ -295,11 +332,20 @@ public class ObjectWritable implements Writable, Configurable {
 
     } else if (declaredClass.isArray()) {              // array
       int length = in.readInt();
-      instance = Array.newInstance(declaredClass.getComponentType(), length);
-      for (int i = 0; i < length; i++) {
-        Array.set(instance, i, readObject(in, conf));
+      if (length < 0) {
+        throw new IOException("Negative array length: " + length);
       }
-      
+      // Read elements into a growable list first to avoid over-allocating
+      List<Object> elements = new ArrayList<>(Math.min(length, MAX_NESTING_DEPTH));
+      for (int i = 0; i < length; i++) {
+        elements.add(readObject(in, null, conf, depth + 1));
+      }
+      instance = Array.newInstance(declaredClass.getComponentType(),
+          elements.size());
+      for (int i = 0; i < elements.size(); i++) {
+        Array.set(instance, i, elements.get(i));
+      }
+
     } else if (declaredClass == ArrayPrimitiveWritable.Internal.class) {
       // Read and unwrap ArrayPrimitiveWritable$Internal array.
       // Always allow the read, even if write is disabled by allowCompactArrays.
@@ -315,11 +361,17 @@ public class ObjectWritable implements Writable, Configurable {
       instance = Enum.valueOf((Class<? extends Enum>) declaredClass, UTF8.readString(in));
     } else if (Message.class.isAssignableFrom(declaredClass)) {
       instance = tryInstantiateProtobuf(declaredClass, in);
-    } else {                                      // Writable
-      Class instanceClass = null;
+    } else {
+      // Writable
+      // the next field is read to identify the writable to load.
+      Class<? extends Writable> instanceClass;
       String str = UTF8.readString(in);
-      instanceClass = loadClass(conf, str);
-      
+      try {
+        instanceClass = ReflectionUtils.loadUninitedClass(conf, str, Writable.class);
+      } catch (ClassNotFoundException e) {
+        throw new RuntimeException("readObject can't find class " + str, e);
+      }
+
       Writable writable = WritableFactories.newInstance(instanceClass, conf);
       writable.readFields(in);
       instance = writable;
@@ -377,8 +429,8 @@ public class ObjectWritable implements Writable, Configurable {
       }
     } catch (InvocationTargetException e) {
       
-      if (e.getCause() instanceof IOException) {
-        throw (IOException)e.getCause();
+      if (e.getCause() instanceof IOException ioe) {
+        throw ioe;
       } else {
         throw new IOException(e.getCause());
       }

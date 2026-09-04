@@ -149,8 +149,8 @@ public class CompositeInputSplit extends InputSplit implements Writable {
     Class<? extends InputSplit>[] cls = new Class[card];
     try {
       for (int i = 0; i < card; ++i) {
-        cls[i] =
-          Class.forName(Text.readString(in)).asSubclass(InputSplit.class);
+        cls[i] = ReflectionUtils.loadUninitedClass(
+            conf, Text.readString(in), InputSplit.class);
       }
       for (int i = 0; i < card; ++i) {
         splits[i] = ReflectionUtils.newInstance(cls[i], null);
