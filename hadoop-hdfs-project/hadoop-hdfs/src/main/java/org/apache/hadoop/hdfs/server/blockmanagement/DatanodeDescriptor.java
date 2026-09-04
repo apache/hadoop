@@ -310,11 +310,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   public EnumSet<StorageType> getStorageTypes() {
-    EnumSet<StorageType> storageTypes = EnumSet.noneOf(StorageType.class);
-    for (DatanodeStorageInfo dsi : getStorageInfos()) {
-      storageTypes.add(dsi.getStorageType());
+    synchronized (storageMap) {
+      EnumSet<StorageType> storageTypes = EnumSet.noneOf(StorageType.class);
+      for (DatanodeStorageInfo dsi : storageMap.values()) {
+        storageTypes.add(dsi.getStorageType());
+      }
+      return storageTypes;
     }
-    return storageTypes;
   }
 
   public StorageReport[] getStorageReports() {
@@ -1136,9 +1138,16 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   public boolean hasStorageType(StorageType type) {
-    for (DatanodeStorageInfo dnStorage : getStorageInfos()) {
-      if (dnStorage.getStorageType() == type) {
-        return true;
+    // Iterate storageMap.values() directly under the lock instead of calling
+    // getStorageInfos() which acquires the lock a second time and allocates a
+    // new array.  On clusters with many storages per DataNode this matters
+    // because hasStorageType() is called frequently (block placement, heartbeat
+    // processing, topology updates) — HDFS-17639.
+    synchronized (storageMap) {
+      for (DatanodeStorageInfo dnStorage : storageMap.values()) {
+        if (dnStorage.getStorageType() == type) {
+          return true;
+        }
       }
     }
     return false;
