@@ -1283,8 +1283,8 @@ public class TestDFSClientRetries {
     DFSClientFaultInjector.set(new DFSClientFaultInjector() {
       public void delayWhenRenewLeaseTimeout() {
         try {
-          // Bounded, so a renewer thread cannot be parked here forever if this
-          // test dies without running its finally block.
+          // Bounded, so a stalled out1.close() cannot leave the renewer
+          // holding the LeaseRenewer monitor forever.
           testLatch.await(30, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
