@@ -2128,4 +2128,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
    */
   public static final String SUPPORTED_PACKAGES_CONFIG_NAME =
       "dfs.nodeplan.steps.supported.packages";
+
+  public static final String DFS_NAMENODE_DATANODE_LIST_CACHE_EXPIRATION_MS_KEY =
+      "dfs.namenode.datanode.list.cache.expiration.ms";
+  public static final long DFS_NAMENODE_DATANODE_LIST_CACHE_EXPIRATION_MS_DEFAULT = 0;
 }
