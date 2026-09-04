@@ -49,11 +49,13 @@ static void (*dlsym_CRYPTO_set_id_callback) (unsigned long (*)());
 static void (*dlsym_ENGINE_load_rdrand) (void);
 static void (*dlsym_ENGINE_cleanup) (void);
 #endif
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
 static ENGINE * (*dlsym_ENGINE_by_id) (const char *);
 static int (*dlsym_ENGINE_init) (ENGINE *);
 static int (*dlsym_ENGINE_set_default) (ENGINE *, unsigned int);
 static int (*dlsym_ENGINE_finish) (ENGINE *);
 static int (*dlsym_ENGINE_free) (ENGINE *);
+#endif
 static int (*dlsym_RAND_bytes) (unsigned char *, int);
 static unsigned long (*dlsym_ERR_get_error) (void);
 #endif
@@ -126,12 +128,14 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_random_OpensslSecureRandom_
                       openssl, "ENGINE_load_rdrand");
   LOAD_DYNAMIC_SYMBOL(dlsym_ENGINE_cleanup, env, openssl, "ENGINE_cleanup");
 #endif
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
   LOAD_DYNAMIC_SYMBOL(dlsym_ENGINE_by_id, env, openssl, "ENGINE_by_id");
   LOAD_DYNAMIC_SYMBOL(dlsym_ENGINE_init, env, openssl, "ENGINE_init");
   LOAD_DYNAMIC_SYMBOL(dlsym_ENGINE_set_default, env,  \
                       openssl, "ENGINE_set_default");
   LOAD_DYNAMIC_SYMBOL(dlsym_ENGINE_finish, env, openssl, "ENGINE_finish");
   LOAD_DYNAMIC_SYMBOL(dlsym_ENGINE_free, env, openssl, "ENGINE_free");
+#endif
   LOAD_DYNAMIC_SYMBOL(dlsym_RAND_bytes, env, openssl, "RAND_bytes");
   LOAD_DYNAMIC_SYMBOL(dlsym_ERR_get_error, env, openssl, "ERR_get_error");
 #endif
@@ -308,6 +312,7 @@ static unsigned long pthreads_thread_id(void)
  */
 static ENGINE * openssl_rand_init(void)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
   locks_setup();
   
@@ -339,10 +344,12 @@ static ENGINE * openssl_rand_init(void)
   }
   
   return eng;
+#endif
 }
 
 static void openssl_rand_clean(ENGINE *eng, int clean_locks)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
   if (NULL != eng) {
     dlsym_ENGINE_finish(eng);
     dlsym_ENGINE_free(eng);
@@ -352,6 +359,7 @@ static void openssl_rand_clean(ENGINE *eng, int clean_locks)
   if (clean_locks) {
     locks_cleanup();
   }
+#endif
 #endif
 }
 
