@@ -57,6 +57,15 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.http.HttpHost;
+import org.apache.http.HttpVersion;
+import org.apache.http.ProtocolException;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.message.BasicHttpResponse;
+import org.apache.http.message.BasicStatusLine;
+import org.apache.http.protocol.HttpCoreContext;
+
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -565,6 +574,30 @@ public class TestWebAppProxyServlet {
         "Was expecting an HTML page explaining that an HTTPS tracking"
             + " url must be used but found " + s);
     Mockito.verify(resp, Mockito.times(1)).setContentType(MimeType.HTML);
+  }
+
+  @Test
+  void testProxyRedirectToDifferentHostIsRefused() throws Exception {
+    WebAppProxyServlet.SameHostRedirectStrategy strategy =
+        new WebAppProxyServlet.SameHostRedirectStrategy("amhost");
+
+    HttpGet request = new HttpGet("http://amhost:8042/app");
+    HttpClientContext context = HttpClientContext.create();
+    context.setAttribute(HttpCoreContext.HTTP_TARGET_HOST,
+        new HttpHost("amhost", 8042, "http"));
+    context.setAttribute(HttpCoreContext.HTTP_REQUEST, request);
+
+    BasicHttpResponse sameHost = new BasicHttpResponse(
+        new BasicStatusLine(HttpVersion.HTTP_1_1, 302, "Found"));
+    sameHost.setHeader("Location", "http://amhost:8042/app/next");
+    assertEquals("amhost",
+        strategy.getLocationURI(request, sameHost, context).getHost());
+
+    BasicHttpResponse crossHost = new BasicHttpResponse(
+        new BasicStatusLine(HttpVersion.HTTP_1_1, 302, "Found"));
+    crossHost.setHeader("Location", "http://169.254.169.254/latest/meta-data/");
+    assertThrows(ProtocolException.class,
+        () -> strategy.getLocationURI(request, crossHost, context));
   }
 
   private String readInputStream(InputStream input) throws Exception {
