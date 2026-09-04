@@ -245,6 +245,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private boolean restrictSystemProps = restrictSystemPropsDefault;
   private boolean allowNullValueProperties = false;
 
+  private static final String HADOOP_CLIENT_OPTS = "HADOOP_CLIENT_OPTS";
+
   private static class Resource {
     private final Object resource;
     private final String name;
@@ -2934,6 +2936,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (properties == null) {
       properties = new Properties();
       loadProps(properties, 0, true);
+      loadOtherProps(properties);
     }
     return properties;
   }
@@ -2963,6 +2966,63 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             }
           }
         }
+      }
+    }
+  }
+
+  /**
+   * Loads configuration properties from both environment variables.
+   *
+   * @param props the object containing the loaded properties.
+   */
+  private void loadOtherProps(Properties props) {
+    loadEnvironmentVariables(props);
+  }
+
+  /**
+   * Loads Hadoop configuration properties from the "HADOOP_CLIENT_OPTS" environment variable.
+   * <p>
+   * This method extracts {@code -Dkey=value or -D key=value} style strings from the value of the
+   * {@code HADOOP_CLIENT_OPTS} environment variable.
+   * <p>
+   * <b>Example:</b> Given {@code hdfs-site.xml}: key: dfs.client.socket-timeout, value: 60000,
+   * Setting the environment variable:
+   * <pre>{@code export HADOOP_CLIENT_OPTS="-Xmx1g -Ddfs.client.socket-timeout=30000"}</pre>
+   * will extract {@code dfs.client.socket-timeout=30000} and override the XML files at runtime.
+   * <p>
+   * <b>String format:</b>
+   * <ul>
+   *   <li>{@code -Dkey=value}</li>
+   *   <li>{@code -D key=value}</li>
+   * </ul>
+   *
+   * @param props the object containing the loaded properties.
+   */
+  private void loadEnvironmentVariables(Properties props) {
+    String hadoopClientOpts = System.getenv(HADOOP_CLIENT_OPTS);
+    if (hadoopClientOpts == null || hadoopClientOpts.trim().isEmpty()) {
+      return;
+    }
+    String[] tokens = hadoopClientOpts.trim().split("\\s+");
+    for (int i = 0; i < tokens.length; i++) {
+      String token = tokens[i];
+      if (token == null) {
+        continue;
+      }
+      String keyValueStr = null;
+      if (token.equals("-D")) {
+        if (i < tokens.length - 1 && tokens[i + 1].contains("=")) {
+          keyValueStr = tokens[++i];
+        }
+      } else if (token.startsWith("-D") && token.contains("=")) {
+        keyValueStr = token;
+      }
+      if (keyValueStr != null) {
+        String rawPair = keyValueStr.startsWith("-D") ? keyValueStr.substring(2) : keyValueStr;
+        int eqIndex = rawPair.indexOf('=');
+        String key = rawPair.substring(0, eqIndex);
+        String value = rawPair.substring(eqIndex + 1).trim();
+        loadProperty(props, "env", key, value, false, new String[] {"env-property"});
       }
     }
   }

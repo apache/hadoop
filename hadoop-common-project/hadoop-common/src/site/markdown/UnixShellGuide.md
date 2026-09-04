@@ -26,8 +26,18 @@ Apache Hadoop has many environment variables that control various aspects of the
 
 This environment variable is used for all end-user, non-daemon operations.  It can be used to set any Java options as well as any Apache Hadoop options via a system property definition. For example:
 
+Set the client socket timeout via dfs.client.socket-timeout
 ```bash
-HADOOP_CLIENT_OPTS="-Xmx1g -Dhadoop.socks.server=localhost:4000" hadoop fs -ls /tmp
+export HADOOP_CLIENT_OPTS="-Xmx1g -Ddfs.client.socket-timeout=30000"
+
+hadoop fs -ls hdfs://localhost:8020/tmp
+```
+
+Define the default filesystem via fs.defaultFS
+```bash
+export HADOOP_CLIENT_OPTS="-Xmx1g -Dfs.defaultFS=hdfs://localhost:8020/"
+
+hadoop fs -ls /tmp
 ```
 
 will increase the memory and send this command via a SOCKS proxy server.

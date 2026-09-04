@@ -52,6 +52,8 @@ import static java.util.concurrent.TimeUnit.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+
+import com.github.stefanbirkner.systemlambda.SystemLambda;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,6 +64,7 @@ import static org.apache.hadoop.conf.StorageUnit.GB;
 import static org.apache.hadoop.conf.StorageUnit.KB;
 import static org.apache.hadoop.conf.StorageUnit.MB;
 import static org.apache.hadoop.conf.StorageUnit.TB;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -2762,5 +2765,29 @@ public class TestConfiguration {
     Thread.sleep(1000); //give enough time for threads to run
 
     assertFalse(exceptionOccurred.get(), "ConcurrentModificationException occurred");
+  }
+
+  @Test
+  public void testLoadEnvironmentVariables() throws Exception {
+    // Test valid configurations: both "-Dkey=value" and "-D key=value" formats
+    SystemLambda.withEnvironmentVariable("HADOOP_CLIENT_OPTS",
+            "-Ddfs.client.socket-timeout=30000 -D dfs.datanode.socket.write.timeout=240000")
+        .execute(() -> {
+          Configuration configuration = new Configuration();
+          assertThat(configuration.get("dfs.client.socket-timeout")).isEqualTo("30000");
+          assertThat(configuration.get("dfs.datanode.socket.write.timeout")).isEqualTo("240000");
+        });
+    // Test invalid configurations: "-X" formats should be ignored
+    SystemLambda.withEnvironmentVariable("HADOOP_CLIENT_OPTS",
+            "-Xdfs.client.socket-timeout=30000 -X dfs.datanode.socket.write.timeout=240000")
+        .execute(() -> {
+          Configuration configuration = new Configuration();
+          assertThat(configuration.get("dfs.client.socket-timeout")).isNull();
+          assertThat(configuration.get("dfs.datanode.socket.write.timeout")).isNull();
+        });
+    // There are no environment variables
+    Configuration configuration = new Configuration();
+    assertThat(configuration.get("dfs.client.socket-timeout")).isNull();
+    assertThat(configuration.get("dfs.datanode.socket.write.timeout")).isNull();
   }
 }
