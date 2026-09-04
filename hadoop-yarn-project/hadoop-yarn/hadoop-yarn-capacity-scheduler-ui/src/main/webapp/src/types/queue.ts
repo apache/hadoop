@@ -45,6 +45,16 @@ export type ResourceUsageByPartition = {
   used?: ResourceInfo;
 };
 
+export type QueueCapacityVectorEntryInfo = {
+  resourceName: string;
+  resourceValue: string;
+};
+
+export type QueueCapacityVectorInfo = {
+  configuredCapacityVector: string;
+  capacityVectorEntries: QueueCapacityVectorEntryInfo[];
+};
+
 export type QueueCapacityByPartition = {
   partitionName: string;
   capacity?: number;
@@ -60,7 +70,8 @@ export type QueueCapacityByPartition = {
   configuredMinResource?: ResourceInfo;
   effectiveMaxResource?: ResourceInfo;
   effectiveMinResource?: ResourceInfo;
-  queueCapacityVectorInfo?: Record<string, unknown>;
+  queueCapacityVectorInfo?: QueueCapacityVectorInfo;
+  maximumQueueCapacityVectorInfo?: QueueCapacityVectorInfo;
 };
 
 export type QueueInfo = {
@@ -104,9 +115,10 @@ export type QueueInfo = {
   numSchedulableApplications?: number;
   numNonSchedulableApplications?: number;
 
-  // Capacity details
+  // Capacity details (from scheduler REST)
   maxEffectiveCapacity?: ResourceInfo;
   minEffectiveCapacity?: ResourceInfo;
+  weight?: number;
   normalizedWeight?: number;
   isAbsoluteResource?: boolean;
   effectiveMinResource?: ResourceInfo;
