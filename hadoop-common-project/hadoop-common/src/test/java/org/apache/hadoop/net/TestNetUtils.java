@@ -784,6 +784,19 @@ public class TestNetUtils {
   }
 
   @Test
+  public void testIPv6HostPortString() {
+    assertEquals("[::1]:123", NetUtils.getHostPortString("::1", 123));
+    assertEquals("[::1]:123", NetUtils.getHostPortString("[::1]", 123));
+
+    InetSocketAddress addr = NetUtils.createSocketAddrUnresolved("[::1]:123");
+    assertEquals("::1", addr.getHostString());
+    assertEquals(123, addr.getPort());
+
+    assertThrows(IllegalArgumentException.class,
+        () -> NetUtils.createSocketAddr("::1:123"));
+  }
+
+  @Test
   public void testGetPortFromHostPortString() throws Exception {
 
     assertEquals(1002, NetUtils.getPortFromHostPortString("testHost:1002"));
