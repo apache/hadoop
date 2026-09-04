@@ -85,6 +85,8 @@ describe('CapacityEditorDialog', () => {
         saveCapacityDrafts: mockSaveCapacityDrafts,
         getQueuePropertyValue: () => ({ value: '', isStaged: false }),
         getGlobalPropertyValue: () => ({ value: 'false', isStaged: false }),
+        hasQueueProperty: () => true,
+        getQueueAccessibility: () => true,
         getQueuePartitionCapacities: mockGetQueuePartitionCapacities,
         ...overrides,
       };
@@ -649,6 +651,47 @@ describe('CapacityEditorDialog', () => {
 
       expect(
         screen.getByText(/This queue doesn't have access to the gpu label/i),
+      ).toBeInTheDocument();
+    });
+
+    it('should show validation error when label partition capacity is set without access', () => {
+      const draft = createMockDraft({
+        capacityValue: '50',
+        maxCapacityValue: '100',
+      });
+
+      mockStoreState({
+        hasQueueProperty: () => false,
+        getQueuePropertyValue: () => ({ value: '', isStaged: false }),
+        capacityEditor: {
+          isOpen: true,
+          drafts: { [draft.queuePath]: draft },
+          draftOrder: [draft.queuePath],
+          parentQueuePath: 'root',
+          selectedNodeLabel: 'gpu',
+          labelOptions: [
+            { value: '__DEFAULT_PARTITION__', label: 'Default partition' },
+            { value: 'gpu', label: 'gpu' },
+          ],
+          labelsWithoutAccess: new Set(['gpu']),
+          validationIssues: [],
+          isSaving: false,
+          saveError: null,
+          origin: 'property-editor',
+          originQueuePath: draft.queuePath,
+          originQueueName: draft.queueName,
+          originQueueState: null,
+          originInitialCapacity: null,
+          originInitialMaxCapacity: null,
+          originIsNew: false,
+          draftCache: {},
+        },
+      });
+
+      render(<CapacityEditorDialog />);
+
+      expect(
+        screen.getByText(/Add "gpu" to accessible-node-labels before setting label partition capacity/i),
       ).toBeInTheDocument();
     });
   });

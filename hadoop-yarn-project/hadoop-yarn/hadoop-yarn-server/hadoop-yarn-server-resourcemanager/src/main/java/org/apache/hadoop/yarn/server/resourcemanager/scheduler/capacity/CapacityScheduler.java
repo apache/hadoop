@@ -212,11 +212,12 @@ public class CapacityScheduler extends
       yarnConf = conf;
   }
 
-  private void validateConf(Configuration conf) {
+  private void validateConf(Configuration conf) throws IOException {
     // validate scheduler memory allocation setting
     CapacitySchedulerConfigValidator.validateMemoryAllocation(conf);
     // validate scheduler vcores allocation setting
     CapacitySchedulerConfigValidator.validateVCores(conf);
+    CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf);
   }
 
   @Override
