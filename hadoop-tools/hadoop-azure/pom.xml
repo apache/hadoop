@@ -47,6 +47,16 @@
     <fs.azure.scale.test.list.performance.files>1000</fs.azure.scale.test.list.performance.files>
     <!-- http connection pool size; passed down as a system property -->
     <http.maxConnections>100</http.maxConnections>
+    <!-- Apache Arrow version used for Photon (Arrow-based ListBlob) parsing. -->
+    <arrow.version>15.0.2</arrow.version>
+    <!--
+      Apache Arrow's off-heap allocator (io.netty.util.internal / MemoryUtil)
+      reflectively accesses java.nio internals, which requires opening the
+      java.base/java.nio package on Java 9+. The parent extraJavaTestArgs opens
+      several java.base packages but not java.nio, so append it here to ensure
+      the default (no-profile) `mvn test` run can execute Arrow-based tests.
+    -->
+    <maven-surefire-plugin.argLine>-Xmx4096m -Xss4m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs} --add-opens=java.base/java.nio=ALL-UNNAMED</maven-surefire-plugin.argLine>
   </properties>
 
   <build>
@@ -176,6 +186,26 @@
       <artifactId>HdrHistogram</artifactId>
       <version>2.1.12</version>
       <scope>compile</scope>
+    </dependency>
+
+    <!--
+      Apache Arrow support for Photon (Arrow-based ListBlob) listings.
+      arrow-vector provides the IPC stream reader used to parse Arrow ListBlobs
+      responses; arrow-memory-netty provides the off-heap allocator implementation
+      required at runtime by the Arrow vectors.
+    -->
+    <dependency>
+      <groupId>org.apache.arrow</groupId>
+      <artifactId>arrow-vector</artifactId>
+      <version>${arrow.version}</version>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.arrow</groupId>
+      <artifactId>arrow-memory-netty</artifactId>
+      <version>${arrow.version}</version>
+      <scope>runtime</scope>
     </dependency>
 
     <!--com.fasterxml.jackson is used by WASB, not ABFS-->

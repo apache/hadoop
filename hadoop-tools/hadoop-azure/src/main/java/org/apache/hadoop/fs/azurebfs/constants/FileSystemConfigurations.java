@@ -173,6 +173,16 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_ENABLE_ABFS_LIST_ITERATOR = true;
   public static final boolean DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE = true;
   public static final boolean DEFAULT_ENABLE_PAGINATED_DELETE = false;
+  public static final boolean DEFAULT_ENABLE_PHOTON = false;
+
+  /**
+   * Default off-heap memory limit (256 MB) for the Apache Arrow allocator used
+   * to parse a single Photon (Arrow) ListBlobs response. A ListBlobs page
+   * returns at most 5000 entries; even with maximum-length blob names and the
+   * full set of columns this bound leaves ample headroom while still protecting
+   * the process from an oversized or malformed Arrow response.
+   */
+  public static final long DEFAULT_PHOTON_ARROW_MEMORY_LIMIT = 256L * 1024 * 1024;
   public static final boolean DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION = false;
   public static final boolean DEFAULT_ENABLE_FULL_BLOB_ABFS_CHECKSUM_VALIDATION = false;
 
