@@ -352,6 +352,15 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
           </filesets>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>src/main/java/org/apache/hadoop/hdfs/server/federation/metrics/JSON.java</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
   <profiles>
