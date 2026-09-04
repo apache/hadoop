@@ -20,10 +20,12 @@ package org.apache.hadoop.tools.fedbalance;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.tools.fedbalance.DistCpProcedure.Stage;
@@ -31,6 +33,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.tools.fedbalance.procedure.BalanceJob;
 import org.apache.hadoop.tools.fedbalance.procedure.BalanceProcedure.RetryException;
 import org.apache.hadoop.tools.fedbalance.procedure.BalanceProcedureScheduler;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -57,6 +60,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 /**
  * Test DistCpProcedure.
@@ -198,6 +204,39 @@ public class TestDistCpProcedure {
           () -> dcProcedure.diffDistCp());
     }
     cleanup(fs, new Path(testRoot));
+  }
+
+  @Test
+  public void testDiffThresholdAfterRecovery() throws Exception {
+    String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
+    DistributedFileSystem fs =
+        (DistributedFileSystem) FileSystem.get(URI.create(nnUri), conf);
+    createFiles(fs, testRoot, srcfiles);
+    Path src = new Path(testRoot, SRCDAT);
+    Path dst = new Path(testRoot, DSTDAT);
+
+    FedBalanceContext context = buildContext(src, dst, MOUNT, 10);
+    DistCpProcedure dcProcedure =
+        new DistCpProcedure("distcp-procedure", null, 1000, context);
+    executeProcedure(dcProcedure, Stage.DIFF_DISTCP,
+        () -> dcProcedure.initDistCp());
+    DistCpProcedure recoveredProcedure = serializeProcedure(dcProcedure);
+
+    Path lastPath = new Path(src, "a");
+    for (int i = 0; i < 5; i++) {
+      Path newPath = new Path(src, "a-" + i);
+      fs.rename(lastPath, newPath);
+      lastPath = newPath;
+    }
+    assertTrue(recoveredProcedure.diffDistCpStageDone());
+    cleanup(fs, new Path(testRoot));
+  }
+
+  @Test
+  public void testPreserveAclRequiresDestinationAclSupport()
+      throws Exception {
+    assertEquals("-pruxgpcba", getPreserveOption(true));
+    assertEquals("-pruxgpcb", getPreserveOption(false));
   }
 
   @Test
@@ -389,6 +428,34 @@ public class TestDistCpProcedure {
     return new FedBalanceContext.Builder(src, dst, mount, conf).setMapNum(10)
         .setBandwidthLimit(1).setTrash(TrashOption.TRASH).setDelayDuration(1000)
         .setDiffThreshold(diffThreshold).build();
+  }
+
+  private String getPreserveOption(boolean dstAclSupported) throws IOException {
+    DistCpProcedure dcProcedure = new DistCpProcedure();
+    DistributedFileSystem srcFs = mock(DistributedFileSystem.class);
+    DistributedFileSystem dstFs = mock(DistributedFileSystem.class);
+    Path src = new Path("/src");
+    Path dst = new Path("/dst");
+    Path dstRoot = new Path(Path.SEPARATOR);
+    AclStatus aclStatus = new AclStatus.Builder().owner("owner")
+        .group("group").build();
+
+    doReturn(aclStatus).when(srcFs).getAclStatus(src);
+    doReturn(false).when(dstFs).exists(dst);
+    doReturn(true).when(dstFs).exists(dstRoot);
+    if (dstAclSupported) {
+      doReturn(aclStatus).when(dstFs).getAclStatus(dstRoot);
+    } else {
+      doThrow(new AclException("ACL disabled")).when(dstFs)
+          .getAclStatus(dstRoot);
+    }
+
+    Whitebox.setInternalState(dcProcedure, "src", src);
+    Whitebox.setInternalState(dcProcedure, "dst", dst);
+    Whitebox.setInternalState(dcProcedure, "srcFs", srcFs);
+    Whitebox.setInternalState(dcProcedure, "dstFs", dstFs);
+    Whitebox.setInternalState(dcProcedure, "preserveAcl", true);
+    return dcProcedure.getPreserveOption();
   }
 
   protected interface Call {
