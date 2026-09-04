@@ -680,8 +680,24 @@ public class ShuffleChannelHandler extends SimpleChannelInboundHandler<FullHttpR
       LOG.trace("SendMap operation complete; mapsToWait='{}', channel='{}'",
           this.reduceContext.getMapsToWait().get(), future.channel().id());
       if (!future.isSuccess()) {
+        Throwable cause = future.cause();
+        if (cause instanceof ClosedChannelException) {
+          LOG.debug("Ignoring closed channel error in operationComplete. channel='{}'",
+              future.channel().id(), cause);
+          future.channel().close();
+          return;
+        }
+        if (cause instanceof IOException) {
+          String message = String.valueOf(cause.getMessage());
+          if (IGNORABLE_ERROR_MESSAGE.matcher(message).matches()) {
+            LOG.debug("Ignoring client disconnect during sendMap. channel='{}' Cause: {}",
+                future.channel().id(), cause.getMessage());
+            future.channel().close();
+            return;
+          }
+        }
         LOG.error("Future is unsuccessful. channel='{}' Cause: ",
-            future.channel().id(), future.cause());
+            future.channel().id(), cause);
         future.channel().close();
         return;
       }
