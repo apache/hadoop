@@ -65,6 +65,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -1115,6 +1116,34 @@ public class TestDFSUtil {
       assertEquals(new Path(prefix + inode),
           DFSUtilClient.makePathFromFileId(inode));
     }
+  }
+
+  @Test
+  public void testUserHomeDirectoryPrefix() throws Exception {
+    UserGroupInformation ugi =
+        UserGroupInformation.createRemoteUser("test-user");
+    Configuration conf = new Configuration(false);
+
+    assertEquals("/user/test-user",
+        DFSUtilClient.getHomeDirectory(conf, ugi));
+
+    conf.set(HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_KEY, "/home");
+    assertEquals("/home/test-user",
+        DFSUtilClient.getHomeDirectory(conf, ugi));
+
+    conf.set(HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_KEY, "@name@");
+    IllegalArgumentException exception = assertThrows(
+        IllegalArgumentException.class,
+        () -> DFSUtilClient.getHomeDirectory(conf, ugi));
+    assertEquals("Invalid value of dfs.user.home.dir.prefix: @name@; "
+        + "must be an absolute path", exception.getMessage());
+
+    conf.setClass("fs.hdfs.impl", DistributedFileSystem.class,
+        FileSystem.class);
+    exception = assertThrows(IllegalArgumentException.class,
+        () -> FileSystem.newInstance(new URI("hdfs://127.0.0.1:9000"), conf));
+    assertEquals("Invalid value of dfs.user.home.dir.prefix: @name@; "
+        + "must be an absolute path", exception.getMessage());
   }
 
   @Test
