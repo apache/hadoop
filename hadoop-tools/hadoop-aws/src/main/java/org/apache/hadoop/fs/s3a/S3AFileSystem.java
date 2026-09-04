@@ -411,6 +411,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private boolean dirOperationsPurgeUploads;
 
   /**
+   * When true, recursive deletion of a non-empty directory uses a single delete
+   * request for the directory key (for S3-compatible endpoints that support it).
+   */
+  private boolean deleteNonEmptyDirectoryEnabled;
+
+  /**
    * Page size for deletions.
    */
   private int pageSize;
@@ -686,6 +692,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // should the delete also purge uploads?
       dirOperationsPurgeUploads = conf.getBoolean(DIRECTORY_OPERATIONS_PURGE_UPLOADS,
           DIRECTORY_OPERATIONS_PURGE_UPLOADS_DEFAULT);
+
+      deleteNonEmptyDirectoryEnabled = conf.getBoolean(DELETE_NON_EMPTY_DIRECTORY_ENABLED,
+          DELETE_NON_EMPTY_DIRECTORY_ENABLED_DEFAULT);
 
       this.isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
           DEFAULT_MULTIPART_UPLOAD_ENABLED);
@@ -2616,7 +2625,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         throws IOException {
       auditSpan.activate();
       once("delete", path.toString(), () ->
-          S3AFileSystem.this.deleteObjectAtPath(path, key, isFile));
+          S3AFileSystem.this.deleteObjectAtPath(
+              path, key, isFile));
     }
 
     @Override
@@ -3223,7 +3233,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     } else {
       instrumentation.directoryDeleted();
     }
-    deleteObject(key);
+    incrementWriteOperations();
+    getStore().deleteObject(getRequestFactory()
+        .newDeleteObjectRequestBuilder(key)
+        .build());
   }
 
   /**
@@ -3576,7 +3589,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               recursive,
               new OperationCallbacksImpl(storeContext),
               pageSize,
-              dirOperationsPurgeUploads));
+              dirOperationsPurgeUploads,
+              deleteNonEmptyDirectoryEnabled));
       if (outcome) {
         try {
           maybeCreateFakeParentDirectory(path);
@@ -5411,6 +5425,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // Do directory operations purge uploads.
     case DIRECTORY_OPERATIONS_PURGE_UPLOADS:
       return dirOperationsPurgeUploads;
+
+    case DELETE_NON_EMPTY_DIRECTORY_ENABLED:
+      return deleteNonEmptyDirectoryEnabled;
 
       // this is a v2 sdk release.
     case STORE_CAPABILITY_AWS_V2:
