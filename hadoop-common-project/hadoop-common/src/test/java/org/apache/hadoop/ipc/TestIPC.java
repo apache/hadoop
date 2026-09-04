@@ -1800,6 +1800,58 @@ public class TestIPC {
   }
 
   @Test
+  public void testWarnDataLengthThreshold() throws Throwable {
+    Configuration serverConf = new Configuration();
+    Client.setPingInterval(serverConf, PING_INTERVAL);
+    // Set a very small warn threshold so any real RPC packet triggers it.
+    serverConf.setInt(CommonConfigurationKeys.IPC_DATA_LENGTH_WARN_THRESHOLD, 1);
+    Server server = new TestServer(1, false, serverConf);
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    server.start();
+    try {
+      GenericTestUtils.LogCapturer logCapturer =
+          GenericTestUtils.LogCapturer.captureLogs(Server.LOG);
+      Client client = new Client(LongWritable.class, conf);
+      try {
+        call(client, 0, addr, conf);
+      } finally {
+        client.stop();
+        logCapturer.stopCapturing();
+      }
+      assertTrue(logCapturer.getOutput().contains("exceeds warn threshold"),
+          "Expected warn-threshold log message");
+    } finally {
+      server.stop();
+    }
+  }
+
+  @Test
+  public void testWarnDataLengthThresholdDisabled() throws Throwable {
+    Configuration serverConf = new Configuration();
+    Client.setPingInterval(serverConf, PING_INTERVAL);
+    // Disable warn threshold.
+    serverConf.setInt(CommonConfigurationKeys.IPC_DATA_LENGTH_WARN_THRESHOLD, -1);
+    Server server = new TestServer(1, false, serverConf);
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    server.start();
+    try {
+      GenericTestUtils.LogCapturer logCapturer =
+          GenericTestUtils.LogCapturer.captureLogs(Server.LOG);
+      Client client = new Client(LongWritable.class, conf);
+      try {
+        call(client, 0, addr, conf);
+      } finally {
+        client.stop();
+        logCapturer.stopCapturing();
+      }
+      assertFalse(logCapturer.getOutput().contains("exceeds warn threshold"),
+          "Expected no warn-threshold log message when threshold is disabled");
+    } finally {
+      server.stop();
+    }
+  }
+
+  @Test
   public void testUserBinding() throws Exception {
     checkUserBinding(false);
   }
