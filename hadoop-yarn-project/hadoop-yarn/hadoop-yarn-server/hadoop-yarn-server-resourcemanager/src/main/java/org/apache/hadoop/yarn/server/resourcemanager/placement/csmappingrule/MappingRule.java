@@ -110,7 +110,7 @@ public class MappingRule {
       if (source.equals("%user")) {
         matcher = MappingRuleMatchers.createAllMatcher();
       } else {
-        matcher = MappingRuleMatchers.createUserMatcher(source);
+        matcher = MappingRuleMatchers.createUserMatcherFromMatches(source);
       }
       break;
     case GROUP_MAPPING:
