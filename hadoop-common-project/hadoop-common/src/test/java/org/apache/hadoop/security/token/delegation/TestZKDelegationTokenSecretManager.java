@@ -105,6 +105,7 @@ public class TestZKDelegationTokenSecretManager {
    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH, "testPath");
    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_AUTH_TYPE, "none");
    conf.setLong(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_SHUTDOWN_TIMEOUT, 100);
+   conf.setLong(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CACHE_INIT_TIMEOUT, 10000);
    conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, DAY_IN_SECS);
    conf.setLong(DelegationTokenManager.MAX_LIFETIME, DAY_IN_SECS);
    conf.setLong(DelegationTokenManager.RENEW_INTERVAL, DAY_IN_SECS);
@@ -551,22 +552,29 @@ public class TestZKDelegationTokenSecretManager {
         .build();
     curatorFramework.start();
     ZKDelegationTokenSecretManager.setCurator(curatorFramework);
-    DelegationTokenManager tm1 = new DelegationTokenManager(conf, new Text("foo"));
+    DelegationTokenManager tm1 = null;
+    try {
+      tm1 = new DelegationTokenManager(conf, new Text("foo"));
 
-    // When the init method is called,
-    // the ZKDelegationTokenSecretManager#startThread method will be called,
-    // and the creatingParentContainersIfNeeded will be called to create the nameSpace.
-    tm1.init();
+      // When the init method is called,
+      // the ZKDelegationTokenSecretManager#startThread method will be called,
+      // and the creatingParentContainersIfNeeded will be called to create the nameSpace.
+      tm1.init();
 
-    String workingPath = "/" + conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH,
-        ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT) + "/ZKDTSMRoot";
+      String workingPath = "/" + conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH,
+          ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT) + "/ZKDTSMRoot";
 
-    // Check if the created NameSpace exists.
-    Stat stat = curatorFramework.checkExists().forPath(workingPath);
-    assertNotNull(stat);
-
-    tm1.destroy();
-    curatorFramework.close();
+      // Check if the created NameSpace exists.
+      Stat stat = curatorFramework.checkExists().forPath(workingPath);
+      assertNotNull(stat);
+    } finally {
+      if (tm1 != null) {
+        tm1.destroy();
+      }
+      // Restore the default curator so later tests do not see a closed client.
+      ZKDelegationTokenSecretManager.setCurator(null);
+      curatorFramework.close();
+    }
   }
 
   @Test
@@ -616,36 +624,43 @@ public class TestZKDelegationTokenSecretManager {
 
     DelegationTokenManager tm1 = new DelegationTokenManager(conf, new Text("foo"));
     DelegationTokenManager tm2 = new DelegationTokenManager(conf, new Text("bar"));
-    // When the init method is called,
-    // the ZKDelegationTokenSecretManager#startThread method will be called,
-    // and the creatingParentContainersIfNeeded will be called to create the nameSpace.
-    ExecutorService executorService = Executors.newFixedThreadPool(2);
+    ExecutorService executorService = null;
+    try {
+      // When the init method is called,
+      // the ZKDelegationTokenSecretManager#startThread method will be called,
+      // and the creatingParentContainersIfNeeded will be called to create the nameSpace.
+      executorService = Executors.newFixedThreadPool(2);
 
-    Callable<Boolean> tm1Callable = () -> {
-      tm1.init();
-      return true;
-    };
-    Callable<Boolean> tm2Callable = () -> {
-      tm2.init();
-      return true;
-    };
-    List<Future<Boolean>> futures = executorService.invokeAll(
-        Arrays.asList(tm1Callable, tm2Callable));
-    for(Future<Boolean> future : futures) {
-      assertTrue(future.get());
+      Callable<Boolean> tm1Callable = () -> {
+        tm1.init();
+        return true;
+      };
+      Callable<Boolean> tm2Callable = () -> {
+        tm2.init();
+        return true;
+      };
+      List<Future<Boolean>> futures = executorService.invokeAll(
+          Arrays.asList(tm1Callable, tm2Callable));
+      for (Future<Boolean> future : futures) {
+        assertTrue(future.get());
+      }
+
+      String workingPath = "/" + conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH,
+          ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT) + "/ZKDTSMRoot";
+
+      // Check if the created NameSpace exists.
+      Stat stat = curatorFramework.checkExists().forPath(workingPath);
+      assertNotNull(stat);
+    } finally {
+      if (executorService != null) {
+        executorService.shutdownNow();
+        executorService.awaitTermination(1, TimeUnit.SECONDS);
+      }
+      tm1.destroy();
+      tm2.destroy();
+      // Restore the default curator so later tests do not see a closed client.
+      ZKDelegationTokenSecretManager.setCurator(null);
+      curatorFramework.close();
     }
-    executorService.shutdownNow();
-    assertTrue(executorService.awaitTermination(1, TimeUnit.SECONDS));
-    tm1.destroy();
-    tm2.destroy();
-
-    String workingPath = "/" + conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH,
-        ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT) + "/ZKDTSMRoot";
-
-    // Check if the created NameSpace exists.
-    Stat stat = curatorFramework.checkExists().forPath(workingPath);
-    assertNotNull(stat);
-
-    curatorFramework.close();
   }
 }
