@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.WriteOperationHelper;
+import org.apache.hadoop.fs.s3a.impl.write.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
@@ -93,7 +93,7 @@ public class ITestAuditManager extends AbstractS3ACostTest {
 
     // this will be out of span
     final WriteOperationHelper writer
-        = fs.getWriteOperationHelper();
+        = fs.createWriteOperationHelper(fs.getActiveAuditSpan());
 
     // which can be verified
     Assertions.assertThat(writer.getAuditSpan())
