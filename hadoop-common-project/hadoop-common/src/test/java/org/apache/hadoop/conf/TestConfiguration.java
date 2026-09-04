@@ -2763,4 +2763,72 @@ public class TestConfiguration {
 
     assertFalse(exceptionOccurred.get(), "ConcurrentModificationException occurred");
   }
+
+  @Test
+  public void testGetIntOutOfRange() {
+    Configuration conf = new Configuration();
+    final String key = "test.get.int.key";
+    final String outOfRangeValue = "-4294967296";
+    conf.set(key, outOfRangeValue);
+    try {
+      conf.getInt(key, 0);
+      fail("should have thrown NumberFormatException");
+    } catch (NumberFormatException e) {
+      assertTrue(e.getMessage().contains(key),
+          "Exception message should contain the config key");
+      assertTrue(e.getMessage().contains(outOfRangeValue),
+          "Exception message should contain the invalid value");
+    }
+  }
+
+  @Test
+  public void testGetIntsOutOfRange() {
+    Configuration conf = new Configuration();
+    final String key = "test.get.ints.key";
+    final String outOfRangeValue = "1,-4294967296,3";
+    conf.set(key, outOfRangeValue);
+    try {
+      conf.getInts(key);
+      fail("should have thrown NumberFormatException");
+    } catch (NumberFormatException e) {
+      assertTrue(e.getMessage().contains(key),
+          "Exception message should contain the config key");
+      assertTrue(e.getMessage().contains("-4294967296"),
+          "Exception message should contain the invalid value");
+    }
+  }
+
+  @Test
+  public void testGetLongOutOfRange() {
+    Configuration conf = new Configuration();
+    final String key = "test.get.long.key";
+    final String outOfRangeValue = "99999999999999999999";
+    conf.set(key, outOfRangeValue);
+    try {
+      conf.getLong(key, 0L);
+      fail("should have thrown NumberFormatException");
+    } catch (NumberFormatException e) {
+      assertTrue(e.getMessage().contains(key),
+          "Exception message should contain the config key");
+      assertTrue(e.getMessage().contains(outOfRangeValue),
+          "Exception message should contain the invalid value");
+    }
+  }
+
+  @Test
+  public void testGetFloatOutOfRange() {
+    Configuration conf = new Configuration();
+    final String key = "test.get.float.key";
+    final String invalidValue = "not_a_float";
+    conf.set(key, invalidValue);
+    try {
+      conf.getFloat(key, 0.0f);
+      fail("should have thrown NumberFormatException");
+    } catch (NumberFormatException e) {
+      assertTrue(e.getMessage().contains(key),
+          "Exception message should contain the config key");
+      assertTrue(e.getMessage().contains(invalidValue),
+          "Exception message should contain the invalid value");
+    }
+  }
 }
