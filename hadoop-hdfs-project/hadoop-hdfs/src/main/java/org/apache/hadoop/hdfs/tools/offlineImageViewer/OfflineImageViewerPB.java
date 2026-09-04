@@ -19,8 +19,11 @@ package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -218,13 +221,17 @@ public class OfflineImageViewerPB {
         int step = Integer.parseInt(cmd.getOptionValue("step", "0"));
         boolean formatOutput = cmd.hasOption("format");
         try (RandomAccessFile r = new RandomAccessFile(inputFile, "r")) {
-          new FileDistributionCalculator(conf, maxSize, step, formatOutput, out)
+          Writer writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
+          new FileDistributionCalculator(conf, maxSize, step, formatOutput, writer)
             .visit(r);
+          writer.flush();
         }
         break;
       case "XML":
         try (RandomAccessFile r = new RandomAccessFile(inputFile, "r")) {
-          new PBImageXmlWriter(conf, out).visit(r);
+          Writer writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
+          new PBImageXmlWriter(conf, writer).visit(r);
+          writer.flush();
         }
         break;
       case "REVERSEXML":
