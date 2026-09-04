@@ -18,9 +18,15 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
+import org.apache.commons.io.serialization.ValidatingObjectInputStream;
 import org.apache.commons.lang3.SerializationException;
 import org.apache.commons.lang3.SerializationUtils;
+import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.numa.NumaResourceAllocation;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.FpgaDevice;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -89,9 +95,37 @@ public class ResourceMappings {
     public static AssignedResources fromBytes(byte[] bytes)
         throws IOException {
       final List<Serializable> resources;
-      try {
-        resources = SerializationUtils.deserialize(bytes);
-      } catch (SerializationException e) {
+      // The bytes come from the NM recovery state store and are read back
+      // during container recovery on restart. Deserialize through a
+      // ValidatingObjectInputStream so a tampered record cannot instantiate
+      // arbitrary serializable classes on the NodeManager classpath.
+      try (ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+          ValidatingObjectInputStream ois =
+              new ValidatingObjectInputStream(bais)) {
+        // The concrete value objects the resource plugins store, the list
+        // types that wrap them (a fresh ArrayList, or the unmodifiable view
+        // that legacy records were serialized from), and the strings / boxed
+        // primitives those objects hold. Number is the superclass descriptor
+        // read back for the boxed Integer / Long map values.
+        ois.accept(ArrayList.class, String.class, Number.class,
+            Integer.class, Long.class, Device.class, GpuDevice.class,
+            FpgaDevice.class, NumaResourceAllocation.class);
+        ois.accept("java.util.Collections$UnmodifiableList",
+            "java.util.Collections$UnmodifiableCollection");
+        // NumaResourceAllocation serializes its shaded-guava ImmutableMaps
+        // through guava's internal SerializedForm, which carries the keys and
+        // values in an Object[]. The forms are a guava-internal detail, so the
+        // collect package is matched by pattern rather than pinned class name.
+        ois.accept(
+            "org.apache.hadoop.thirdparty.com.google.common.collect.*",
+            "[Ljava.lang.Object;");
+        Object obj = ois.readObject();
+        if (!(obj instanceof List)) {
+          throw new IOException("Unexpected assigned-resources record type: "
+              + (obj == null ? "null" : obj.getClass().getName()));
+        }
+        resources = (List<Serializable>) obj;
+      } catch (ClassNotFoundException e) {
         throw new IOException(e);
       }
       AssignedResources ar = new AssignedResources();

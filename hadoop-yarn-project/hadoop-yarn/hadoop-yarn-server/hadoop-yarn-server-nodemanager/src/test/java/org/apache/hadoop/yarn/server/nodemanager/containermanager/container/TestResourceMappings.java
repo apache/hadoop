@@ -19,16 +19,21 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.numa.NumaResourceAllocation;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.FpgaDevice;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestResourceMappings {
@@ -92,6 +97,38 @@ public class TestResourceMappings {
       fail(String.format("Deserialization of test AssignedResources " +
           "failed with %s", e.getMessage()));
     }
+  }
+
+  @Test
+  public void testRoundTripCoversResourcePluginTypes() throws IOException {
+    // The elements a NodeManager actually stores for gpu / fpga / numa
+    // resources must survive the allowlist, otherwise recovery would break.
+    ResourceMappings.AssignedResources pluginResources =
+        new ResourceMappings.AssignedResources();
+    pluginResources.updateAssignedResources(ImmutableList.of(
+        new GpuDevice(2, 3),
+        new FpgaDevice("IntelOpenCL", 247, 0, "aclv0"),
+        new NumaResourceAllocation("0", 1024L, "0", 4),
+        "cpu-0"));
+
+    ResourceMappings.AssignedResources deserialized =
+        ResourceMappings.AssignedResources.fromBytes(pluginResources.toBytes());
+
+    assertEquals(pluginResources.getAssignedResources(),
+        deserialized.getAssignedResources());
+  }
+
+  @Test
+  public void testFromBytesRejectsUnexpectedType() throws IOException {
+    // A tampered record whose top-level list is fine but which carries an
+    // element of a type the resource plugins never store. This stands in for a
+    // serialization gadget (e.g. a commons-beanutils BeanComparator): the
+    // allowlist rejects it by class name during readObject, before the object
+    // is instantiated and any of its logic runs.
+    byte[] payload = toBytes(ImmutableList.<Serializable>of(
+        new File("/etc/passwd")));
+    assertThrows(IOException.class,
+        () -> ResourceMappings.AssignedResources.fromBytes(payload));
   }
 
   /**
