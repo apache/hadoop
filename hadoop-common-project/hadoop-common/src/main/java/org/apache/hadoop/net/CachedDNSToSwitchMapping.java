@@ -157,7 +157,9 @@ public class CachedDNSToSwitchMapping extends AbstractDNSToSwitchMapping {
   @Override
   public void reloadCachedMappings(List<String> names) {
     for (String name : names) {
-      cache.remove(name);
+      if (name != null) {
+        cache.remove(name);
+      }
     }
   }
 }
