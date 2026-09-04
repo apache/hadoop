@@ -18,14 +18,16 @@
 package org.apache.hadoop.http;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.SocketException;
 import java.net.URI;
 import java.net.URL;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -42,6 +44,7 @@ import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests that HttpServer2 enforces mutual TLS (mTLS) when
@@ -145,6 +148,15 @@ public class TestSSLHttpServerMTLS extends HttpServerFunctionalTest {
     HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
     // presents untrustedCert; server cert is trusted via no-op TrustManager
     KeyStoreTestUtil.setAllowAllSSL(conn, untrustedCert, untrustedKeyPair);
-    assertThrows(SSLHandshakeException.class, () -> conn.getInputStream());
+    // The server rejects the certificate as soon as it arrives and drops the
+    // connection, which races the client's own last handshake flight.  When
+    // the close wins the client fails writing that flight and never reads
+    // the alert, so the refusal reaches it as a SocketException rather than
+    // an SSLHandshakeException.  What the server guarantees is that the
+    // request is refused, not which of the two the client gets to see.
+    IOException e =
+        assertThrows(IOException.class, () -> conn.getInputStream());
+    assertTrue(e instanceof SSLException || e instanceof SocketException,
+        "expected the handshake to be refused, got " + e);
   }
 }
