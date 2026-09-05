@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Properties;
 import java.text.ParseException;
 
+import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPublicKey;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -125,7 +126,11 @@ public class JWTRedirectAuthenticationHandler extends
         throw new ServletException(
             "Public key for signature validation must be provisioned.");
       }
-      publicKey = CertificateUtil.parseRSAPublicKey(pemPublicKey);
+      try {
+        publicKey = CertificateUtil.toRSAPublicKey(pemPublicKey);
+      } catch (CertificateException ce) {
+        throw new ServletException(ce.getMessage(), ce);
+      }
     }
     // setup the list of valid audiences for token validation
     String auds = config.getProperty(EXPECTED_JWT_AUDIENCES);

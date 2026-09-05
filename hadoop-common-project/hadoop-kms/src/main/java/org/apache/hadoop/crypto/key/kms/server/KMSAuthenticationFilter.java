@@ -28,7 +28,6 @@ import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthentica
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationHandler;
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticationHandler;
 import org.apache.hadoop.security.token.delegation.web.PseudoDelegationTokenAuthenticationHandler;
-import org.eclipse.jetty.server.Response;
 
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -115,17 +114,8 @@ public class KMSAuthenticationFilter
       statusCode = sc;
       this.msg = msg;
 
-      ServletResponse response = getResponse();
-
-      // After Jetty 9.4.21, sendError() no longer allows a custom message.
-      // use setStatusWithReason() to set a custom message.
-      if (response instanceof Response) {
-        ((Response) response).setStatusWithReason(sc, msg);
-      } else {
-        KMS.LOG.warn("The wrapped response object is instance of {}" +
-            ", not org.eclipse.jetty.server.Response. Can't set custom error " +
-            "message", response.getClass());
-      }
+      // Jetty 12 never puts a reason phrase on the wire, so the detail is
+      // left to sendError, which writes it into the response body.
       super.sendError(sc, HtmlQuoting.quoteHtmlChars(msg));
     }
 

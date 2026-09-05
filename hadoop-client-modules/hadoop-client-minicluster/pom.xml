@@ -124,8 +124,12 @@
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>jakarta.servlet</groupId>
-          <artifactId>jakarta.servlet-api</artifactId>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
@@ -419,7 +423,7 @@
     </dependency>
     <!-- Add back in the transitive dependencies excluded from hadoop-common in client TODO remove once we have a filter for "is in these artifacts" -->
     <!-- skip javax.servlet:javax.servlet-api because it's in client -->
-    <!-- skip jakarta.servlet:jakarta.servlet-api because it's in client -->
+    <!-- skip org.eclipse.jetty.toolchain:jetty-servlet-api because it's in client -->
     <!-- skip jakarta.ws.rs-api:jakarta.ws.rs because it's in client -->
     <!-- Skip commons-logging:commons-logging-api because it looks like nothing actually included it -->
     <!-- Skip jetty-util because it's in client -->
@@ -464,7 +468,7 @@
     </dependency>
     <!-- add back in transitive dependencies of hadoop-mapreduce-client-app removed in client -->
     <!-- Skipping javax.servlet:javax.servlet-api because it's in client -->
-    <!-- Skipping jakarta.servlet:jakarta.servlet-api because it's in client -->
+    <!-- Skipping org.eclipse.jetty.toolchain:jetty-servlet-api because it's in client -->
     <!-- Skipping jakarta.ws.rs-api:jakarta.ws.rs because it's in client -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -476,8 +480,12 @@
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>jakarta.servlet</groupId>
-          <artifactId>jakarta.servlet-api</artifactId>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
@@ -551,8 +559,12 @@
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>jakarta.servlet</groupId>
-          <artifactId>jakarta.servlet-api</artifactId>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
@@ -624,6 +636,10 @@
           <artifactId>jakarta.servlet-api</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
           <artifactId>junit-jupiter</artifactId>
           <groupId>org.junit.jupiter</groupId>
         </exclusion>
@@ -632,8 +648,17 @@
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.test-framework.providers</groupId>
-      <artifactId>jersey-test-framework-provider-jetty</artifactId>
+      <artifactId>jersey-test-framework-provider-jdk-http</artifactId>
       <exclusions>
+        <!-- skip jakarta.servlet:jakarta.servlet-api because it's in client -->
+        <exclusion>
+          <groupId>jakarta.servlet</groupId>
+          <artifactId>jakarta.servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
+        </exclusion>
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
           <artifactId>jakarta.ws.rs-api</artifactId>
@@ -707,8 +732,14 @@
                       <exclude>junit:junit</exclude>
                       <exclude>com.google.code.findbugs:jsr305</exclude>
                       <exclude>ch.qos.reload4j:reload4j</exclude>
-                      <exclude>org.eclipse.jetty.websocket:websocket-common</exclude>
-                      <exclude>org.eclipse.jetty.websocket:websocket-api</exclude>
+                      <!--
+                        WebSocket is hadoop-client-runtime's to ship. Jetty 12
+                        renamed both of these and split the Jetty-flavoured API
+                        out per EE environment, so the two names become three.
+                      -->
+                      <exclude>org.eclipse.jetty.websocket:jetty-websocket-core-common</exclude>
+                      <exclude>org.eclipse.jetty.ee8.websocket:jetty-ee8-websocket-jetty-api</exclude>
+                      <exclude>org.eclipse.jetty.ee8.websocket:jetty-ee8-websocket-jetty-common</exclude>
                       <!-- We need a filter that matches just those things that are included in the above artiacts -->
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>
@@ -940,11 +971,13 @@
                         <exclude>com/sun/security/*</exclude>
                         <exclude>com/sun/jndi/*</exclude>
                         <exclude>com/sun/management/*</exclude>
+                        <exclude>com/sun/net/httpserver/*</exclude>
                         <exclude>com/sun/tools/**/*</exclude>
                         <exclude>com/sun/javadoc/**/*</exclude>
                         <exclude>com/sun/security/**/*</exclude>
                         <exclude>com/sun/jndi/**/*</exclude>
                         <exclude>com/sun/management/**/*</exclude>
+                        <exclude>com/sun/net/httpserver/**/*</exclude>
                         <exclude>com/ibm/security/*</exclude>
                         <exclude>com/ibm/security/**/*</exclude>
                         <!-- Exclude zstd-jni -->

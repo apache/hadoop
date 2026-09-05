@@ -52,12 +52,16 @@
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
       <scope>provided</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.eclipse.jetty</groupId>
-          <artifactId>javax.servlet-api</artifactId>
-        </exclusion>
-      </exclusions>
+    </dependency>
+    <!--
+      SLSWebApp handles requests through the ee8 nested handler API, the shape
+      Jetty 9 had at org.eclipse.jetty.server. It reached this module through
+      jetty-server before and has to be asked for by name now.
+    -->
+    <dependency>
+      <groupId>org.eclipse.jetty.ee8</groupId>
+      <artifactId>jetty-ee8-nested</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>

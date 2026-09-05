@@ -18,12 +18,10 @@ import org.apache.hadoop.security.authentication.util.AuthToken;
 
 import java.security.Principal;
 
-import javax.servlet.http.HttpServletRequest;
-
 /**
  * The {@link AuthenticationToken} contains information about an authenticated
  * HTTP client and doubles as the {@link Principal} to be returned by
- * authenticated {@link HttpServletRequest}s
+ * authenticated HTTP requests.
  * <p>
  * The token can be serialized/deserialized to and from a string as it is sent
  * and received in HTTP client responses and requests as a HTTP cookie (this is

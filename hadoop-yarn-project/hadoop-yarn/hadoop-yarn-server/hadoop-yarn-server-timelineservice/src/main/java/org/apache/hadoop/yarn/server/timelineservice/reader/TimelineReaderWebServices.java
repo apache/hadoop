@@ -98,7 +98,7 @@ public class TimelineReaderWebServices {
     };
 
   private void init(HttpServletResponse response) {
-    response.setContentType(null);
+    JettyUtils.clearContentType(response);
   }
 
   private static final class DateRange {

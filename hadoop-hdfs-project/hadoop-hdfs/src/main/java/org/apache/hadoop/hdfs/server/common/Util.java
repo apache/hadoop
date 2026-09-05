@@ -49,6 +49,7 @@ import org.apache.hadoop.net.DomainNameResolverFactory;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -170,7 +171,8 @@ public final class Util {
     if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
       throw new HttpGetFailedException("Image transfer servlet at " + url +
               " failed with status code " + connection.getResponseCode() +
-              "\nResponse message:\n" + connection.getResponseMessage(),
+              "\nResponse message:\n"
+              + HttpExceptionUtils.getResponseDetail(connection),
           connection);
     }
 
