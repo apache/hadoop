@@ -435,8 +435,11 @@ Preconditions for reproducing someone else's build:
   * The same JDK major version and vendor. The compiler output, the javadoc HTML
     and the Build-Jdk-Spec manifest entries are all JDK-specific. This is normal
     for Maven reproducible builds.
-  * umask 022. The archiver copies each file's on-disk permissions into the ZIP
-    entry metadata, and Maven has no setting that normalises them.
+  * umask 022, for the jars. The archiver copies each file's on-disk
+    permissions into the ZIP entry metadata.
+    The tarballs are not affected, being written with fixed permissions and ownership.
+    Source JARs carry the permissions of the source directories themselves,
+    so unpack the source release under the same umask as well as building under it.
   * The same architecture, for the binary distribution rather than for the
     jars. Jar content does not depend on the architecture: hadoop-common
     compiles the same legacy protobuf classes everywhere, generating them with
