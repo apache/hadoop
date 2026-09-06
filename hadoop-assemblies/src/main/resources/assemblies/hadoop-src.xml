@@ -66,6 +66,8 @@
         <exclude>**/SecurityAuth.audit*</exclude>
         <exclude>patchprocess/**</exclude>
         <exclude>**/auth-keys.xml</exclude>
+        <exclude>**/azure-auth-keys.xml</exclude>
+        <exclude>**/azure-bfs-auth-keys.xml</exclude>
       </excludes>
     </fileSet>
   </fileSets>
