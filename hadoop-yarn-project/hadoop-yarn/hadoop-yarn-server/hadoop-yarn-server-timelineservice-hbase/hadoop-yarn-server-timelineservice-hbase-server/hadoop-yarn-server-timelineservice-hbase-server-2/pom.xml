@@ -201,7 +201,9 @@
                   <goal>single</goal>
                 </goals>
                 <configuration>
-                  <descriptor>src/assembly/coprocessor.xml</descriptor>
+                  <descriptors>
+                    <descriptor>src/assembly/coprocessor.xml</descriptor>
+                  </descriptors>
                   <attach>true</attach>
                 </configuration>
               </execution>
