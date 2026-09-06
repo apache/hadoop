@@ -29,24 +29,38 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
-import java.util.TimeZone;
 
 /**
  * VersionInfoMojo calculates information about the current version of the
  * codebase and exports the information as properties for further use in a Maven
  * build.  The version information includes build time, SCM URI, SCM branch, SCM
  * commit, and an MD5 checksum of the contents of the files in the codebase.
+ * <p>
+ * The build time and the SCM fields can each be pinned to a fixed value so that
+ * two builds of the same source produce the same output; see
+ * {@code version-info.build.time.value} and {@code version-info.scm.static}.
  */
 @Mojo(name="version-info")
 public class VersionInfoMojo extends AbstractMojo {
+
+  static final String UNKNOWN = "Unknown";
+
+  /**
+   * Rendered into {@code common-version-info.properties} and read back by
+   * {@code VersionInfo}; the minute precision is long-standing and retained.
+   */
+  private static final DateTimeFormatter BUILD_TIME_FORMAT =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm'Z'")
+          .withZone(ZoneOffset.UTC);
 
   @Parameter(defaultValue="${project}", readonly=true)
   private MavenProject project;
@@ -72,16 +86,48 @@ public class VersionInfoMojo extends AbstractMojo {
   @Parameter(defaultValue="git")
   private String gitCommand;
 
+  /**
+   * Build time to record, as an ISO-8601 instant or as seconds since the epoch.
+   * Defaults to the Maven-wide reproducible-build timestamp; a value of one
+   * character or less means unset, following the maven-archiver convention, and
+   * the current time is used instead.
+   */
+  @Parameter(property="version-info.build.time.value",
+      defaultValue="${project.build.outputTimestamp}")
+  private String buildTimeValue;
+
+  /**
+   * When true, report the SCM values below instead of running git.
+   */
+  @Parameter(property="version-info.scm.static", defaultValue="false")
+  private boolean staticScmInfo;
+
+  @Parameter(property="version-info.scm.uri.value", defaultValue=VersionInfoMojo.UNKNOWN)
+  private String scmUriValue;
+
+  @Parameter(property="version-info.scm.branch.value", defaultValue=VersionInfoMojo.UNKNOWN)
+  private String scmBranchValue;
+
+  @Parameter(property="version-info.scm.commit.value", defaultValue=VersionInfoMojo.UNKNOWN)
+  private String scmCommitValue;
+
   private enum SCM {NONE, GIT}
 
   @Override
   public void execute() throws MojoExecutionException {
     try {
-      SCM scm = determineSCM();
       project.getProperties().setProperty(buildTimeProperty, getBuildTime());
-      project.getProperties().setProperty(scmUriProperty, getSCMUri(scm));
-      project.getProperties().setProperty(scmBranchProperty, getSCMBranch(scm));
-      project.getProperties().setProperty(scmCommitProperty, getSCMCommit(scm));
+      if (staticScmInfo) {
+        getLog().info("SCM: static");
+        project.getProperties().setProperty(scmUriProperty, scmUriValue);
+        project.getProperties().setProperty(scmBranchProperty, scmBranchValue);
+        project.getProperties().setProperty(scmCommitProperty, scmCommitValue);
+      } else {
+        SCM scm = determineSCM();
+        project.getProperties().setProperty(scmUriProperty, getSCMUri(scm));
+        project.getProperties().setProperty(scmBranchProperty, getSCMBranch(scm));
+        project.getProperties().setProperty(scmCommitProperty, getSCMCommit(scm));
+      }
       project.getProperties().setProperty(md5Property, computeMD5());
     } catch (Throwable ex) {
       throw new MojoExecutionException(ex.toString(), ex);
@@ -89,14 +135,40 @@ public class VersionInfoMojo extends AbstractMojo {
   }
 
   /**
-   * Returns a string representing current build time.
-   * 
-   * @return String representing current build time
+   * Returns the build time to record, formatted in UTC.
+   *
+   * @return String representing the build time
+   * @throws MojoExecutionException if the configured value cannot be parsed
    */
-  private String getBuildTime() {
-    DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
-    dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-    return dateFormat.format(new Date());
+  private String getBuildTime() throws MojoExecutionException {
+    Instant instant = parseBuildTime(buildTimeValue);
+    return BUILD_TIME_FORMAT.format(instant != null ? instant : Instant.now());
+  }
+
+  /**
+   * Parses a build timestamp given either as seconds since the epoch or as an
+   * ISO-8601 instant.
+   *
+   * @param value configured value; null, empty or a single character all mean
+   *              "not set"
+   * @return the instant, or null if the value was not set
+   * @throws MojoExecutionException if the value is set but unparseable
+   */
+  static Instant parseBuildTime(String value) throws MojoExecutionException {
+    if (value == null || value.length() <= 1) {
+      return null;
+    }
+    try {
+      return Instant.ofEpochSecond(Long.parseLong(value));
+    } catch (NumberFormatException ignored) {
+      // not epoch seconds, fall through to ISO-8601
+    }
+    try {
+      return DateTimeFormatter.ISO_DATE_TIME.parse(value, Instant::from);
+    } catch (DateTimeParseException e) {
+      throw new MojoExecutionException("Cannot parse build time '" + value
+          + "'; expected epoch seconds or an ISO-8601 instant", e);
+    }
   }
   private List<String> scmOut;
 
@@ -143,7 +215,7 @@ public class VersionInfoMojo extends AbstractMojo {
    * @return String URI of SCM
    */
   private String getSCMUri(SCM scm) {
-    String uri = "Unknown";
+    String uri = UNKNOWN;
     switch (scm) {
       case GIT:
         for (String s : scmOut) {
@@ -165,7 +237,7 @@ public class VersionInfoMojo extends AbstractMojo {
    * @return String commit of SCM
    */
   private String getSCMCommit(SCM scm) {
-    String commit = "Unknown";
+    String commit = UNKNOWN;
     switch (scm) {
       case GIT:
         for (String s : scmOut) {
@@ -186,7 +258,7 @@ public class VersionInfoMojo extends AbstractMojo {
    * @return String branch of SCM
    */
   private String getSCMBranch(SCM scm) {
-    String branch = "Unknown";
+    String branch = UNKNOWN;
     switch (scm) {
       case GIT:
         for (String s : scmOut) {

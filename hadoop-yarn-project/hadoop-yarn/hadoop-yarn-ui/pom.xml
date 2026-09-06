@@ -153,6 +153,16 @@
                       </excludes>
                     </resource>
                   </resources>
+                  <nonFilteredFileExtensions>
+                    <!-- beyond the plugin's own jpg/jpeg/gif/bmp/png defaults -->
+                    <nonFilteredFileExtension>ico</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>psd</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>svgz</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>woff</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>woff2</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>ttf</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>eot</nonFilteredFileExtension>
+                  </nonFilteredFileExtensions>
                 </configuration>
               </execution>
               <execution>
@@ -173,6 +183,16 @@
                       </includes>
                     </resource>
                   </resources>
+                  <nonFilteredFileExtensions>
+                    <!-- beyond the plugin's own jpg/jpeg/gif/bmp/png defaults -->
+                    <nonFilteredFileExtension>ico</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>psd</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>svgz</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>woff</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>woff2</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>ttf</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>eot</nonFilteredFileExtension>
+                  </nonFilteredFileExtensions>
                 </configuration>
               </execution>
               <execution>
@@ -193,6 +213,16 @@
                       </includes>
                     </resource>
                   </resources>
+                  <nonFilteredFileExtensions>
+                    <!-- beyond the plugin's own jpg/jpeg/gif/bmp/png defaults -->
+                    <nonFilteredFileExtension>ico</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>psd</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>svgz</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>woff</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>woff2</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>ttf</nonFilteredFileExtension>
+                    <nonFilteredFileExtension>eot</nonFilteredFileExtension>
+                  </nonFilteredFileExtensions>
                 </configuration>
               </execution>
             </executions>
