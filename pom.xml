@@ -14,14 +14,33 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
+child.project.url.inherit.append.path="false">
   <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.apache</groupId>
+    <artifactId>apache</artifactId>
+    <version>39</version>
+    <relativePath />
+  </parent>
+
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-main</artifactId>
   <version>3.6.0-SNAPSHOT</version>
   <description>Apache Hadoop Main</description>
   <name>Apache Hadoop Main</name>
   <packaging>pom</packaging>
+  <url>https://hadoop.apache.org/</url>
+
+  <scm child.scm.connection.inherit.append.path="false"
+       child.scm.developerConnection.inherit.append.path="false"
+       child.scm.url.inherit.append.path="false">
+    <connection>scm:git:https://gitbox.apache.org/repos/asf/hadoop.git</connection>
+    <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/hadoop.git</developerConnection>
+    <url>https://github.com/apache/hadoop/tree/${project.scm.tag}</url>
+    <tag>trunk</tag>
+  </scm>
 
   <distributionManagement>
     <repository>
@@ -95,7 +114,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!-- maven plugin versions -->
-    <maven-deploy-plugin.version>2.8.1</maven-deploy-plugin.version>
     <maven-site-plugin.version>3.9.1</maven-site-plugin.version>
     <maven-stylus-skin.version>1.5</maven-stylus-skin.version>
     <maven-antrun-plugin.version>1.7</maven-antrun-plugin.version>
@@ -106,7 +124,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <maven-javadoc-plugin.version>3.8.0</maven-javadoc-plugin.version>
     <maven-gpg-plugin.version>1.5</maven-gpg-plugin.version>
     <maven-remote-resources-plugin.version>1.5</maven-remote-resources-plugin.version>
-    <maven-resources-plugin.version>3.0.1</maven-resources-plugin.version>
     <apache-rat-plugin.version>0.12</apache-rat-plugin.version>
     <wagon-ssh.version>2.4</wagon-ssh.version>
     <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
@@ -119,7 +136,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <spotbugs-maven-plugin.version>4.9.7.0</spotbugs-maven-plugin.version>
     <jsonschema2pojo-maven-plugin.version>1.1.1</jsonschema2pojo-maven-plugin.version>
     <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
-    <cyclonedx.version>2.9.1</cyclonedx.version>
+    <cyclonedx.version>2.9.3</cyclonedx.version>
     <docker-maven-plugin.version>0.29.0</docker-maven-plugin.version>
 
     <shell-executable>bash</shell-executable>
@@ -144,6 +161,23 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     -->
     <enforced.java.version>[${javac.version},)</enforced.java.version>
     <enforced.maven.version>[3.9.15,)</enforced.maven.version>
+
+    <!-- consumed by the apache parent to set maven.compiler.release and the
+         java version its own enforcer execution requires -->
+    <javaVersion>${javac.version}</javaVersion>
+    <minimalMavenBuildVersion>${enforced.maven.version}</minimalMavenBuildVersion>
+    <!-- The parent's default of posix is rejected by maven-assembly-plugin 2.4;
+         gnu is valid in both and is what the dist descriptors already set. -->
+    <assembly.tarLongFileMode>gnu</assembly.tarLongFileMode>
+
+    <!-- Fixed instant recorded in artifacts built with -Prepeatable; the
+         release manager bumps this when cutting a release branch. -->
+    <hadoop.build.timestamp>2026-01-01T00:00:00Z</hadoop.build.timestamp>
+
+    <!-- Off by default; -Prepeatable sets it to ${hadoop.build.timestamp}.
+         A single character disables it, per the maven-archiver convention.
+         Overrides the value inherited from the apache parent. -->
+    <project.build.outputTimestamp>-</project.build.outputTimestamp>
   </properties>
 
   <modules>
@@ -351,11 +385,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           <version>${maven-assembly-plugin.version}</version>
         </plugin>
         <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-deploy-plugin</artifactId>
-          <version>${maven-deploy-plugin.version}</version>
-        </plugin>
-        <plugin>
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
           <version>${apache-rat-plugin.version}</version>
@@ -558,6 +587,19 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     </pluginManagement>
 
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-remote-resources-plugin</artifactId>
+        <version>${maven-remote-resources-plugin.version}</version>
+        <executions>
+          <!-- Hadoop ships its own L&N bundle from hadoop-build-tools; unbind
+               the apache parent's bundle so jar contents are unchanged. -->
+          <execution>
+            <id>process-resource-bundles</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
