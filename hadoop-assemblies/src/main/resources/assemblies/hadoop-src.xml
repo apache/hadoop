@@ -43,6 +43,8 @@
       <excludes>
         <exclude>.git/**</exclude>
         <exclude>**/.gitignore</exclude>
+        <!-- written by the shade plugin into the module dir, not target/ -->
+        <exclude>**/dependency-reduced-pom.xml</exclude>
         <exclude>**/.svn</exclude>
         <exclude>**/*.iws</exclude>
         <exclude>**/*.ipr</exclude>
@@ -50,6 +52,12 @@
         <exclude>**/.classpath</exclude>
         <exclude>**/.project</exclude>
         <exclude>**/.settings</exclude>
+        <!-- the bare directory name above prunes only the entry, not its
+             contents, so each of these needs the recursive form -->
+        <exclude>**/.settings/**</exclude>
+        <exclude>**/.idea/**</exclude>
+        <exclude>**/.claude/**</exclude>
+        <exclude>**/*.versionsBackup</exclude>
         <exclude>**/target/**</exclude>
         <!-- until the code that does this is fixed -->
         <exclude>**/*.log</exclude>
