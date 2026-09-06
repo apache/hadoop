@@ -117,7 +117,6 @@ child.project.url.inherit.append.path="false">
     <maven-site-plugin.version>3.9.1</maven-site-plugin.version>
     <maven-stylus-skin.version>1.5</maven-stylus-skin.version>
     <maven-antrun-plugin.version>1.7</maven-antrun-plugin.version>
-    <maven-assembly-plugin.version>2.4</maven-assembly-plugin.version>
     <maven-dependency-plugin.version>3.8.1</maven-dependency-plugin.version>
     <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
     <restrict-imports.enforcer.version>2.0.0</restrict-imports.enforcer.version>
@@ -166,8 +165,8 @@ child.project.url.inherit.append.path="false">
          java version its own enforcer execution requires -->
     <javaVersion>${javac.version}</javaVersion>
     <minimalMavenBuildVersion>${enforced.maven.version}</minimalMavenBuildVersion>
-    <!-- The parent's default of posix is rejected by maven-assembly-plugin 2.4;
-         gnu is valid in both and is what the dist descriptors already set. -->
+    <!-- What the dist descriptors already set; keeps tar headers unchanged
+         from the 2.4 output rather than switching to the parent's posix. -->
     <assembly.tarLongFileMode>gnu</assembly.tarLongFileMode>
 
     <!-- Fixed instant recorded in artifacts built with -Prepeatable; the
@@ -391,11 +390,6 @@ child.project.url.inherit.append.path="false">
               </configuration>
             </execution>
           </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>${maven-assembly-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.rat</groupId>
