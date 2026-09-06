@@ -11,7 +11,10 @@
  See the License for the specific language governing permissions and
  limitations under the License. See accompanying LICENSE file.
 -->
-<project name="Hadoop Auth">
+<project xmlns="http://maven.apache.org/DECORATION/2.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/DECORATION/2.0.0 http://maven.apache.org/xsd/decoration-2.0.0.xsd"
+  name="Hadoop Auth">
 
   <skin>
     <groupId>org.apache.maven.skins</groupId>
@@ -21,7 +24,7 @@
 
   <body>
     <links>
-      <item name="Apache Hadoop" href="http://hadoop.apache.org/"/>
+      <item name="Apache Hadoop" href="https://hadoop.apache.org/"/>
     </links>
   </body>
 
