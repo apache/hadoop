@@ -192,6 +192,10 @@ function set_defaults
 
   ARTIFACTS_DIR="${BASEDIR}/target/artifacts"
 
+  # project.build.outputTimestamp to stamp into the tarballs; a value of one
+  # character or less means unset, and they are built as they always were.
+  BUILD_TIMESTAMP="-"
+
   # Extract Hadoop version from ${BASEDIR}/pom.xml
   DEFAULT_HADOOP_VERSION=$(grep "<version>" "${BASEDIR}/pom.xml" \
     | head -1 \
@@ -624,7 +628,8 @@ function makearelease
   # Create the site tarball
   run mv "${BASEDIR}/target/staging/hadoop-project" "${BASEDIR}/target/r${HADOOP_VERSION}/"
   run cd "${BASEDIR}/target/"
-  run tar czpf "hadoop-site-${HADOOP_VERSION}.tar.gz" "r${HADOOP_VERSION}"/*
+  run "${BASEDIR}/dev-support/bin/hadoop-maketar" "${BUILD_TIMESTAMP}" \
+    "hadoop-site-${HADOOP_VERSION}.tar.gz" "r${HADOOP_VERSION}"/*
   run cd "${BASEDIR}"
 
   # Stage SITE tarball
@@ -648,7 +653,8 @@ function makearelease
   run tar -xzpf "hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz"
   run mkdir -p "hadoop-${HADOOP_VERSION}/share/doc/hadoop/"
   run cp -r "${BASEDIR}/target/r${HADOOP_VERSION}"/* "hadoop-${HADOOP_VERSION}/share/doc/hadoop/"
-  run tar -czpf "hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz" "hadoop-${HADOOP_VERSION}"
+  run "${BASEDIR}/dev-support/bin/hadoop-maketar" "${BUILD_TIMESTAMP}" \
+    "hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz" "hadoop-${HADOOP_VERSION}"
   run rm -rf "hadoop-${HADOOP_VERSION}"
 
 }
