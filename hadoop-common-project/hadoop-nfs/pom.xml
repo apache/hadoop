@@ -31,7 +31,6 @@
   <description>Apache Hadoop NFS library</description>
 
   <properties>
-    <maven.build.timestamp.format>yyyyMMdd</maven.build.timestamp.format>
     <kerberos.realm>LOCALHOST</kerberos.realm>
   </properties>
 

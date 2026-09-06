@@ -30,10 +30,6 @@
   <name>Apache Hadoop Auth</name>
   <description>Apache Hadoop Auth - Java HTTP SPNEGO</description>
 
-  <properties>
-    <maven.build.timestamp.format>yyyyMMdd</maven.build.timestamp.format>
-  </properties>
-
   <dependencies>
     <dependency>
       <!-- Used, even though 'mvn dependency:analyze' doesn't find it -->
