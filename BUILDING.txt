@@ -437,11 +437,14 @@ Preconditions for reproducing someone else's build:
     for Maven reproducible builds.
   * umask 022. The archiver copies each file's on-disk permissions into the ZIP
     entry metadata, and Maven has no setting that normalises them.
-  * The same architecture. hadoop-common compiles the same legacy protobuf
-    classes everywhere, but generates them with protoc 2.5.0 under the x86_64
-    profile and takes them from checked-in sources under non-x86_64, and the
-    root aarch64 profile substitutes a different leveldbjni artifact into
-    share/hadoop/*/lib. Compare an x86_64 build against another x86_64 build.
+  * The same architecture, for the binary distribution rather than for the
+    jars. Jar content does not depend on the architecture: hadoop-common
+    compiles the same legacy protobuf classes everywhere, generating them with
+    protoc 2.5.0 under the x86_64 profile and taking them from checked-in
+    sources under non-x86_64, and the two paths produce identical bytecode.
+    What does differ is the distribution layout, because the root aarch64
+    profile substitutes a different leveldbjni artifact into
+    share/hadoop/*/lib, and native code is per architecture in any case.
 
 For ASF releases all three hold by construction, because the build runs in the
 docker images under dev-support/docker/.
