@@ -212,7 +212,7 @@
         </configuration>
         <executions>
           <execution>
-            <id>prepare-jar</id>
+            <id>default-jar</id>
             <phase>prepare-package</phase>
             <goals>
               <goal>jar</goal>
