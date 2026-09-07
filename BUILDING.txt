@@ -165,9 +165,7 @@ Maven build goals:
   * Use -Pyarn-ui to build YARN UI v2. (Requires Internet connectivity)
   * Use -DskipShade to disable client jar shading to speed up build times (in
     development environments only, not to build release artifacts)
-  * Use -Prepeatable to pin the build timestamp, user and git information to
-    fixed values, so that a rebuild of the same source produces identical
-    artifacts. See "Reproducible builds" below.
+  * Use -Prepeatable for repeatable builds. See "Repeatable Builds" below.
 
  YARN Application Timeline Service V2 build options:
 
@@ -392,7 +390,7 @@ Create a local staging version of the website (in /tmp/hadoop-site)
 Note that the site needs to be built in a second pass after other artifacts.
 
 ----------------------------------------------------------------------------------
-Reproducible builds:
+Repeatable builds:
 
 By default a Hadoop build records the machine it was built on: the username, the
 wall-clock time, the git remote/branch/commit and the OS classifier all end up
@@ -409,7 +407,7 @@ produces byte-identical .jar, -sources.jar, -javadoc.jar, .pom and the source
 tarball whoever runs the build and wherever they run it. It works from a git
 checkout and from the unpacked hadoop-X.Y.Z-src.tar.gz alike.
 
-What the profile pins:
+What the profile fixes:
 
   * project.build.outputTimestamp, which fixes the entry timestamps in every
     archive written by Maven, and drops the generation timestamp from the
@@ -441,26 +439,26 @@ Preconditions for reproducing someone else's build:
     Source JARs carry the permissions of the source directories themselves,
     so unpack the source release under the same umask as well as building under it.
   * The same architecture, for the binary distribution rather than for the
-    jars. Jar content does not depend on the architecture: hadoop-common
-    compiles the same legacy protobuf classes everywhere, generating them with
-    protoc 2.5.0 under the x86_64 profile and taking them from checked-in
-    sources under non-x86_64, and the two paths produce identical bytecode.
+    JARs. The hadoop JARS do not depend on the architecture.
     What does differ is the distribution layout, because the root aarch64
     profile substitutes a different leveldbjni artifact into
-    share/hadoop/*/lib, and native code is per architecture in any case.
+    share/hadoop/*/lib, and native code is platform-specific.
 
-For ASF releases all three hold by construction, because the build runs in the
-docker images under dev-support/docker/.
+ASF releases are built in docker images set up under dev-support/docker/; these
+recreate the build environment as much as possible.
 
 Not yet reproducible, and out of scope of the profile:
 
-  * The binary distribution TAR.GZ. It is assembled by shell scripts calling
-    tar and gzip directly, which record the building user and wall-clock mtimes.
+  * The binary .tar.gz distribution. It is assembled by shell scripts calling
+    tar and gzip directly, which record the building user and wall-clock times.
   * The generated site, which stamps a publication date into each page.
   * Native code, which embeds absolute build paths, and the YARN UI, which
     downloads its toolchain at build time.
-  * GPG signatures, which carry a creation time by design. Verification compares
-    artifacts, not signatures.
+
+Never reproducible
+
+  * GPG signatures. These are unique, even if signed by the same principal, as they
+    include a signing timestamp.
 
 To check a build, run it twice into two different directories, varying anything
 you believe does not matter - TZ, LC_ALL, the absolute path, the OS user - and
@@ -469,10 +467,6 @@ compare:
   $ find . -path '*/target/*.jar' -not -path '*/target/*/*' -exec sha512sum {} + \
       | sed 's#.*/##' | sort > /tmp/build1.txt
 
-Differing checksums are triaged with 'unzip -v' on both jars, run under the same
-TZ since unzip renders entry times in local time. Entries whose CRCs match but
-whose dates differ mean only that a timestamp was missed; differing CRCs mean
-the content itself diverged.
 
 ----------------------------------------------------------------------------------
 Including Cloud Connector Dependencies in Distributions:
