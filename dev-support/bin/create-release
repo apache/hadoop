@@ -193,8 +193,12 @@ function set_defaults
 
   ARTIFACTS_DIR="${BASEDIR}/target/artifacts"
 
-  # project.build.outputTimestamp to stamp into the tarballs; a value of one
-  # character or less means unset, and they are built as they always were.
+  # project.build.outputTimestamp to stamp into the tarballs on repeatable builds only.
+  # values
+  # fixed: use the repeatable timestamp
+  # git: use git commit
+  # iso/epoch number: use that date
+  # empty or string length = 1: unset. Use the current time (default)
   BUILD_TIMESTAMP="-"
   REPEATABLE=false
 
@@ -290,7 +294,7 @@ function usage
   echo "--artifactsdir=[path]   Path to use to store release bits"
   echo "--asfrelease            Make an ASF release"
   echo "--repeatable            Build with fixed timestamps and host information"
-  echo "--build-timestamp=[ts]  Override the repeatable build timestamp (ISO, epoch or git)"
+  echo "--build-timestamp=[ts]  Override the repeatable build timestamp (ISO, epoch, 'git', 'fixed'))"
   echo "--deploy                Deploy Maven artifacts using ~/.m2/settings.xml"
   echo "--docker                Use Hadoop's Dockerfile for guaranteed environment"
   echo "--dockercache           Use a Docker-private maven cache"
@@ -318,7 +322,6 @@ function option_parse
       ;;
       --build-timestamp=*)
         BUILD_TIMESTAMP=${i#*=}
-        REPEATABLE=true
       ;;
       --artifactsdir=*)
         ARTIFACTS_DIR=${i#*=}
@@ -425,39 +428,25 @@ function option_parse
     fi
   fi
 
-  if [[ "${REPEATABLE}" = true ]]; then
-    if [[ "${BUILD_TIMESTAMP}" = "-" ]]; then
-      # determine build timestamp from the profile.
-      # this is a bit contrived give it is coming back down again and the repeatable profile holds
-      # the secret. Better to only pass it down if not "-"; but for now leaving with
-      # a slightly less brittle variant of the claude design.
+  # start building the maven argument list.
+  MVN_ARGS=()
 
-      # claude wants to use sed to parse xml, which is dangerously brittle
-      # BUILD_TIMESTAMP=$(sed -n 's|^[[:space:]]*<hadoop\.build\.timestamp>\([^<]*\)</hadoop\.build\.timestamp>.*|\1|p' "${BASEDIR}/pom.xml" | head -1)
-      # an XPath lookup is the correct way, though it needs xmlstarlet installed.
-      # note the use of _ to pick up the default xmlns of the pom -without this the path won't
-      # resolve.
-      BUILD_TIMESTAMP=$(xmlstarlet sel -t -v "//_:hadoop.build.timestamp" "${BASEDIR}/pom.xml")
-      if [ $? -ne 0 ] ; then
-        hadoop_error "ERROR: Cannot find xmlstarlet"
-        exit 1
-      fi
-      if [[ -z "${BUILD_TIMESTAMP}" ]]; then
-        hadoop_error "ERROR: Cannot find hadoop.build.timestamp in ${BASEDIR}/pom.xml."
-        exit 1
-      fi
-    fi
-    if [[ "${BUILD_TIMESTAMP}" = git ]]; then
+  if [[ "${REPEATABLE}" = true ]]; then
+    MVN_ARGS=("-Prepeatable" )
+    if [[ "${BUILD_TIMESTAMP}" = "fixed" ]]; then
+      echo "Using timestamp from repeatable build profile"
+    elif [[ "${BUILD_TIMESTAMP}" = git ]]; then
       BUILD_TIMESTAMP=$(git -C "${BASEDIR}" log -1 --format=%ct)
-    elif [[ ${#BUILD_TIMESTAMP} -gt 1 \
-        && ! "${BUILD_TIMESTAMP}" =~ ^[0-9]+$ \
-        && ! "${BUILD_TIMESTAMP}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[^[:space:]]+$ ]]; then
-      hadoop_error "ERROR: Invalid build timestamp '${BUILD_TIMESTAMP}'. Use ISO-8601, epoch seconds or git."
-      exit 1
+      echo "Using git commit timestamp ${BUILD_TIMESTAMP}"
+      MVN_ARGS+=("-Dhadoop.build.timestamp=${BUILD_TIMESTAMP}")
+    elif [[ ${#BUILD_TIMESTAMP} -gt 1 ]]; then
+      if [[ ! "${BUILD_TIMESTAMP}" =~ ^[0-9]+$ \
+          && ! "${BUILD_TIMESTAMP}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[^[:space:]]+$ ]]; then
+        hadoop_error "ERROR: Invalid build timestamp '${BUILD_TIMESTAMP}'. Use ISO-8601, epoch seconds or git."
+        exit 1
+      fi
+      MVN_ARGS+=("-Dhadoop.build.timestamp=${BUILD_TIMESTAMP}")
     fi
-    MVN_ARGS=("-Prepeatable" "-Dhadoop.build.timestamp=${BUILD_TIMESTAMP}")
-  else
-    MVN_ARGS=()
   fi
 
   if [[ -n "${MVNCACHE}" ]]; then

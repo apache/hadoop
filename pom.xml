@@ -967,7 +967,7 @@ child.project.url.inherit.append.path="false">
       <id>repeatable</id>
       <properties>
         <!-- Picked up by maven-archiver, maven-assembly-plugin and cyclonedx to
-             normalise archive entry times and drop generation timestamps. -->
+             fix archive entry times and drop generation timestamps. -->
         <project.build.outputTimestamp>${hadoop.build.timestamp}</project.build.outputTimestamp>
 
         <!-- Recorded in the version resources in place of the git checkout, the

@@ -37,7 +37,7 @@ This directory contains tools to help in the development and release of Apache H
 
 * create-release.sh
 
-  Helps REs create a release of Apache Hadoop for distribution.
+  Helps REs/CI tools create a release of Apache Hadoop for distribution.
 
 * determine-flaky-tests-hadoop.py
 
