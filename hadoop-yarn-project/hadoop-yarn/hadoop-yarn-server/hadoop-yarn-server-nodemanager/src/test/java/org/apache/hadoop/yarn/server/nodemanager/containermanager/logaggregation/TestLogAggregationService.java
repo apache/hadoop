@@ -257,18 +257,12 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
       verify(delSrvc, times(2)).delete(argThat(new FileDeletionMatcher(
           delSrvc, user, null, dirList)));
 
-      String containerIdStr = container11.toString();
-      File containerLogDir = new File(app1LogDir, containerIdStr);
-      for (String fileType : new String[]{"stdout", "stderr", "syslog", "zero"}) {
-        File f = new File(containerLogDir, fileType);
-        GenericTestUtils.waitFor(() -> !f.exists(), 1000, 1000 * 50);
-        assertFalse(f.exists(), "File [" + f + "] was not deleted");
-      }
-      // DeletionService removes the files before the directories that hold
-      // them, so the application log directory can still be there when the
-      // last file has gone.  Wait for it the same way.
-      GenericTestUtils.waitFor(() -> !app1LogDir.exists(), 1000, 1000 * 50);
-      assertFalse(app1LogDir.exists(),
+      // The container files and the application directory are deleted by two
+      // independent FileDeletionTasks, both scheduled on the DeletionService
+      // pool with no ordering between them, so neither is guaranteed to have
+      // finished when handle() returns.  Waiting for app1LogDir to go
+      // subsumes the per-file waits: the files live inside it.
+      GenericTestUtils.waitFor(() -> !app1LogDir.exists(), 1000, 1000 * 50,
           "Directory [" + app1LogDir + "] was not deleted");
     } else {
       List<Path> dirList = new ArrayList<>();
