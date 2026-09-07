@@ -19,15 +19,14 @@ package org.apache.hadoop.http;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
-import java.net.SocketException;
 import java.net.URI;
 import java.net.URL;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -43,8 +42,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests that HttpServer2 enforces mutual TLS (mTLS) when
@@ -149,14 +148,20 @@ public class TestSSLHttpServerMTLS extends HttpServerFunctionalTest {
     // presents untrustedCert; server cert is trusted via no-op TrustManager
     KeyStoreTestUtil.setAllowAllSSL(conn, untrustedCert, untrustedKeyPair);
     // The server rejects the certificate as soon as it arrives and drops the
-    // connection, which races the client's own last handshake flight.  When
-    // the close wins the client fails writing that flight and never reads
-    // the alert, so the refusal reaches it as a SocketException rather than
-    // an SSLHandshakeException.  What the server guarantees is that the
-    // request is refused, not which of the two the client gets to see.
+    // connection, which races the client's own last handshake flight, and how
+    // the refusal surfaces depends on who wins and on the protocol in play.
+    // Under TLSv1.2 it is an SSLHandshakeException; when the close wins the
+    // client fails writing that flight and gets a SocketException instead;
+    // under TLSv1.3 the handshake completes client-side before the server has
+    // verified the cert, so the failure lands on the request write as a bare
+    // IOException with no cause.  What the server guarantees is that the
+    // request is refused, not which of those the client gets to see.  Assert
+    // the refusal and exclude only ConnectException, which would mean we
+    // never reached the server at all.
     IOException e =
         assertThrows(IOException.class, () -> conn.getInputStream());
-    assertTrue(e instanceof SSLException || e instanceof SocketException,
-        "expected the handshake to be refused, got " + e);
+    assertFalse(e instanceof ConnectException,
+        "expected the request to be refused by the server, but it was "
+            + "never reached: " + e);
   }
 }
