@@ -2236,6 +2236,31 @@ public class DataNode extends ReconfigurableBase
     return blockPoolManager.getAllNamenodeThreads();
   }
 
+  /**
+   * Signal every block pool service to stop, without waiting for its threads
+   * to exit, so that a caller shutting down several DataNodes in one JVM can
+   * signal them all before joining any of them. A later {@code shutdown()} on
+   * this DataNode still does the joining; {@code stop()} is idempotent.
+   *
+   * <p>Joining one DataNode while the others still run can hang: DataNodes in
+   * a single JVM share an {@link org.apache.hadoop.ipc.Client} through
+   * ClientCache, so they share its per-address Connection objects too. A
+   * BPServiceActor that is still retrying a dead NameNode holds that
+   * Connection's monitor across its connect-retry sleeps, and an actor of the
+   * DataNode being shut down can sit BLOCKED on that monitor. A BLOCKED thread
+   * cannot observe the interrupt that {@code stop()} sends, so the join waits
+   * for as long as the surviving DataNodes keep re-acquiring the monitor.
+   * Signalling everyone first lets the holder abort its sleep and release it.
+   */
+  @VisibleForTesting
+  public void signalBlockPoolShutdown() {
+    if (blockPoolManager == null) {
+      return;
+    }
+    blockPoolManager.signalShutDownAll(
+        blockPoolManager.getAllNamenodeThreads());
+  }
+
   BPOfferService getBPOfferService(String bpid){
     return blockPoolManager.get(bpid);
   }
