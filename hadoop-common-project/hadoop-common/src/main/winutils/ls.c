@@ -280,11 +280,11 @@ int Ls(__in int argc, __in_ecount(argc) wchar_t *argv[])
     goto LsEnd;
   }
 
-  dwErrorCode = GetFileInformationByName(
+  dwErrorCode = GetFileInformationByPathName(
     longPathName, optionsMask & CmdLineOptionFollowSymlink, &fileInformation);
   if (dwErrorCode != ERROR_SUCCESS)
   {
-    ReportErrorCode(L"GetFileInformationByName", dwErrorCode);
+    ReportErrorCode(L"GetFileInformationByPathName", dwErrorCode);
     goto LsEnd;
   }
 
