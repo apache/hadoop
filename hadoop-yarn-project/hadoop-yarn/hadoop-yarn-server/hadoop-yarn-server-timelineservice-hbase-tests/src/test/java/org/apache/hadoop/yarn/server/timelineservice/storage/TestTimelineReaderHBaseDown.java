@@ -22,6 +22,7 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
@@ -42,6 +43,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+/**
+ * Tests for the reader's handling of an HBase backend that is down.
+ * <p>
+ * Every test here stops its {@link TimelineReaderServer}, which is what stops
+ * the storage monitor the server started.  Without that the monitor's
+ * scheduled executor stays behind for the life of the JVM, polling HBase
+ * every TIMELINE_SERVICE_READER_STORAGE_MONITOR_INTERVAL_MS against a
+ * minicluster the test has already torn down.  Its threads are not daemons
+ * and the module runs with forkCount 0, so they pile up across the whole
+ * surefire run.
+ */
 public class TestTimelineReaderHBaseDown {
 
   @Test
@@ -49,13 +61,12 @@ public class TestTimelineReaderHBaseDown {
   public void testTimelineReaderHBaseUp() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
-    TimelineReaderServer server = null;
+    TimelineReaderServer server = getTimelineReaderServer();
     try {
       util.startMiniCluster();
       DataGeneratorForTest.createSchema(util.getConfiguration());
       DataGeneratorForTest.loadApps(util, System.currentTimeMillis());
 
-      server = getTimelineReaderServer();
       server.init(util.getConfiguration());
       HBaseTimelineReaderImpl htr = getHBaseTimelineReaderImpl(server);
       server.start();
@@ -68,7 +79,7 @@ public class TestTimelineReaderHBaseDown {
         throw e;
       }
     } finally {
-      stopServer(server);
+      ServiceOperations.stopQuietly(server);
       util.shutdownMiniCluster();
     }
   }
@@ -88,7 +99,7 @@ public class TestTimelineReaderHBaseDown {
       server.start();
       waitForHBaseDown(htr);
     } finally {
-      stopServer(server);
+      ServiceOperations.stopQuietly(server);
     }
   }
 
@@ -97,7 +108,7 @@ public class TestTimelineReaderHBaseDown {
   public void testTimelineReaderDetectsHBaseDown() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
-    TimelineReaderServer server = null;
+    TimelineReaderServer server = getTimelineReaderServer();
 
     try {
       // start minicluster
@@ -106,7 +117,6 @@ public class TestTimelineReaderHBaseDown {
       DataGeneratorForTest.loadApps(util, System.currentTimeMillis());
 
       // init timeline reader
-      server = getTimelineReaderServer();
       server.init(util.getConfiguration());
       HBaseTimelineReaderImpl htr = getHBaseTimelineReaderImpl(server);
 
@@ -124,7 +134,7 @@ public class TestTimelineReaderHBaseDown {
         throw e;
       }
     } finally {
-      stopServer(server);
+      ServiceOperations.stopQuietly(server);
       util.shutdownMiniCluster();
     }
   }
@@ -134,7 +144,7 @@ public class TestTimelineReaderHBaseDown {
   public void testTimelineReaderDetectsZooKeeperDown() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
-    TimelineReaderServer server = null;
+    TimelineReaderServer server = getTimelineReaderServer();
 
     try {
       // start minicluster
@@ -143,7 +153,6 @@ public class TestTimelineReaderHBaseDown {
       DataGeneratorForTest.loadApps(util, System.currentTimeMillis());
 
       // init timeline reader
-      server = getTimelineReaderServer();
       server.init(util.getConfiguration());
       HBaseTimelineReaderImpl htr = getHBaseTimelineReaderImpl(server);
 
@@ -161,7 +170,7 @@ public class TestTimelineReaderHBaseDown {
         throw e;
       }
     } finally {
-      stopServer(server);
+      ServiceOperations.stopQuietly(server);
       util.shutdownMiniCluster();
     }
   }
@@ -171,7 +180,7 @@ public class TestTimelineReaderHBaseDown {
   public void testTimelineReaderRecoversAfterHBaseReturns() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
-    TimelineReaderServer server = null;
+    TimelineReaderServer server = getTimelineReaderServer();
 
     try {
       // start minicluster
@@ -180,7 +189,6 @@ public class TestTimelineReaderHBaseDown {
       DataGeneratorForTest.loadApps(util, System.currentTimeMillis());
 
       // init timeline reader
-      server = getTimelineReaderServer();
       server.init(util.getConfiguration());
       HBaseTimelineReaderImpl htr = getHBaseTimelineReaderImpl(server);
 
@@ -208,23 +216,8 @@ public class TestTimelineReaderHBaseDown {
         throw e;
       }
     } finally {
-      stopServer(server);
+      ServiceOperations.stopQuietly(server);
       util.shutdownMiniCluster();
-    }
-  }
-
-  /**
-   * Stop the reader server, which is what stops the storage monitor it
-   * started.  Without this the monitor's scheduled executor stays behind for
-   * the life of the JVM, polling HBase every
-   * TIMELINE_SERVICE_READER_STORAGE_MONITOR_INTERVAL_MS against a minicluster
-   * that these tests have already torn down.  Its threads are not daemons and
-   * the module runs with forkCount 0, so they pile up across the whole
-   * surefire run.
-   */
-  private static void stopServer(TimelineReaderServer server) {
-    if (server != null) {
-      server.stop();
     }
   }
 
