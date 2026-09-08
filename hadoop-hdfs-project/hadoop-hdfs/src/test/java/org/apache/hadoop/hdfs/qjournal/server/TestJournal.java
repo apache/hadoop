@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.qjournal.server;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -516,6 +517,29 @@ public class TestJournal {
     journal.journal(makeRI(7), 16, 16, 5, QJMTestUtil.createTxnData(16, 5));
 
     assertJournaledEditsTxnCountAndContents(16, 10, 20, newLayoutVersion);
+  }
+
+  @Test
+  public void testOnlyReadPersistedEditsFromCache() throws Exception {
+    JournalFaultInjector faultInjector = Mockito.mock(JournalFaultInjector.class);
+    JournalFaultInjector.instance = faultInjector;
+
+    journal.newEpoch(FAKE_NSINFO, 1);
+    journal.startLogSegment(makeRI(1), 1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    journal.journal(makeRI(2), 1, 1, 5, QJMTestUtil.createTxnData(1, 5));
+    assertJournaledEditsTxnCountAndContents(1, 10, 5,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+
+    Mockito.doThrow(new IOException("Injected")).when(faultInjector)
+        .writeEdits();
+    assertThrows(IOException.class, () ->
+        journal.journal(makeRI(3), 1, 6, 5, QJMTestUtil.createTxnData(6, 5)));
+    Mockito.reset(faultInjector);
+
+    // We should not see the edits that failed to persist to storage
+    assertJournaledEditsTxnCountAndContents(1, 10, 5,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
   }
 
   private void assertJournaledEditsTxnCountAndContents(int startTxn,

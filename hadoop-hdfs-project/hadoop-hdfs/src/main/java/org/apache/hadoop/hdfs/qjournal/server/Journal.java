@@ -429,9 +429,6 @@ public class Journal implements Closeable {
       LOG.trace("Writing txid " + firstTxnId + "-" + lastTxnId +
           " ; journal id: " + journalId);
     }
-    if (cache != null) {
-      cache.storeEdits(records, firstTxnId, lastTxnId, curSegmentLayoutVersion);
-    }
 
     // If the edit has already been marked as committed, we know
     // it has been fsynced on a quorum of other nodes, and we are
@@ -439,6 +436,7 @@ public class Journal implements Closeable {
     boolean isLagging = lastTxnId <= committedTxnId.get();
     boolean shouldFsync = !isLagging;
     
+    JournalFaultInjector.get().writeEdits();
     curSegment.writeRaw(records, 0, records.length);
     curSegment.setReadyToFlush();
     StopWatch sw = new StopWatch();
@@ -469,6 +467,12 @@ public class Journal implements Closeable {
     
     updateHighestWrittenTxId(lastTxnId);
     nextTxId = lastTxnId + 1;
+
+    // Only cache the edits if we successfully persisted them
+    if (cache != null) {
+      cache.storeEdits(records, firstTxnId, lastTxnId, curSegmentLayoutVersion);
+    }
+
     lastJournalTimestamp = Time.now();
   }
 
