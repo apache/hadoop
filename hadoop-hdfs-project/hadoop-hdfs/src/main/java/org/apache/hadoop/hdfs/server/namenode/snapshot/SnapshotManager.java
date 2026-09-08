@@ -543,8 +543,11 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       assertFirstSnapshot(srcRoot, snapshottable, snapshot);
     }
 
-    srcRoot.removeSnapshot(reclaimContext, snapshotName, now, this);
-    numSnapshots.getAndDecrement();
+    Snapshot removed = srcRoot.removeSnapshot(
+        reclaimContext, snapshotName, now, this);
+    if (removed != null) {
+      numSnapshots.decrementAndGet();
+    }
   }
 
   /**
