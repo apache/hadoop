@@ -66,6 +66,9 @@ static void display_usage(FILE *stream) {
       "%s container-executor --reap-runc-layer-mounts <retain-count>\n", de);
 
   fprintf(stream,
+      "       container-executor --run-jstack <user> <pid> <jstack_path>\n");
+
+  fprintf(stream,
       "       container-executor <user> <yarn-user> <command> <command-args>\n"
       "       where command and command-args: \n" \
       "            initialize container:  %2d appid containerid tokens nm-local-dirs "
@@ -467,6 +470,16 @@ static int validate_arguments(int argc, char **argv , int *operation) {
     }
   }
 
+  if(strcmp("--run-jstack", argv[1]) == 0) {
+    if(argc != 5){
+      fprintf(ERRORFILE, "Usage: container-executor --run-jstack <user> <pid> <jstack_path>\n");
+      return INVALID_ARGUMENT_NUMBER;
+    }
+
+    *operation = RUN_JSTACK;
+    return 0;
+  }
+
 
   /* Now we have to validate 'run as user' operations that don't use
     a 'long option' - we should fix this at some point. The validation/argument
@@ -824,6 +837,9 @@ int main(int argc, char **argv) {
     break;
   case REAP_RUNC_LAYER_MOUNTS:
     exit_code = reap_runc_layer_mounts(cmd_input.runc_layer_count);
+    break;
+  case RUN_JSTACK:
+    exit_code = run_jstack_as_user(argv[2], argv[3], argv[4]);
     break;
   default:
     fprintf(ERRORFILE, "Unexpected operation code: %d\n", operation);
