@@ -38,8 +38,8 @@
 
   <dependencies>
     <dependency>
-      <groupId>jakarta.servlet</groupId>
-      <artifactId>jakarta.servlet-api</artifactId>
+      <groupId>org.eclipse.jetty.toolchain</groupId>
+      <artifactId>jetty-servlet-api</artifactId>
     </dependency>
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
     <dependency>
@@ -52,6 +52,21 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-annotations</artifactId>
+    </dependency>
+
+    <!-- ApplicationHistoryServer uses org.eclipse.jetty.webapp.WebAppContext and
+         org.eclipse.jetty.servlet.FilterHolder. Declared provided, matching the
+         scope they already resolve at through the provided hadoop-common above. -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-webapp</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlet</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
@@ -92,7 +107,7 @@
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.test-framework.providers</groupId>
-      <artifactId>jersey-test-framework-provider-jetty</artifactId>
+      <artifactId>jersey-test-framework-provider-jdk-http</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
