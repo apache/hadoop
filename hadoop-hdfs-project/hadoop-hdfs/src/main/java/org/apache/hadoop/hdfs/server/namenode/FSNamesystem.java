@@ -7212,16 +7212,34 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Verifies that the given identifier and password are valid and match.
    * @param identifier Token identifier.
    * @param password Password in the token.
+   * @throws InvalidToken if the token is not valid on this namenode.
+   * @throws RetriableException if this namenode may not have tailed the
+   *         editlog entry creating the token yet, so the caller should retry.
    */
   public synchronized void verifyToken(DelegationTokenIdentifier identifier,
       byte[] password) throws InvalidToken, RetriableException {
+    byte[] storedPassword;
     try {
-      getDelegationTokenSecretManager().verifyToken(identifier, password);
+      // what this namesystem holds for the token is the only part of
+      // verification that lagging behind the active can defeat
+      storedPassword =
+          getDelegationTokenSecretManager().retrievePassword(identifier);
     } catch (InvalidToken it) {
-      if (inTransitionToActive()) {
+      if (inTransitionToActive() || isObserver()) {
+        // the corresponding editlog may not have been applied yet: this
+        // namesystem is either in the middle of transitioning to active
+        // state, or is an observer tailing the active. let client retry.
         throw new RetriableException(it);
       }
       throw it;
+    }
+    // a mismatch cannot be a symptom of staleness: every namenode recomputes
+    // the same password from the same master key, and one that has not tailed
+    // that key does not store the token at all. so this is a forged token,
+    // and stays fatal even where a failed lookup would not be.
+    if (!MessageDigest.isEqual(password, storedPassword)) {
+      throw new InvalidToken("token (" + identifier
+          + ") is invalid, password doesn't match");
     }
   }
 
@@ -9256,7 +9274,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
-  private boolean isObserver() {
+  /**
+   * @return Whether this namenode is in the observer state, and so may be
+   *         behind the active namenode on tailing the edit log.
+   */
+  public boolean isObserver() {
     return haEnabled && haContext != null && haContext.getState().getServiceState() == OBSERVER;
   }
 
