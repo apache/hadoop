@@ -88,6 +88,7 @@ import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitFdResponse.DO_NOT_USE_RECEIPT_VERIFICATION;
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitFdResponse.USE_RECEIPT_VERIFICATION;
@@ -106,7 +107,9 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 class DataXceiver extends Receiver implements Runnable {
   public static final Logger LOG = DataNode.LOG;
   static final Logger CLIENT_TRACE_LOG = DataNode.CLIENT_TRACE_LOG;
-  
+  static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
+      ".*Premature EOF.*", Pattern.CASE_INSENSITIVE);
+
   private Peer peer;
   private final String remoteAddress; // address of remote side
   private final String remoteAddressWithoutPort; // only the address, no port
@@ -315,9 +318,9 @@ class DataXceiver extends Receiver implements Runnable {
         } else {
           LOG.info("{}; {}", s, t.toString());
         }
-      } else if (op == Op.READ_BLOCK && t instanceof SocketTimeoutException) {
+      } else if (isIgnorableClientDisconnect(op, t)) {
         String s1 =
-            "Likely the client has stopped reading, disconnecting it";
+            "Likely the client has stopped, disconnecting it";
         s1 += " (" + s + ")";
         if (LOG.isTraceEnabled()) {
           LOG.trace(s1, t);
@@ -345,6 +348,13 @@ class DataXceiver extends Receiver implements Runnable {
         IOUtils.closeStream(in);
       }
     }
+  }
+
+  @VisibleForTesting
+  static boolean isIgnorableClientDisconnect(Op op, Throwable t) {
+    return (op == Op.READ_BLOCK && t instanceof SocketTimeoutException) ||
+           (op == Op.WRITE_BLOCK && t instanceof IOException &&
+            IGNORABLE_ERROR_MESSAGE.matcher(String.valueOf(t.getMessage())).matches());
   }
 
   /**
