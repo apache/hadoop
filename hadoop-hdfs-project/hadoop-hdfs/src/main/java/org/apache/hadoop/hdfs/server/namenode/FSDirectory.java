@@ -1882,6 +1882,15 @@ public class FSDirectory implements Closeable {
     }
   }
 
+  FSPermissionChecker getPermissionChecker(UserGroupInformation caller)
+      throws AccessControlException {
+    try {
+      return getPermissionChecker(fsOwnerShortUserName, supergroup, caller);
+    } catch (IOException e) {
+      throw new AccessControlException(e);
+    }
+  }
+
   @VisibleForTesting
   FSPermissionChecker getPermissionChecker(String fsOwner, String superGroup,
       UserGroupInformation ugi) throws AccessControlException {
