@@ -141,7 +141,7 @@ public final class TestContainerLogsUtils {
       appAcls.put(ApplicationAccessType.VIEW_APP, ugi.getUserName());
       LogAggregationFileControllerContext context
           = new LogAggregationFileControllerContext(
-              path, path, true, 1000,
+              path, path, false, -1,
               appId, appAcls, nodeId, ugi);
       fileController.initializeWriter(context);
       for (ContainerId containerId : containerIds) {
@@ -149,6 +149,8 @@ public final class TestContainerLogsUtils {
             new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
                 ugi.getShortUserName()));
       }
+      context.setUploadedLogsInThisCycle(true);
+      fileController.postWrite(context);
     } finally {
       fileController.closeWriter();
     }
