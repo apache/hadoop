@@ -23,9 +23,11 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -60,6 +62,7 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   private Map<ApplicationAttemptId, MasterKey> applicationMasterKeys;
   private Map<ContainerId, Long> activeTokens;
   private Map<ApplicationId, LogDeleterProto> logDeleterState;
+  private Set<ContainerId> logAggregatorState;
   private RecoveredAMRMProxyState amrmProxyState;
 
   public NMMemoryStateStoreService() {
@@ -77,6 +80,7 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
     trackerStates = new HashMap<TrackerKey, TrackerState>();
     deleteTasks = new HashMap<Integer, DeletionServiceDeleteTaskProto>();
     logDeleterState = new HashMap<ApplicationId, LogDeleterProto>();
+    logAggregatorState = new HashSet<ContainerId>();
     amrmProxyState = new RecoveredAMRMProxyState();
   }
 
@@ -511,6 +515,26 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   public synchronized void removeLogDeleter(ApplicationId appId)
       throws IOException {
     logDeleterState.remove(appId);
+  }
+
+  @Override
+  public synchronized RecoveredLogAggregatorState loadLogAggregatorState()
+      throws IOException {
+    RecoveredLogAggregatorState state = new RecoveredLogAggregatorState();
+    state.logAggregators = new ArrayList<>(logAggregatorState);
+    return state;
+  }
+
+  @Override
+  public synchronized void storeLogAggregator(ContainerId containerId)
+      throws IOException {
+    logAggregatorState.add(containerId);
+  }
+
+  @Override
+  public synchronized void removeLogAggregator(ContainerId containerId)
+      throws IOException {
+        logAggregatorState.remove(containerId);
   }
 
   @Override

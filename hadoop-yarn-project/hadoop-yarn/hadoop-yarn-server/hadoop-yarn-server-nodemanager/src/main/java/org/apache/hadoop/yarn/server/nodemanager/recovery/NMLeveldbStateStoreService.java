@@ -152,6 +152,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       CONTAINER_TOKENS_KEY_PREFIX + PREV_MASTER_KEY_SUFFIX;
 
   private static final String LOG_DELETER_KEY_PREFIX = "LogDeleters/";
+  private static final String LOG_AGGREGATOR_KEY_PREFIX = "LogAggregators/";
 
   private static final String AMRMPROXY_KEY_PREFIX = "AMRMProxy/";
 
@@ -1411,6 +1412,65 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   }
 
   @Override
+  public RecoveredLogAggregatorState loadLogAggregatorState() throws IOException {
+    RecoveredLogAggregatorState state = new RecoveredLogAggregatorState();
+    state.logAggregators = new ArrayList<ContainerId>();
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(LOG_AGGREGATOR_KEY_PREFIX));
+      final int logAggregatorKeyPrefixLength = LOG_AGGREGATOR_KEY_PREFIX.length();
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.next();
+        String fullKey = asString(entry.getKey());
+        if (!fullKey.startsWith(LOG_AGGREGATOR_KEY_PREFIX)) {
+          break;
+        }
+
+        String containerIdStr = fullKey.substring(logAggregatorKeyPrefixLength);
+        ContainerId containerId = null;
+        try {
+          containerId = ContainerId.fromString(containerIdStr);
+        } catch (IllegalArgumentException e) {
+          LOG.warn("Skipping unknown log aggregator key " + fullKey);
+          continue;
+        }
+        state.logAggregators.add(containerId);
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+    return state;
+  }
+
+  @Override
+  public void storeLogAggregator(ContainerId containerId)
+      throws IOException {
+    String key = getLogAggregatorKey(containerId);
+    try {
+      db.put(bytes(key), new byte[0]);
+    } catch (DBException e) {
+      markStoreUnHealthy(e);
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void removeLogAggregator(ContainerId containerId) throws IOException {
+    String key = getLogAggregatorKey(containerId);
+    try {
+      db.delete(bytes(key));
+    } catch (DBException e) {
+      markStoreUnHealthy(e);
+      throw new IOException(e);
+    }
+  }
+
+  @Override
   public void storeAssignedResources(Container container,
       String resourceType, List<Serializable> assignedResources)
       throws IOException {
@@ -1488,6 +1548,10 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   private String getLogDeleterKey(ApplicationId appId) {
     return LOG_DELETER_KEY_PREFIX + appId;
+  }
+
+  private String getLogAggregatorKey(ContainerId containerId) {
+    return LOG_AGGREGATOR_KEY_PREFIX + containerId;
   }
 
   @Override
