@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -39,12 +40,14 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.fs.TestFileUtil;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
@@ -66,6 +69,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_IMPL_DISABLE_CACHE;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
@@ -1694,6 +1698,46 @@ abstract public class ViewFileSystemBaseTest {
         assertExceptionContains("Filesystem closed", e);
       }
     }
+  }
+
+  public static class CloseTrackingFileSystem extends FilterFileSystem {
+    private static final AtomicInteger CLOSE_COUNT = new AtomicInteger();
+
+    public CloseTrackingFileSystem() {
+      super(new RawLocalFileSystem());
+    }
+
+    @Override
+    public void close() throws IOException {
+      CLOSE_COUNT.incrementAndGet();
+      super.close();
+    }
+  }
+
+  @Test
+  public void testCloseChildrenFileSystemWithGlobalCacheDisabled()
+      throws Exception {
+    final String clusterName = "cluster" + new Random().nextInt();
+    Configuration config = new Configuration(conf);
+    config.setClass("fs.tracking.impl", CloseTrackingFileSystem.class,
+        FileSystem.class);
+    config.setBoolean(FS_IMPL_DISABLE_CACHE, true);
+    config.setBoolean(CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
+    ConfigUtil.addLink(config, clusterName, "/tracking",
+        new Path("tracking:///target").toUri());
+    URI uri = new URI("viewfs://" + clusterName + "/");
+    CloseTrackingFileSystem.CLOSE_COUNT.set(0);
+
+    ViewFileSystem viewFs = (ViewFileSystem) FileSystem.get(uri, config);
+    try {
+      assertTrue(viewFs.getChildFileSystems().length > 0,
+          "viewfs should have at least one child fs.");
+      assertEquals(0, CloseTrackingFileSystem.CLOSE_COUNT.get());
+    } finally {
+      viewFs.close();
+    }
+
+    assertEquals(1, CloseTrackingFileSystem.CLOSE_COUNT.get());
   }
 
   @Test

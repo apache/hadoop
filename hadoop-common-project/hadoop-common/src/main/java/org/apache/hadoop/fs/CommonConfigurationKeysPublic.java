@@ -58,6 +58,10 @@ public class CommonConfigurationKeysPublic {
   public static final String  FS_DEFAULT_NAME_KEY = "fs.defaultFS";
   /** Default value for FS_DEFAULT_NAME_KEY */
   public static final String  FS_DEFAULT_NAME_DEFAULT = "file:///";
+  /** Disable the FileSystem instance cache for all schemes. */
+  public static final String FS_IMPL_DISABLE_CACHE = "fs.impl.disable.cache";
+  /** Default value for FS_IMPL_DISABLE_CACHE. */
+  public static final boolean FS_IMPL_DISABLE_CACHE_DEFAULT = false;
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
@@ -1104,4 +1108,3 @@ public class CommonConfigurationKeysPublic {
   public static final String JMX_NAN_FILTER = "hadoop.http.jmx.nan-filter.enabled";
   public static final boolean JMX_NAN_FILTER_DEFAULT = false;
 }
-
