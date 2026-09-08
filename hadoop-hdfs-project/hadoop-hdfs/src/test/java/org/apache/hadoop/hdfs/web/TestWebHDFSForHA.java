@@ -22,9 +22,11 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -49,14 +51,17 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeUtils;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.web.resources.ExceptionHandler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.JsonUtils;
 import org.junit.jupiter.api.Test;
@@ -332,5 +337,66 @@ public class TestWebHDFSForHA {
         cluster.shutdown();
       }
     }
+  }
+
+  /**
+   * Make sure a StandbyException is thrown when rpcServer is null in
+   * NamenodeWebHdfsMethods in HA Setup.
+   */
+  @Test
+  @Timeout(120)
+  public void testThrowStandbyExceptionWhileNNStartup() throws Exception {
+    final Configuration conf = DFSTestUtil.newHAConfiguration(LOGICAL_NAME);
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).nnTopology(topo)
+          .numDataNodes(0).build();
+      HATestUtil.setFailoverConfigurations(cluster, conf, LOGICAL_NAME);
+      cluster.waitActive();
+      cluster.transitionToActive(1);
+
+      final NameNode namenode = cluster.getNameNode(0);
+      final NamenodeProtocols rpcServer = namenode.getRpcServer();
+      Whitebox.setInternalState(namenode, "rpcServer", null);
+
+      String standbyHttpAddress = namenode.getHttpAddress().getHostName()
+          + ":" + namenode.getHttpAddress().getPort();
+      URI webhdfsUri = URI.create(WebHdfsConstants.WEBHDFS_SCHEME + "://" + standbyHttpAddress);
+      FileSystem fs = FileSystem.get(webhdfsUri, conf);
+
+      Path foo = new Path("/foo");
+      try {
+        fs.mkdirs(foo);
+        fail("Expected StandbyException");
+      } catch (Exception e) {
+        if (e instanceof StandbyException) {
+          GenericTestUtils.assertExceptionContains(NameNodeUtils.STARTUP_MODE, e);
+        } else {
+          fail("Expected StandbyException");
+        }
+      } finally {
+        Whitebox.setInternalState(namenode, "rpcServer", rpcServer);
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Active NameNode in startup mode must yield a RetriableException so the
+   * client keeps retrying the same node instead of failing over.
+   */
+  @Test
+  public void testStartupModeExceptionWhenActive() {
+    NameNode active = mock(NameNode.class);
+    when(active.isActiveState()).thenReturn(true);
+
+    IOException ex = NameNodeUtils.startupModeException(active);
+    assertTrue(ex instanceof RetriableException,
+        "Active NameNode in startup mode should yield RetriableException, got "
+            + ex.getClass().getName());
+    GenericTestUtils.assertExceptionContains(NameNodeUtils.STARTUP_MODE, ex);
   }
 }
