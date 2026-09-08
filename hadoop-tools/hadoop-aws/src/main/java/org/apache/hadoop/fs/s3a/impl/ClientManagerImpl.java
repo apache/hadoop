@@ -112,7 +112,7 @@ public class ClientManagerImpl
       final S3ClientFactory unencryptedClientFactory,
       final S3ClientFactory.S3ClientCreationParameters clientCreationParameters,
       final DurationTrackerFactory durationTrackerFactory) {
-    super("ClientManager");
+    super(CLIENT_MANAGER);
     this.clientFactory = requireNonNull(clientFactory);
     this.unencryptedClientFactory = unencryptedClientFactory;
     this.clientCreationParameters = requireNonNull(clientCreationParameters);

@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.s3a.S3ADataBlocks;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.WriteOperationHelper;
+import org.apache.hadoop.fs.s3a.impl.write.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
@@ -241,7 +241,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
       final AuditSpan span = fs.getAuditSpanSource()
           .createSpan(OBJECT_PUT_REQUESTS.getSymbol(), dir.toString(), null);
       final WriteOperationHelper writeOperationHelper
-          = fs.getWriteOperationHelper();
+          = fs.createWriteOperationHelper(span);
       final RequestFactory requestFactory
           = writeOperationHelper.getRequestFactory();
       List<CompletableFuture<PutObjectResponse>> futures =

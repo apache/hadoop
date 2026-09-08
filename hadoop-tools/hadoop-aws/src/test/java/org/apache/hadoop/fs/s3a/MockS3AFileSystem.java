@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.impl.StubContextAccessor;
+import org.apache.hadoop.fs.s3a.impl.write.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.test.MinimalWriteOperationHelperCallbacks;
@@ -181,20 +182,18 @@ public class MockS3AFileSystem extends S3AFileSystem {
   public void initialize(URI name, Configuration originalConf)
       throws IOException {
     conf = originalConf;
-    writeHelper = new WriteOperationHelper(this,
-        conf,
-        new EmptyS3AStatisticsContext(),
+    writeHelper = new WriteOperationHelper(
         noopAuditor(conf),
         AuditTestSupport.NOOP_SPAN,
-        new MinimalWriteOperationHelperCallbacks(this::getS3Client));
+        new MinimalWriteOperationHelperCallbacks("bucket", this::getS3Client, REQUEST_FACTORY)
+    );
   }
 
   @Override
   public void close() {
   }
 
-  @Override
-  public WriteOperationHelper getWriteOperationHelper() {
+  public WriteOperationHelper createWriteOperationHelperWithinActiveSpan() {
     return writeHelper;
   }
 
@@ -333,18 +332,6 @@ public class MockS3AFileSystem extends S3AFileSystem {
 
   @Override
   public void incrementWriteOperations() {
-  }
-
-  @Override
-  public void incrementPutStartStatistics(long bytes) {
-  }
-
-  @Override
-  public void incrementPutCompletedStatistics(boolean success, long bytes) {
-  }
-
-  @Override
-  public void incrementPutProgressStatistics(String key, long bytes) {
   }
 
   @Override
