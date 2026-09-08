@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockPinningException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Receiver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
@@ -797,7 +798,6 @@ class DataXceiver extends Receiver implements Runnable {
         mirrorNode = targets[0].getXferAddr(connectToDnViaHostname);
         LOG.debug("Connecting to datanode {}", mirrorNode);
         mirrorTarget = NetUtils.createSocketAddr(mirrorNode);
-        mirrorSock = datanode.newSocket();
         try {
 
           DataNodeFaultInjector.get().failMirrorConnection();
@@ -806,32 +806,52 @@ class DataXceiver extends Receiver implements Runnable {
               (HdfsConstants.READ_TIMEOUT_EXTENSION * targets.length);
           int writeTimeout = dnConf.socketWriteTimeout +
               (HdfsConstants.WRITE_TIMEOUT_EXTENSION * targets.length);
-          NetUtils.connect(mirrorSock, mirrorTarget, timeoutValue);
-          mirrorSock.setTcpNoDelay(dnConf.getDataTransferServerTcpNoDelay());
-          mirrorSock.setSoTimeout(timeoutValue);
-          mirrorSock.setKeepAlive(true);
-          if (dnConf.getTransferSocketSendBufferSize() > 0) {
-            mirrorSock.setSendBufferSize(
-                dnConf.getTransferSocketSendBufferSize());
-          }
-
-          OutputStream unbufMirrorOut = NetUtils.getOutputStream(mirrorSock,
-              writeTimeout);
-          InputStream unbufMirrorIn = NetUtils.getInputStream(mirrorSock);
           DataEncryptionKeyFactory keyFactory =
             datanode.getDataEncryptionKeyFactoryForBlock(block);
-          SecretKey secretKey = null;
-          if (dnConf.overwriteDownstreamDerivedQOP) {
-            String bpid = block.getBlockPoolId();
-            BlockKey blockKey = datanode.blockPoolTokenSecretManager
-                .get(bpid).getCurrentKey();
-            secretKey = blockKey.getKey();
+          OutputStream unbufMirrorOut;
+          InputStream unbufMirrorIn;
+          int encryptionKeyRetryCount = 0;
+          while (true) {
+            try {
+              mirrorSock = datanode.newSocket();
+              NetUtils.connect(mirrorSock, mirrorTarget, timeoutValue);
+              mirrorSock.setTcpNoDelay(
+                  dnConf.getDataTransferServerTcpNoDelay());
+              mirrorSock.setSoTimeout(timeoutValue);
+              mirrorSock.setKeepAlive(true);
+              if (dnConf.getTransferSocketSendBufferSize() > 0) {
+                mirrorSock.setSendBufferSize(
+                    dnConf.getTransferSocketSendBufferSize());
+              }
+
+              unbufMirrorOut = NetUtils.getOutputStream(mirrorSock,
+                  writeTimeout);
+              unbufMirrorIn = NetUtils.getInputStream(mirrorSock);
+              SecretKey secretKey = null;
+              if (dnConf.overwriteDownstreamDerivedQOP) {
+                String bpid = block.getBlockPoolId();
+                BlockKey blockKey = datanode.blockPoolTokenSecretManager
+                    .get(bpid).getCurrentKey();
+                secretKey = blockKey.getKey();
+              }
+              IOStreamPair saslStreams = datanode.saslClient.socketSend(
+                  mirrorSock, unbufMirrorOut, unbufMirrorIn, keyFactory,
+                  blockToken, targets[0], secretKey);
+              unbufMirrorOut = saslStreams.out;
+              unbufMirrorIn = saslStreams.in;
+              break;
+            } catch (InvalidEncryptionKeyException e) {
+              IOUtils.closeSocket(mirrorSock);
+              mirrorSock = null;
+              if (!prepareRetryAfterInvalidEncryptionKey(keyFactory,
+                  ++encryptionKeyRetryCount)) {
+                throw e;
+              }
+              LOG.info("Retrying connection to mirror {} for block {} after "
+                      + "InvalidEncryptionKeyException",
+                  targets[0], block, e);
+            }
           }
-          IOStreamPair saslStreams = datanode.saslClient.socketSend(
-              mirrorSock, unbufMirrorOut, unbufMirrorIn, keyFactory,
-              blockToken, targets[0], secretKey);
-          unbufMirrorOut = saslStreams.out;
-          unbufMirrorIn = saslStreams.in;
           mirrorOut = new DataOutputStream(new BufferedOutputStream(unbufMirrorOut,
               smallBufferSize));
           mirrorIn = new DataInputStream(unbufMirrorIn);
@@ -1211,21 +1231,40 @@ class DataXceiver extends Receiver implements Runnable {
         final String dnAddr = proxySource.getXferAddr(connectToDnViaHostname);
         LOG.debug("Connecting to datanode {}", dnAddr);
         InetSocketAddress proxyAddr = NetUtils.createSocketAddr(dnAddr);
-        proxySock = datanode.newSocket();
-        NetUtils.connect(proxySock, proxyAddr, dnConf.socketTimeout);
-        proxySock.setTcpNoDelay(dnConf.getDataTransferServerTcpNoDelay());
-        proxySock.setSoTimeout(dnConf.socketTimeout);
-        proxySock.setKeepAlive(true);
-
-        OutputStream unbufProxyOut = NetUtils.getOutputStream(proxySock,
-            dnConf.socketWriteTimeout);
-        InputStream unbufProxyIn = NetUtils.getInputStream(proxySock);
         DataEncryptionKeyFactory keyFactory =
             datanode.getDataEncryptionKeyFactoryForBlock(block);
-        IOStreamPair saslStreams = datanode.saslClient.socketSend(proxySock,
-            unbufProxyOut, unbufProxyIn, keyFactory, blockToken, proxySource);
-        unbufProxyOut = saslStreams.out;
-        unbufProxyIn = saslStreams.in;
+        OutputStream unbufProxyOut;
+        InputStream unbufProxyIn;
+        int encryptionKeyRetryCount = 0;
+        while (true) {
+          try {
+            proxySock = datanode.newSocket();
+            NetUtils.connect(proxySock, proxyAddr, dnConf.socketTimeout);
+            proxySock.setTcpNoDelay(dnConf.getDataTransferServerTcpNoDelay());
+            proxySock.setSoTimeout(dnConf.socketTimeout);
+            proxySock.setKeepAlive(true);
+
+            unbufProxyOut = NetUtils.getOutputStream(proxySock,
+                dnConf.socketWriteTimeout);
+            unbufProxyIn = NetUtils.getInputStream(proxySock);
+            IOStreamPair saslStreams = datanode.saslClient.socketSend(
+                proxySock, unbufProxyOut, unbufProxyIn, keyFactory, blockToken,
+                proxySource);
+            unbufProxyOut = saslStreams.out;
+            unbufProxyIn = saslStreams.in;
+            break;
+          } catch (InvalidEncryptionKeyException e) {
+            IOUtils.closeSocket(proxySock);
+            proxySock = null;
+            if (!prepareRetryAfterInvalidEncryptionKey(keyFactory,
+                ++encryptionKeyRetryCount)) {
+              throw e;
+            }
+            LOG.info("Retrying connection to proxy {} for block {} after "
+                    + "InvalidEncryptionKeyException",
+                proxySource, block, e);
+          }
+        }
         
         proxyOut = new DataOutputStream(new BufferedOutputStream(unbufProxyOut,
             smallBufferSize));
@@ -1311,6 +1350,15 @@ class DataXceiver extends Receiver implements Runnable {
 
     //update metrics
     datanode.metrics.addReplaceBlockOp(elapsed());
+  }
+
+  private static boolean prepareRetryAfterInvalidEncryptionKey(
+      DataEncryptionKeyFactory keyFactory, int retryCount) {
+    if (retryCount > 1) {
+      return false;
+    }
+    keyFactory.clearDataEncryptionKey();
+    return true;
   }
 
 
