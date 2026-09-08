@@ -28,10 +28,10 @@ import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
  * This class represents a replica that is waiting to be recovered.
  * After a datanode restart, any replica in "rbw" directory is loaded
  * as a replica waiting to be recovered.
- * A replica waiting to be recovered does not provision read nor
- * participates in any pipeline recovery. It will become outdated if its
- * client continues to write or be recovered as a result of
- * lease recovery.
+ * A replica waiting to be recovered provisions read access for the bytes
+ * validated on load, but does not participate in any pipeline recovery.
+ * It will become outdated if its client continues to write or be recovered
+ * as a result of lease recovery.
  */
 public class ReplicaWaitingToBeRecovered extends LocalReplica {
 
@@ -73,7 +73,7 @@ public class ReplicaWaitingToBeRecovered extends LocalReplica {
   
   @Override //ReplicaInfo
   public long getVisibleLength() {
-    return -1;  //no bytes are visible
+    return getNumBytes();  // all bytes are visible since validated on load
   }
   
   @Override
