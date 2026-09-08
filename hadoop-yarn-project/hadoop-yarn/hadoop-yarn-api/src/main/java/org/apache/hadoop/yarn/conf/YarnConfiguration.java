@@ -2726,6 +2726,16 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_DOCKER_DEFAULT_TMPFS_MOUNTS =
       DOCKER_CONTAINER_RUNTIME_PREFIX + "default-tmpfs-mounts";
 
+  /**
+   * Maximum allowed file size in bytes for the Docker client configuration
+   * file (config.json). If the file size exceeds this value, the container
+   * launch will be rejected.
+   */
+  public static final String NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "client-config-file-max-size-bytes";
+  public static final int DEFAULT_NM_DOCKER_CLIENT_CONFIG_MAX_SIZE_BYTES =
+      16 * 1024;
+
   /** The mode in which the Java Container Sandbox should run detailed by
    *  the JavaSandboxLinuxContainerRuntime. */
   public static final String YARN_CONTAINER_SANDBOX =
