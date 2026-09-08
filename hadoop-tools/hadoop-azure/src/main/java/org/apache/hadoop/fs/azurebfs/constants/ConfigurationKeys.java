@@ -136,6 +136,7 @@ public final class ConfigurationKeys {
   public static final String AZURE_STATIC_RETRY_INTERVAL = "fs.azure.static.retry.interval";
   public static final String AZURE_BACKOFF_INTERVAL = "fs.azure.io.retry.backoff.interval";
   public static final String AZURE_MAX_IO_RETRIES = "fs.azure.io.retry.max.retries";
+  public static final String AZURE_MAX_IO_PREFETCH_RETRIES = "fs.azure.io.prefetch.retry.max.retries";
   public static final String AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT = "fs.azure.custom.token.fetch.retry.count";
 
   /**

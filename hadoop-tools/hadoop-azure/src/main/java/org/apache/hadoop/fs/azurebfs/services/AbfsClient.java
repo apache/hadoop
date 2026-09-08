@@ -158,6 +158,7 @@ public abstract class AbfsClient implements Closeable {
   private final SharedKeyCredentials sharedKeyCredentials;
   private ApiVersion xMsVersion = ApiVersion.getCurrentVersion();
   private final ExponentialRetryPolicy exponentialRetryPolicy;
+  private final ExponentialRetryPolicy prefetchRetryPolicy;
   private final StaticRetryPolicy staticRetryPolicy;
   private final TailLatencyRequestTimeoutRetryPolicy tailLatencyRequestTimeoutRetryPolicy;
   private final String filesystem;
@@ -212,6 +213,7 @@ public abstract class AbfsClient implements Closeable {
     this.filesystem = baseUrlString.substring(indexLastForwardSlash + 1);
     this.abfsConfiguration = abfsConfiguration;
     this.exponentialRetryPolicy = abfsClientContext.getExponentialRetryPolicy();
+    this.prefetchRetryPolicy = abfsClientContext.getPrefetchExponentialRetryPolicy();
     this.staticRetryPolicy = abfsClientContext.getStaticRetryPolicy();
     this.tailLatencyRequestTimeoutRetryPolicy = abfsClientContext.getTailLatencyRequestTimeoutRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
@@ -374,6 +376,10 @@ public abstract class AbfsClient implements Closeable {
     return exponentialRetryPolicy;
   }
 
+  ExponentialRetryPolicy getPrefetchRetryPolicy() {
+    return prefetchRetryPolicy;
+  }
+
   StaticRetryPolicy getStaticRetryPolicy() {
     return staticRetryPolicy;
   }
@@ -395,6 +401,22 @@ public abstract class AbfsClient implements Closeable {
       return getTailLatencyRequestTimeoutRetryPolicy();
     }
     return getExponentialRetryPolicy();
+  }
+
+  /**
+   * Returns the retry policy based on tracing context and failure reason.
+   * @param tc the tracing context containing read type information.
+   * @param failureReason the reason for the failure to determine retry policy.
+   * @return retry policy to be used, prefetch policy if enabled and prefetch read, otherwise standard policy.
+   */
+  public AbfsRetryPolicy getRetryPolicy(TracingContext tc, final String failureReason){
+    if (getAbfsConfiguration().isEnablePrefetchRequestPriority()
+        && ReadType.PREFETCH_READ.equals(tc.getReadType())){
+      return getPrefetchRetryPolicy();
+    }
+    else {
+      return getRetryPolicy(failureReason);
+    }
   }
 
   SharedKeyCredentials getSharedKeyCredentials() {
