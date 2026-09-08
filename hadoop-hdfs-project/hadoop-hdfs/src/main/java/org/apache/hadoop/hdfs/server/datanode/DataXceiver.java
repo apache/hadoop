@@ -779,7 +779,8 @@ class DataXceiver extends Receiver implements Runnable {
             peer.getLocalAddressString(),
             stage, latestGenerationStamp, minBytesRcvd, maxBytesRcvd,
             clientname, srcDataNode, datanode, requestedChecksum,
-            cachingStrategy, allowLazyPersist, pinning, storageId));
+            cachingStrategy, allowLazyPersist, pinning, storageId,
+            targets.length == 0));
         replica = blockReceiver.getReplica();
       } else {
         replica = datanode.data.recoverClose(
@@ -1255,7 +1256,7 @@ class DataXceiver extends Receiver implements Runnable {
             proxyReply, proxySock.getRemoteSocketAddress().toString(),
             proxySock.getLocalSocketAddress().toString(),
             null, 0, 0, 0, "", null, datanode, remoteChecksum,
-            CachingStrategy.newDropBehind(), false, false, storageId));
+            CachingStrategy.newDropBehind(), false, false, storageId, true));
         
         // receive a block
         blockReceiver.receiveBlock(null, null, replyOut, null, 
@@ -1329,11 +1330,13 @@ class DataXceiver extends Receiver implements Runnable {
       CachingStrategy cachingStrategy,
       final boolean allowLazyPersist,
       final boolean pinning,
-      final String storageId) throws IOException {
+      final String storageId,
+      final boolean isLastInPipeline) throws IOException {
     return new BlockReceiver(block, storageType, in,
         inAddr, myAddr, stage, newGs, minBytesRcvd, maxBytesRcvd,
         clientname, srcDataNode, dn, requestedChecksum,
-        cachingStrategy, allowLazyPersist, pinning, storageId);
+        cachingStrategy, allowLazyPersist, pinning, storageId,
+        isLastInPipeline);
   }
 
   /**

@@ -162,7 +162,7 @@ public class TestDataXceiverBackwardsCompat {
         anyString(), any(DatanodeInfo.class), any(DataNode.class),
         any(DataChecksum.class), any(CachingStrategy.class),
         ArgumentCaptor.forClass(Boolean.class).capture(),
-        anyBoolean(), any());
+        anyBoolean(), any(), anyBoolean());
 
     Token<BlockTokenIdentifier> token = (Token<BlockTokenIdentifier>)mock(
         Token.class);
