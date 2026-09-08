@@ -266,7 +266,9 @@ public final class BalanceJob<T extends BalanceProcedure> implements Writable {
     for (int i = 0; i < taskTableSize; i++) {
       String className = Text.readString(in);
       try {
-        T p = (T) ReflectionUtils.newInstance(Class.forName(className), null);
+        Class<? extends BalanceProcedure> clazz = ReflectionUtils.loadUninitedClass(
+            getClass().getClassLoader(), className, BalanceProcedure.class);
+        T p = (T) ReflectionUtils.newInstance(clazz, null);
         p.readFields(in);
         procedureTable.put(p.name(), p);
       } catch (Exception e) {
