@@ -177,6 +177,10 @@ public class DFSInputStream extends FSInputStream
 
   private byte[] oneByteBuf; // used for 'int read()'
 
+  // Sequential read-ahead prefetcher; null when prefetch is disabled for this
+  // stream (feature off, single-block file, or global budget exhausted).
+  private BlockPrefetcher prefetcher;
+
   protected void addToLocalDeadNodes(DatanodeInfo dnInfo) {
     DFSClient.LOG.debug("Add {} to local dead nodes, previously was {}.",
             dnInfo, deadNodes);
@@ -210,6 +214,123 @@ public class DFSInputStream extends FSInputStream
     }
     this.locatedBlocks = locatedBlocks;
     openInfo(false);
+    this.prefetcher = BlockPrefetcher.maybeCreate(this, dfsClient);
+    if (dfsClient.getConf().isPrefetchMetricsLogEnabled()) {
+      DFSClient.LOG.debug("HDFS read caching for src={} : {}", src,
+          prefetcher != null ? "ENABLED" : "DISABLED");
+    }
+  }
+
+  /**
+   * @return true if this file is a candidate for sequential read-ahead
+   * prefetch: it spans more than one block, is not under construction, and is
+   * not erasure-coded. Multi-block status is derived from the total file length
+   * and block size rather than {@code locatedBlockCount()}, which at open time
+   * only reflects the initial block-location window
+   * ({@code dfs.client.read.prefetch.size}) and could otherwise make a genuine
+   * multi-block file look single-block. Erasure-coded (striped) files are
+   * excluded because {@link DFSStripedInputStream} inherits the prefetch
+   * fast-path in {@code read(byte[],int,int)} / {@code read(ByteBuffer)} but the
+   * prefetcher would read a striped block group from a single DataNode as if it
+   * were a contiguous replicated block, returning wrong bytes.
+   */
+  boolean prefetchEligible() {
+    synchronized (infoLock) {
+      if (locatedBlocks == null || locatedBlocks.isUnderConstruction()
+          || locatedBlocks.getErasureCodingPolicy() != null) {
+        return false;
+      }
+      return getFileLength() > getBlockSizeForPrefetch();
+    }
+  }
+
+  /** @return this file's (uniform) block size, used to index prefetch blocks. */
+  long getBlockSizeForPrefetch() {
+    synchronized (infoLock) {
+      if (locatedBlocks == null || locatedBlocks.locatedBlockCount() == 0) {
+        return 0;
+      }
+      return locatedBlocks.get(0).getBlockSize();
+    }
+  }
+
+  /**
+   * Stream {@code [0, cb.length())} of {@code cb}'s block into {@code cb.data},
+   * in {@code chunkSize} pieces, publishing the number of bytes fetched so far
+   * via {@code cb.bytesReady} after each chunk and stopping early if
+   * {@code cancelled} becomes true. Used by the prefetcher to fill a block
+   * incrementally so the reader can consume its prefix and so a fetch can be
+   * cancelled when the reader catches up.
+   *
+   * <p>This runs on a background prefetch thread that does <em>not</em> hold the
+   * {@link DFSInputStream} monitor, so it must never mutate the shared
+   * foreground retry state. It therefore selects a DataNode with
+   * {@code refetchIfRequired=false} and, on a node-selection miss, aborts the
+   * prefetch (best-effort) rather than invoking {@link #refetchLocations},
+   * which would bump {@link #failures}, clear the dead-node map and refresh the
+   * located blocks concurrently with a foreground read.
+   */
+  void prefetchBlockChunked(BlockPrefetcher.CacheBlock cb, int chunkSize,
+      java.util.function.BooleanSupplier cancelled) throws IOException {
+    LocatedBlock block = getCachedBlockAt(cb.startOffset);
+    if (block == null) {
+      // Locations for this block are not cached yet. Do not issue a NameNode
+      // RPC on the prefetch thread (it would hold infoLock and stall the
+      // foreground reader); fail this block so it falls back to a synchronous
+      // read, which resolves and caches the locations for a later prefetch.
+      throw new IOException(
+          "Block locations not cached for prefetch @ offset " + cb.startOffset);
+    }
+    if (block.getStartOffset() != cb.startOffset
+        || block.getBlockSize() < cb.length()) {
+      // The prefetcher indexes the file as a uniform grid of blockSize-sized
+      // slots (blockSize == block 0's size), reading each real block from its
+      // offset 0 into the slot. If the real block covering this slot does not
+      // start exactly at the slot offset, or is smaller than the slot, the file
+      // has non-uniform block sizes (e.g. concat, or append with a different
+      // dfs.blocksize). Filling the slot from the real block's start would then
+      // record bytes at the wrong file offset -> silent corruption. Fail the
+      // prefetch so this range falls back to a correct synchronous read.
+      throw new IOException("Non-uniform block size; skipping prefetch @ offset "
+          + cb.startOffset + " (real block start " + block.getStartOffset()
+          + ", size " + block.getBlockSize() + ", slot len " + cb.length() + ")");
+    }
+    DNAddrPair addr = chooseDataNode(block, null, false);
+    if (addr == null) {
+      // Best-effort prefetch found no live DataNode. Fail this block so
+      // fillBlock() treats it as FAILED (recycles the buffer, removes the
+      // block, allows a later re-attempt) instead of recording an empty
+      // "done" slot with inflated bytesPrefetched.
+      throw new IOException("No live DataNode available to prefetch block "
+          + block.getBlock());
+    }
+    block = addr.block;
+    int length = cb.length();
+    BlockReader reader = null;
+    try {
+      reader = getBlockReader(block, 0, length, addr.addr, addr.storageType,
+          addr.info);
+      cb.recordLocality(reader.isShortCircuit(), reader.getNetworkDistance());
+      int written = 0;
+      while (written < length) {
+        if (cancelled.getAsBoolean()) {
+          return;
+        }
+        int toRead = Math.min(chunkSize, length - written);
+        reader.readFully(cb.data, written, toRead);
+        written += toRead;
+        cb.bytesReady.set(written);
+      }
+    } finally {
+      if (reader != null) {
+        reader.close();
+      }
+    }
+  }
+
+  @VisibleForTesting
+  BlockPrefetcher getPrefetcherForTesting() {
+    return prefetcher;
   }
 
   @VisibleForTesting
@@ -499,6 +620,28 @@ public class DFSInputStream extends FSInputStream
     return fetchBlockAt(offset, 0, false); // don't use cache
   }
 
+  /**
+   * Return the cached {@link LocatedBlock} covering {@code offset} without
+   * contacting the NameNode. Used by the background prefetcher so a prefetch
+   * never issues a blocking getBlockLocations RPC while holding
+   * {@link #infoLock} (which would stall the foreground reader that needs the
+   * same lock). Returns {@code null} when the block's locations are not already
+   * cached; the prefetch of that block is then skipped and the foreground read
+   * resolves the locations on demand (caching them for a later prefetch).
+   */
+  protected LocatedBlock getCachedBlockAt(long offset) {
+    synchronized (infoLock) {
+      if (locatedBlocks == null) {
+        return null;
+      }
+      int idx = locatedBlocks.findBlock(offset);
+      if (idx < 0) {
+        return null;
+      }
+      return locatedBlocks.get(idx);
+    }
+  }
+
   /** Fetch a block from namenode and cache it */
   private LocatedBlock fetchBlockAt(long offset, long length, boolean useCache)
       throws IOException {
@@ -695,6 +838,9 @@ public class DFSInputStream extends FSInputStream
   protected BlockReader getBlockReader(LocatedBlock targetBlock,
       long offsetInBlock, long length, InetSocketAddress targetAddr,
       StorageType storageType, DatanodeInfo datanode) throws IOException {
+    // Test hook: simulate per-block-open latency on every read path
+    // (sequential and positioned) since both open a reader here.
+    DFSClientFaultInjector.get().openBlockReaderDelay();
     ExtendedBlock blk = targetBlock.getBlock();
     Token<BlockTokenIdentifier> accessToken = targetBlock.getBlockToken();
     CachingStrategy curCachingStrategy;
@@ -754,6 +900,16 @@ public class DFSInputStream extends FSInputStream
       closeCurrentBlockReaders();
       super.close();
     } finally {
+      // Always return the prefetch buffers and the reserved JVM-wide byte
+      // budget, even if checkOpen() or super.close() above threw (e.g. the
+      // DFSClient was closed before this still-open stream, so checkOpen()
+      // raises "Filesystem closed"). close() is idempotent, so the early
+      // "already closed" return path runs this harmlessly too. Skipping it
+      // would permanently leak this stream's reservation from the shared
+      // prefetch budget and eventually disable prefetch for the whole JVM.
+      if (prefetcher != null) {
+        prefetcher.close();
+      }
       /**
        * If dfsInputStream is closed and datanode is in
        * DeadNodeDetector#dfsInputStreamNodes, we need remove the datanode from
@@ -955,16 +1111,83 @@ public class DFSInputStream extends FSInputStream
     if (len == 0) {
       return 0;
     }
+    if (prefetcher != null && !closed.get()) {
+      dfsClient.checkOpen();
+      int n = prefetcher.read(pos, buf, off, len);
+      if (n > 0) {
+        consumePrefetched(n);
+        return n;
+      }
+    }
     ReaderStrategy byteArrayReader =
         new ByteArrayStrategy(buf, off, len, readStatistics, dfsClient);
-    return readWithStrategy(byteArrayReader);
+    int result = readWithStrategy(byteArrayReader);
+    if (prefetcher != null && result > 0) {
+      prefetcher.recordDirectRead(result);
+    }
+    return result;
   }
 
   @Override
   public synchronized int read(final ByteBuffer buf) throws IOException {
+    if (prefetcher != null && !closed.get() && buf.hasRemaining()) {
+      dfsClient.checkOpen();
+      int n = prefetcher.read(pos, buf);
+      if (n > 0) {
+        consumePrefetched(n);
+        return n;
+      }
+    }
     ReaderStrategy byteBufferReader =
         new ByteBufferStrategy(buf, readStatistics, dfsClient);
-    return readWithStrategy(byteBufferReader);
+    int result = readWithStrategy(byteBufferReader);
+    if (prefetcher != null && result > 0) {
+      prefetcher.recordDirectRead(result);
+    }
+    return result;
+  }
+
+  /**
+   * Advance the stream position after serving {@code n} bytes from the
+   * prefetch cache and invalidate the stateful synchronous reader so that the
+   * next synchronous read (on a cache miss) re-seeks to {@link #pos} rather
+   * than reading from a now-stale reader position.
+   *
+   * <p>The cache may have advanced {@link #pos} across one or more block
+   * boundaries, so {@link #blockReader} and {@link #currentNode} no longer
+   * correspond to {@link #pos}. Besides closing the reader and clearing
+   * {@link #blockEnd}, {@link #currentNode} is cleared too so that
+   * node-selection logic run before the next re-seek (e.g.
+   * {@link #seekToNewSource(long)} or {@link #getCurrentDatanode()}) does not
+   * act on a DataNode that is no longer the current source.
+   *
+   * <p>Prefetch-served bytes are also accounted in the read statistics exactly
+   * like the direct read path, so cache hits are not invisible to
+   * {@code FileSystem.Statistics#getBytesRead()}, {@link ReadStatistics}, and
+   * any downstream monitoring/billing. The bytes are attributed to the
+   * local/remote/short-circuit bucket that matches the locality of the reader
+   * that actually prefetched the serving block (captured at fill time and
+   * surfaced by the prefetcher for the block that served this read); the
+   * foreground serve is an in-memory copy, hence zero read time.
+   */
+  private void consumePrefetched(int n) {
+    pos += n;
+    closeCurrentBlockReaders();
+    blockEnd = -1;
+    currentNode = null;
+    // A cache-served read can advance pos into a later block, so the previously
+    // read block is no longer current. Re-point currentLocatedBlock at the
+    // block covering the new pos using only the in-memory block cache (no
+    // NameNode RPC) so getCurrentBlock()/getCurrentBlockLocationsLength() keep
+    // returning the block for pos across cache-served reads instead of null.
+    // The prefetcher located every served block via getBlockAt(), so the
+    // covering block is normally cached; if it somehow is not, fall back to
+    // null and let the next synchronous access re-resolve it.
+    currentLocatedBlock = getCachedBlockAt(pos);
+    boolean shortCircuit = prefetcher.lastServedShortCircuit();
+    int networkDistance = prefetcher.lastServedNetworkDistance();
+    updateReadStatistics(readStatistics, n, shortCircuit, networkDistance);
+    dfsClient.updateFileSystemReadStats(networkDistance, n, 0);
   }
 
   private DNAddrPair chooseDataNode(LocatedBlock block,
@@ -1647,6 +1870,12 @@ public class DFSInputStream extends FSInputStream
     if (closed.get()) {
       throw new IOException("Stream is closed!");
     }
+    if (prefetcher != null) {
+      // Re-anchor the read-ahead window: behind-cursor blocks are dropped and
+      // at/ahead blocks are kept (HDFS blocks are immutable), so intra-block
+      // and forward seeks retain their prefetch instead of re-fetching.
+      prefetcher.onSeek(targetPos);
+    }
     boolean done = false;
     if (pos <= targetPos && targetPos <= blockEnd) {
       //
@@ -1987,6 +2216,9 @@ public class DFSInputStream extends FSInputStream
   @Override
   public synchronized void unbuffer() {
     closeCurrentBlockReaders();
+    if (prefetcher != null) {
+      prefetcher.onUnbuffer();
+    }
   }
 
   @Override
