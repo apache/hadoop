@@ -37,6 +37,8 @@ import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+import java.util.Collections;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Map;
@@ -80,9 +82,17 @@ public class SlowDiskTracker {
   private final int maxDisksToReport;
   private static final String DATANODE_DISK_SEPARATOR = ":";
   private final long reportGenerationIntervalMs;
+  private final long cacheRebuildIntervalMs;
+  // Whether slow-disk read-path deprioritization is enabled. The read cache
+  // (cachedSlowDisksForRead) is only consumed by the read path when this is
+  // true, so rebuilding it is skipped when the feature is disabled to avoid
+  // spawning an async thread on every heartbeat for nothing.
+  private final boolean deprioritizeEnabled;
 
   private volatile long lastUpdateTime;
+  private volatile long lastCacheRebuildTime;
   private AtomicBoolean isUpdateInProgress = new AtomicBoolean(false);
+  private AtomicBoolean isCacheRebuildInProgress = new AtomicBoolean(false);
 
   /**
    * Information about disks that have been reported as being slow.
@@ -91,6 +101,17 @@ public class SlowDiskTracker {
    * was received.
    */
   private final Map<String, DiskLatency> diskIDLatencyMap;
+
+    /**
+     * Cached slow disk map for efficient read path lookup.
+     *
+     * <p>Key format: {@code IP:PORT:StorageID}.
+     *
+     * <p>Uses a copy-on-write strategy: heartbeat processing only updates
+     * {@code diskIDLatencyMap}; an async thread periodically rebuilds this cache
+     * and atomically swaps the reference.
+     */
+  private volatile Map<String, Double> cachedSlowDisksForRead = Collections.emptyMap();
 
   /**
    * Map of slow disk -> diskOperations it has been reported slow in.
@@ -102,6 +123,7 @@ public class SlowDiskTracker {
   public SlowDiskTracker(Configuration conf, Timer timer) {
     this.timer = timer;
     this.lastUpdateTime = timer.monotonicNow();
+    this.lastCacheRebuildTime = timer.monotonicNow();
     this.diskIDLatencyMap = new ConcurrentHashMap<>();
     this.reportGenerationIntervalMs = conf.getTimeDuration(
         DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
@@ -111,6 +133,23 @@ public class SlowDiskTracker {
         DFSConfigKeys.DFS_DATANODE_MAX_DISKS_TO_REPORT_KEY,
         DFSConfigKeys.DFS_DATANODE_MAX_DISKS_TO_REPORT_DEFAULT);
     this.reportValidityMs = reportGenerationIntervalMs * 3;
+    this.cacheRebuildIntervalMs = conf.getTimeDuration(
+            DFSConfigKeys.DFS_NAMENODE_SLOW_DISK_CACHE_REBUILD_INTERVAL_KEY,
+            DFSConfigKeys.DFS_NAMENODE_SLOW_DISK_CACHE_REBUILD_INTERVAL_DEFAULT,
+            TimeUnit.MILLISECONDS);
+    this.deprioritizeEnabled = conf.getBoolean(
+            DFSConfigKeys.DFS_NAMENODE_DEPRIORITIZE_SLOW_DISK_DATANODE_FOR_READ_KEY,
+            DFSConfigKeys.DFS_NAMENODE_DEPRIORITIZE_SLOW_DISK_DATANODE_FOR_READ_DEFAULT);
+
+  }
+
+  /**
+   * Get all valid slow disks for read path lookup.
+   *
+   * @return cached slow disk map with key format "IP:PORT:StorageID"
+   */
+  public Map<String, Double> getAllValidSlowDisks() {
+    return cachedSlowDisksForRead;
   }
 
   @VisibleForTesting
@@ -140,11 +179,66 @@ public class SlowDiskTracker {
 
   }
 
+  /**
+   * Extraction mode for slow disk key formatting.
+   */
+  private enum KeyExtractMode {
+    CACHE_KEY,
+    LEGACY_KEY
+  }
+
+  /**
+   * Extract a formatted key from a slow disk ID.
+   *
+   * <p>The slowDiskID format is "IP:PORT:volumeName|storageID".
+   * CACHE_KEY mode returns "IP:PORT:StorageID" (null if parse fails).
+   * LEGACY_KEY mode returns "IP:PORT:volumeName" (original if parse fails).
+   *
+   * <p>Parsing anchors on the '|' separator (unique in the format) then
+   * scans backwards to the ':' that delimits IP:PORT from the disk info.
+   * This avoids mis-parsing when the volume path contains ':' characters.</p>
+   */
+  private static String extractDiskKey(String slowDiskID, KeyExtractMode mode) {
+    if (slowDiskID == null || slowDiskID.isEmpty()) {
+      return mode == KeyExtractMode.CACHE_KEY ? null : slowDiskID;
+    }
+
+    int pipeIndex = slowDiskID.indexOf('|');
+    if (pipeIndex < 0) {
+      return mode == KeyExtractMode.CACHE_KEY ? null : slowDiskID;
+    }
+
+    // Find the ':' before volumeName by scanning backwards from '|'.
+    // Format: "IP:PORT:volumeName|storageID"
+    //                  ^-- this colon separates addr from disk info
+    int colonBeforeVolume = slowDiskID.lastIndexOf(':', pipeIndex);
+    if (colonBeforeVolume <= 0 || colonBeforeVolume >= pipeIndex) {
+      return mode == KeyExtractMode.CACHE_KEY ? null : slowDiskID;
+    }
+
+    String datanodeAddr = slowDiskID.substring(0, colonBeforeVolume);
+
+    if (mode == KeyExtractMode.CACHE_KEY) {
+      if (pipeIndex >= slowDiskID.length() - 1) {
+        return null;
+      }
+      String storageID = slowDiskID.substring(pipeIndex + 1);
+      return datanodeAddr + ":" + storageID;
+    } else {
+      String volumeName = slowDiskID.substring(colonBeforeVolume + 1, pipeIndex);
+      return datanodeAddr + ":" + volumeName;
+    }
+  }
+
   public void checkAndUpdateReportIfNecessary() {
     // Check if it is time for update
     long now = timer.monotonicNow();
     if (now - lastUpdateTime > reportGenerationIntervalMs) {
       updateSlowDiskReportAsync(now);
+    }
+    if (deprioritizeEnabled
+        && now - lastCacheRebuildTime > cacheRebuildIntervalMs) {
+      rebuildSlowDiskCacheAsync(now);
     }
   }
 
@@ -164,6 +258,52 @@ public class SlowDiskTracker {
         }
       }).start();
     }
+  }
+
+  /**
+   * Asynchronously rebuild the slow disk cache.
+   */
+  private void rebuildSlowDiskCacheAsync(long now) {
+    if (isCacheRebuildInProgress.compareAndSet(false, true)) {
+      lastCacheRebuildTime = now;
+      new Thread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            rebuildSlowDiskCache();
+          } finally {
+            isCacheRebuildInProgress.set(false);
+          }
+        }
+      }).start();
+    }
+  }
+
+  /**
+   * Rebuild the slow disk cache in full (called in an async thread).
+   * Uses a fresh timestamp to avoid stale expiry decisions caused by
+   * thread scheduling delays.
+   */
+  private void rebuildSlowDiskCache() {
+    long now = timer.monotonicNow();
+    Map<String, Double> newCache = new HashMap<>();
+
+    for (Map.Entry<String, DiskLatency> entry : diskIDLatencyMap.entrySet()) {
+      DiskLatency diskLatency = entry.getValue();
+
+      if (now - diskLatency.timestamp >= reportValidityMs) {
+        continue;
+      }
+
+      String cacheKey = extractDiskKey(entry.getKey(), KeyExtractMode.CACHE_KEY);
+      if (cacheKey != null) {
+        newCache.put(cacheKey, diskLatency.getReadLatency());
+      }
+    }
+
+    cachedSlowDisksForRead = newCache;
+
+    LOG.debug("Rebuilt slow disk cache: {} valid slow disks", newCache.size());
   }
 
   /**
@@ -210,6 +350,16 @@ public class SlowDiskTracker {
 
     Double getLatency(DiskOp op) {
       return this.latencyMap.get(op);
+    }
+
+    /**
+     * Return the READ latency if reported, otherwise fall back to max latency.
+     * This is used by the read path cache so that sorting reflects the
+     * operation the client actually cares about.
+     */
+    double getReadLatency() {
+      Double readLatency = latencyMap.get(DiskOp.READ);
+      return readLatency != null ? readLatency : getMaxLatency();
     }
   }
 
@@ -266,7 +416,15 @@ public class SlowDiskTracker {
       if (slowDisksReport.isEmpty()) {
         return null;
       }
-      return WRITER.writeValueAsString(slowDisksReport);
+      // Transform slowDiskID to legacy format (IP:PORT:volumeName)
+      // for backward compatibility with existing JSON consumers.
+      ArrayList<DiskLatency> reportForJson = Lists.newArrayList();
+      for (DiskLatency dl : slowDisksReport) {
+        String legacyID = extractDiskKey(dl.getSlowDiskID(),
+            KeyExtractMode.LEGACY_KEY);
+        reportForJson.add(new DiskLatency(legacyID, dl.latencyMap));
+      }
+      return WRITER.writeValueAsString(reportForJson);
     } catch (JsonProcessingException e) {
       // Failed to serialize. Don't log the exception call stack.
       LOG.debug("Failed to serialize statistics" + e);
@@ -285,17 +443,17 @@ public class SlowDiskTracker {
   }
 
   @VisibleForTesting
-  ArrayList<DiskLatency> getSlowDisksReport() {
+  public ArrayList<DiskLatency> getSlowDisksReport() {
     return this.slowDisksReport;
   }
 
   @VisibleForTesting
-  long getReportValidityMs() {
+  public long getReportValidityMs() {
     return reportValidityMs;
   }
 
   @VisibleForTesting
-  void setReportValidityMs(long reportValidityMs) {
+  public void setReportValidityMs(long reportValidityMs) {
     this.reportValidityMs = reportValidityMs;
   }
 }
