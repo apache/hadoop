@@ -543,13 +543,15 @@ function dockermode
     # force a new image for every run to make it easier to remove later
     echo "LABEL org.apache.hadoop.create-release=\"cr-${dockerfile_hash:0:12}\""
 
-    # setup ownerships, etc
-    echo "RUN groupadd --non-unique -g ${group_id} ${user_name}; exit 0;"
-    echo "RUN useradd -g ${group_id} -u ${user_id} -m ${user_name}; exit 0;"
-    echo "RUN chown -R ${user_name} /home/${user_name}; exit 0;"
+    # setup ownerships, etc.
+    # reports meaningful failure if the user/group already exists rather than fail later.
+    # if there is a failure here: change your user id.
+    echo "RUN existing_group=\$(getent group ${group_id} | cut -d: -f1); named_group_gid=\$(getent group ${user_name} | cut -d: -f3); if [ -n \"\${existing_group}\" ] && [ \"\${existing_group}\" != \"${user_name}\" ]; then echo \"UID/GID setup failed: GID ${group_id} is already used by group \${existing_group}\" >&2; exit 1; fi; if [ -n \"\${named_group_gid}\" ] && [ \"\${named_group_gid}\" != \"${group_id}\" ]; then echo \"UID/GID setup failed: group ${user_name} has GID \${named_group_gid}, expected ${group_id}\" >&2; exit 1; fi; if [ -z \"\${named_group_gid}\" ]; then groupadd -g ${group_id} ${user_name}; fi"
+    echo "RUN existing_user=\$(getent passwd ${user_id} | cut -d: -f1); named_user_uid=\$(getent passwd ${user_name} | cut -d: -f3); if [ -n \"\${existing_user}\" ] && [ \"\${existing_user}\" != \"${user_name}\" ]; then echo \"UID/GID setup failed: UID ${user_id} is already used by user \${existing_user}\" >&2; exit 1; fi; if [ -n \"\${named_user_uid}\" ] && [ \"\${named_user_uid}\" != \"${user_id}\" ]; then echo \"UID/GID setup failed: user ${user_name} has UID \${named_user_uid}, expected ${user_id}\" >&2; exit 1; fi; if [ -z \"\${named_user_uid}\" ]; then useradd -g ${group_id} -u ${user_id} -m ${user_name}; fi"
+    echo "RUN chown -R ${user_id}:${group_id} /home/${user_name}"
     echo "ENV HOME /home/${user_name}"
     echo "RUN mkdir -p /maven"
-    echo "RUN chown -R ${user_name} /maven"
+    echo "RUN chown -R ${user_id}:${group_id} /maven"
 
     # we always force build with the OpenJDK JDK
     # but with the correct version
