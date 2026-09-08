@@ -70,6 +70,10 @@ public class FileSystemNodeLabelsStore
     initStore(conf, new Path(
         conf.get(YarnConfiguration.FS_NODE_LABELS_STORE_ROOT_DIR,
             getDefaultFSNodeLabelsRootDir())), schema, mgr);
+    if (conf.getBoolean(YarnConfiguration.FS_NODE_LABELS_STORE_MERGE_ENABLED,
+        YarnConfiguration.DEFAULT_FS_NODE_LABELS_STORE_MERGE_ENABLED)) {
+      mergeMirrorAndEditLog();
+    }
   }
 
   @Override
