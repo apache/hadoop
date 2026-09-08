@@ -733,26 +733,33 @@ public class DFSInputStream extends FSInputStream
         DFSClient.LOG.debug("DFSInputStream has been closed already");
         return;
       }
-      dfsClient.checkOpen();
+      try {
+        dfsClient.checkOpen();
 
-      if ((extendedReadBuffers != null) && (!extendedReadBuffers.isEmpty())) {
-        final StringBuilder builder = new StringBuilder();
-        extendedReadBuffers
-            .visitAll(new IdentityHashStore.Visitor<ByteBuffer, Object>() {
-              private String prefix = "";
+        if ((extendedReadBuffers != null) && (!extendedReadBuffers.isEmpty())) {
+          final StringBuilder builder = new StringBuilder();
+          extendedReadBuffers
+              .visitAll(new IdentityHashStore.Visitor<ByteBuffer, Object>() {
+                private String prefix = "";
 
-              @Override
-              public void accept(ByteBuffer k, Object v) {
-                builder.append(prefix).append(k);
-                prefix = ", ";
-              }
-            });
-        DFSClient.LOG.warn("closing file " + src + ", but there are still "
-            + "unreleased ByteBuffers allocated by read().  "
-            + "Please release " + builder.toString() + ".");
+                @Override
+                public void accept(ByteBuffer k, Object v) {
+                  builder.append(prefix).append(k);
+                  prefix = ", ";
+                }
+              });
+          DFSClient.LOG.warn("closing file " + src + ", but there are still "
+              + "unreleased ByteBuffers allocated by read().  "
+              + "Please release " + builder.toString() + ".");
+        }
+      } finally {
+        // Release the block reader even if checkOpen() throws because the
+        // DFSClient was closed first. Otherwise the block reader's socket
+        // leaks and the DataNode side of the connection can be stuck in
+        // FIN_WAIT1 for the lifetime of the client JVM.
+        closeCurrentBlockReaders();
+        super.close();
       }
-      closeCurrentBlockReaders();
-      super.close();
     } finally {
       /**
        * If dfsInputStream is closed and datanode is in
@@ -1824,6 +1831,11 @@ public class DFSInputStream extends FSInputStream
     }
     blockReader = null;
     blockEnd = -1;
+  }
+
+  @VisibleForTesting
+  BlockReader getCurrentBlockReader() {
+    return blockReader;
   }
 
   @Override
