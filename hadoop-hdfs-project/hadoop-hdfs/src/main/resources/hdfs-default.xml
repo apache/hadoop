@@ -6775,4 +6775,14 @@
       If you have more than one package, separate the packages using commas.
     </description>
   </property>
+  <property>
+    <name>dfs.namenode.datanode.list.cache.expiration.ms</name>
+    <value>0</value>
+    <description>
+      Set to a positive number to cache values for DatanodeManager.getDatanodeListForReport for
+      performance purpose. Milliseconds for cache expiration from insertion. 0 or negative value
+      to disable this cache.
+      Non metrics usage will bypass this cache (fsck, datanodeReport, etc.)
+    </description>
+  </property>
 </configuration>

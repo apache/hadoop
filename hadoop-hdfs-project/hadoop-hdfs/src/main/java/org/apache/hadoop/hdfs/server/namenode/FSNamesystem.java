@@ -5843,8 +5843,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric({"NumDecomLiveDataNodes",
       "Number of datanodes which have been decommissioned and are now live"})
   public int getNumDecomLiveDataNodes() {
-    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, false);
+    final List<DatanodeDescriptor> live = new ArrayList<>();
+    getBlockManager().getDatanodeManager().fetchDatanodesWithCache(live, null, false);
     int liveDecommissioned = 0;
     for (DatanodeDescriptor node : live) {
       liveDecommissioned += node.isDecommissioned() ? 1 : 0;
@@ -5856,8 +5856,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric({"NumDecomDeadDataNodes",
       "Number of datanodes which have been decommissioned and are now dead"})
   public int getNumDecomDeadDataNodes() {
-    final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-    getBlockManager().getDatanodeManager().fetchDatanodes(null, dead, false);
+    final List<DatanodeDescriptor> dead = new ArrayList<>();
+    getBlockManager().getDatanodeManager().fetchDatanodesWithCache(null, dead, false);
     int deadDecommissioned = 0;
     for (DatanodeDescriptor node : dead) {
       deadDecommissioned += node.isDecommissioned() ? 1 : 0;
@@ -5869,8 +5869,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric({"NumInServiceLiveDataNodes",
       "Number of live datanodes which are currently in service"})
   public int getNumInServiceLiveDataNodes() {
-    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, true);
+    final List<DatanodeDescriptor> live = new ArrayList<>();
+    getBlockManager().getDatanodeManager().fetchDatanodesWithCache(live, null, true);
     int liveInService = live.size();
     for (DatanodeDescriptor node : live) {
       liveInService -= node.isInMaintenance() ? 1 : 0;
@@ -5882,8 +5882,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric({"VolumeFailuresTotal",
       "Total number of volume failures across all Datanodes"})
   public int getVolumeFailuresTotal() {
-    List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, false);
+    List<DatanodeDescriptor> live = new ArrayList<>();
+    getBlockManager().getDatanodeManager().fetchDatanodesWithCache(live, null, false);
     int volumeFailuresTotal = 0;
     for (DatanodeDescriptor node: live) {
       volumeFailuresTotal += node.getVolumeFailures();
@@ -5895,8 +5895,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric({"EstimatedCapacityLostTotal",
       "An estimate of the total capacity lost due to volume failures"})
   public long getEstimatedCapacityLostTotal() {
-    List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, false);
+    List<DatanodeDescriptor> live = new ArrayList<>();
+    getBlockManager().getDatanodeManager().fetchDatanodesWithCache(live, null, false);
     long estimatedCapacityLostTotal = 0;
     for (DatanodeDescriptor node: live) {
       VolumeFailureSummary volumeFailureSummary = node.getVolumeFailureSummary();
@@ -6785,10 +6785,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   @Override // NameNodeMXBean
   public String getLiveNodes() {
-    final Map<String, Map<String,Object>> info = 
-      new HashMap<String, Map<String,Object>>();
-    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-    blockManager.getDatanodeManager().fetchDatanodes(live, null, false);
+    final Map<String, Map<String, Object>> info = new HashMap<>();
+    final List<DatanodeDescriptor> live = new ArrayList<>();
+    blockManager.getDatanodeManager().fetchDatanodesWithCache(live, null, false);
     for (DatanodeDescriptor node : live) {
       ImmutableMap.Builder<String, Object> innerinfo =
           ImmutableMap.<String,Object>builder();
@@ -6840,10 +6839,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   @Override // NameNodeMXBean
   public String getDeadNodes() {
-    final Map<String, Map<String, Object>> info = 
-      new HashMap<String, Map<String, Object>>();
-    final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-    blockManager.getDatanodeManager().fetchDatanodes(null, dead, false);
+    final Map<String, Map<String, Object>> info = new HashMap<>();
+    final List<DatanodeDescriptor> dead = new ArrayList<>();
+    blockManager.getDatanodeManager().fetchDatanodesWithCache(null, dead, false);
     for (DatanodeDescriptor node : dead) {
       Map<String, Object> innerinfo = ImmutableMap.<String, Object>builder()
           .put("lastContact", getLastContact(node))
@@ -6971,10 +6969,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     float min = 0;
     float dev = 0;
 
-    final Map<String, Map<String,Object>> info =
-        new HashMap<String, Map<String,Object>>();
-    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-    blockManager.getDatanodeManager().fetchDatanodes(live, null, true);
+    final Map<String, Map<String, Object>> info = new HashMap<>();
+    final List<DatanodeDescriptor> live = new ArrayList<>();
+    blockManager.getDatanodeManager().fetchDatanodesWithCache(live, null, true);
     for (Iterator<DatanodeDescriptor> it = live.iterator(); it.hasNext();) {
       DatanodeDescriptor node = it.next();
       if (!node.isInService()) {
@@ -9149,8 +9146,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric({"NumInMaintenanceLiveDataNodes",
       "Number of live Datanodes which are in maintenance state"})
   public int getNumInMaintenanceLiveDataNodes() {
-    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, true);
+    final List<DatanodeDescriptor> live = new ArrayList<>();
+    getBlockManager().getDatanodeManager().fetchDatanodesWithCache(live, null, true);
     int liveInMaintenance = 0;
     for (DatanodeDescriptor node : live) {
       liveInMaintenance += node.isInMaintenance() ? 1 : 0;
@@ -9162,8 +9159,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric({"NumInMaintenanceDeadDataNodes",
       "Number of dead Datanodes which are in maintenance state"})
   public int getNumInMaintenanceDeadDataNodes() {
-    final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-    getBlockManager().getDatanodeManager().fetchDatanodes(null, dead, true);
+    final List<DatanodeDescriptor> dead = new ArrayList<>();
+    getBlockManager().getDatanodeManager().fetchDatanodesWithCache(null, dead, true);
     int deadInMaintenance = 0;
     for (DatanodeDescriptor node : dead) {
       deadInMaintenance += node.isInMaintenance() ? 1 : 0;
