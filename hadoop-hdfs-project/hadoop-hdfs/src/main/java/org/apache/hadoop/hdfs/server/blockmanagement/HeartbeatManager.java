@@ -67,8 +67,8 @@ class HeartbeatManager implements DatanodeStatistics {
   /** Statistics, which are synchronized by the heartbeat manager lock. */
   private final DatanodeStats stats = new DatanodeStats();
 
-  /** The time period to check for expired datanodes. */
-  private final long heartbeatRecheckInterval;
+  /** The time period to check for expired datanodes. Can be updated by {@link DatanodeManager}. */
+  private volatile long heartbeatRecheckInterval;
   /** Heartbeat monitor thread. */
   private final Daemon heartbeatThread = new Daemon(new Monitor());
   private final StopWatch heartbeatStopWatch = new StopWatch();
@@ -532,6 +532,10 @@ class HeartbeatManager implements DatanodeStatistics {
         }
       }
     }
+  }
+
+  public void setHeartbeatRecheckInterval(long interval) {
+    heartbeatRecheckInterval = interval;
   }
 
   /** Periodically check heartbeat and update block key */
