@@ -115,8 +115,7 @@ public class AMWebServices {
   }
 
   private void init() {
-    //clear content type
-    response.setContentType(null);
+    JettyUtils.clearContentType(response);
   }
 
   public static Job getJobFromContainerIdString(String cid, AppContext appCtx)

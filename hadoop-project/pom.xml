@@ -36,7 +36,20 @@
     <!--Whether to proceed to next module if any test failures exist-->
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.4.58.v20250814</jetty.version>
+    <!--
+      The 12.1.x line, not 12.0.x: Jetty has said 12.0 stops receiving updates
+      during 2026 in favour of 12.1, and both carry the ee8 environment this
+      tree depends on.
+    -->
+    <jetty.version>12.1.12</jetty.version>
+    <!--
+      Jetty's own build of the Servlet 4.0 API. Jetty 12's ee8 environment
+      resolves the web.xml schemas out of whatever archive javax.servlet.Servlet
+      came from, and this is the only artifact that carries both. It tracks the
+      servlet spec, not the Jetty release, so it has its own version - 12.0 and
+      12.1 pin the same 4.0.9.
+    -->
+    <jetty-servlet-api.version>4.0.9</jetty-servlet-api.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -234,6 +247,8 @@
     <jline.version>3.9.0</jline.version>
     <mockito.version>4.11.0</mockito.version>
     <solr.version>8.11.2</solr.version>
+    <!-- the Jetty Solr 8 is built against; see the catalog webapp pom -->
+    <solr.jetty.version>9.4.44.v20210927</solr.jetty.version>
     <openssl-wildfly.version>2.2.5.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.4.0</woodstox.version>
@@ -904,57 +919,89 @@
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-server</artifactId>
         <version>${jetty.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-          </exclusion>
-        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-http</artifactId>
+        <version>${jetty.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-util</artifactId>
         <version>${jetty.version}</version>
       </dependency>
+      <!--
+        Jetty 12 keeps the servlet container out of its core and ships it as a
+        pluggable EE environment. ee8 is the environment that serves
+        javax.servlet, so a module that embedded a Jetty 9 servlet container
+        moves to the ee8 artifact of the same name rather than to the core one.
+
+        The ee8 artifacts bring org.eclipse.jetty.toolchain:jetty-servlet-api
+        with them, and that is the servlet API this tree resolves to. It
+        publishes the same javax.servlet packages as jakarta.servlet-api did,
+        so the namespace is unchanged and HADOOP-19970's one-servlet-API rule
+        still holds; the difference is that this jar also carries the web.xml
+        schemas, which ee8 loads from the archive javax.servlet.Servlet came
+        from and which jakarta.servlet-api does not ship at all.
+      -->
       <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-servlet</artifactId>
+        <groupId>org.eclipse.jetty.ee8</groupId>
+        <artifactId>jetty-ee8-nested</artifactId>
         <version>${jetty.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-webapp</artifactId>
+        <groupId>org.eclipse.jetty.ee8</groupId>
+        <artifactId>jetty-ee8-servlet</artifactId>
         <version>${jetty.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.eclipse.jetty.websocket</groupId>
-        <artifactId>javax-websocket-server-impl</artifactId>
+        <groupId>org.eclipse.jetty.ee8</groupId>
+        <artifactId>jetty-ee8-webapp</artifactId>
+        <version>${jetty.version}</version>
+      </dependency>
+      <!--
+        Hadoop's WebSocket code is written against the Jetty API, not
+        javax.websocket, so the server side maps to the ee8 build of Jetty's own
+        WebSocket module rather than to jetty-ee8-websocket-javax-server.
+
+        jetty-ee8-annotations is excluded because it is the only route by which
+        org.ow2.asm:asm reaches the classpath, and asm is a banned dependency in
+        this build. This keeps the exclusion the Jetty 9 coordinates already
+        carried.
+
+        Excluding it does cost something, and the cost has to be paid back at
+        the call site. Jetty ships the annotations module with the WebSocket
+        server on purpose: JettyWebSocketServlet no longer bootstraps itself
+        from init() the way Jetty 9's WebSocketServlet did, and instead expects
+        the WebSocket components to be on the context already, put there by a
+        ServletContainerInitializer that only AnnotationConfiguration discovers.
+        Without that, the servlet throws "WebSocketComponents has not been
+        created" on init and the endpoint answers 500. So every module that
+        registers a JettyWebSocketServlet has to call
+        JettyWebSocketServletContainerInitializer.configure() on the context
+        before it starts - see the node manager's WebServer. That is the same
+        work the scan would have done, minus the scan and minus asm.
+      -->
+      <dependency>
+        <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+        <artifactId>jetty-ee8-websocket-jetty-server</artifactId>
         <version>${jetty.version}</version>
         <exclusions>
           <exclusion>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-webapp</artifactId>
+            <groupId>org.eclipse.jetty.ee8</groupId>
+            <artifactId>jetty-ee8-annotations</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>org.eclipse.jetty.websocket</groupId>
-        <artifactId>websocket-client</artifactId>
+        <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+        <artifactId>jetty-ee8-websocket-jetty-client</artifactId>
         <version>${jetty.version}</version>
       </dependency>
       <dependency>
-        <groupId>jakarta.servlet.jsp</groupId>
-        <artifactId>jakarta.servlet.jsp-api</artifactId>
-        <version>2.3.6</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.servlet</groupId>
-        <artifactId>jakarta.servlet-api</artifactId>
-        <version>4.0.4</version>
+        <groupId>org.eclipse.jetty.toolchain</groupId>
+        <artifactId>jetty-servlet-api</artifactId>
+        <version>${jetty-servlet-api.version}</version>
       </dependency>
 
       <dependency>
@@ -1069,11 +1116,6 @@
         <version>${commons-io.version}</version>
       </dependency>
 
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-servlet-tester</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
       <dependency>
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging</artifactId>
@@ -2174,15 +2216,36 @@
         <groupId>org.glassfish.jersey.test-framework</groupId>
         <artifactId>jersey-test-framework-core</artifactId>
         <version>${jersey2.version}</version>
+        <exclusions>
+          <!--
+            It declares the servlet API under the jakarta.servlet coordinate.
+            Those are the same javax.servlet classes jetty-servlet-api carries,
+            so letting it through puts two of them on the test classpath and
+            which one a module compiles against comes down to jar order.
+          -->
+          <exclusion>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
+      <!--
+        HADOOP-19970 moved the test container here off Jetty. It has to stay off
+        it: Jersey 2's Jetty container extends
+        org.eclipse.jetty.server.handler.AbstractHandler and takes the concrete
+        Request and Response classes, none of which survive into Jetty 12 core,
+        and 2.46 is the last 2.x release, so there will be no Jetty 12 container
+        for it.
+      -->
       <dependency>
         <groupId>org.glassfish.jersey.test-framework.providers</groupId>
-        <artifactId>jersey-test-framework-provider-jetty</artifactId>
+        <artifactId>jersey-test-framework-provider-jdk-http</artifactId>
         <version>${jersey2.version}</version>
         <exclusions>
+          <!-- Reaches the servlet API again through jersey-test-framework-core. -->
           <exclusion>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
           </exclusion>
         </exclusions>
       </dependency>

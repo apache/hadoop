@@ -161,16 +161,35 @@
                       <exclude>com.google.code.findbugs:jsr305</exclude>
                       <exclude>io.netty:*</exclude>
                       <exclude>io.dropwizard.metrics:metrics-core</exclude>
-                      <exclude>org.eclipse.jetty:jetty-servlet</exclude>
                       <exclude>org.eclipse.jetty:jetty-security</exclude>
                       <!-- Excluding Jetty dependencies to resolve `BanDuplicateClasses` issues caused by
                        duplicate Jetty classes in `hadoop-client-minicluster` and `hadoop-client-runtime`.
                        so keeping it here leads to conflicts.
+
+                       Jetty 12 splits what jetty-servlet and jetty-server used to
+                       hold across the ee8 environment and a separate session
+                       module, so the same division of labour needs more names:
+                       jetty-ee8-servlet for the old jetty-servlet, plus
+                       jetty-ee8-nested, jetty-ee8-security and jetty-session,
+                       which are all code that shipped inside those two jars on
+                       9.4. jetty-util-ajax and jetty-continuation are gone from
+                       the tree, so they are no longer named here.
+
+                       jetty-util is not named here either. It is this jar's to
+                       ship, as hadoop-client-minicluster still says when it
+                       excludes it. YARN-11793 took it away when the Jersey test
+                       framework moved onto Jetty and started pulling jetty-util
+                       into hadoop-client-minicluster on a path that module does
+                       not exclude; HADOOP-19970 moved that test container back
+                       off Jetty, so nothing pulls it there any more and the two
+                       exclusions would leave org.eclipse.jetty.util in neither
+                       jar.
                       -->
-                      <exclude>org.eclipse.jetty:jetty-util</exclude>
-                      <exclude>org.eclipse.jetty:jetty-util-ajax</exclude>
                       <exclude>org.eclipse.jetty:jetty-server</exclude>
-                      <exclude>org.eclipse.jetty:jetty-continuation</exclude>
+                      <exclude>org.eclipse.jetty:jetty-session</exclude>
+                      <exclude>org.eclipse.jetty.ee8:jetty-ee8-servlet</exclude>
+                      <exclude>org.eclipse.jetty.ee8:jetty-ee8-nested</exclude>
+                      <exclude>org.eclipse.jetty.ee8:jetty-ee8-security</exclude>
                       <exclude>org.ow2.asm:*</exclude>
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>

@@ -21,7 +21,6 @@ import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.eclipse.jetty.util.log.Log;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletResponse;
@@ -37,8 +36,13 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestAuthenticationSessionCookie {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestAuthenticationSessionCookie.class);
+
   private static final String BASEDIR =
       GenericTestUtils.getTempPath(TestHttpCookieFlag.class.getSimpleName());
   private static boolean isCookiePersistent;
@@ -152,7 +156,7 @@ public class TestAuthenticationSessionCookie {
     String header = conn.getHeaderField("Set-Cookie");
     List<HttpCookie> cookies = HttpCookie.parse(header);
     assertTrue(!cookies.isEmpty());
-    Log.getLog().info(header);
+    LOG.info(header);
     assertFalse(header.contains("; Expires="));
     assertTrue("token".equals(cookies.get(0).getValue()));
   }
@@ -174,7 +178,7 @@ public class TestAuthenticationSessionCookie {
     String header = conn.getHeaderField("Set-Cookie");
     List<HttpCookie> cookies = HttpCookie.parse(header);
     assertTrue(!cookies.isEmpty());
-    Log.getLog().info(header);
+    LOG.info(header);
     assertTrue(header.contains("; Expires="));
     assertTrue("token".equals(cookies.get(0).getValue()));
   }

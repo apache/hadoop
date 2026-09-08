@@ -141,8 +141,7 @@ public class NMWebServices {
   }
 
   private void init() {
-    //clear content type
-    response.setContentType(null);
+    JettyUtils.clearContentType(response);
   }
 
   @GET

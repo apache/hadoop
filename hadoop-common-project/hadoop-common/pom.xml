@@ -93,11 +93,6 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>jakarta.servlet.jsp</groupId>
-      <artifactId>jakarta.servlet.jsp-api</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>jakarta.ws.rs</groupId>
       <artifactId>jakarta.ws.rs-api</artifactId>
       <scope>compile</scope>
@@ -126,6 +121,17 @@
       <artifactId>jakarta.activation-api</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <!--
+      HttpServer2 and the filters around it are written against javax.servlet.
+      The API used to arrive only as a transitive of jetty-server; it is declared
+      here so the module states which servlet API it compiles against instead of
+      depending on which jar happened to come first on the classpath.
+    -->
+    <dependency>
+      <groupId>org.eclipse.jetty.toolchain</groupId>
+      <artifactId>jetty-servlet-api</artifactId>
+      <scope>compile</scope>
+    </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
@@ -135,21 +141,15 @@
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-util</artifactId>
       <scope>compile</scope>
-      <exclusions>
-        <exclusion>
-          <artifactId>javax.servlet-api</artifactId>
-          <groupId>javax.servlet</groupId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-servlet</artifactId>
+      <groupId>org.eclipse.jetty.ee8</groupId>
+      <artifactId>jetty-ee8-servlet</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-webapp</artifactId>
+      <groupId>org.eclipse.jetty.ee8</groupId>
+      <artifactId>jetty-ee8-webapp</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>

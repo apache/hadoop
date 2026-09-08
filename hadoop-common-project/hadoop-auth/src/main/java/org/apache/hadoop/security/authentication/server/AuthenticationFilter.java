@@ -621,8 +621,11 @@ public class AuthenticationFilter implements Filter {
                 KerberosAuthenticator.WWW_AUTHENTICATE.toLowerCase()))) {
           errCode = HttpServletResponse.SC_FORBIDDEN;
         }
-        // After Jetty 9.4.21, sendError() no longer allows a custom message.
-        // use setStatus() to set a custom message.
+        // The reason phrase is not a place to put this any more. Jetty 12
+        // stores what ee8's Response.setStatusWithReason is given and never
+        // writes it to the wire, and setStatus(int, String) has ignored its
+        // message since Servlet 3.0 deprecated it. sendError puts the detail
+        // in the response body, which is where a client can still read it.
         String reason;
         if (authenticationEx == null) {
           reason = "Authentication required";
@@ -630,7 +633,6 @@ public class AuthenticationFilter implements Filter {
           reason = authenticationEx.getMessage();
         }
 
-        httpResponse.setStatus(errCode, reason);
         httpResponse.sendError(errCode, reason);
       }
     }

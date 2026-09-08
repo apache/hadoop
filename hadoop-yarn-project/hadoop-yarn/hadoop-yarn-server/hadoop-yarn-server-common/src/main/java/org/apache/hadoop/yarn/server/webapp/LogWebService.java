@@ -122,8 +122,7 @@ public class LogWebService implements AppInfoProvider {
   }
 
   private void initForReadableEndpoints(HttpServletResponse response) {
-    // clear content type
-    response.setContentType(null);
+    JettyUtils.clearContentType(response);
   }
 
   /**
