@@ -791,6 +791,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         "auto queue deletion should be turned off on a3");
 
     // Set the capacity of label TEST
+    csConf.setAccessibleNodeLabels(cQueuePath, Set.of("TEST"));
     csConf.set(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
         cQueuePath) + "accessible-node-labels.TEST.capacity", "6w");
     csConf.setQueues(ROOT, new String[]{"a", "b", "c"});

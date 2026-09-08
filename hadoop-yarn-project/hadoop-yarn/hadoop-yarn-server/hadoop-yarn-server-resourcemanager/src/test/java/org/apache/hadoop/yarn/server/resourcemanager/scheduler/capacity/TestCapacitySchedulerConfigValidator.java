@@ -45,6 +45,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -734,5 +735,130 @@ public class TestCapacitySchedulerConfigValidator {
     }
 
     return csConf;
+  }
+
+  private static final String ACCESSIBLE_LABELS_CAPACITY_ERROR =
+      "must have accessible-node-labels and its capacity together";
+
+  @Test
+  public void testValidateQueueAccessibleLabelsAllowsListedLabel() throws IOException {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath queue = new QueuePath("root.test1");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+        new String[] {"test1"});
+    conf.setCapacity(queue, 100);
+    conf.setAccessibleNodeLabels(queue, Set.of("gpu"));
+    conf.setCapacityByLabel(queue, "gpu", 50);
+
+    CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf);
+  }
+
+  @Test
+  public void testValidateQueueAccessibleLabelsAllowsWildcardAccess() throws IOException {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath queue = new QueuePath("root.test1");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+        new String[] {"test1"});
+    conf.setCapacity(queue, 100);
+    conf.setAccessibleNodeLabels(queue, Set.of("*"));
+    conf.setCapacityByLabel(queue, "gpu", 50);
+
+    CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf);
+  }
+
+  @Test
+  public void testValidateQueueAccessibleLabelsRejectsUnlistedLabelCapacity(){
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath queue = new QueuePath("root.test1");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+        new String[] {"test1"});
+    conf.setCapacity(queue, 100);
+    conf.setCapacityByLabel(queue, "gpu", 50);
+    conf.setAccessibleNodeLabels(queue, Set.of());
+
+    IOException exception = assertThrows(IOException.class, () ->
+        CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf));
+    assertTrue(exception.getMessage().contains(ACCESSIBLE_LABELS_CAPACITY_ERROR));
+    assertTrue(exception.getMessage().contains("root.test1"));
+  }
+
+  @Test
+  public void testValidateQueueAccessibleLabelsRejectsAbsoluteMinResourceWithoutAccessibleLabels() {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath queue = new QueuePath("root.queueC");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+        new String[] {"queueC"});
+    conf.setCapacity(queue, 25);
+    conf.setMinimumResourceRequirement("x", queue, Resource.newInstance(10 * 1024, 2));
+    conf.setMaximumResourceRequirement("x", queue, Resource.newInstance(20 * 1024, 4));
+
+    IOException exception = assertThrows(IOException.class, () ->
+        CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf));
+    assertTrue(exception.getMessage().contains(ACCESSIBLE_LABELS_CAPACITY_ERROR));
+    assertTrue(exception.getMessage().contains("root.queueC"));
+  }
+
+  @Test
+  public void testValidateQueueAccessibleLabelsRejectsCapacityWithoutAccessibleLabelsProperty() {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath sibling = new QueuePath("root.sibling");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+            new String[] {"default", "sibling"});
+    conf.setCapacity(new QueuePath("root.default"), 50);
+    conf.setCapacity(sibling, 50);
+    conf.setCapacityByLabel(sibling, "label3", 100);
+    conf.setMaximumCapacityByLabel(sibling, "label3", 100);
+
+    IOException exception = assertThrows(IOException.class, () ->
+            CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf));
+    assertTrue(exception.getMessage().contains(ACCESSIBLE_LABELS_CAPACITY_ERROR));
+    assertTrue(exception.getMessage().contains("root.sibling"));
+  }
+
+  @Test
+  public void testValidateQueueAccessibleLabelsAllowsInheritedAccessibleLabel()
+      throws IOException {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath parent = new QueuePath("root.c");
+    QueuePath template = new QueuePath("root.c.leaf-queue-template");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+        new String[] {"c"});
+    conf.setCapacity(parent, 100);
+    conf.setAccessibleNodeLabels(parent, Set.of("gpu"));
+    conf.setCapacityByLabel(template, "gpu", 50);
+
+    CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf);
+  }
+
+  @Test
+  public void testValidateQueueAccessibleLabelsRejectsRemovedAccessibleLabel(){
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath queue = new QueuePath("root.test1");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+        new String[] {"test1"});
+    conf.setCapacity(queue, 100);
+    conf.setAccessibleNodeLabels(queue, Set.of("cpu"));
+    conf.setCapacityByLabel(queue, "gpu", 50);
+
+    IOException exception = assertThrows(IOException.class, () ->
+        CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf));
+    assertTrue(exception.getMessage().contains(ACCESSIBLE_LABELS_CAPACITY_ERROR));
+    assertTrue(exception.getMessage().contains("root.test1"));
+  }
+
+  @Test
+  public void testValidateQueueAccessibleLabelsRejectsUnlistedMaxCapacity(){
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    QueuePath queue = new QueuePath("root.test1");
+    conf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
+        new String[] {"test1"});
+    conf.setCapacity(queue, 100);
+    conf.setAccessibleNodeLabels(queue, Set.of());
+    conf.setMaximumCapacityByLabel(queue, "gpu", 100);
+
+    IOException exception = assertThrows(IOException.class, () ->
+        CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(conf));
+    assertTrue(exception.getMessage().contains(ACCESSIBLE_LABELS_CAPACITY_ERROR));
+    assertTrue(exception.getMessage().contains("root.test1"));
   }
 }
