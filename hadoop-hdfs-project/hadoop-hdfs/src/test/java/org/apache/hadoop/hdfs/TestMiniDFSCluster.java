@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
@@ -414,6 +415,42 @@ public class TestMiniDFSCluster {
           miniDfsCluster.getDataNode(ipcPorts[1]).getIpcPort());
       assertEquals(ipcPorts[2],
           miniDfsCluster.getDataNode(ipcPorts[2]).getIpcPort());
+    }
+  }
+
+  /**
+   * Test that restarting a DataNode that was added without explicit
+   * storage capacities does not throw ArrayIndexOutOfBoundsException.
+   *
+   * @see <a href="https://issues.apache.org/jira/browse/HDFS-17870">HDFS-17870</a>
+   */
+  @Test
+  @Timeout(value = 100)
+  public void testRestartDataNodeWithoutStorageCapacities() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    final long[] capacities = new long[] {1024 * 1024 * 100, 1024 * 1024 * 100};
+
+    // Create cluster with 1 DataNode and explicit storage capacities
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1)
+        .storageCapacities(capacities)
+        .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
+        .storagesPerDatanode(2)
+        .build()) {
+      cluster.waitActive();
+
+      // Add another DataNode without specifying storage capacities
+      cluster.startDataNodes(conf, 1, true, null, null);
+      cluster.waitActive();
+
+      assertEquals(2, cluster.getDataNodes().size());
+
+      // Restart the second DataNode - this should not throw
+      // ArrayIndexOutOfBoundsException
+      assertTrue(cluster.restartDataNode(1));
+      cluster.waitActive();
+
+      assertEquals(2, cluster.getDataNodes().size());
     }
   }
 
