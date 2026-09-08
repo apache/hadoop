@@ -347,6 +347,8 @@ const char *get_error_message(const int error_code) {
         return "Cannot get executable name from pid";
       case WRONG_PATH_OF_EXECUTABLE:
         return "Wrong path of executable";
+      case WRAPPED_EXIT_CODE_USER_CONTAINER_FAILED:
+        return "Wrapped exit code user container failed";
       default:
         return "Unknown error code";
     }
