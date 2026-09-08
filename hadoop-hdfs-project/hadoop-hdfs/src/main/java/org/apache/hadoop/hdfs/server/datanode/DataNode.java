@@ -2500,6 +2500,9 @@ public class DataNode extends ReconfigurableBase
       LOG.debug("requestShortCircuitFdsForRead failed", e);
       throw new ShortCircuitFdsUnsupportedException("This DataNode's " +
           "FsDatasetSpi does not support short-circuit local reads");
+    } catch (IOException e) {
+      IOUtils.cleanupWithLogger(LOG, fis);
+      throw e;
     }
     return fis;
   }
