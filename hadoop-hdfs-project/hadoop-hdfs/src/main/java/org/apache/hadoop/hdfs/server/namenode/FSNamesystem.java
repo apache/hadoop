@@ -2252,20 +2252,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             dir, pc, srcArg, offset, length, true);
         inode = res.getIIp().getLastINode();
         if (isInSafeMode()) {
-          for (LocatedBlock b : res.blocks.getLocatedBlocks()) {
-            // if safemode & no block locations yet then throw safemodeException
-            if ((b.getLocations() == null) || (b.getLocations().length == 0)) {
-              SafeModeException se = newSafemodeException(
-                  "Zero blocklocations for " + srcArg);
-              if (haEnabled && haContext != null &&
-                  (haContext.getState().getServiceState() == ACTIVE ||
-                      haContext.getState().getServiceState() == OBSERVER)) {
-                throw new RetriableException(se);
-              } else {
-                throw se;
-              }
-            }
-          }
+          checkBlockLocationsInSafeMode(res.blocks, srcArg);
         } else if (isObserver()) {
           checkBlockLocationsWhenObserver(res.blocks, srcArg);
         }
@@ -3546,9 +3533,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, src);
       throw e;
     }
-    if (needLocation && isObserver() && stat instanceof HdfsLocatedFileStatus) {
+    if (needLocation && stat instanceof HdfsLocatedFileStatus) {
       LocatedBlocks lbs = ((HdfsLocatedFileStatus) stat).getLocatedBlocks();
-      checkBlockLocationsWhenObserver(lbs, src);
+      if (isInSafeMode()) {
+        checkBlockLocationsInSafeMode(lbs, src);
+      } else if (isObserver()) {
+        checkBlockLocationsWhenObserver(lbs, src);
+      }
     }
     logAuditEvent(true, operationName, src);
     return stat;
@@ -4278,11 +4269,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, src);
       throw e;
     }
-    if (dl != null && needLocation && isObserver()) {
+    if (dl != null && needLocation) {
       for (HdfsFileStatus fs : dl.getPartialListing()) {
         if (fs instanceof HdfsLocatedFileStatus) {
           LocatedBlocks lbs = ((HdfsLocatedFileStatus) fs).getLocatedBlocks();
-          checkBlockLocationsWhenObserver(lbs, fs.toString());
+          if (isInSafeMode()) {
+            checkBlockLocationsInSafeMode(lbs, fs.toString());
+          } else if (isObserver()) {
+            checkBlockLocationsWhenObserver(lbs, fs.toString());
+          }
         }
       }
     }
@@ -4357,11 +4352,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           if (dirListing == null) {
             throw new FileNotFoundException("Path " + src + " does not exist");
           }
-          if (needLocation && isObserver()) {
+          if (needLocation) {
             for (HdfsFileStatus fs : dirListing.getPartialListing()) {
               if (fs instanceof HdfsLocatedFileStatus) {
                 LocatedBlocks lbs = ((HdfsLocatedFileStatus) fs).getLocatedBlocks();
-                checkBlockLocationsWhenObserver(lbs, fs.toString());
+                if (isInSafeMode()) {
+                  checkBlockLocationsInSafeMode(lbs, fs.toString());
+                } else if (isObserver()) {
+                  checkBlockLocationsWhenObserver(lbs, fs.toString());
+                }
               }
             }
           }
@@ -9260,6 +9259,63 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return haEnabled && haContext != null && haContext.getState().getServiceState() == OBSERVER;
   }
 
+  private boolean hasSufficientBlockLocations(LocatedBlock block,
+      ErasureCodingPolicy ecPolicy) {
+    DatanodeInfo[] locations = block.getLocations();
+    if (locations == null) {
+      return false;
+    }
+
+    if (block.isStriped()) {
+      LocatedStripedBlock stripedBlock = (LocatedStripedBlock) block;
+      // For erasure coded files, require enough data units to reconstruct
+      // the block, bounded by the number of cells in the block.
+      long numCells = (block.getBlockSize() - 1) / ecPolicy.getCellSize() + 1;
+      int minRequiredIndices = (int) Math.min(ecPolicy.getNumDataUnits(), numCells);
+
+      // Units can be over-replicated, so need to account for unique indices
+      byte[] blockIndices = stripedBlock.getBlockIndices();
+      boolean[] seenIndices = new boolean[ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits()];
+
+      int uniqueIndexCount = 0;
+      for (byte idx : blockIndices) {
+        int index = idx & 0xFF;
+        if (!seenIndices[index]) {
+          seenIndices[index] = true;
+          if (++uniqueIndexCount >= minRequiredIndices) {
+            return true;
+          }
+        }
+      }
+      return false;
+    } else {
+      return locations.length > 0;
+    }
+  }
+
+  private void checkBlockLocationsInSafeMode(LocatedBlocks blocks, String src)
+      throws SafeModeException, RetriableException {
+    if (blocks == null) {
+      return;
+    }
+    List<LocatedBlock> locatedBlockList = blocks.getLocatedBlocks();
+    if (locatedBlockList != null) {
+      ErasureCodingPolicy ecPolicy = blocks.getErasureCodingPolicy();
+      for (LocatedBlock block : locatedBlockList) {
+        if (!hasSufficientBlockLocations(block, ecPolicy)) {
+          SafeModeException se = newSafemodeException(
+              "Not enough blocklocations for " + src);
+          if (haEnabled && haContext != null &&
+              (haContext.getState().getServiceState() == ACTIVE ||
+                  haContext.getState().getServiceState() == OBSERVER)) {
+            throw new RetriableException(se);
+          }
+          throw se;
+        }
+      }
+    }
+  }
+
   private void checkBlockLocationsWhenObserver(LocatedBlocks blocks, String src)
       throws ObserverRetryOnActiveException {
     if (blocks == null) {
@@ -9267,9 +9323,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     List<LocatedBlock> locatedBlockList = blocks.getLocatedBlocks();
     if (locatedBlockList != null) {
-      for (LocatedBlock b : locatedBlockList) {
-        if (b.getLocations() == null || b.getLocations().length == 0) {
-          throw new ObserverRetryOnActiveException("Zero blocklocations for " + src);
+      ErasureCodingPolicy ecPolicy = blocks.getErasureCodingPolicy();
+      for (LocatedBlock block : locatedBlockList) {
+        if (!hasSufficientBlockLocations(block, ecPolicy)) {
+          throw new ObserverRetryOnActiveException("Not enough blocklocations for " + src);
         }
       }
     }
