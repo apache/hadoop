@@ -48,21 +48,24 @@ On Linux / Mac:
 The prompt which is then presented is located at a mounted version of the source tree
 and all required tools for testing and building have been installed and configured.
 
+The script can also run a single command instead of an interactive shell. Any
+arguments after the OS platform are executed inside the container, at the root of
+the mounted source tree, as the invoking user. Set DOCKER_INTERACTIVE_RUN to an
+empty string to drop the '-i -t' flags, so no TTY is needed and the script exits
+with the command's status:
+
+    $ DOCKER_INTERACTIVE_RUN= ./start-build-env.sh ubuntu_24 \
+        mvn -pl hadoop-common-project/hadoop-common test -Dtest=TestIPC
+
+The source tree and ~/.m2 are bind-mounted, so build output and surefire reports
+appear in the host tree and dependencies are downloaded once. The container is
+named 'hadoop-build_<OS platform>', so only one can run at a time; remove a stale
+one with 'docker rm -f hadoop-build_<OS platform>'.
+
 Note that from within this docker environment you ONLY have access to the Hadoop source
 tree from where you started. So if you need to run
     dev-support/bin/test-patch /path/to/my.patch
 then the patch must be placed inside the hadoop source tree.
-
-Known issues:
-- On Mac with Boot2Docker the performance on the mounted directory is currently extremely slow.
-  This is a known problem related to boot2docker on the Mac.
-  See:
-    https://github.com/boot2docker/boot2docker/issues/593
-  This issue has been resolved as a duplicate, and they point to a new feature for utilizing NFS mounts
-  as the proposed solution:
-    https://github.com/boot2docker/boot2docker/issues/64
-  An alternative solution to this problem is to install Linux native inside a virtual machine
-  and run your IDE and Docker etc inside that VM.
 
 ----------------------------------------------------------------------------------
 Installing required packages for clean install of Ubuntu 24.04 LTS Desktop.
@@ -418,6 +421,7 @@ Available package profiles:
   hadoop-aliyun-package
   hadoop-aws-package
   hadoop-azure-datalake-package
+  hadoop-bos-package
   hadoop-cos-package
   hadoop-gcp-package
   hadoop-huaweicloud-package
@@ -429,6 +433,7 @@ mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true \
  -Dhadoop-aliyun-package \
  -Dhadoop-aws-package \
  -Dhadoop-azure-datalake-package \
+ -Dhadoop-bos-package \
  -Dhadoop-cos-package \
  -Dhadoop-gcp-package \
  -Dhadoop-huaweicloud-package \
@@ -436,7 +441,7 @@ mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true \
 
 The resulting tar file will be too large to be distributable through ASF infrastructure.
 
-The hadoop-gcp and hadoop-tos artifacts include their dependencies as shaded
+The hadoop-bos, hadoop-gcp and hadoop-tos artifacts include their dependencies as shaded
 artifacts unless the distribution is built with -DskipShade.
 
 ----------------------------------------------------------------------------------
