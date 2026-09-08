@@ -17,16 +17,26 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 @XmlRootElement(name = "clusterMetrics")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -83,6 +93,8 @@ public class ClusterMetricsInfo {
   // Total allocated containers across all partitions.
   private int totalAllocatedContainersAcrossPartition;
 
+  private List<PartitionClusterMetricsInfo> partitionClusterMetrics;
+
   private boolean crossPartitionMetricsAvailable = false;
 
   private int rmEventQueueSize;
@@ -138,6 +150,29 @@ public class ClusterMetricsInfo {
             cs.getRootQueue().getQueueResourceUsage().getAllReserved());
         totalAllocatedContainersAcrossPartition =
             ((ParentQueue) cs.getRootQueue()).getNumContainers();
+        partitionClusterMetrics = getPartitionClusterMetrics(cs, metrics,
+            cs.getRootQueue().getQueueResourceUsage());
+
+        Resource available = Resources.subtractFromNonNegative(
+            totalClusterResourcesAcrossPartition.getResource(),
+            totalUsedResourcesAcrossPartition.getResource());
+        this.totalMB = totalClusterResourcesAcrossPartition.getMemorySize();
+        this.totalVirtualCores = totalClusterResourcesAcrossPartition.getvCores();
+        this.allocatedMB = totalUsedResourcesAcrossPartition.getMemorySize()
+            - totalReservedResourcesAcrossPartition.getMemorySize();
+        this.allocatedVirtualCores = totalUsedResourcesAcrossPartition.getvCores()
+            - totalReservedResourcesAcrossPartition.getvCores();
+        this.reservedMB = totalReservedResourcesAcrossPartition.getMemorySize();
+        this.reservedVirtualCores = totalReservedResourcesAcrossPartition.getvCores();
+        this.availableMB = available.getMemorySize();
+        this.availableVirtualCores = available.getVirtualCores();
+        this.pendingMB = cs.getRootQueue().getQueueResourceUsage()
+            .getAllPending().getMemorySize();
+        this.pendingVirtualCores = cs.getRootQueue().getQueueResourceUsage()
+            .getAllPending().getVirtualCores();
+        this.containersAllocated = totalAllocatedContainersAcrossPartition;
+        this.containersPending = sumPendingContainers(partitionClusterMetrics);
+        this.containersReserved = sumReservedContainers(partitionClusterMetrics);
         crossPartitionMetricsAvailable = true;
       }
     } else {
@@ -170,6 +205,56 @@ public class ClusterMetricsInfo {
     this.rmEventQueueSize = clusterMetrics.getRmEventQueueSize();
     this.schedulerEventQueueSize = clusterMetrics.getSchedulerEventQueueSize();
     this.utilizedVirtualCores = clusterMetrics.getUtilizedVirtualCores();
+  }
+
+  private List<PartitionClusterMetricsInfo> getPartitionClusterMetrics(
+      CapacityScheduler cs, QueueMetrics metrics, ResourceUsage usage) {
+    List<PartitionClusterMetricsInfo> partitionMetrics = new ArrayList<>();
+    RMNodeLabelsManager labelManager = cs.getRMContext().getNodeLabelManager();
+    if (labelManager == null) {
+      return partitionMetrics;
+    }
+
+    Set<String> partitionNames = new LinkedHashSet<>();
+    partitionNames.add(RMNodeLabelsManager.NO_LABEL);
+    for (RMNodeLabel label : labelManager.pullRMNodeLabelsInfo()) {
+      partitionNames.add(label.getLabelName());
+    }
+
+    for (String partitionName : partitionNames) {
+      Resource total = labelManager.getResourceByLabel(
+          partitionName, cs.getClusterResource());
+      Resource reserved = usage.getReserved(partitionName);
+      Resource pending = usage.getPending(partitionName);
+      Resource used = usage.getUsed(partitionName);
+      Resource allocated = Resources.subtract(used, reserved);
+      Resource available = Resources.subtractFromNonNegative(
+          Resources.clone(total), used);
+      partitionMetrics.add(new PartitionClusterMetricsInfo(
+          partitionName, total, allocated, reserved, pending, available,
+          metrics.getAllocatedContainers(partitionName),
+          metrics.getReservedContainers(partitionName),
+          metrics.getPendingContainers(partitionName)));
+    }
+    return partitionMetrics;
+  }
+
+  private int sumPendingContainers(
+      List<PartitionClusterMetricsInfo> partitionMetrics) {
+    int sum = 0;
+    for (PartitionClusterMetricsInfo partitionMetric : partitionMetrics) {
+      sum += partitionMetric.getContainersPending();
+    }
+    return sum;
+  }
+
+  private int sumReservedContainers(
+      List<PartitionClusterMetricsInfo> partitionMetrics) {
+    int sum = 0;
+    for (PartitionClusterMetricsInfo partitionMetric : partitionMetrics) {
+      sum += partitionMetric.getContainersReserved();
+    }
+    return sum;
   }
 
   public int getAppsSubmitted() {
@@ -422,6 +507,10 @@ public class ClusterMetricsInfo {
 
   public boolean getCrossPartitionMetricsAvailable() {
     return crossPartitionMetricsAvailable;
+  }
+
+  public List<PartitionClusterMetricsInfo> getPartitionClusterMetrics() {
+    return partitionClusterMetrics;
   }
 
   public int getContainerAssignedPerSecond() {
