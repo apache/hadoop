@@ -74,6 +74,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PAT
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LIST_MAX_RESULTS;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_METADATA_PREFIX;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_ARROW_LIST_PARSING;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_BLOB_LIST_PARSING;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicity.SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_MESSAGE;
@@ -218,9 +219,17 @@ public class ITestAzureBlobFileSystemListStatus extends
     assertThat(ex.getStatusCode())
         .describedAs("Expecting Network Error status code")
         .isEqualTo(-1);
-    assertThat(ex.getErrorMessage())
-        .describedAs("Expecting COPY_ABORTED error code")
-        .contains(ERR_BLOB_LIST_PARSING);
+    // The wrapping error message is chosen from the parser actually selected by
+    // the response Content-Type, not from the Photon config: even when Photon is
+    // enabled the service may return XML (fallback), yielding the XML parsing
+    // message. Accept either to keep the assertion stable across accounts.
+    final String errorMessage = ex.getErrorMessage();
+    assertThat(errorMessage != null
+        && (errorMessage.contains(ERR_ARROW_LIST_PARSING)
+            || errorMessage.contains(ERR_BLOB_LIST_PARSING)))
+        .describedAs("Expecting a list-response parsing failure message, was: %s",
+            errorMessage)
+        .isTrue();
   }
 
   /**
