@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.net.URI;
@@ -63,13 +64,11 @@ public class TestViewFsWithAuthorityLocalFs extends ViewFsBaseTest {
   @Override
   @Test
   public void testBasicPaths() {
-    assertEquals(schemeWithAuthority, fcView.getDefaultFileSystem().getUri());
-    assertEquals(fcView.makeQualified(
-        new Path("/user/" + System.getProperty("user.name"))),
-        fcView.getWorkingDirectory());
-    assertEquals(fcView.makeQualified(
-        new Path("/user/" + System.getProperty("user.name"))),
-        fcView.getHomeDirectory());
+    assertThat(fcView.getDefaultFileSystem().getUri()).isEqualTo(schemeWithAuthority);
+    assertThat(fcView.getWorkingDirectory()).isEqualTo(
+        fcView.makeQualified(new Path("/user/" + System.getProperty("user.name"))));
+    assertThat(fcView.getHomeDirectory()).isEqualTo(
+        fcView.makeQualified(new Path("/user/" + System.getProperty("user.name"))));
     assertEquals(
         new Path("/foo/bar").makeQualified(schemeWithAuthority, null),
         fcView.makeQualified(new Path("/foo/bar")));

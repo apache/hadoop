@@ -196,14 +196,11 @@ abstract public class ViewFsBaseTest {
   
   @Test
   public void testBasicPaths() {
-    assertEquals(FsConstants.VIEWFS_URI,
-        fcView.getDefaultFileSystem().getUri());
-    assertEquals(fcView.makeQualified(
-        new Path("/user/" + System.getProperty("user.name"))),
-        fcView.getWorkingDirectory());
-    assertEquals(fcView.makeQualified(
-        new Path("/user/" + System.getProperty("user.name"))),
-        fcView.getHomeDirectory());
+    assertThat(fcView.getDefaultFileSystem().getUri()).isEqualTo(FsConstants.VIEWFS_URI);
+    assertThat(fcView.getWorkingDirectory()).isEqualTo(
+        fcView.makeQualified(new Path("/user/" + System.getProperty("user.name"))));
+    assertThat(fcView.getHomeDirectory()).isEqualTo(
+        fcView.makeQualified(new Path("/user/" + System.getProperty("user.name"))));
     assertEquals(
         new Path("/foo/bar").makeQualified(FsConstants.VIEWFS_URI, null),
         fcView.makeQualified(new Path("/foo/bar")));
