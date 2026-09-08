@@ -181,7 +181,8 @@ public class AppsBlock extends RouterBlock {
     StringBuilder appsDataBuilder = new StringBuilder();
     try {
       String percent = String.format("%.1f", app.getProgress() * 100.0F);
-      String trackingURL = app.getTrackingUrl() == null ? "#" : app.getTrackingUrl();
+      String trackingURL =
+          app.getTrackingUrl() == null ? "#" : escape(app.getTrackingUrl());
 
       // AppID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
       appsDataBuilder.append("[\"")

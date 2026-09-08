@@ -220,7 +220,8 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
       String trackingURL =
         !appInfo.isTrackingUrlReady()? "#" : appInfo.getTrackingUrlPretty();
 
-      appsTableData.append(trackingURL).append("'>")
+      appsTableData.append(StringEscapeUtils.escapeEcmaScript(
+          StringEscapeUtils.escapeHtml4(trackingURL))).append("'>")
       .append(appInfo.getTrackingUI()).append("</a>\"],\n");
 
     }
