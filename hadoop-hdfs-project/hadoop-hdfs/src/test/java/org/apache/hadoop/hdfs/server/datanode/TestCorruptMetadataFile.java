@@ -34,9 +34,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests to ensure that a block is not read successfully from a datanode
@@ -114,6 +116,56 @@ public class TestCorruptMetadataFile {
     }, 100, 5000);
 
     raFile.close();
+  }
+
+  /**
+   * HDFS-17179: When the client receives CorruptMetaHeaderException during
+   * a block read, it should report the block to the NameNode so the block
+   * is marked corrupt and can be re-replicated.
+   */
+  @Test
+  @Timeout(value = 60)
+  public void testReportCorruptMetaHeaderToNameNode() throws Exception {
+    cluster = clusterBuilder.build();
+    cluster.waitActive();
+    FileSystem fs = cluster.getFileSystem();
+    Path filePath = new Path("testCorruptMetaReport.dat");
+    FSDataOutputStream out = fs.create(filePath, (short) 1);
+    out.write(1);
+    out.hflush();
+    out.close();
+
+    ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
+    File metadataFile = cluster.getBlockMetadataFile(0, block);
+
+    // Corrupt meta file: 7 bytes invalid header so header parse throws
+    // CorruptMetaHeaderException when DN serves the block.
+    try (RandomAccessFile raFile = new RandomAccessFile(metadataFile, "rw")) {
+      raFile.setLength(0);
+      raFile.write("1234567".getBytes());
+    }
+
+    // Client read should get an IOException (CorruptMetaHeaderException, or
+    // "No live nodes" when the only replica was marked dead due to corrupt meta).
+    try (FSDataInputStream in = fs.open(filePath)) {
+      in.readByte();
+    } catch (IOException e) {
+      String msg = e.getMessage() != null ? e.getMessage() : "";
+      boolean expected = msg.contains("corrupt") || msg.contains("meta")
+          || msg.contains("No live nodes")
+          || e.getCause() instanceof CorruptMetaHeaderException;
+      assertTrue(expected,
+          "Expected IOException related to corrupt meta or no live nodes: " + e.getMessage());
+    }
+
+    // Block should be reported to NN and marked corrupt
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return cluster.getNameNode().getNamesystem()
+            .getBlockManager().getCorruptBlocks() == 1;
+      }
+    }, 100, 5000);
   }
 
   /**
