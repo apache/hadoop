@@ -16,7 +16,7 @@ package org.apache.hadoop.security.authentication.util;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 import java.util.Random;
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletContext;
 
 import org.apache.curator.test.TestingServer;
 import org.apache.log4j.Level;

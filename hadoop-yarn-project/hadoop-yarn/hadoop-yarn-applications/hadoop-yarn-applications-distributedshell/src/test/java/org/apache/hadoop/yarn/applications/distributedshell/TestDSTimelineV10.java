@@ -63,7 +63,7 @@ import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
-import javax.ws.rs.ProcessingException;
+import jakarta.ws.rs.ProcessingException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -539,7 +539,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     TimelineClientImpl client = new TimelineClientImpl() {
       @Override
       protected TimelineWriter createTimelineWriter(Configuration conf,
-           UserGroupInformation ugi, javax.ws.rs.client.Client webClient, URI uri,
+           UserGroupInformation ugi, jakarta.ws.rs.client.Client webClient, URI uri,
            RetryPolicy<Object> retryPolicy) {
         long retryInterval =
             YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS;

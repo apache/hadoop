@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.webapp;
 
 import java.util.ArrayList;
 import java.util.List;
-import javax.ws.rs.core.Response.StatusType;
+import jakarta.ws.rs.core.Response.StatusType;
 
 import org.w3c.dom.Attr;
 import org.w3c.dom.Element;

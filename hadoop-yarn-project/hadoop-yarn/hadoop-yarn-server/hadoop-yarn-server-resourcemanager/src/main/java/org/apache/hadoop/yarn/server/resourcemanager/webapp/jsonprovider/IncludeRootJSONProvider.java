@@ -20,15 +20,15 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
-import javax.inject.Inject;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.ext.Provider;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.ext.Provider;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Marshaller;
+import jakarta.xml.bind.Unmarshaller;
 
 import org.eclipse.persistence.jaxb.MarshallerProperties;
 import org.eclipse.persistence.jaxb.rs.MOXyJsonProvider;
@@ -42,8 +42,8 @@ import org.apache.hadoop.conf.Configuration;
  * to ensure that JSON marshalling and unmarshalling
  * include the root element for configured classes.
  * <p>
- * This provider integrates with EclipseLink MOXy and the JAX-RS runtime (annotated with
- * {@link javax.ws.rs.ext.Provider}), and it is configured to both produce and consume
+ * This provider integrates with EclipseLink MOXy and the Jakarta-RS runtime (annotated with
+ * {@link jakarta.ws.rs.ext.Provider}), and it is configured to both produce and consume
  * {@code application/json} content types. It uses a {@link ClassSerialisationConfig}
  * to determine which classes should include
  * their root elements when serialized or deserialized.
@@ -95,7 +95,7 @@ public class IncludeRootJSONProvider extends MOXyJsonProvider {
    *             used to initialize serialization settings
    */
   @Inject
-  public IncludeRootJSONProvider(@javax.inject.Named("conf") Configuration conf) {
+  public IncludeRootJSONProvider(@jakarta.inject.Named("conf") Configuration conf) {
     classSerialisationConfig = new ClassSerialisationConfig(conf);
   }
 

@@ -21,9 +21,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlAccessType;
+import jakarta.xml.bind.annotation.XmlAccessorType;
+import jakarta.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 

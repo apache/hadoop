@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.http.IsActiveServlet;
 
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletContext;
 
 /**
  * Detect if the Router is active and ready to serve requests.

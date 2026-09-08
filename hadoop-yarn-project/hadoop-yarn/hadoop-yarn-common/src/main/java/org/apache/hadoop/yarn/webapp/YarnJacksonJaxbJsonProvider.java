@@ -18,32 +18,32 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import javax.inject.Singleton;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.ext.Provider;
+import jakarta.inject.Singleton;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.ext.Provider;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
-import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
+import com.fasterxml.jackson.jakarta.rs.json.JacksonXmlBindJsonProvider;
+import com.fasterxml.jackson.module.jakarta.xmlbind.JakartaXmlBindAnnotationIntrospector;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 
 
 /**
- * YARN's implementation of JAX-RS abstractions based on
- * {@link JacksonJaxbJsonProvider} needed for deserialize JSON content to or
+ * YARN's implementation of Jakarta-RS abstractions based on
+ * {@link JacksonXmlBindJsonProvider} needed for deserialize JSON content to or
  * serialize it from POJO objects.
  */
 @Singleton
 @Provider
 @Unstable
 @Private
-public class YarnJacksonJaxbJsonProvider extends JacksonJaxbJsonProvider {
+public class YarnJacksonJaxbJsonProvider extends JacksonXmlBindJsonProvider {
 
   public YarnJacksonJaxbJsonProvider() {
     super();
@@ -61,7 +61,7 @@ public class YarnJacksonJaxbJsonProvider extends JacksonJaxbJsonProvider {
 
   public static void configObjectMapper(ObjectMapper mapper) {
     AnnotationIntrospector introspector =
-        new JaxbAnnotationIntrospector(TypeFactory.defaultInstance());
+        new JakartaXmlBindAnnotationIntrospector(TypeFactory.defaultInstance());
     mapper.setAnnotationIntrospector(introspector);
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
   }

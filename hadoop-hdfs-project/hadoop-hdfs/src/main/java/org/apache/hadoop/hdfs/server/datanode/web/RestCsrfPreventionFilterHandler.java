@@ -26,7 +26,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_RES
 
 import java.util.Map;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;

@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
-import org.eclipse.jetty.websocket.api.Session;
-import org.eclipse.jetty.websocket.api.WebSocketAdapter;
-import org.eclipse.jetty.websocket.api.annotations.WebSocket;
+import jakarta.websocket.ClientEndpoint;
+import jakarta.websocket.OnClose;
+import jakarta.websocket.OnError;
+import jakarta.websocket.OnMessage;
+import jakarta.websocket.OnOpen;
+import jakarta.websocket.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,41 +33,43 @@ import java.util.concurrent.CountDownLatch;
 /**
  *  Container shell client socket interface.
  */
-@WebSocket
-public class ContainerShellClientSocketTest extends WebSocketAdapter {
+@ClientEndpoint
+public class ContainerShellClientSocketTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(ContainerShellClientSocketTest.class);
   private Session session;
   private CountDownLatch latch = new CountDownLatch(1);
 
-  @Override
+  @OnMessage
   public void onWebSocketText(String message) {
     LOG.info("Message received from server:" + message);
   }
 
-  @Override
-  public void onWebSocketConnect(Session session) {
+  @OnOpen
+  public void onWebSocketOpen(Session session) {
     LOG.info("Connected to server");
     this.session = session;
     latch.countDown();
   }
 
-  @Override
+  @OnClose
   public void onWebSocketClose(int statusCode, String reason) {
-    session.close();
+    try {
+      session.close();
+    } catch (IOException e) {
+      LOG.debug("Error closing session", e);
+    }
   }
 
-  @Override
+  @OnError
   public void onWebSocketError(Throwable cause) {
-    super.onWebSocketError(cause);
     cause.printStackTrace(System.err);
   }
 
   public void sendMessage(String str) {
     try {
-      session.getRemote().sendString(str);
+      session.getBasicRemote().sendText(str);
     } catch (IOException e) {
-      // TODO Auto-generated catch block
       LOG.error("Failed to sent message to server", e);
     }
   }

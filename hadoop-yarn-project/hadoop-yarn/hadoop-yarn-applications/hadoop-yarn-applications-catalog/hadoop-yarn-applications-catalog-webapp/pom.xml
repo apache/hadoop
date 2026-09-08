@@ -61,8 +61,8 @@
           <artifactId>javassist</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>com.fasterxml.jackson.jaxrs</groupId>
-          <artifactId>jackson-jaxrs-base</artifactId>
+          <groupId>com.fasterxml.jackson.jakarta.rs</groupId>
+          <artifactId>jackson-jakarta-rs-base</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -89,22 +89,22 @@
 
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
-          <artifactId>http2-hpack</artifactId>
+          <artifactId>jetty-http2-hpack</artifactId>
           <version>${jetty.version}</version>
       </dependency>
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
-          <artifactId>http2-client</artifactId>
+          <artifactId>jetty-http2-client</artifactId>
           <version>${jetty.version}</version>
       </dependency>
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
-          <artifactId>http2-common</artifactId>
+          <artifactId>jetty-http2-common</artifactId>
           <version>${jetty.version}</version>
       </dependency>
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
-          <artifactId>http2-http-client-transport</artifactId>
+          <artifactId>jetty-http2-client-transport</artifactId>
           <version>${jetty.version}</version>
       </dependency>
 
@@ -143,19 +143,19 @@
                 </exclusion>
                 <exclusion>
                     <groupId>org.eclipse.jetty.http2</groupId>
-                    <artifactId>http2-hpack</artifactId>
+                    <artifactId>jetty-http2-hpack</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.eclipse.jetty.http2</groupId>
-                    <artifactId>http2-client</artifactId>
+                    <artifactId>jetty-http2-client</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.eclipse.jetty.http2</groupId>
-                    <artifactId>http2-common</artifactId>
+                    <artifactId>jetty-http2-common</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.eclipse.jetty.http2</groupId>
-                    <artifactId>http2-http-client-transport</artifactId>
+                    <artifactId>jetty-http2-client-transport</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -195,19 +195,19 @@
                 </exclusion>
                 <exclusion>
                     <groupId>org.eclipse.jetty.http2</groupId>
-                    <artifactId>http2-hpack</artifactId>
+                    <artifactId>jetty-http2-hpack</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.eclipse.jetty.http2</groupId>
-                    <artifactId>http2-client</artifactId>
+                    <artifactId>jetty-http2-client</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.eclipse.jetty.http2</groupId>
-                    <artifactId>http2-common</artifactId>
+                    <artifactId>jetty-http2-common</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.eclipse.jetty.http2</groupId>
-                    <artifactId>http2-http-client-transport</artifactId>
+                    <artifactId>jetty-http2-client-transport</artifactId>
                 </exclusion>
             </exclusions>
             <scope>test</scope>
@@ -248,19 +248,19 @@
                 </exclusion>
                 <exclusion>
                     <groupId>org.eclipse.jetty.http2</groupId>
-                    <artifactId>http2-hpack</artifactId>
+                    <artifactId>jetty-http2-hpack</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.eclipse.jetty.http2</groupId>
-                    <artifactId>http2-client</artifactId>
+                    <artifactId>jetty-http2-client</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.eclipse.jetty.http2</groupId>
-                    <artifactId>http2-common</artifactId>
+                    <artifactId>jetty-http2-common</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.eclipse.jetty.http2</groupId>
-                    <artifactId>http2-http-client-transport</artifactId>
+                    <artifactId>jetty-http2-client-transport</artifactId>
                 </exclusion>
             </exclusions>
             <scope>test</scope>
@@ -321,14 +321,14 @@
         </dependency>
 
         <dependency>
-            <groupId>com.fasterxml.jackson.jaxrs</groupId>
-            <artifactId>jackson-jaxrs-json-provider</artifactId>
+            <groupId>com.fasterxml.jackson.jakarta.rs</groupId>
+            <artifactId>jackson-jakarta-rs-json-provider</artifactId>
             <version>${jackson2.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>com.fasterxml.jackson.jaxrs</groupId>
-            <artifactId>jackson-jaxrs-base</artifactId>
+            <groupId>com.fasterxml.jackson.jakarta.rs</groupId>
+            <artifactId>jackson-jakarta-rs-base</artifactId>
             <version>${jackson2.version}</version>
         </dependency>
     </dependencies>

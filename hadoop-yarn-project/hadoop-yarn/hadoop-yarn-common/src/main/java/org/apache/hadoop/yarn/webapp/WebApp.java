@@ -42,7 +42,7 @@ import com.google.inject.Provides;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.ServletModule;
 
-import javax.servlet.Filter;
+import jakarta.servlet.Filter;
 
 /**
  * @see WebApps for a usage example

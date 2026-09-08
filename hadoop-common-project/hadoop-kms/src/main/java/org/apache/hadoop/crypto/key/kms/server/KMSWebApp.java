@@ -20,8 +20,8 @@ package org.apache.hadoop.crypto.key.kms.server;
 import java.io.IOException;
 import java.net.URI;
 
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.Meter;

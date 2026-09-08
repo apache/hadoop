@@ -21,9 +21,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlAccessType;
+import jakarta.xml.bind.annotation.XmlAccessorType;
+import jakarta.xml.bind.annotation.XmlRootElement;
 
 /**
  * The YARN UI doesn't have centralized login mechanism. While accessing UI2 from kerberized shell, user who is

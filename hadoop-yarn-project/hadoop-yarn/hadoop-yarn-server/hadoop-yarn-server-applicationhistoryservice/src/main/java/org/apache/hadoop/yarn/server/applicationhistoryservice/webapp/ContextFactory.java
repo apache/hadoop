@@ -40,8 +40,8 @@ import java.util.HashSet;
 import java.util.Arrays;
 import java.util.Map;
 import java.lang.reflect.Method;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBException;
 
 /**
  * ContextFactory to reuse JAXBContextImpl for DAO Classes.

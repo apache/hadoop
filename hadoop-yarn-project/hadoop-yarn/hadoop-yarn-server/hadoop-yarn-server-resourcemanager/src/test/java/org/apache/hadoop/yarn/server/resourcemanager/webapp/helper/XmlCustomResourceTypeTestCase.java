@@ -27,8 +27,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.MediaType;
+import jakarta.ws.rs.client.WebTarget;
+import jakarta.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;

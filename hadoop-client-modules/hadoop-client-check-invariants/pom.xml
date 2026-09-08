@@ -86,9 +86,9 @@
                     <exclude>commons-logging:commons-logging</exclude>
                     <!-- Leave reload4j unshaded so downstream users can configure logging. -->
                     <exclude>ch.qos.reload4j:reload4j</exclude>
-                    <!-- Leave javax annotations we need exposed -->
+                    <!-- Leave jakarta annotations we need exposed -->
                     <exclude>com.google.code.findbugs:jsr305</exclude>
-                    <exclude>jakarta.annotation:jakarta.annotation-api</exclude>
+                    <exclude>javax.annotation:javax.annotation-api</exclude>
                     <exclude>org.glassfish.jersey:*</exclude>
                     <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                     <exclude>org.bouncycastle:*</exclude>

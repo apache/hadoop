@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.inject.Inject;
 
-import javax.ws.rs.client.Client;
+import jakarta.ws.rs.client.Client;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

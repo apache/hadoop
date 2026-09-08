@@ -32,17 +32,16 @@ import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.io.*;
 
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.security.SecurityUtil;
-import org.eclipse.jetty.server.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -703,10 +702,6 @@ public class ImageServlet extends HttpServlet {
 
   private void sendError(HttpServletResponse response, int code, String message)
       throws IOException {
-    if (response instanceof Response) {
-      ((Response)response).setStatusWithReason(code, message);
-    }
-
     response.sendError(code, message);
   }
 

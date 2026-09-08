@@ -20,12 +20,12 @@ package org.apache.hadoop.hdfs.web.resources;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.ext.ExceptionMapper;
-import javax.ws.rs.ext.Provider;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.ExceptionMapper;
+import jakarta.ws.rs.ext.Provider;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

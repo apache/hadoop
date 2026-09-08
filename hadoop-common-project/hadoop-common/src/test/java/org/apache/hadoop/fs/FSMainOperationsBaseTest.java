@@ -36,7 +36,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.eclipse.jetty.util.log.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <p>
@@ -58,7 +59,8 @@ import org.eclipse.jetty.util.log.Log;
  * </p>
  */
 public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(FSMainOperationsBaseTest.class);
+
   private static String TEST_DIR_AAA2 = "test/hadoop2/aaa";
   private static String TEST_DIR_AAA = "test/hadoop/aaa";
   private static String TEST_DIR_AXA = "test/hadoop/axa";
@@ -803,7 +805,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
       rename(src, dst, false, false, false, Rename.NONE);
       fail("Should throw FileNotFoundException");
     } catch (IOException e) {
-      Log.getLog().info("XXX", e);
+      LOG.info("XXX", e);
       assertTrue(unwrapException(e) instanceof FileNotFoundException);
     }
 

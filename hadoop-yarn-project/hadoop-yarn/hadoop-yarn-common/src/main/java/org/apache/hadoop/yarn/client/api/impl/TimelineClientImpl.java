@@ -55,7 +55,7 @@ import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.VisibleForTesting;
-import javax.ws.rs.client.Client;
+import jakarta.ws.rs.client.Client;
 
 @Private
 @Evolving

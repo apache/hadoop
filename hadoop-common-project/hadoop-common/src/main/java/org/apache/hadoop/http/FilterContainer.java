@@ -20,7 +20,7 @@ package org.apache.hadoop.http;
 import java.util.Map;
 
 /**
- * A container class for javax.servlet.Filter. 
+ * A container class for jakarta.servlet.Filter. 
  */
 public interface FilterContainer {
   /**

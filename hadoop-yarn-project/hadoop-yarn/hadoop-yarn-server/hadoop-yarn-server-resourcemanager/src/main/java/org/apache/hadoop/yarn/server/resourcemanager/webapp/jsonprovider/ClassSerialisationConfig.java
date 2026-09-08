@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -187,7 +187,7 @@ public class ClassSerialisationConfig {
    *             dependency injection) used to load optional custom class definitions
    */
   @Inject
-  public ClassSerialisationConfig(@javax.inject.Named("conf") Configuration conf) {
+  public ClassSerialisationConfig(@jakarta.inject.Named("conf") Configuration conf) {
     wrappedClasses = new HashSet<>(CONST_WRAPPED_CLASSES);
     try {
       wrappedClasses.addAll(

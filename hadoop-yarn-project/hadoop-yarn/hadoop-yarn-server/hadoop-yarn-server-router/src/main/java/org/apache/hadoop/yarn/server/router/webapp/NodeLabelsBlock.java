@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
-import javax.ws.rs.client.Client;
+import jakarta.ws.rs.client.Client;
 
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_SC;
 

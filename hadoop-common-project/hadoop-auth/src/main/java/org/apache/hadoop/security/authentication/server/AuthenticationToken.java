@@ -18,7 +18,7 @@ import org.apache.hadoop.security.authentication.util.AuthToken;
 
 import java.security.Principal;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * The {@link AuthenticationToken} contains information about an authenticated

@@ -22,7 +22,7 @@ import io.swagger.annotations.ApiModelProperty;
 
 import java.util.Objects;
 
-import javax.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlRootElement;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;

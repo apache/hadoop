@@ -24,8 +24,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.lib.server.Server;
 import org.apache.hadoop.lib.server.ServerException;
 
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;

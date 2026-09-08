@@ -32,7 +32,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

@@ -28,9 +28,9 @@ import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.eclipse.jetty.websocket.api.Session;
-import org.eclipse.jetty.websocket.api.UpgradeRequest;
-import org.eclipse.jetty.websocket.client.WebSocketClient;
+import jakarta.websocket.ContainerProvider;
+import jakarta.websocket.Session;
+import jakarta.websocket.WebSocketContainer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -132,21 +132,17 @@ public class TestNMContainerWebSocket {
     StringBuilder sb = new StringBuilder();
     sb.append("ws://localhost:").append(port).append("/container/abc/");
     String dest = sb.toString();
-    WebSocketClient client = new WebSocketClient();
+    WebSocketContainer container = ContainerProvider.getWebSocketContainer();
     try {
       ContainerShellClientSocketTest socket = new ContainerShellClientSocketTest();
-      client.start();
       URI echoUri = new URI(dest);
-      Future<Session> future = client.connect(socket, echoUri);
-      Session session = future.get();
-      session.getRemote().sendString("hello world");
+      Session session = container.connectToServer(socket, echoUri);
+      session.getBasicRemote().sendText("hello world");
       session.close();
-      client.stop();
     } catch (Throwable t) {
       LOG.error("Failed to connect WebSocket and send message to server", t);
     } finally {
       try {
-        client.stop();
         server.close();
       } catch (Exception e) {
         LOG.error("Failed to close client", e);
@@ -159,7 +155,6 @@ public class TestNMContainerWebSocket {
     Context nm = mock(Context.class);
     Session session = mock(Session.class);
     Container container = mock(Container.class);
-    UpgradeRequest request = mock(UpgradeRequest.class);
     ApplicationACLsManager aclManager = mock(ApplicationACLsManager.class);
     ContainerShellWebSocket.init(nm);
     ContainerShellWebSocket ws = new ContainerShellWebSocket();
@@ -167,8 +162,7 @@ public class TestNMContainerWebSocket {
     names.add("foobar");
     Map<String, List<String>> mockParameters = new HashMap<>();
     mockParameters.put("user.name", names);
-    when(session.getUpgradeRequest()).thenReturn(request);
-    when(request.getParameterMap()).thenReturn(mockParameters);
+    when(session.getRequestParameterMap()).thenReturn(mockParameters);
     when(container.getUser()).thenReturn("foobar");
     when(nm.getApplicationACLsManager()).thenReturn(aclManager);
     when(aclManager.areACLsEnabled()).thenReturn(false);

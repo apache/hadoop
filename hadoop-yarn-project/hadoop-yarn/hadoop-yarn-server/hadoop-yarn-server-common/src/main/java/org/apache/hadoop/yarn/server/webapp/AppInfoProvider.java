@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.webapp;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Classes implementing this interface are used in the {@link LogServlet}

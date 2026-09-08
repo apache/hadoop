@@ -32,10 +32,10 @@ import java.util.ArrayList;
 import java.util.Properties;
 import java.util.Date;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;

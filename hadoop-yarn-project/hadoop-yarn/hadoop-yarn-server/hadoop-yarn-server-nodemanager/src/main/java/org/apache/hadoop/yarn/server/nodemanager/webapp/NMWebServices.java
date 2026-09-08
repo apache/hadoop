@@ -41,21 +41,21 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfoes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.GET;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.ResponseBuilder;
-import javax.ws.rs.core.Response.Status;
-import javax.ws.rs.core.StreamingOutput;
-import javax.ws.rs.core.UriInfo;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response.ResponseBuilder;
+import jakarta.ws.rs.core.Response.Status;
+import jakarta.ws.rs.core.StreamingOutput;
+import jakarta.ws.rs.core.UriInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -93,8 +93,8 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 
 @Singleton
 @Path("/ws/v1/node")
@@ -109,19 +109,19 @@ public class NMWebServices {
   private LogAggregationFileControllerFactory factory;
   private boolean filterAppsByUser = false;
 
-  @javax.ws.rs.core.Context
+  @jakarta.ws.rs.core.Context
   private HttpServletRequest request;
   
-  @javax.ws.rs.core.Context
+  @jakarta.ws.rs.core.Context
   private HttpServletResponse response;
 
-  @javax.ws.rs.core.Context
+  @jakarta.ws.rs.core.Context
   private UriInfo uriInfo;
 
   @Inject
-  public NMWebServices(final @javax.inject.Named("nm") Context nm,
-      final @javax.inject.Named("view") ResourceView view,
-      final @javax.inject.Named("webapp") WebApp webapp) {
+  public NMWebServices(final @jakarta.inject.Named("nm") Context nm,
+      final @jakarta.inject.Named("view") ResourceView view,
+      final @jakarta.inject.Named("webapp") WebApp webapp) {
     this.nmContext = nm;
     this.rview = view;
     this.webapp = webapp;
@@ -165,7 +165,7 @@ public class NMWebServices {
   @Path("/apps")
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
-  public AppsInfo getNodeApps(@javax.ws.rs.core.Context HttpServletRequest hsr,
+  public AppsInfo getNodeApps(@jakarta.ws.rs.core.Context HttpServletRequest hsr,
       @QueryParam("state") String stateQuery,
       @QueryParam("user") String userQuery) {
     init();
@@ -221,7 +221,7 @@ public class NMWebServices {
   @Path("/containers")
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
-  public ContainersInfo getNodeContainers(@javax.ws.rs.core.Context
+  public ContainersInfo getNodeContainers(@jakarta.ws.rs.core.Context
       HttpServletRequest hsr) {
     init();
     ContainersInfo allContainers = new ContainersInfo();
@@ -252,7 +252,7 @@ public class NMWebServices {
   @Path("/containers/{containerid}")
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
-  public ContainerInfo getNodeContainer(@javax.ws.rs.core.Context
+  public ContainerInfo getNodeContainer(@jakarta.ws.rs.core.Context
       HttpServletRequest hsr, @PathParam("containerid") String id) {
     ContainerId containerId;
     init();
@@ -288,8 +288,8 @@ public class NMWebServices {
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public Response getContainerLogsInfo(
-      @javax.ws.rs.core.Context HttpServletRequest hsr,
-      @javax.ws.rs.core.Context HttpServletResponse res,
+      @jakarta.ws.rs.core.Context HttpServletRequest hsr,
+      @jakarta.ws.rs.core.Context HttpServletResponse res,
       @PathParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr) {
     ContainerId containerId;
     init();
@@ -561,7 +561,7 @@ public class NMWebServices {
   @Path("/auxiliaryservices")
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
-  public AuxiliaryServicesInfo getAuxiliaryServices(@javax.ws.rs.core.Context
+  public AuxiliaryServicesInfo getAuxiliaryServices(@jakarta.ws.rs.core.Context
       HttpServletRequest hsr) {
     init();
     if (!this.nmContext.getAuxServices().isManifestEnabled()) {
@@ -581,7 +581,7 @@ public class NMWebServices {
   @Path("/auxiliaryservices")
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
-  public Response putAuxiliaryServices(@javax.ws.rs.core.Context
+  public Response putAuxiliaryServices(@jakarta.ws.rs.core.Context
       HttpServletRequest req, AuxServiceRecords services) {
     init();
     if (!this.nmContext.getAuxServices().isManifestEnabled()) {
@@ -607,7 +607,7 @@ public class NMWebServices {
   @Path("/yarn/sysfs/{user}/{appId}")
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
                 MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
-  public Response syncYarnSysFS(@javax.ws.rs.core.Context
+  public Response syncYarnSysFS(@jakarta.ws.rs.core.Context
       HttpServletRequest req,
       @PathParam("user") String user,
       @PathParam("appId") String appId,

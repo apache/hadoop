@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.webapp;
 
 import java.io.PrintWriter;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 
 import com.google.inject.Injector;
 import org.junit.jupiter.api.Test;

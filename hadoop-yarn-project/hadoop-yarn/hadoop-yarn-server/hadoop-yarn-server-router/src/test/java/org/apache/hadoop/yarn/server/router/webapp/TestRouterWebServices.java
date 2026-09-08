@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;

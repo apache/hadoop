@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.yarn.service.conf;
 
-import javax.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.MediaType;
 
 public interface RestApiConstants {
 

@@ -49,6 +49,10 @@
           <artifactId>jaxb-api</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>jakarta.xml.bind</groupId>
+          <artifactId>jakarta.xml.bind-api</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>xml-apis</groupId>
           <artifactId>xml-apis</artifactId>
         </exclusion>
@@ -161,8 +165,8 @@
                       <exclude>com.google.code.findbugs:jsr305</exclude>
                       <exclude>io.netty:*</exclude>
                       <exclude>io.dropwizard.metrics:metrics-core</exclude>
-                      <exclude>org.eclipse.jetty:jetty-servlet</exclude>
-                      <exclude>org.eclipse.jetty:jetty-security</exclude>
+                      <exclude>org.eclipse.jetty.ee10:jetty-ee10-servlet</exclude>
+                      <exclude>org.eclipse.jetty.ee10:jetty-ee10-security</exclude>
                       <!-- Excluding Jetty dependencies to resolve `BanDuplicateClasses` issues caused by
                        duplicate Jetty classes in `hadoop-client-minicluster` and `hadoop-client-runtime`.
                        so keeping it here leads to conflicts.
@@ -171,6 +175,20 @@
                       <exclude>org.eclipse.jetty:jetty-util-ajax</exclude>
                       <exclude>org.eclipse.jetty:jetty-server</exclude>
                       <exclude>org.eclipse.jetty:jetty-continuation</exclude>
+                      <exclude>org.eclipse.jetty:jetty-session</exclude>
+                      <exclude>org.eclipse.jetty:jetty-security</exclude>
+                      <exclude>org.eclipse.jetty:jetty-alpn-client</exclude>
+                      <exclude>org.eclipse.jetty:jetty-alpn-java-client</exclude>
+                      <exclude>org.eclipse.jetty:jetty-http</exclude>
+                      <exclude>org.eclipse.jetty:jetty-io</exclude>
+                      <exclude>org.eclipse.jetty:jetty-xml</exclude>
+                      <exclude>org.eclipse.jetty.websocket:jetty-websocket-core</exclude>
+                      <exclude>org.eclipse.jetty.websocket:jetty-websocket-core-client</exclude>
+                      <exclude>org.eclipse.jetty.websocket:jetty-websocket-core-common</exclude>
+                      <exclude>org.eclipse.jetty.websocket:jetty-websocket-core-server</exclude>
+                      <exclude>org.eclipse.jetty.websocket:jetty-websocket-jetty-api</exclude>
+                      <exclude>org.eclipse.jetty.websocket:jetty-websocket-jetty-client</exclude>
+                      <exclude>org.eclipse.jetty.websocket:jetty-websocket-jetty-common</exclude>
                       <exclude>org.ow2.asm:*</exclude>
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>
@@ -189,8 +207,6 @@
                       <exclude>org.glassfish.jersey.core:*</exclude>
                       <exclude>org.glassfish.hk2.external:*</exclude>
                       <exclude>org.glassfish.jaxb:*</exclude>
-                      <exclude>jakarta.annotation:*</exclude>
-                      <exclude>jakarta.validation:*</exclude>
                       <exclude>org.hamcrest:*</exclude>
                       <exclude>org.javassist:*</exclude>
                       <exclude>aopalliance:*</exclude>
@@ -390,6 +406,98 @@
                     <relocation>
                       <pattern>javax/xml/bind/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.javax.xml.bind.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <!-- Jakarta EE replacements for javax -->
+                    <relocation>
+                      <pattern>jakarta/servlet/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.jakarta.servlet.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>jakarta/activation/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.jakarta.activation.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>jakarta/ws/rs/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.jakarta.ws.rs.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>jakarta/inject/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.jakarta.inject.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>jakarta/websocket/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.jakarta.websocket.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>jakarta/annotation/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.jakarta.annotation.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>jakarta/validation/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.jakarta.validation.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>jakarta/enterprise/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.jakarta.enterprise.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>jakarta/el/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.jakarta.el.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>jakarta/interceptor/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.jakarta.interceptor.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>jakarta/transaction/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.jakarta.transaction.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>jakarta/mail/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.jakarta.mail.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>jakarta/xml/bind/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.jakarta.xml.bind.</shadedPattern>
                       <excludes>
                         <exclude>**/pom.xml</exclude>
                       </excludes>

@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import javax.ws.rs.client.Client;
+import jakarta.ws.rs.client.Client;
 import org.glassfish.jersey.client.ClientProperties;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;

@@ -26,10 +26,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -44,9 +43,10 @@ import org.apache.hadoop.yarn.sls.utils.NodeUsageRanges;
 import org.eclipse.jetty.http.MimeTypes;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.server.handler.ResourceHandler;
+import org.eclipse.jetty.util.Callback;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
@@ -135,46 +135,48 @@ public class SLSWebApp extends HttpServlet {
     staticHandler.setMimeTypes(new MimeTypes());
     String webRootDir = getClass().getClassLoader().getResource("html").
         toExternalForm();
-    staticHandler.setResourceBase(webRootDir);
-    staticHandler.start();
+    staticHandler.setBaseResourceAsString(webRootDir);
 
-    Handler handler = new AbstractHandler() {
+    Handler handler = new Handler.Abstract() {
       @Override
-      public void handle(String target, Request baseRequest,
-                         HttpServletRequest request,
-                         HttpServletResponse response)
-          throws IOException, ServletException {
-        try{
+      public boolean handle(Request request, Response response, Callback callback) {
+        try {
+          String target = request.getHttpURI().getPath();
+          HttpServletRequest httpReq = Request.as(request, HttpServletRequest.class);
+          HttpServletResponse httpResp = Response.as(response, HttpServletResponse.class);
+
           // timeunit
           int timeunit = 1000;   // second, divide millionsecond / 1000
           String timeunitLabel = "second";
-          if (request.getParameter("u")!= null &&
-                  request.getParameter("u").equalsIgnoreCase("m")) {
+          if (httpReq.getParameter("u") != null &&
+                  httpReq.getParameter("u").equalsIgnoreCase("m")) {
             timeunit = 1000 * 60;
             timeunitLabel = "minute";
           }
 
           // http request
           if (target.equals("/")) {
-            printPageIndex(request, response);
+            printPageIndex(httpReq, httpResp);
           } else if (target.equals("/simulate")) {
-            printPageSimulate(request, response, timeunit, timeunitLabel);
+            printPageSimulate(httpReq, httpResp, timeunit, timeunitLabel);
           } else if (target.equals("/track")) {
-            printPageTrack(request, response, timeunit, timeunitLabel);
-          } else
+            printPageTrack(httpReq, httpResp, timeunit, timeunitLabel);
+          } else if (target.startsWith("/js") || target.startsWith("/css")) {
             // js/css request
-            if (target.startsWith("/js") || target.startsWith("/css")) {
-              response.setCharacterEncoding("utf-8");
-              staticHandler.handle(target, baseRequest, request, response);
-            } else
-              // json request
-              if (target.equals("/simulateMetrics")) {
-                printJsonMetrics(request, response);
-              } else if (target.equals("/trackMetrics")) {
-                printJsonTrack(request, response);
-              }
+            httpResp.setCharacterEncoding("utf-8");
+            staticHandler.handle(request, response, callback);
+            return true;
+          } else if (target.equals("/simulateMetrics")) {
+            printJsonMetrics(httpReq, httpResp);
+          } else if (target.equals("/trackMetrics")) {
+            printJsonTrack(httpReq, httpResp);
+          }
+          callback.succeeded();
+          return true;
         } catch (Exception e) {
           LOG.error("Caught exception while starting SLSWebApp", e);
+          callback.failed(e);
+          return false;
         }
       }
     };
@@ -223,7 +225,7 @@ public class SLSWebApp extends HttpServlet {
     }
     response.getWriter().println(simulateInfo);
 
-    ((Request) request).setHandled(true);
+    // handled by callback in start()
   }
 
   /**
@@ -262,7 +264,7 @@ public class SLSWebApp extends HttpServlet {
             "" + ajaxUpdateTimeMS);
     response.getWriter().println(simulateInfo);
 
-    ((Request) request).setHandled(true);
+    // handled by callback in start()
   }
 
   /**
@@ -304,7 +306,7 @@ public class SLSWebApp extends HttpServlet {
             timeunitLabel, "" + timeunit, "" + ajaxUpdateTimeMS);
     response.getWriter().println(trackInfo);
 
-    ((Request) request).setHandled(true);
+    // handled by callback in start()
   }
 
   /**
@@ -320,7 +322,7 @@ public class SLSWebApp extends HttpServlet {
     response.setStatus(HttpServletResponse.SC_OK);
 
     response.getWriter().println(generateRealTimeTrackingMetrics());
-    ((Request) request).setHandled(true);
+    // handled by callback in start()
   }
 
   public String generateRealTimeTrackingMetrics() {
@@ -646,6 +648,6 @@ public class SLSWebApp extends HttpServlet {
     }
     response.getWriter().println(output);
     // package result
-    ((Request) request).setHandled(true);
+    // handled by callback in start()
   }
 }
