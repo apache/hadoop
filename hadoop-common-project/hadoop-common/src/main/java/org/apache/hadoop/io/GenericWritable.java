@@ -123,13 +123,19 @@ public abstract class GenericWritable implements Writable, Configurable {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    type = in.readByte();
-    Class<? extends Writable> clazz = getTypes()[type & 0xff];
+    byte t = in.readByte();
+    Class<? extends Writable>[] types = getTypes();
+    int index = t & 0xff;
+    if (index >= types.length) {
+      throw new IOException("Type index " + index
+          + " is out of range [0, " + types.length + ")");
+    }
+    type = t;
+    Class<? extends Writable> clazz = types[index];
     try {
       instance = ReflectionUtils.newInstance(clazz, conf);
     } catch (Exception e) {
-      e.printStackTrace();
-      throw new IOException("Cannot initialize the class: " + clazz);
+      throw new IOException("Cannot initialize the class: " + clazz, e);
     }
     instance.readFields(in);
   }
