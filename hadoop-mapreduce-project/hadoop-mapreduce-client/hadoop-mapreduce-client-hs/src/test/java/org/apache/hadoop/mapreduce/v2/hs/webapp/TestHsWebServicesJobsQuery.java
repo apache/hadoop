@@ -251,7 +251,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
     WebServicesTestUtils.checkStringMatch("exception message",
-        "limit value must be greater then 0", message);
+        "java.lang.Exception: limit value must be greater then 0", message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "BadRequestException", type);
     WebServicesTestUtils.checkStringMatch("exception classname",
@@ -371,7 +371,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     WebServicesTestUtils
         .checkStringMatch(
             "exception message",
-            "startedTimeEnd must be greater than startTimeBegin",
+            "java.lang.Exception: startedTimeEnd must be greater than startTimeBegin",
             message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "BadRequestException", type);
@@ -397,7 +397,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     WebServicesTestUtils
         .checkStringMatch(
             "exception message",
-            "Invalid number format: For input string: \"efsd\"",
+            "java.lang.Exception: Invalid number format: For input string: \"efsd\"",
             message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "BadRequestException", type);
@@ -424,7 +424,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     WebServicesTestUtils
         .checkStringMatch(
             "exception message",
-            "Invalid number format: For input string: \"efsd\"",
+            "java.lang.Exception: Invalid number format: For input string: \"efsd\"",
             message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "BadRequestException", type);
@@ -450,7 +450,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     String classname = exception.getString("javaClassName");
     WebServicesTestUtils
         .checkStringMatch("exception message",
-            "startedTimeBegin must be greater than 0",
+            "java.lang.Exception: startedTimeBegin must be greater than 0",
             message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "BadRequestException", type);
@@ -476,7 +476,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
     WebServicesTestUtils.checkStringMatch("exception message",
-        "startedTimeEnd must be greater than 0", message);
+        "java.lang.Exception: startedTimeEnd must be greater than 0", message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "BadRequestException", type);
     WebServicesTestUtils.checkStringMatch("exception classname",
@@ -501,7 +501,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
     WebServicesTestUtils.checkStringMatch("exception message",
-        "finishedTimeEnd must be greater than 0", message);
+        "java.lang.Exception: finishedTimeEnd must be greater than 0", message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "BadRequestException", type);
     WebServicesTestUtils.checkStringMatch("exception classname",
@@ -526,7 +526,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
     WebServicesTestUtils.checkStringMatch("exception message",
-        "finishedTimeBegin must be greater than 0", message);
+        "java.lang.Exception: finishedTimeBegin must be greater than 0", message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "BadRequestException", type);
     WebServicesTestUtils.checkStringMatch("exception classname",
@@ -555,7 +555,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     WebServicesTestUtils
         .checkStringMatch(
             "exception message",
-            "finishedTimeEnd must be greater than finishedTimeBegin",
+            "java.lang.Exception: finishedTimeEnd must be greater than finishedTimeBegin",
             message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "BadRequestException", type);
@@ -582,7 +582,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     WebServicesTestUtils
         .checkStringMatch(
             "exception message",
-            "Invalid number format: For input string: \"efsd\"",
+            "java.lang.Exception: Invalid number format: For input string: \"efsd\"",
             message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "BadRequestException", type);
@@ -609,7 +609,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTestBase {
     WebServicesTestUtils
         .checkStringMatch(
             "exception message",
-            "Invalid number format: For input string: \"efsd\"",
+            "java.lang.Exception: Invalid number format: For input string: \"efsd\"",
             message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "BadRequestException", type);

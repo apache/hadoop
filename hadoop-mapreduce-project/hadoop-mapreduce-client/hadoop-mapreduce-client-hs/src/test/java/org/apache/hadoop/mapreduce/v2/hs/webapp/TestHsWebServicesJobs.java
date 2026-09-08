@@ -427,7 +427,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
 
   private void verifyJobIdInvalid(String message, String type, String classname) {
     WebServicesTestUtils.checkStringMatch("exception message",
-        "JobId string : job_foo is not properly formed", message);
+        "java.lang.Exception: JobId string : job_foo is not properly formed", message);
     WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
     WebServicesTestUtils.checkStringMatch("exception classname",
         "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
@@ -455,7 +455,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringMatch("exception message",
-          "JobId string : bogusfoo is not properly formed", message);
+          "java.lang.Exception: JobId string : bogusfoo is not properly formed", message);
       WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",
           "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
