@@ -226,6 +226,9 @@ public class InstrumentationService extends BaseService implements Instrumentati
       lock.lock();
       try {
         long[] values = new long[4];
+        if (last < 0) {
+          return values;
+        }
         values[LAST_TOTAL] = total[last];
         values[LAST_OWN] = own[last];
         int limit = (full) ? size : (last + 1);
