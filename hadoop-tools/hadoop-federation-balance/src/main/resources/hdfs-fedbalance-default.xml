@@ -38,4 +38,23 @@
         </description>
     </property>
 
+    <property>
+        <name>hdfs.fedbalance.time.window.sentinel.path</name>
+        <value></value>
+        <description>
+            A sentinel path that must exist before FedBalance can leave the
+            incremental DistCp stage. An empty value disables this gate.
+        </description>
+    </property>
+
+    <property>
+        <name>hdfs.fedbalance.force.close.sentinel.path</name>
+        <value></value>
+        <description>
+            A sentinel path that makes FedBalance treat open files as force
+            closeable while checking whether the incremental DistCp stage can
+            finish. An empty value disables this gate.
+        </description>
+    </property>
+
 </configuration>

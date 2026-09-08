@@ -100,6 +100,11 @@ Command `submit` has the following options:
 | -delay | Specify the delayed duration(millie seconds) when the job needs to retry. | 1000 |
 | -moveToTrash | This options has 3 values: `trash` (move the source path to trash), `delete` (delete the source path directly) and `skip` (skip both trash and deletion). By default the server side trash interval is used. If the trash is disabled in the server side, the default trash interval 60 minutes is used. | trash |
 | -diffThreshold | Specify the threshold of the diff entries that used in incremental copy stage. If the diff entries size is no greater than the threshold and the open files check is satisfied(no open files or force close all open files), the fedBalance will go to the final round of distcp. Setting to 0 means waiting until there is no diff.| 0 |
+| -stopAfterInitialCopy | Stop the FedBalance job after the initial DistCp job succeeds. A later job can use `-startFromIncremental` to continue from the incremental copy stage. | Disabled |
+| -startFromIncremental | Start the FedBalance job from the incremental DistCp stage. This is intended for controlled recovery after the initial copy and source snapshot already exist. | Disabled |
+| -stopOnSmallDiff | Stop instead of retrying when the diff size is no greater than the threshold but final copy conditions are not satisfied. | Disabled |
+| -timeWindowSentinel | A sentinel path that must exist before FedBalance can leave the incremental DistCp stage. | Disabled |
+| -forceCloseSentinel | A sentinel path that makes FedBalance treat open files as force closeable while checking whether the incremental DistCp stage can finish. | Disabled |
 
 ### Configuration Options
 --------------------
@@ -110,6 +115,8 @@ Set configuration options at hdfs-fedbalance-site.xml.
 | ------------------------------ | ------------------------------------ | ------- |
 | hdfs.fedbalance.procedure.work.thread.num | The worker threads number of the BalanceProcedureScheduler. BalanceProcedureScheduler is responsible for scheduling a balance job, including submit, run, delay and recover. | 10 |
 | hdfs.fedbalance.procedure.scheduler.journal.uri | The uri of the journal, the journal file is used for handling the job persistence and recover. | hdfs://localhost:8020/tmp/procedure |
+| hdfs.fedbalance.time.window.sentinel.path | A sentinel path that must exist before FedBalance can leave the incremental DistCp stage. An empty value disables this gate. | empty |
+| hdfs.fedbalance.force.close.sentinel.path | A sentinel path that makes FedBalance treat open files as force closeable while checking whether the incremental DistCp stage can finish. An empty value disables this gate. | empty |
 
 Architecture of HDFS Federation Balance
 ----------------------

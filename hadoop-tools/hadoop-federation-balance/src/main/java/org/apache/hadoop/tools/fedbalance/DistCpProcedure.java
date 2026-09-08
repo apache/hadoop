@@ -20,6 +20,7 @@ package org.apache.hadoop.tools.fedbalance;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -91,6 +92,14 @@ public class DistCpProcedure extends BalanceProcedure {
   private boolean useMountReadOnly;
   /* The threshold of diff entries. */
   private int diffThreshold;
+  /* Whether to stop after the initial DistCp job succeeds. */
+  private boolean stopAfterInitialCopy;
+  /* Whether to stop when a small diff cannot move to final copy. */
+  private boolean stopOnSmallDiff;
+  /* Sentinel path that gates leaving the incremental DistCp stage. */
+  private String timeWindowSentinelPath;
+  /* Sentinel path that allows force-closing open files. */
+  private String forceCloseSentinelPath;
 
   private FsPermission fPerm; // the permission of the src.
   private AclStatus acl; // the acl of the src.
@@ -145,8 +154,36 @@ public class DistCpProcedure extends BalanceProcedure {
     this.forceCloseOpenFiles = context.getForceCloseOpenFiles();
     this.useMountReadOnly = context.getUseMountReadOnly();
     this.diffThreshold = context.getDiffThreshold();
+    this.stopAfterInitialCopy = context.getStopAfterInitialCopy();
+    this.stopOnSmallDiff = context.getStopOnSmallDiff();
+    this.timeWindowSentinelPath = context.getTimeWindowSentinelPath();
+    this.forceCloseSentinelPath = context.getForceCloseSentinelPath();
     srcFs = (DistributedFileSystem) context.getSrc().getFileSystem(conf);
     dstFs = (DistributedFileSystem) context.getDst().getFileSystem(conf);
+    if (context.getStartFromIncremental()) {
+      validateStartFromIncremental();
+      this.stage = Stage.DIFF_DISTCP;
+    }
+  }
+
+  /**
+   * Check the preconditions that a prior successful initial DistCp copy
+   * normally establishes, since starting from the incremental stage skips
+   * PRE_CHECK/INIT_DISTCP entirely.
+   */
+  private void validateStartFromIncremental() throws IOException {
+    if (!dstFs.exists(dst)) {
+      throw new IOException("Cannot start from the incremental DistCp stage: "
+          + dst + " does not exist. -startFromIncremental requires a prior "
+          + "successful initial DistCp copy.");
+    }
+    Path snapshotPath = new Path(src,
+        HdfsConstants.DOT_SNAPSHOT_DIR_SEPARATOR + CURRENT_SNAPSHOT_NAME);
+    if (!srcFs.exists(snapshotPath)) {
+      throw new IOException("Cannot start from the incremental DistCp stage: "
+          + snapshotPath + " does not exist. -startFromIncremental requires "
+          + "a prior successful initial DistCp copy.");
+    }
   }
 
   @Override
@@ -204,6 +241,10 @@ public class DistCpProcedure extends BalanceProcedure {
         jobId = null; // unset jobId because the job is done.
         if (job.isSuccessful()) {
           updateStage(Stage.DIFF_DISTCP);
+          if (stopAfterInitialCopy) {
+            throw new FedBalancePauseException(
+                "Stopping after initial copy as requested.");
+          }
           return;
         } else {
           LOG.warn("DistCp failed. Failure={}", job.getFailureInfo());
@@ -395,14 +436,57 @@ public class DistCpProcedure extends BalanceProcedure {
   @VisibleForTesting
   boolean diffDistCpStageDone() throws IOException, RetryException {
     int diffSize = getDiffSize();
-    if (diffSize <= diffThreshold) {
-      if (forceCloseOpenFiles || !verifyOpenFiles()) {
-        return true;
-      } else {
-        throw new RetryException();
-      }
+    if (diffSize > diffThreshold) {
+      return false;
     }
-    return false;
+    // Waiting for the scheduled time window is a normal, expected wait, not a
+    // stuck condition, so it always retries regardless of stopOnSmallDiff.
+    if (!inTimeWindow()) {
+      throw new RetryException();
+    }
+    if (shouldForceCloseOpenFiles() || !verifyOpenFiles()) {
+      return true;
+    }
+    if (stopOnSmallDiff) {
+      throw new FedBalancePauseException("Stopping because the diff size is "
+          + "no greater than the threshold but there are still open files "
+          + "that cannot be closed.");
+    }
+    throw new RetryException();
+  }
+
+  private boolean shouldForceCloseOpenFiles() throws IOException {
+    return forceCloseOpenFiles || sentinelExists(forceCloseSentinelPath);
+  }
+
+  private boolean inTimeWindow() throws IOException {
+    if (timeWindowSentinelPath == null || timeWindowSentinelPath.isEmpty()) {
+      return true;
+    }
+    return sentinelExists(timeWindowSentinelPath);
+  }
+
+  /**
+   * Whether the sentinel path exists. Treats a transient failure to resolve
+   * or check the sentinel path the same as "not present yet" so a temporary
+   * problem with the sentinel's filesystem doesn't hard-fail the job.
+   */
+  private boolean sentinelExists(String sentinelPath) {
+    if (sentinelPath == null || sentinelPath.isEmpty()) {
+      return false;
+    }
+    Path sentinel = new Path(sentinelPath);
+    boolean exists;
+    try {
+      FileSystem fileSystem = sentinel.getFileSystem(conf);
+      exists = fileSystem.exists(sentinel);
+    } catch (IOException e) {
+      LOG.warn("Failed to check FedBalance sentinel path={}, will retry.",
+          sentinel, e);
+      return false;
+    }
+    LOG.info("FedBalance sentinel path={} exists={}", sentinel, exists);
+    return exists;
   }
 
   /**
@@ -564,6 +648,11 @@ public class DistCpProcedure extends BalanceProcedure {
     bandWidth = context.getBandwidthLimit();
     forceCloseOpenFiles = context.getForceCloseOpenFiles();
     useMountReadOnly = context.getUseMountReadOnly();
+    diffThreshold = context.getDiffThreshold();
+    stopAfterInitialCopy = context.getStopAfterInitialCopy();
+    stopOnSmallDiff = context.getStopOnSmallDiff();
+    timeWindowSentinelPath = context.getTimeWindowSentinelPath();
+    forceCloseSentinelPath = context.getForceCloseSentinelPath();
     this.client = new JobClient(conf);
   }
 
