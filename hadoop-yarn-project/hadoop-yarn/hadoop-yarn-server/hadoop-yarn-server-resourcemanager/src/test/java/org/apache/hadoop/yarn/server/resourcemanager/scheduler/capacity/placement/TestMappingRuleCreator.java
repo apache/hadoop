@@ -87,6 +87,40 @@ public class TestMappingRuleCreator {
   }
 
   @Test
+  public void testMultipleUserMatcherPasses() {
+    rule.setMatches("alice,bob," + USER_NAME);
+
+    verifyPlacementSucceeds(USER_NAME);
+  }
+
+  @Test
+  public void testMultipleUserMatcherPassesWithWhitespace() {
+    rule.setMatches(" dummyuser , " + USER_NAME + " ");
+
+    variableContext.put("%user", "dummyuser");
+    verifyPlacementSucceeds("dummyuser");
+  }
+
+  @Test
+  public void testMultipleUserMatcherFails() {
+    rule.setMatches("alice,bob");
+
+    verifyNoPlacementOccurs();
+  }
+
+  @Test
+  public void testMultipleUserMatcherEmptyTokenFails() {
+    IllegalArgumentException illegalArgumentException =
+        assertThrows(IllegalArgumentException.class, () -> {
+          rule.setMatches("alice,,bob");
+          ruleCreator.getMappingRules(description);
+        });
+
+    assertTrue(illegalArgumentException.getMessage().
+        contains("empty username"));
+  }
+
+  @Test
   public void testSpecificUserMatcherFails() {
     rule.setMatches(USER_NAME);
     variableContext.put("%user", "dummyuser");
