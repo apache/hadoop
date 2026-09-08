@@ -851,13 +851,7 @@ class DataStreamer extends Daemon {
       } catch (Throwable e) {
         // Log warning if there was a real error.
         if (!errorState.isRestartingNode()) {
-          // Since their messages are descriptive enough, do not always
-          // log a verbose stack-trace WARN for quota exceptions.
-          if (e instanceof QuotaExceededException) {
-            LOG.debug("DataStreamer Quota Exception", e);
-          } else {
-            LOG.warn("DataStreamer Exception", e);
-          }
+          LOG.warn("DataStreamer Exception", e);
         }
         lastException.set(e);
         assert !(e instanceof NullPointerException);
@@ -865,6 +859,11 @@ class DataStreamer extends Daemon {
         if (!errorState.isNodeMarked()) {
           // Not a datanode issue
           streamerClosed = true;
+          if (e instanceof QuotaExceededException) {
+            synchronized (dataQueue) {
+              dataQueue.notifyAll();
+            }
+          }
         }
       } finally {
         if (scope != null) {
