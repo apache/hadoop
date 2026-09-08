@@ -147,10 +147,16 @@ public class TimelineReaderServer extends CompositeService {
 
   @Override
   protected void serviceStop() throws Exception {
-    if (readerWebServer != null) {
-      readerWebServer.stop();
+    try {
+      if (readerWebServer != null) {
+        readerWebServer.stop();
+      }
+    } finally {
+      // super.serviceStop() is what stops the reader and, with it, the
+      // storage monitor's polling executor.  A web server that fails to
+      // stop must not leave those behind.
+      super.serviceStop();
     }
-    super.serviceStop();
   }
 
   protected void addFilters(Configuration conf) {
