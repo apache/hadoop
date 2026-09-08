@@ -385,4 +385,11 @@ public interface RegistryConstants {
    *  {@value}.
    */
   String SUBPATH_COMPONENTS = "/components/";
+
+
+  /**
+   * num of threads for serving dns query.
+   */
+  String KEY_NUM_THREADS = DNS_PREFIX + "num-threads";
+
 }
