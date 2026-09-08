@@ -62,3 +62,17 @@ load hadoop-functions_test_helper
 
   hadoop_finalize_classpath
 }
+
+@test "hadoop_finalize_classpath (user classpath duplicate stays first)" {
+  mkdir -p "${TMP}/new" "${TMP}/old"
+  CLASSPATH=""
+  HADOOP_CONF_DIR="${TMP}"
+  HADOOP_CLASSPATH="${TMP}:${TMP}/new:${TMP}/old"
+  HADOOP_USER_CLASSPATH_FIRST="true"
+
+  hadoop_translate_cygwin_path () { true; }
+
+  hadoop_finalize_classpath
+
+  [ "${CLASSPATH}" = "${TMP}:${TMP}/new:${TMP}/old" ]
+}
