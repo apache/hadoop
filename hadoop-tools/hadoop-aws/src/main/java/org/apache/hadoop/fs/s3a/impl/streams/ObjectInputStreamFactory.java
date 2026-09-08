@@ -42,6 +42,11 @@ public interface ObjectInputStreamFactory
     extends Service, StreamCapabilities {
 
   /**
+   * Registered service name: {@value}.
+   */
+  String OBJECT_INPUT_STREAM_FACTORY = "ObjectInputStreamFactory";
+
+  /**
    * Set extra initialization parameters.
    * This MUST ONLY be invoked between {@code init()}
    * and {@code start()}.
