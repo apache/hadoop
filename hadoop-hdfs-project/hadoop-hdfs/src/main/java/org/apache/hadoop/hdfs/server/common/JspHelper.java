@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.common;
 
+import org.apache.hadoop.security.authentication.server.JettyAuthenticationHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -145,7 +146,9 @@ public class JspHelper {
         ProxyUsers.authorize(ugi, getRemoteAddr(request));
       }
     }
-    
+    if (ugi != null) {
+      JettyAuthenticationHelper.publishRemoteUser(request, ugi.getShortUserName());
+    }
     if(LOG.isDebugEnabled())
       LOG.debug("getUGI is returning: " + ugi.getShortUserName());
     return ugi;
