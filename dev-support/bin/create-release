@@ -182,6 +182,7 @@ function header()
   echo "Version to create      : ${HADOOP_VERSION}"
   echo "Release Candidate Label: ${RC_LABEL##-}"
   echo "Source Version         : ${DEFAULT_HADOOP_VERSION}"
+  echo "Repeatable             : ${REPEATABLE}"
   echo "Build Timestamp        : \"${BUILD_TIMESTAMP}\""
   printf "\n\n"
 }
@@ -203,9 +204,16 @@ function set_defaults
   REPEATABLE=false
 
   # Extract Hadoop version from ${BASEDIR}/pom.xml
-  DEFAULT_HADOOP_VERSION=$(grep "<version>" "${BASEDIR}/pom.xml" \
-    | head -1 \
-    | sed  -e 's|^ *<version>||' -e 's|</version>.*$||')
+  # this requires xmlstarlet on the path as the the original grep version broke once
+  # a parent pom was added.
+  # once we get past here, use it later too.
+  DEFAULT_HADOOP_VERSION=$(xmlstarlet sel -t -v "/_:project/_:version" pom.xml)
+  ret=$?
+  if [[ ${ret} != 0 ]]; then
+    hadoop_error "ERROR: xmlstarlet failed to parse pom.xml."
+    hadoop_error "ERROR: verify xmlstarlet is installed."
+    exit 1
+  fi
 
   DEPLOY=false
 
@@ -222,9 +230,7 @@ function set_defaults
   # Extract Java version from ${BASEDIR}/pom.xml
   # doing this outside of maven means we can do this before
   # the docker container comes up...
-  JVM_VERSION=$(grep "<javac.version>" "${BASEDIR}/pom.xml" \
-    | head -1 \
-    | sed  -e 's|^ *<javac.version>||' -e 's|</javac.version>.*$||')
+  JVM_VERSION=$(xmlstarlet sel -t -v "/_:project/_:properties/_:javac.version" "${BASEDIR}/pom.xml")
 
   GIT=$(command -v git)
 
@@ -293,19 +299,20 @@ function usage
 {
   echo "--artifactsdir=[path]   Path to use to store release bits"
   echo "--asfrelease            Make an ASF release"
-  echo "--repeatable            Build with fixed timestamps and host information"
   echo "--build-timestamp=[ts]  Override the repeatable build timestamp (ISO, epoch, 'git', 'fixed'))"
   echo "--deploy                Deploy Maven artifacts using ~/.m2/settings.xml"
   echo "--docker                Use Hadoop's Dockerfile for guaranteed environment"
   echo "--dockercache           Use a Docker-private maven cache"
+  echo "--help                  Print the list of supported commands"
   echo "--logdir=[path]         Path to store logs"
+  echo "--mvnargs=[args]        Extra Maven args to be provided when running mvn commands"
   echo "--mvncache=[path]       Path to the maven cache to use"
   echo "--native                Also build the native components"
   echo "--rc-label=[label]      Add this label to the builds"
+  echo "--repeatable            Build with fixed timestamps and host information"
   echo "--security              Emergency security release"
   echo "--sign                  Use .gnupg dir to sign the artifacts and jars"
   echo "--version=[version]     Use an alternative version string"
-  echo "--mvnargs=[args]        Extra Maven args to be provided when running mvn commands"
 }
 
 function option_parse
@@ -316,9 +323,10 @@ function option_parse
     case ${i} in
       --asfrelease)
         ASFRELEASE=true
-        NATIVE=true
-        SIGN=true
         DEPLOY=true
+        NATIVE=true
+        REPEATABLE=true
+        SIGN=true
       ;;
       --build-timestamp=*)
         BUILD_TIMESTAMP=${i#*=}

@@ -20,6 +20,7 @@ Requirements:
 * python (for releasedocs)
 * bats (for shell code testing)
 * Node.js / bower / Ember-cli (for YARN UI v2 building)
+* xmlstarling (parsing xml pom files in create-release)
 
 ----------------------------------------------------------------------------------
 The easiest way to get an environment with all the appropriate tools is by means
@@ -800,6 +801,149 @@ As an example, this invocation will check the compatibility of interfaces annota
 
 ./dev-support/bin/checkcompatibility.py --annotation org.apache.hadoop.classification.InterfaceAudience.Public --annotation org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate --include "hadoop.*" branch-2.7.2 trunk
 
+
+----------------------------------------------------------------------------------
+
+Using create-release
+
+The shell script dev-support/bin/create-release is the tool used to produce ASF release artifacts,
+and publish them to nexus.
+
+Important: when run it in invokes "git clean -xdf" to clean up the source tree and keep the
+distributions untainted (and secrets out of the files).
+Do not invoke it on a directory tree where this could be problematic.
+
+
+Arguments
+---------
+
+--artifactsdir=[path]   Path to use to store release bits
+--asfrelease            Make an ASF release
+--build-timestamp=[ts]  Override the repeatable build timestamp (ISO, epoch, 'git', 'fixed'))
+--deploy                Deploy Maven artifacts using ~/.m2/settings.xml
+--docker                Use Hadoop's Dockerfile for guaranteed environment
+--dockercache           Use a Docker-private maven cache
+--help                  Print the list of supported commands
+--logdir=[path]         Path to store logs
+--mvncache=[path]       Path to the maven cache to use
+--native                Also build the native components
+--rc-label=[label]      Add this label to the builds
+--repeatable            Build with fixed timestamps and host information
+--security              Emergency security release
+--sign                  Use .gnupg dir to sign the artifacts and jars
+--version=[version]     Use an alternative version string
+--mvnargs=[args]        Extra Maven args to be provided when running mvn commands
+
+
+Option --asfrelease
+-------------------
+
+Create an ASF release.
+
+The equivalent to `--deploy --sign --native --repeatable`
+
+On Linux system the --docker argument must also be provided, that is: docker builds *only*.
+
+
+Option -build-timestamp=[timestamp]
+-----------------------------------
+
+The `-build-timestamp` option is *only* used during repeatable builds, and can be set to different values
+to control which timestamp is used for the build.
+
+By default, in a repeatable build, the timestamp is set to the value of `hadoop.build.timestamp` in the profile `repeatable`;
+this option allows for the value to be overridden, with the `git` option causing a `git log -1 --format=%ct` command to be invoked to determine
+the timestamp of the last commit.
+
+Options for `--build-timestamp`
+
+| Value             | Meaning                                     | Example               |
+|-------------------|---------------------------------------------|-----------------------|
+| `fixed`           | The value fixed in the `repeatable` profile | "fixed"               |
+| empty string      | The value fixed in the `repeatable` profile | ""                    |
+| one char string   | The value fixed in the `repeatable` profile | "-"                   |
+| git               | The last git commit as the timestamp        | "git"                 |
+| <number>          | An epoch number                             | "0"                   |
+| <iso date string> | An ISO date                                 | "2026-09-08Z12:01:00" |
+
+Option --deploy
+---------------
+
+Publishes the artifacts to ASF Nexus server; requires ~/.m2/settings.xml to contain login secrets.
+
+
+*Important* make sure there is no duplicate staged hadoop repo in nexus.
+If there is: drop and restart the x86 release process to make sure it is the one published
+
+Option --docker
+---------------
+
+Create a docker image and build and release from it.
+
+Required for ASF releases as it is the only way to consistently build the native
+artifacts.
+
+Option --dockercache
+--------------------
+
+Use a private docker M2 repository, rather than one in the host system.
+
+Use this to isolate builds completely; it comes at the expense of having
+to download all dependencies and store them in the docker image.
+
+Option --logdir=[path]
+----------------------
+
+Provide a path to the log directory. The default is patchprocess
+
+
+Option --mvncache=[path]
+------------------------
+
+Provide a path to the maven artifact cache in the host system,
+rather than the default of ~/.m2/cache
+
+Option --mvnargs=[args]
+-----------------------
+
+Any extra Maven args to be provided when running the mvn commands.
+
+Option --native
+---------------
+
+Build the native libraries.
+
+Option --rc-label=[label]
+-------------------------
+
+Attach a release candidate label to the tar file
+
+This tends not to be used.
+
+Option --repeatable
+-------------------
+
+Force a repeatable build.
+
+Option --security
+-----------------
+
+Mark a build as a security release off an existing primary release.
+
+Option --sign
+-------------
+
+Sign a release with a GPG key.
+
+Option --version=[version]
+--------------------------
+
+Use an alternative version string for the .tar.gz files created.
+
+This does not change the versioning of the maven artifacts produced in a build, or the version
+of Hadoop which it itself stores in its jar (see below); it is simply a packaging change.
+
+
 ----------------------------------------------------------------------------------
 Changing the Hadoop version declared returned by VersionInfo
 
@@ -808,3 +952,4 @@ org.apache.hadoop.util.VersionInfo, set the property declared.hadoop.version to 
 For example: mvn package -Pdist -Ddeclared.hadoop.version=2.11
 
 If unset, the project version declared in the POM file is used.
+
