@@ -187,8 +187,13 @@
     </extraJavaTestArgs>
 
     <!-- Plugin versions and config -->
-    <maven-surefire-plugin.argLine>-Xmx4096m -Xss4m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs}</maven-surefire-plugin.argLine>
-    <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
+    <!-- java.net.preferIPv4Stack must be a JVM startup argument, not a
+         systemPropertyVariable: from maven-surefire-plugin 3.6.0 the forked
+         booter initialises networking before it applies the configured
+         system properties, so the flag would be read too late and the fork
+         would fall back to IPv6. See HADOOP-19978. -->
+    <maven-surefire-plugin.argLine>-Djava.net.preferIPv4Stack=true -Xmx4096m -Xss4m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs}</maven-surefire-plugin.argLine>
+    <maven-surefire-plugin.version>3.6.0</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
     <!-- Flag to stop surefire from shortening test stacks  -->
@@ -2313,6 +2318,12 @@
             <!-- @{argLine} injects the JaCoCo agent when coverage is enabled;
                  see the maven-surefire-plugin configuration below for details. -->
             <argLine>${maven-surefire-plugin.argLine} @{argLine}</argLine>
+            <!-- maven-failsafe-plugin 3.6.0 dropped the ${skipTests} binding on
+                 its own skipTests parameter (SUREFIRE-823), so -DskipTests no
+                 longer skips integration tests. Bind it back, so -DskipTests
+                 means "no tests at all" as it did before. -DskipITs still skips
+                 only the integration tests. -->
+            <skipTests>${skipTests}</skipTests>
           </configuration>
         </plugin>
         <plugin>
@@ -2621,7 +2632,6 @@
             <test.cache.data>${test.cache.data}</test.cache.data>
             <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
 
-            <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
             <java.security.krb5.conf>${project.build.directory}/test-classes/krb5.conf</java.security.krb5.conf>
             <java.security.egd>${java.security.egd}</java.security.egd>
             <require.test.libhadoop>${require.test.libhadoop}</require.test.libhadoop>
