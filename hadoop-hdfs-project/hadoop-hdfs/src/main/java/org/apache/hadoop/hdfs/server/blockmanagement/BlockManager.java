@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -123,6 +124,8 @@ import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
@@ -466,6 +469,44 @@ public class BlockManager implements BlockStatsMXBean {
   private volatile BlockPlacementPolicies placementPolicies;
   private final BlockStoragePolicySuite storagePolicySuite;
 
+  /** Configuration stored for rebuilding per-affinity-group placement policies. */
+  private Configuration conf;
+
+  /**
+   * Pairs a file-path {@link Pattern} with the {@link BlockPlacementPolicies}
+   * that use a restricted {@link org.apache.hadoop.net.NetworkTopology}
+   * containing only the DataNodes eligible for that affinity group.
+   *
+   * <p>Using a restricted topology means
+   * {@link org.apache.hadoop.net.NetworkTopology#chooseRandom} only sees the
+   * small in-pool node set and never needs a large exclusion list.
+   */
+  static final class AffinityPlacementGroup {
+    final Pattern pathPattern;
+    final BlockPlacementPolicies policies;
+    /**
+     * The group's restricted topology (same instance the {@link #policies} are
+     * bound to). Retained so {@link #chooseTarget4AdditionalDatanode} can test
+     * whether an existing pipeline's surviving replicas actually live inside
+     * this group before routing recovery through the group's (small) policy.
+     */
+    final NetworkTopology topology;
+
+    AffinityPlacementGroup(Pattern pathPattern, BlockPlacementPolicies policies,
+        NetworkTopology topology) {
+      this.pathPattern = pathPattern;
+      this.policies = policies;
+      this.topology = topology;
+    }
+  }
+
+  /**
+   * Immutable snapshot replaced atomically by
+   * {@link #buildAffinityBasedBlockPlacementPolicies()}.
+   */
+  private volatile List<AffinityPlacementGroup> affinityPlacementGroups =
+      Collections.emptyList();
+
   /** Check whether name system is running before terminating */
   private boolean checkNSRunning = true;
 
@@ -489,6 +530,13 @@ public class BlockManager implements BlockStatsMXBean {
    * replicas available on stale storages.
    */
   private final boolean deleteCorruptReplicaImmediately;
+
+  /**
+   * When true, a write whose path matches an affinity group must be satisfied
+   * within that group or fail (fail-closed strict isolation); when false the
+   * placement falls back to the default (shared-pool) policy for availability.
+   */
+  private final boolean strictAffinityIsolation;
 
   /** Storages accessible from multiple DNs. */
   private final ProvidedStorageMap providedStorageMap;
@@ -535,6 +583,11 @@ public class BlockManager implements BlockStatsMXBean {
         conf, datanodeManager.getFSClusterStats(),
         datanodeManager.getNetworkTopology(),
         datanodeManager.getHost2DatanodeMap());
+    this.conf = conf;
+    // DatanodeManager already initialised the DatanodeAffinityManager (and
+    // therefore ran refresh()) in its constructor, so group topologies are
+    // ready to build the per-affinity-group placement policies.
+    buildAffinityBasedBlockPlacementPolicies();
     this.storagePolicySuite = BlockStoragePolicySuite.createDefaultSuite(conf);
     this.pendingReconstruction = new PendingReconstructionBlocks(conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
@@ -573,6 +626,10 @@ public class BlockManager implements BlockStatsMXBean {
     this.encryptDataTransfer =
         conf.getBoolean(DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY,
             DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEFAULT);
+
+    this.strictAffinityIsolation = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_AFFINITY_STRICT_ISOLATION_KEY,
+        DFSConfigKeys.DFS_NAMENODE_AFFINITY_STRICT_ISOLATION_DEFAULT);
 
     this.maxNumBlocksToLog =
         conf.getLong(DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
@@ -862,6 +919,68 @@ public class BlockManager implements BlockStatsMXBean {
             datanodeManager.getNetworkTopology(),
             datanodeManager.getHost2DatanodeMap());
     placementPolicies = bpp;
+    this.conf = conf;
+    buildAffinityBasedBlockPlacementPolicies();
+  }
+
+  /**
+   * Build per-affinity-group {@link BlockPlacementPolicies}, each backed by
+   * the restricted {@link org.apache.hadoop.net.NetworkTopology} exposed by
+   * {@link DatanodeAffinityManager#getAffinityGroupTopologies()}.
+   *
+   * <p>Called at {@link BlockManager} construction (after DatanodeManager
+   * initialisation), after {@link DatanodeAffinityManager#refresh()} completes,
+   * and after {@link #refreshBlockPlacementPolicy(Configuration)}.
+   */
+  void buildAffinityBasedBlockPlacementPolicies() {
+    try {
+      if (datanodeManager == null
+          || datanodeManager.getDatanodeAffinityManager() == null) {
+        affinityPlacementGroups = Collections.emptyList();
+        return;
+      }
+      final DatanodeAffinityManager affinityManager =
+          datanodeManager.getDatanodeAffinityManager();
+      final List<DatanodeAffinityManager.AffinityGroupTopology> topologies =
+          affinityManager.getAffinityGroupTopologies();
+      if (topologies.isEmpty()) {
+        affinityPlacementGroups = Collections.emptyList();
+        return;
+      }
+      final List<AffinityPlacementGroup> groups =
+          new ArrayList<>(topologies.size());
+      for (DatanodeAffinityManager.AffinityGroupTopology entry : topologies) {
+        final BlockPlacementPolicies groupPolicies = new BlockPlacementPolicies(
+            conf,
+            datanodeManager.getFSClusterStats(),
+            entry.topology,
+            datanodeManager.getHost2DatanodeMap());
+        groups.add(new AffinityPlacementGroup(entry.pathPattern, groupPolicies,
+            entry.topology));
+      }
+      affinityPlacementGroups = Collections.unmodifiableList(groups);
+      LOG.info("BlockManager: rebuilt {} affinity placement group(s)",
+          groups.size());
+    } catch (Exception e) {
+      LOG.warn("Failed to rebuild affinity placement policies", e);
+    }
+  }
+
+  /**
+   * Return the first {@link AffinityPlacementGroup} whose path pattern matches
+   * {@code src}, or {@code null} if none match (or the list is empty).
+   */
+  private AffinityPlacementGroup findAffinityGroup(String src) {
+    final List<AffinityPlacementGroup> groups = affinityPlacementGroups;
+    if (src == null || groups == null || groups.isEmpty()) {
+      return null;
+    }
+    for (AffinityPlacementGroup group : groups) {
+      if (group.pathPattern.matcher(src).find()) {
+        return group;
+      }
+    }
+    return null;
   }
 
   /** Dump meta data to out. */
@@ -2184,6 +2303,16 @@ public class BlockManager implements BlockStatsMXBean {
       }
 
       // choose replication targets: NOT HOLDING THE GLOBAL LOCK
+      // NOTE (affinity/tenant-isolation scope): background
+      // replication/EC-reconstruction currently uses the default placement
+      // policy, whose topology excludes affinity-group DataNodes. As a result,
+      // a replica repaired for a block that belongs to an affinity path is
+      // placed in the shared pool rather than back into the block's affinity
+      // group. Making reconstruction affinity-aware requires resolving the
+      // block's owning path (a reverse block->file lookup) inside this
+      // lock-sensitive, hot loop and is intentionally left as a follow-up: this
+      // change scopes affinity to initial block placement and in-pipeline
+      // recovery (chooseTarget4NewBlock / chooseTarget4AdditionalDatanode).
       final BlockPlacementPolicy placementPolicy =
           placementPolicies.getPolicy(rw.getBlock().getBlockType());
       rw.chooseTargets(placementPolicy, storagePolicySuite, excludedNodes);
@@ -2452,10 +2581,70 @@ public class BlockManager implements BlockStatsMXBean {
       BlockType blockType) {
     final BlockStoragePolicy storagePolicy =
         storagePolicySuite.getPolicy(storagePolicyID);
-    final BlockPlacementPolicy blockplacement =
-        placementPolicies.getPolicy(blockType);
+    // If the path is isolated to an affinity group AND the existing pipeline's
+    // surviving replicas still live inside that group, the replacement node for
+    // a failed pipeline member MUST come from the same group's restricted
+    // topology; otherwise a mid-write DataNode failure would pull in a
+    // shared-pool node and break tenant isolation. Affinity nodes are absent
+    // from the default topology, so without this the default policy could
+    // never even pick a same-group replacement.
+    //
+    // Non-strict availability mode: if the initial block already spilled its
+    // replicas to the shared pool (group under-provisioned, strict isolation
+    // disabled), those shared-pool survivors are absent from the group topology.
+    // Forcing the group policy would then count them against the tiny group in
+    // getMaxNodesPerRack(numChosen, numAdditional) -- numChosen + numAdditional
+    // exceeds the group's leaf count, so numAdditional is driven to 0, no
+    // replacement is returned, and (with the default best-effort=false)
+    // DataStreamer fails the write. Route such a block's recovery through the
+    // DEFAULT policy instead so the write succeeds; this is never an isolation
+    // leak because the block already lives in the shared pool, and the default
+    // topology excludes affinity nodes so recovery stays in the shared pool.
+    final AffinityPlacementGroup affinityGroup = findAffinityGroup(src);
+    final boolean useAffinityGroup =
+        affinityGroup != null && allChosenInAffinityGroup(affinityGroup, chosen);
+    final BlockPlacementPolicy blockplacement = useAffinityGroup
+        ? affinityGroup.policies.getPolicy(blockType)
+        : placementPolicies.getPolicy(blockType);
     return blockplacement.chooseTarget(src, numAdditionalNodes, clientnode,
         chosen, true, excludes, blocksize, storagePolicy, null);
+  }
+
+  /**
+   * Whether every surviving replica in {@code chosen} lives inside the given
+   * affinity group's restricted topology. Drives the pipeline-recovery policy
+   * choice in {@link #chooseTarget4AdditionalDatanode}: only when the survivors
+   * are actually in the group does routing recovery through the group's small
+   * restricted policy make sense; otherwise (a non-strict block that spilled to
+   * the shared pool) the group's leaf count would zero out the replacement and
+   * fail the write.
+   *
+   * <p>Membership is tested by exact identity against the group topology
+   * ({@code getNode(path) == descriptor}) rather than {@code contains()}, which
+   * walks the shared descriptor's parent pointer -- unreliable for isolated
+   * nodes whose parent is nulled when they are removed from the default
+   * topology. An empty/absent {@code chosen} keeps the replacement in-group
+   * (the path matches the group).
+   */
+  private static boolean allChosenInAffinityGroup(AffinityPlacementGroup group,
+      List<DatanodeStorageInfo> chosen) {
+    if (group == null || group.topology == null) {
+      return false;
+    }
+    if (chosen == null || chosen.isEmpty()) {
+      return true;
+    }
+    final NetworkTopology topo = group.topology;
+    for (DatanodeStorageInfo storage : chosen) {
+      if (storage == null) {
+        continue;
+      }
+      final DatanodeDescriptor dn = storage.getDatanodeDescriptor();
+      if (dn == null || topo.getNode(NodeBase.getPath(dn)) != dn) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -2479,6 +2668,60 @@ public class BlockManager implements BlockStatsMXBean {
         getDatanodeDescriptors(favoredNodes);
     final BlockStoragePolicy storagePolicy =
         storagePolicySuite.getPolicy(storagePolicyID);
+
+    // Step 1: Try the per-affinity-group policy (restricted topology).
+    // The group's NetworkTopology contains only eligible DataNodes, so
+    // NetworkTopology.chooseRandom() never needs a large exclusion list.
+    final AffinityPlacementGroup affinityGroup = findAffinityGroup(src);
+    if (affinityGroup != null) {
+      final BlockPlacementPolicy affinityPolicy =
+          affinityGroup.policies.getPolicy(blockType);
+      final DatanodeStorageInfo[] affinityTargets = affinityPolicy.chooseTarget(
+          src, numOfReplicas, client, excludedNodes, blocksize,
+          favoredDatanodeDescriptors, storagePolicy, flags);
+      // Sufficiency threshold: the affinity group must place ALL requested
+      // replicas (numOfReplicas already accounts for EC data+parity units on
+      // STRIPED blocks). Accepting a partial placement (e.g. >= minReplication)
+      // would create the block under-replicated and let the redundancy monitor
+      // "repair" the missing replicas via the DEFAULT policy onto shared-pool
+      // nodes -- which in strict mode leaks data out of the isolated group and
+      // in non-strict mode silently under-replicates the block until the
+      // asynchronous repair completes. Both modes therefore require the full
+      // count in-group; they differ only in how the shortfall is handled below
+      // (strict fails closed; non-strict spills the WHOLE block to the shared
+      // pool via the default policy so it is fully replicated at write time).
+      if (affinityTargets.length >= numOfReplicas) {
+        return affinityTargets;
+      }
+      // The affinity group could not fully satisfy the request (under-
+      // provisioned group, group DataNodes down/decommissioned, or a
+      // misconfigured datanodesRegex that matched too few nodes). This is
+      // significant for an isolation feature, so log it at WARN rather than
+      // DEBUG.
+      LOG.warn("DatanodeAffinity: affinity pool for '{}' returned only {} of {} "
+          + "requested target(s); {}", src, affinityTargets.length, numOfReplicas,
+          strictAffinityIsolation
+              ? "strict isolation is enabled -- failing the write instead of "
+                  + "spilling over to the shared pool"
+              : "falling back to the default placement policy for the whole "
+                  + "block (set "
+                  + DFSConfigKeys.DFS_NAMENODE_AFFINITY_STRICT_ISOLATION_KEY
+                  + "=true to fail closed instead)");
+      if (strictAffinityIsolation) {
+        throw new IOException(String.format(
+            "File %s matches an affinity group but only %d of the requested %d "
+                + "target(s) could be placed within that isolated pool, and "
+                + DFSConfigKeys.DFS_NAMENODE_AFFINITY_STRICT_ISOLATION_KEY
+                + " is enabled (fail-closed). Add capacity to the affinity "
+                + "group or disable strict isolation.",
+            src, affinityTargets.length, numOfReplicas));
+      }
+    }
+
+    // Step 2: Default placement policy. Affinity DataNodes are absent from the
+    // default NetworkTopology (removed by DatanodeManager when they registered
+    // into an affinity group), so the default policy never selects them and no
+    // exclusion-list manipulation is needed.
     final BlockPlacementPolicy blockplacement =
         placementPolicies.getPolicy(blockType);
     final DatanodeStorageInfo[] targets = blockplacement.chooseTarget(src,
