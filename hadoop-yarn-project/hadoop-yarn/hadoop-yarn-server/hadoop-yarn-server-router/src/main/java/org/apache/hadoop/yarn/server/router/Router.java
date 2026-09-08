@@ -48,6 +48,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -124,6 +125,13 @@ public class Router extends CompositeService {
 
   private static final String UI2_WEBAPP_NAME = "/ui2";
 
+  /**
+   * How long serviceStop waits for the scheduled executor to drain before it
+   * interrupts what is still running. One SubClusterCleaner run is a scan of
+   * the state store, so this only has to cover a single pass.
+   */
+  private static final long SCHEDULED_EXECUTOR_SHUTDOWN_TIMEOUT_SECONDS = 10;
+
   private ScheduledThreadPoolExecutor scheduledExecutorService;
   private SubClusterCleaner subClusterCleaner;
 
@@ -196,6 +204,12 @@ public class Router extends CompositeService {
     if (isStopping.getAndSet(true)) {
       return;
     }
+    // serviceStart() may have scheduled the SubClusterCleaner on this executor.
+    // Shut it down before the services below, and wait for an in-flight run to
+    // finish: the cleaner reaches the federation state store on every run, so
+    // it must not still be running once the Router has stopped.
+    HadoopExecutors.shutdown(scheduledExecutorService, LOG,
+        SCHEDULED_EXECUTOR_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     super.serviceStop();
     DefaultMetricsSystem.shutdown();
     WebServiceClient.destroy();
