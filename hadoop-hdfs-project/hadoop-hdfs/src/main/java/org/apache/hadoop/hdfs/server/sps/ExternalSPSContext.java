@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.net.NetworkTopologyFactory;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -95,7 +96,7 @@ public class ExternalSPSContext implements Context {
   @Override
   public NetworkTopology getNetworkTopology(DatanodeMap datanodeMap) {
     // create network topology.
-    NetworkTopology cluster = NetworkTopology.getInstance(service.getConf());
+    NetworkTopology cluster = NetworkTopologyFactory.create(service.getConf());
     List<DatanodeWithStorage> targets = datanodeMap.getTargets();
     for (DatanodeWithStorage node : targets) {
       cluster.add(node.getDatanodeInfo());
