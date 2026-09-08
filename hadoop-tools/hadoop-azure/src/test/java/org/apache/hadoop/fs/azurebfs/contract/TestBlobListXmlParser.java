@@ -31,7 +31,9 @@ import org.xml.sax.SAXException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListXmlParser;
+import org.apache.hadoop.util.XMLUtils;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestBlobListXmlParser {
   @Test
@@ -164,13 +166,29 @@ public class TestBlobListXmlParser {
     assertThat(listResultSchema.getNextMarker()).isNull();
   }
 
+  /**
+   * A blob list response body that declares an external entity pointing at a
+   * local file. The Blob endpoint never returns a DOCTYPE, so parsing it as XXE
+   * would only serve an attacker controlling the response.
+   */
+  @Test
+  public void testExternalEntityRejected() {
+    String xxeResponse = ""
+        + "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        + "<!DOCTYPE EnumerationResults [<!ENTITY xxe SYSTEM \"file:///etc/hostname\">]>"
+        + "<EnumerationResults ServiceEndpoint=\"https://a.blob.core.windows.net/\" ContainerName=\"c\">"
+        + "<Blobs><Blob><Name>&xxe;</Name></Blob></Blobs>"
+        + "</EnumerationResults>";
+    assertThrows(SAXException.class, () -> getResultSchema(xxeResponse));
+  }
+
   private static final ThreadLocal<SAXParser> SAX_PARSER_THREAD_LOCAL
       = new ThreadLocal<SAXParser>() {
     @Override
     public SAXParser initialValue() {
-      SAXParserFactory factory = SAXParserFactory.newInstance();
-      factory.setNamespaceAware(true);
       try {
+        SAXParserFactory factory = XMLUtils.newSecureSAXParserFactory();
+        factory.setNamespaceAware(true);
         return factory.newSAXParser();
       } catch (SAXException e) {
         throw new RuntimeException("Unable to create SAXParser", e);
