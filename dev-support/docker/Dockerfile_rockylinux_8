@@ -85,8 +85,8 @@ ENV INFOPATH="${GCC_HOME}/root/usr/share/info"
 ######
 # Set env vars required to build Hadoop
 ######
-ENV MAVEN_HOME=/opt/maven
-ENV PATH="${PATH}:${MAVEN_HOME}/bin"
+#ENV MAVEN_HOME=/opt/maven
+#ENV PATH="${PATH}:${MAVEN_HOME}/bin"
 
 # jenkins.sh sets --java-home to a path with an "-amd64" suffix, which doesn't
 # exist on Rocky. Fake it with symlinks.
@@ -113,7 +113,7 @@ ENV HADOOP_SKIP_YETUS_VERIFICATION=true
 ######
 # Install packages
 ######
-RUN pkg-resolver/install-maven.sh rockylinux:8
+# RUN pkg-resolver/install-maven.sh rockylinux:8
 RUN pkg-resolver/install-boost.sh rockylinux:8
 RUN pkg-resolver/install-spotbugs.sh rockylinux:8
 RUN pkg-resolver/install-protobuf.sh rockylinux:8
