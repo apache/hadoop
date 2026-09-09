@@ -574,6 +574,8 @@ function dockermode
     printf "\n\n"
   ) | docker build -t "${imgname}" -f - "${BASEDIR}"/dev-support/docker/
 
+  echo "launching docker image ${imgname} with directory mapping ${extrad[*]}"
+
   run docker run -i -t \
     --privileged \
     "${extrad[@]}"  \
