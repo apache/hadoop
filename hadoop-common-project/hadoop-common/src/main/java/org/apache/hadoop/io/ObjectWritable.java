@@ -429,8 +429,8 @@ public class ObjectWritable implements Writable, Configurable {
       }
     } catch (InvocationTargetException e) {
       
-      if (e.getCause() instanceof IOException ioe) {
-        throw ioe;
+      if (e.getCause() instanceof IOException) {
+        throw (IOException)e.getCause();
       } else {
         throw new IOException(e.getCause());
       }
