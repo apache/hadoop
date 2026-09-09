@@ -41,9 +41,9 @@ public final class JacksonMcpJsonMapper implements McpJsonMapper {
   private final ObjectMapper mapper;
 
   public JacksonMcpJsonMapper() {
-    ObjectMapper mapper = new ObjectMapper();
-    mapper.configure(DeserializationFeature.FAIL_ON_TRAILING_TOKENS, true);
-    this.mapper = mapper;
+    ObjectMapper objectMapper = new ObjectMapper();
+    objectMapper.configure(DeserializationFeature.FAIL_ON_TRAILING_TOKENS, true);
+    this.mapper = objectMapper;
   }
 
   public JacksonMcpJsonMapper(ObjectMapper mapper) {
