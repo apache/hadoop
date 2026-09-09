@@ -395,6 +395,16 @@ function option_parse
     fi
   fi
 
+  if [[ "${SIGN}" = true ]]; then
+    # Check that a secret key is present, rather than wait until the end of the build.
+    # There's no downgrading here, unlike the other checks; this is a later addition and
+    # less forgiving than earlier release options.
+    if ! "${GPG}" --list-secret-keys 2>/dev/null | grep -q "^sec"; then
+      hadoop_error "ERROR: No gpg secret keys available. Cannot sign release."
+      exit 1
+    fi
+  fi
+
   if [[ "${DEPLOY}" = true && ! -f "${HOME}/.m2/settings.xml" ]]; then
     hadoop_error "ERROR: No ~/.m2/settings.xml file, cannot deploy Maven artifacts."
     exit 1
