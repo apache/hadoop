@@ -2330,6 +2330,7 @@
           <artifactId>maven-javadoc-plugin</artifactId>
           <version>${maven-javadoc-plugin.version}</version>
           <configuration>
+            <source>${javac.version}</source>
             <doclint>all</doclint>
             <additionalJOptions>
               <!-- To fix doclet runtime error -->
