@@ -871,6 +871,8 @@ Option --deploy
 
 Publishes the artifacts to ASF Nexus server; requires ~/.m2/settings.xml to contain login secrets.
 
+The host ~/.m2/settings.xml will be mapped to container ~/.m2/settings.xml irrespective
+of --dockercache and --mvncache options.
 
 *Important* make sure there is no duplicate staged hadoop repo in nexus.
 If there is: drop and restart the x86 release process to make sure it is the one published
@@ -891,22 +893,25 @@ Use a private docker M2 repository, rather than one in the host system.
 Use this to isolate builds completely; it comes at the expense of having
 to download all dependencies and store them in the docker image.
 
+Ignored on non-docker builds.
+
 Option --logdir=[path]
 ----------------------
 
 Provide a path to the log directory. The default is patchprocess
 
 
-Option --mvncache=[path]
-------------------------
-
-Provide a path to the maven artifact cache in the host system,
-rather than the default of ~/.m2/cache
-
 Option --mvnargs=[args]
 -----------------------
 
 Any extra Maven args to be provided when running the mvn commands.
+
+
+Option --mvncache=[path]
+------------------------
+
+Provide a path to the maven artifact cache in the local system,
+rather than the default of ~/.m2/cache
 
 Option --native
 ---------------
