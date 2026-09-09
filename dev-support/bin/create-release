@@ -243,11 +243,13 @@ function set_defaults
 
   LOGDIR="${BASEDIR}/patchprocess"
 
-  # the mvnw wrapper script is used, to guarantee the same
-  # maven version is used everywhere, and to test the maven binary download/validate
-  # process more broadly. That is: it is someone else's problem and everyone running mvnw
-  # makes sure all is good outside this script and/or docker containers.
-  MVN=${BASEDIR}/mvnw
+  if [[ -z "${MVN}" ]]; then
+    if [[ -n "${MAVEN_HOME}" ]]; then
+      MVN=${MAVEN_HOME}/bin/mvn
+    else
+      MVN=$(command -v mvn)
+    fi
+  fi
 
   NATIVE=false
   OSNAME=$(uname -s)
@@ -326,11 +328,11 @@ function option_parse
         REPEATABLE=true
         SIGN=true
       ;;
-      --artifactsdir=*)
-        ARTIFACTS_DIR=${i#*=}
-      ;;
       --build-timestamp=*)
         BUILD_TIMESTAMP=${i#*=}
+      ;;
+      --artifactsdir=*)
+        ARTIFACTS_DIR=${i#*=}
       ;;
       --deploy)
         DEPLOY=true
@@ -350,9 +352,6 @@ function option_parse
       ;;
       --logdir=*)
         LOGDIR=${i#*=}
-      ;;
-      --mvnargs=*)
-        MVNEXTRAARGS=${i#*=}
       ;;
       --mvncache=*)
         MVNCACHE=${i#*=}
@@ -374,6 +373,9 @@ function option_parse
       ;;
       --version=*)
         HADOOP_VERSION=${i#*=}
+      ;;
+      --mvnargs=*)
+        MVNEXTRAARGS=${i#*=}
       ;;
     esac
   done
