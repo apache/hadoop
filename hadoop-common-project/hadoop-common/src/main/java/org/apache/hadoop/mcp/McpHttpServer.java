@@ -121,6 +121,11 @@ public final class McpHttpServer implements AutoCloseable {
       if (sslFactory != null) {
         sslFactory.destroy();
       }
+      try {
+        server.stop();
+      } catch (Exception ex) {
+        LOG.debug("Failed to stop server after start failed", ex);
+      }
       throw new IOException("Failed to start MCP HTTP server", e);
     }
 

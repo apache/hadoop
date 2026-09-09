@@ -48,8 +48,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class TestMcpHttpServer {
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-  private static final JacksonMcpJsonMapper JSON_MAPPER =
-      new JacksonMcpJsonMapper(OBJECT_MAPPER);
+  private static final JacksonMcpJsonMapper JSON_MAPPER = new JacksonMcpJsonMapper();
   private static final String BASEDIR =
       GenericTestUtils.getTempPath(TestMcpHttpServer.class.getSimpleName());
 

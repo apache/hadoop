@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -38,6 +39,12 @@ public final class JacksonMcpJsonMapper implements McpJsonMapper {
   private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
   private final ObjectMapper mapper;
+
+  public JacksonMcpJsonMapper() {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_TRAILING_TOKENS, true);
+    this.mapper = mapper;
+  }
 
   public JacksonMcpJsonMapper(ObjectMapper mapper) {
     this.mapper = mapper;
