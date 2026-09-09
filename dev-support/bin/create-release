@@ -438,6 +438,7 @@ function option_parse
   MVN_ARGS=()
 
   if [[ "${REPEATABLE}" = true ]]; then
+    echo "Build is repeatable"
     MVN_ARGS=("-Prepeatable" )
     if [[ "${BUILD_TIMESTAMP}" = "fixed" ]]; then
       echo "Using timestamp from repeatable build profile"
@@ -458,7 +459,7 @@ function option_parse
   if [[ -n "${MVNCACHE}" ]]; then
     mkdir -p "${MVNCACHE}"
     if [[ -d "${MVNCACHE}" ]]; then
-      MVN_ARGS=("-Dmaven.repo.local=${MVNCACHE}")
+      MVN_ARGS+=("-Dmaven.repo.local=${MVNCACHE}")
     fi
   fi
   if [ -n "$MVNEXTRAARGS" ]; then
