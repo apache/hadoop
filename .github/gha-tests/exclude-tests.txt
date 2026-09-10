@@ -27,7 +27,6 @@
 **/org/apache/hadoop/hdfs/TestDecommission.java
 **/org/apache/hadoop/hdfs/TestDecommissionWithBackoffMonitor.java
 **/org/apache/hadoop/hdfs/TestDecommissionWithStriped.java
-**/org/apache/hadoop/hdfs/TestDFSClientRetries.java
 **/org/apache/hadoop/hdfs/TestDFSUtil.java
 **/org/apache/hadoop/hdfs/TestFileCreation.java
 **/org/apache/hadoop/hdfs/TestMaintenanceState.java
@@ -39,7 +38,6 @@
 **/org/apache/hadoop/hdfs/client/impl/TestBlockReaderLocal.java
 **/org/apache/hadoop/hdfs/server/balancer/TestBalancer.java
 **/org/apache/hadoop/hdfs/server/balancer/TestBalancerRPCDelay.java
-**/org/apache/hadoop/hdfs/server/balancer/TestBalancerWithHANameNodes.java
 **/org/apache/hadoop/hdfs/server/balancer/TestBalancerWithMultipleNameNodes.java
 **/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockReportLease.java
 **/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockTokenWithDFSStriped.java
