@@ -172,6 +172,9 @@ child.project.url.inherit.append.path="false">
          release manager bumps this when cutting a release branch. -->
     <hadoop.build.timestamp>2026-01-01T00:00:00Z</hadoop.build.timestamp>
 
+    <!-- repeatability flag is override in the repeatable profile -->
+    <hadoop.build.repeatable>false</hadoop.build.repeatable>
+
     <!-- Recorded in the version resources. Declared here rather than in the
          module that consumes each one, so that the repeatable profile can
          replace them: a module's own properties outrank inherited values.
@@ -1017,6 +1020,8 @@ child.project.url.inherit.append.path="false">
              OS user and the wall clock. TestYarnVersionInfo requires a user
              other than Unknown. -->
         <version-info.scm.static>true</version-info.scm.static>
+        <!-- declare the build is repeatable -->
+        <hadoop.build.repeatable>true</hadoop.build.repeatable>
         <hadoop.build.user>hadoop</hadoop.build.user>
         <hadoop.build.platform>Unknown</hadoop.build.platform>
         <httpfs.build.timestamp>${hadoop.build.timestamp}</httpfs.build.timestamp>
