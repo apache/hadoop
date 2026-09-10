@@ -29,11 +29,6 @@
   <name>Apache Hadoop Annotations</name>
   <packaging>jar</packaging>
 
-  <properties>
-    <!-- this module reads JDK internal API, which the compiler release flag forbids -->
-    <maven.compiler.release></maven.compiler.release>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>io.github.zhtttylz</groupId>
@@ -64,9 +59,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
         <configuration>
-          <!-- build-time doclets; HadoopDocEnvImpl uses jdk.javadoc internals
-               which are not visible to javadoc under the release flag -->
-          <release>${javac.version}</release>
+          <source>${javac.version}</source>
           <excludePackageNames>org.apache.hadoop.classification.tools</excludePackageNames>
         </configuration>
       </plugin>

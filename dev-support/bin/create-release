@@ -182,6 +182,8 @@ function header()
   echo "Version to create      : ${HADOOP_VERSION}"
   echo "Release Candidate Label: ${RC_LABEL##-}"
   echo "Source Version         : ${DEFAULT_HADOOP_VERSION}"
+  echo "Repeatable             : ${REPEATABLE}"
+  echo "Build Timestamp        : \"${BUILD_TIMESTAMP}\""
   printf "\n\n"
 }
 
@@ -192,10 +194,26 @@ function set_defaults
 
   ARTIFACTS_DIR="${BASEDIR}/target/artifacts"
 
+  # project.build.outputTimestamp to stamp into the tarballs on repeatable builds only.
+  # values
+  # fixed: use the repeatable timestamp
+  # git: use git commit
+  # iso/epoch number: use that date
+  # empty or string length = 1: unset. Use the current time (default)
+  BUILD_TIMESTAMP="-"
+  REPEATABLE=false
+
   # Extract Hadoop version from ${BASEDIR}/pom.xml
-  DEFAULT_HADOOP_VERSION=$(grep "<version>" "${BASEDIR}/pom.xml" \
-    | head -1 \
-    | sed  -e 's|^ *<version>||' -e 's|</version>.*$||')
+  # this requires xmlstarlet on the path as the the original grep version broke once
+  # a parent pom was added.
+  # once we get past here, use it later too.
+  DEFAULT_HADOOP_VERSION=$(xmlstarlet sel -t -v "/_:project/_:version" pom.xml)
+  ret=$?
+  if [[ ${ret} != 0 ]]; then
+    hadoop_error "ERROR: xmlstarlet failed to parse pom.xml."
+    hadoop_error "ERROR: verify xmlstarlet is installed."
+    exit 1
+  fi
 
   DEPLOY=false
 
@@ -212,9 +230,7 @@ function set_defaults
   # Extract Java version from ${BASEDIR}/pom.xml
   # doing this outside of maven means we can do this before
   # the docker container comes up...
-  JVM_VERSION=$(grep "<javac.version>" "${BASEDIR}/pom.xml" \
-    | head -1 \
-    | sed  -e 's|^ *<javac.version>||' -e 's|</javac.version>.*$||')
+  JVM_VERSION=$(xmlstarlet sel -t -v "/_:project/_:properties/_:javac.version" "${BASEDIR}/pom.xml")
 
   GIT=$(command -v git)
 
@@ -283,17 +299,20 @@ function usage
 {
   echo "--artifactsdir=[path]   Path to use to store release bits"
   echo "--asfrelease            Make an ASF release"
+  echo "--build-timestamp=[ts]  Override the repeatable build timestamp (ISO, epoch, 'git', 'fixed'))"
   echo "--deploy                Deploy Maven artifacts using ~/.m2/settings.xml"
   echo "--docker                Use Hadoop's Dockerfile for guaranteed environment"
   echo "--dockercache           Use a Docker-private maven cache"
+  echo "--help                  Print the list of supported commands"
   echo "--logdir=[path]         Path to store logs"
+  echo "--mvnargs=[args]        Extra Maven args to be provided when running mvn commands"
   echo "--mvncache=[path]       Path to the maven cache to use"
   echo "--native                Also build the native components"
   echo "--rc-label=[label]      Add this label to the builds"
+  echo "--repeatable            Build with fixed timestamps and host information"
   echo "--security              Emergency security release"
   echo "--sign                  Use .gnupg dir to sign the artifacts and jars"
   echo "--version=[version]     Use an alternative version string"
-  echo "--mvnargs=[args]        Extra Maven args to be provided when running mvn commands"
 }
 
 function option_parse
@@ -304,9 +323,13 @@ function option_parse
     case ${i} in
       --asfrelease)
         ASFRELEASE=true
-        NATIVE=true
-        SIGN=true
         DEPLOY=true
+        NATIVE=true
+        REPEATABLE=true
+        SIGN=true
+      ;;
+      --build-timestamp=*)
+        BUILD_TIMESTAMP=${i#*=}
       ;;
       --artifactsdir=*)
         ARTIFACTS_DIR=${i#*=}
@@ -339,6 +362,9 @@ function option_parse
       --rc-label=*)
         RC_LABEL=${i#*=}
       ;;
+      --repeatable)
+        REPEATABLE=true
+      ;;
       --security)
         SECURITYRELEASE=true
       ;;
@@ -366,6 +392,16 @@ function option_parse
     elif [[ -z "${GPGAGENT}" ]]; then
       hadoop_error "ERROR: No gpg-agent. Disabling signing capability."
       SIGN=false
+    fi
+  fi
+
+  if [[ "${SIGN}" = true ]]; then
+    # Check that a secret key is present, rather than wait until the end of the build.
+    # There's no downgrading here, unlike the other checks; this is a later addition and
+    # less forgiving than earlier release options.
+    if ! "${GPG}" --list-secret-keys 2>/dev/null | grep -q "^sec"; then
+      hadoop_error "ERROR: No gpg secret keys available. Cannot sign release."
+      exit 1
     fi
   fi
 
@@ -399,7 +435,6 @@ function option_parse
       hadoop_error "ERROR: --asfrelease requires --sign. Exiting."
       exit 1
     fi
-
     if [[ "${OSNAME}" = Linux ]]; then
       if [[ "${DOCKER}" = false && "${INDOCKER}" = false ]]; then
         hadoop_error "ERROR: --asfrelease requires --docker on Linux. Exiting."
@@ -411,10 +446,32 @@ function option_parse
     fi
   fi
 
+  # start building the maven argument list.
+  MVN_ARGS=()
+
+  if [[ "${REPEATABLE}" = true ]]; then
+    echo "Build is repeatable"
+    MVN_ARGS=("-Prepeatable" )
+    if [[ "${BUILD_TIMESTAMP}" = "fixed" ]]; then
+      echo "Using timestamp from repeatable build profile"
+    elif [[ "${BUILD_TIMESTAMP}" = git ]]; then
+      BUILD_TIMESTAMP=$(git -C "${BASEDIR}" log -1 --format=%ct)
+      echo "Using git commit timestamp ${BUILD_TIMESTAMP}"
+      MVN_ARGS+=("-Dhadoop.build.timestamp=${BUILD_TIMESTAMP}")
+    elif [[ ${#BUILD_TIMESTAMP} -gt 1 ]]; then
+      if [[ ! "${BUILD_TIMESTAMP}" =~ ^[0-9]+$ \
+          && ! "${BUILD_TIMESTAMP}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[^[:space:]]+$ ]]; then
+        hadoop_error "ERROR: Invalid build timestamp '${BUILD_TIMESTAMP}'. Use ISO-8601, epoch seconds or git."
+        exit 1
+      fi
+      MVN_ARGS+=("-Dhadoop.build.timestamp=${BUILD_TIMESTAMP}")
+    fi
+  fi
+
   if [[ -n "${MVNCACHE}" ]]; then
     mkdir -p "${MVNCACHE}"
     if [[ -d "${MVNCACHE}" ]]; then
-      MVN_ARGS=("-Dmaven.repo.local=${MVNCACHE}")
+      MVN_ARGS+=("-Dmaven.repo.local=${MVNCACHE}")
     fi
   fi
   if [ -n "$MVNEXTRAARGS" ]; then
@@ -448,7 +505,8 @@ function dockermode
   user_id=$(id -u "${user_name}")
   group_id=$(id -g "${user_name}")
 
-  imgname="hadoop/createrelease:${HADOOP_VERSION}_${RANDOM}"
+  dockerfile_hash=$(git -C "${BASEDIR}" hash-object "${DOCKERFILE}")
+  imgname="hadoop/createrelease:${HADOOP_VERSION}_${dockerfile_hash:0:12}"
 
   if [[ -d "${HOME}/.gnupg" ]]; then
     extrad+=("-v" "${HOME}/.gnupg:/home/${user_name}/.gnupg")
@@ -502,15 +560,17 @@ function dockermode
     printf "\n\n"
 
     # force a new image for every run to make it easier to remove later
-    echo "LABEL org.apache.hadoop.create-release=\"cr-${RANDOM}\""
+    echo "LABEL org.apache.hadoop.create-release=\"cr-${dockerfile_hash:0:12}\""
 
-    # setup ownerships, etc
-    echo "RUN groupadd --non-unique -g ${group_id} ${user_name}; exit 0;"
-    echo "RUN useradd -g ${group_id} -u ${user_id} -m ${user_name}; exit 0;"
-    echo "RUN chown -R ${user_name} /home/${user_name}; exit 0;"
+    # setup ownerships, etc.
+    # reports meaningful failure if the user/group already exists rather than fail later.
+    # if there is a failure here: change your user id.
+    echo "RUN existing_group=\$(getent group ${group_id} | cut -d: -f1); named_group_gid=\$(getent group ${user_name} | cut -d: -f3); if [ -n \"\${existing_group}\" ] && [ \"\${existing_group}\" != \"${user_name}\" ]; then echo \"UID/GID setup failed: GID ${group_id} is already used by group \${existing_group}\" >&2; exit 1; fi; if [ -n \"\${named_group_gid}\" ] && [ \"\${named_group_gid}\" != \"${group_id}\" ]; then echo \"UID/GID setup failed: group ${user_name} has GID \${named_group_gid}, expected ${group_id}\" >&2; exit 1; fi; if [ -z \"\${named_group_gid}\" ]; then groupadd -g ${group_id} ${user_name}; fi"
+    echo "RUN existing_user=\$(getent passwd ${user_id} | cut -d: -f1); named_user_uid=\$(getent passwd ${user_name} | cut -d: -f3); if [ -n \"\${existing_user}\" ] && [ \"\${existing_user}\" != \"${user_name}\" ]; then echo \"UID/GID setup failed: UID ${user_id} is already used by user \${existing_user}\" >&2; exit 1; fi; if [ -n \"\${named_user_uid}\" ] && [ \"\${named_user_uid}\" != \"${user_id}\" ]; then echo \"UID/GID setup failed: user ${user_name} has UID \${named_user_uid}, expected ${user_id}\" >&2; exit 1; fi; if [ -z \"\${named_user_uid}\" ]; then useradd -g ${group_id} -u ${user_id} -m ${user_name}; fi"
+    echo "RUN chown -R ${user_id}:${group_id} /home/${user_name}"
     echo "ENV HOME /home/${user_name}"
     echo "RUN mkdir -p /maven"
-    echo "RUN chown -R ${user_name} /maven"
+    echo "RUN chown -R ${user_id}:${group_id} /maven"
 
     # we always force build with the OpenJDK JDK
     # but with the correct version
@@ -523,6 +583,8 @@ function dockermode
     echo "USER ${user_name}"
     printf "\n\n"
   ) | docker build -t "${imgname}" -f - "${BASEDIR}"/dev-support/docker/
+
+  echo "launching docker image ${imgname} with directory mapping ${extrad[*]}"
 
   run docker run -i -t \
     --privileged \
@@ -624,7 +686,8 @@ function makearelease
   # Create the site tarball
   run mv "${BASEDIR}/target/staging/hadoop-project" "${BASEDIR}/target/r${HADOOP_VERSION}/"
   run cd "${BASEDIR}/target/"
-  run tar czpf "hadoop-site-${HADOOP_VERSION}.tar.gz" "r${HADOOP_VERSION}"/*
+  run "${BASEDIR}/dev-support/bin/hadoop-maketar" "${BUILD_TIMESTAMP}" \
+    "hadoop-site-${HADOOP_VERSION}.tar.gz" "r${HADOOP_VERSION}"/*
   run cd "${BASEDIR}"
 
   # Stage SITE tarball
@@ -648,7 +711,8 @@ function makearelease
   run tar -xzpf "hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz"
   run mkdir -p "hadoop-${HADOOP_VERSION}/share/doc/hadoop/"
   run cp -r "${BASEDIR}/target/r${HADOOP_VERSION}"/* "hadoop-${HADOOP_VERSION}/share/doc/hadoop/"
-  run tar -czpf "hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz" "hadoop-${HADOOP_VERSION}"
+  run "${BASEDIR}/dev-support/bin/hadoop-maketar" "${BUILD_TIMESTAMP}" \
+    "hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz" "hadoop-${HADOOP_VERSION}"
   run rm -rf "hadoop-${HADOOP_VERSION}"
 
 }
@@ -690,6 +754,28 @@ function signartifacts
   fi
 }
 
+function write_buildinfo
+{
+  local buildinfo
+  buildinfo="${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}.buildinfo"
+
+  {
+    echo "name = Hadoop"
+    echo "version = ${HADOOP_VERSION}"
+    echo "build-timestamp = ${BUILD_TIMESTAMP}"
+    echo "repeatable = ${REPEATABLE}"
+    echo "jdk = ${JAVA_HOME:-unknown}"
+    echo "maven = ${MVN}"
+    echo
+    echo "[checksums]"
+    for i in "${ARTIFACTS_DIR}"/*; do
+      if [[ "${i}" != "${buildinfo}" && -f "${i}" ]]; then
+        sha512sum --tag "${i}"
+      fi
+    done
+  } > "${buildinfo}"
+}
+
 # find root of the source tree
 BIN=$(hadoop_abs "${BASH_SOURCE:-$0}")
 PARAMS=("$@")
@@ -712,6 +798,7 @@ if [[ "${INDOCKER}" = true || "${DOCKERRAN}" = false ]]; then
 
   makearelease
   releaseret=$?
+  write_buildinfo
 
   signartifacts
 

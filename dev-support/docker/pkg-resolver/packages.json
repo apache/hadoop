@@ -371,5 +371,19 @@
     "debian:13": "yasm",
     "ubuntu:noble": "yasm",
     "ubuntu:noble::arch64": "yasm"
+  },
+  "xmlstarlet": {
+    "debian:12": "xmlstarlet",
+    "debian:13": "xmlstarlet",
+    "ubuntu:noble": "xmlstarlet",
+    "ubuntu:noble::arch64": "xmlstarlet",
+    "rockylinux:8": "xmlstarlet"
+  },
+  "faketime": {
+    "debian:12": "faketime",
+    "debian:13": "faketime",
+    "ubuntu:noble": "faketime",
+    "ubuntu:noble::arch64": "faketime",
+    "rockylinux:8": "faketime"
   }
 }

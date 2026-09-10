@@ -18,13 +18,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
 child.project.url.inherit.append.path="false">
   <modelVersion>4.0.0</modelVersion>
 
-  <parent>
-    <groupId>org.apache</groupId>
-    <artifactId>apache</artifactId>
-    <version>39</version>
-    <relativePath />
-  </parent>
-
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-main</artifactId>
   <version>3.6.0-SNAPSHOT</version>
@@ -114,7 +107,7 @@ child.project.url.inherit.append.path="false">
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!-- maven plugin versions -->
-    <maven-site-plugin.version>3.9.1</maven-site-plugin.version>
+    <maven-site-plugin.version>3.22.0</maven-site-plugin.version>
     <maven-stylus-skin.version>1.5</maven-stylus-skin.version>
     <maven-antrun-plugin.version>1.7</maven-antrun-plugin.version>
     <maven-dependency-plugin.version>3.8.1</maven-dependency-plugin.version>
@@ -138,6 +131,16 @@ child.project.url.inherit.append.path="false">
     <cyclonedx.version>2.9.3</cyclonedx.version>
     <docker-maven-plugin.version>0.29.0</docker-maven-plugin.version>
 
+    <!-- Versions previously supplied by the org.apache:apache:39 parent's
+         pluginManagement; pinned directly because apache 39 cannot be used
+         (it breaks javadoc plugin use). -->
+    <maven-assembly-plugin.version>3.8.0</maven-assembly-plugin.version>
+    <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
+    <maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
+    <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
+    <maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
+    <maven-install-plugin.version>3.1.4</maven-install-plugin.version>
+    <version.tooling.atr>1.0.0-alpha-1</version.tooling.atr>
     <shell-executable>bash</shell-executable>
 
     <leveldbjni.group>org.fusesource.leveldbjni</leveldbjni.group>
@@ -161,17 +164,16 @@ child.project.url.inherit.append.path="false">
     <enforced.java.version>[${javac.version},)</enforced.java.version>
     <enforced.maven.version>[3.9.15,)</enforced.maven.version>
 
-    <!-- consumed by the apache parent to set maven.compiler.release and the
-         java version its own enforcer execution requires -->
-    <javaVersion>${javac.version}</javaVersion>
-    <minimalMavenBuildVersion>${enforced.maven.version}</minimalMavenBuildVersion>
-    <!-- What the dist descriptors already set; keeps tar headers unchanged
-         from the 2.4 output rather than switching to the parent's posix. -->
+    <!-- Historically inherited from the apache parent's posix default; kept as
+         gnu to match what the dist descriptors already expect. -->
     <assembly.tarLongFileMode>gnu</assembly.tarLongFileMode>
 
     <!-- Fixed instant recorded in artifacts built with -Prepeatable; the
          release manager bumps this when cutting a release branch. -->
     <hadoop.build.timestamp>2026-01-01T00:00:00Z</hadoop.build.timestamp>
+
+    <!-- repeatability flag is override in the repeatable profile -->
+    <hadoop.build.repeatable>false</hadoop.build.repeatable>
 
     <!-- Recorded in the version resources. Declared here rather than in the
          module that consumes each one, so that the repeatable profile can
@@ -187,8 +189,7 @@ child.project.url.inherit.append.path="false">
     <httpfs.build.timestamp>${maven.build.timestamp}</httpfs.build.timestamp>
 
     <!-- Off by default; -Prepeatable sets it to ${hadoop.build.timestamp}.
-         A single character disables it, per the maven-archiver convention.
-         Overrides the value inherited from the apache parent. -->
+         A single character disables it, per the maven-archiver convention. -->
     <project.build.outputTimestamp>-</project.build.outputTimestamp>
   </properties>
 
@@ -221,6 +222,64 @@ child.project.url.inherit.append.path="false">
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
           <version>${docker-maven-plugin.version}</version>
+        </plugin>
+        <!-- The following six plugins were previously version-managed by the
+             org.apache:apache:39 parent pom. Configuration is
+             carried over unchanged from that parent. -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>${maven-assembly-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>${maven-source-plugin.version}</version>
+          <configuration>
+            <archive>
+              <manifest>
+                <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+              </manifest>
+            </archive>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>${maven-jar-plugin.version}</version>
+          <configuration>
+            <archive>
+              <manifest>
+                <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+              </manifest>
+            </archive>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>${maven-resources-plugin.version}</version>
+          <configuration>
+            <!-- see https://maven.apache.org/plugins/maven-resources-plugin/examples/filtering-properties-files.html -->
+            <propertiesEncoding>UTF-8 </propertiesEncoding>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>${maven-deploy-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-install-plugin</artifactId>
+          <version>${maven-install-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.tooling</groupId>
+          <artifactId>atr-maven-plugin</artifactId>
+          <version>${version.tooling.atr}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -596,19 +655,6 @@ child.project.url.inherit.append.path="false">
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-remote-resources-plugin</artifactId>
-        <version>${maven-remote-resources-plugin.version}</version>
-        <executions>
-          <!-- Hadoop ships its own L&N bundle from hadoop-build-tools; unbind
-               the apache parent's bundle so jar contents are unchanged. -->
-          <execution>
-            <id>process-resource-bundles</id>
-            <phase>none</phase>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
         <inherited>false</inherited>
         <executions>
@@ -967,13 +1013,15 @@ child.project.url.inherit.append.path="false">
       <id>repeatable</id>
       <properties>
         <!-- Picked up by maven-archiver, maven-assembly-plugin and cyclonedx to
-             normalise archive entry times and drop generation timestamps. -->
+             fix archive entry times and drop generation timestamps. -->
         <project.build.outputTimestamp>${hadoop.build.timestamp}</project.build.outputTimestamp>
 
         <!-- Recorded in the version resources in place of the git checkout, the
              OS user and the wall clock. TestYarnVersionInfo requires a user
              other than Unknown. -->
         <version-info.scm.static>true</version-info.scm.static>
+        <!-- declare the build is repeatable -->
+        <hadoop.build.repeatable>true</hadoop.build.repeatable>
         <hadoop.build.user>hadoop</hadoop.build.user>
         <hadoop.build.platform>Unknown</hadoop.build.platform>
         <httpfs.build.timestamp>${hadoop.build.timestamp}</httpfs.build.timestamp>

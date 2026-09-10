@@ -2277,6 +2277,20 @@
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <configuration>
+            <excludes>
+              <!-- Critical: exclude all cloud credentials from JAR files -->
+              <exclude>**/auth-keys.xml</exclude>
+              <exclude>**/azure-auth-keys.xml</exclude>
+              <exclude>**/azure-bfs-auth-keys.xml</exclude>
+              <!-- Keep any test logging settings out of downstream apps. -->
+              <exclude>**/log4j.properties</exclude>
+            </excludes>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
           <version>${maven-shade-plugin.version}</version>
           <dependencies>
@@ -2316,6 +2330,7 @@
           <artifactId>maven-javadoc-plugin</artifactId>
           <version>${maven-javadoc-plugin.version}</version>
           <configuration>
+            <source>${javac.version}</source>
             <doclint>all</doclint>
             <additionalJOptions>
               <!-- To fix doclet runtime error -->
