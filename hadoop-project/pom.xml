@@ -231,7 +231,7 @@
     <junit.jupiter.version>5.13.3</junit.jupiter.version>
     <junit.platform.version>1.13.3</junit.platform.version>
     <assertj.version>3.12.2</assertj.version>
-    <jline.version>3.9.0</jline.version>
+    <jline.version>3.30.14</jline.version>
     <mockito.version>4.11.0</mockito.version>
     <solr.version>8.11.2</solr.version>
     <openssl-wildfly.version>2.2.5.Final</openssl-wildfly.version>
