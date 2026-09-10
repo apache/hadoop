@@ -15,15 +15,18 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<project name="Hadoop">
+<project xmlns="http://maven.apache.org/DECORATION/2.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/DECORATION/2.0.0 http://maven.apache.org/xsd/decoration-2.0.0.xsd"
+  name="Hadoop">
   <bannerLeft>
     <name>Hadoop</name>
-    <src>http://hadoop.apache.org/images/hadoop-logo.jpg</src>
-    <href>http://hadoop.apache.org/</href>
+    <src>https://hadoop.apache.org/images/hadoop-logo.jpg</src>
+    <href>https://hadoop.apache.org/</href>
   </bannerLeft>
   <bannerRight>
-    <src>http://www.apache.org/images/asf_logo_wide.png</src>
-    <href>http://www.apache.org/</href>
+    <src>https://www.apache.org/images/asf_logo_wide.png</src>
+    <href>https://www.apache.org/</href>
   </bannerRight>
 
   <publishDate position="right"/>
@@ -37,7 +40,7 @@
 
   <body>
     <links position="left">
-      <item name="Wiki" href="http://wiki.apache.org/hadoop" />
+      <item name="Wiki" href="https://wiki.apache.org/hadoop" />
       <item name="git" href="https://gitbox.apache.org/repos/asf/hadoop.git" />
     </links>
 
