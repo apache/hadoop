@@ -14,5 +14,51 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Wraps Yetus' releasedocmaker so that the date it stamps on "unreleased"
+# versions is repeatable: on a -Prepeatable build, faketime pins the wall
+# clock it sees to hadoop.build.timestamp instead of the actual current
+# time, so two builds of the same source produce identical output.
+#
+# Usage: releasedocmaker <repeatable> <timestamp> [releasedocmaker args...]
+#
+# <repeatable> is "true" or "false" (hadoop.build.repeatable).
+# <timestamp> is hadoop.build.timestamp: either an ISO-8601 instant
+# (e.g. 2026-01-01T00:00:00Z) or a number of seconds since the epoch.
+#
+# Note: faketime relies on LD_PRELOAD/DYLD_INSERT_LIBRARIES, which macOS's
+# System Integrity Protection blocks for Apple-signed binaries such as the
+# system python3/date. It works reliably in the Linux release Docker image;
+# on macOS it may silently have no effect on an unpatched toolchain.
+
 BINDIR=$(cd -P -- "$(dirname -- "${BASH_SOURCE-0}")" >/dev/null && pwd -P)
-exec "${BINDIR}/yetus-wrapper" releasedocmaker "$@"
+
+repeatable="$1"
+shift
+timestamp="$1"
+shift
+
+if [[ "${repeatable}" != "true" ]]; then
+  exec "${BINDIR}/yetus-wrapper" releasedocmaker "$@" --usetoday
+fi
+
+# faketime takes the epoch, so given an iso time, the epoch has to be
+# calculated. This uses `date`, which takes different arguments on
+# BSD-based systems from linux.
+if [[ "${timestamp}" =~ ^[0-9]+$ ]]; then
+  epoch="${timestamp}"
+elif date -u -d "${timestamp}" +%s >/dev/null 2>&1; then
+  # GNU date
+  epoch=$(date -u -d "${timestamp}" +%s)
+else
+  # BSD/macOS date
+  epoch=$(date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "${timestamp}" +%s)
+fi
+
+if ! command -v faketime >/dev/null 2>&1; then
+  echo "releasedocmaker: faketime not found on PATH; falling back to the" \
+       "current date instead of hadoop.build.timestamp (${timestamp})." \
+       "Install libfaketime for a repeatable release build." >&2
+  exec "${BINDIR}/yetus-wrapper" releasedocmaker "$@" --usetoday
+fi
+
+exec faketime "@${epoch}" "${BINDIR}/yetus-wrapper" releasedocmaker "$@" --usetoday

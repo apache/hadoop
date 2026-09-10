@@ -1041,6 +1041,13 @@
       <build>
         <plugins>
           <plugin>
+            <!--
+            Yetus connects with Apache Jira to create release notes.
+            This is inherently unreproducible as changes in the JIRA database will result in different
+            notes. The script is set up to try and generate consistent output on
+            repeatable builds when JIRA has not changed the set of issues declared as FIXED for the
+            release for which the release notes are generated.
+            -->
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
             <executions>
@@ -1054,6 +1061,8 @@
                         <executable>${shell-executable}</executable>
                         <arguments>
                             <argument>${basedir}/../../dev-support/bin/releasedocmaker</argument>
+                            <argument>${hadoop.build.repeatable}</argument>
+                            <argument>${hadoop.build.timestamp}</argument>
                             <argument>--index</argument>
                             <argument>--license</argument>
                             <argument>--outputdir</argument>
@@ -1068,7 +1077,6 @@
                             <argument>YARN</argument>
                             <argument>--projecttitle</argument>
                             <argument>Apache Hadoop</argument>
-                            <argument>--usetoday</argument>
                             <argument>--fileversions</argument>
                             <argument>--dirversions</argument>
                             <argument>--version</argument>
