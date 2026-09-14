@@ -17,17 +17,20 @@ from __future__ import print_function
 
 import argparse
 import sys, os
+import socket
 import subprocess
 from datetime import datetime, timedelta
-from urllib import request, error
 import xml.etree.ElementTree as ET
 import re
 import time
 
 TEMP_DIR = "/tmp"
-HADOOP_CONF_DIR = "/etc/hadoop"
+HADOOP_CONF_DIR = None
 YARN_SITE_XML = "yarn-site.xml"
-RM_ADDRESS_PROPERTY_NAME = "yarn.resourcemanager.webapp.address"
+RM_WEBAPP_HTTPS_ADDRESS_KEY = "yarn.resourcemanager.webapp.https.address"
+RM_WEBAPP_HTTP_ADDRESS_KEY = "yarn.resourcemanager.webapp.address"
+RM_ADDRESS = None
+RM_SCHEME = "http"
 
 RM_LOG_REGEX = r"(?<=\")\/logs.+?RESOURCEMANAGER.+?(?=\")"
 NM_LOG_REGEX = r"(?<=\")\/logs.+?NODEMANAGER.+?(?=\")"
@@ -55,35 +58,37 @@ def application_diagnostic():
 
     # Get JStack of the hanging containers
     nm_address = get_nodemanager_address(app_id)
-    app_jstack = create_request("http://{}/ws/v1/node/apps/{}/jstack".format(nm_address, app_id), False)
+    app_jstack = create_request(web_url(RM_SCHEME, nm_address,
+                                        "ws/v1/node/apps/{}/jstack".format(app_id)), False)
     write_output(output_path, "application_jstack", app_jstack)
 
     # Get JStack of the hanging NodeManager
-    nm_jstack = create_request("http://{}/ws/v1/node/jstack".format(nm_address), False)
+    nm_jstack = create_request(web_url(RM_SCHEME, nm_address, "ws/v1/node/jstack"), False)
     write_output(output_path, "nm_{}_jstack".format(nm_address), nm_jstack)
 
     # Get application info
-    app_info= create_request("http://{}/ws/v1/cluster/apps/{}".format(RM_ADDRESS, app_id))
+    app_info= create_request(rm_url("ws/v1/cluster/apps/{}".format(app_id)))
     write_output(output_path, "application_info", app_info)
 
     # Get application attempts
-    app_attempts = create_request("http://{}/ws/v1/cluster/apps/{}/appattempts".format(RM_ADDRESS, app_id))
+    app_attempts = create_request(rm_url("ws/v1/cluster/apps/{}/appattempts".format(app_id)))
     write_output(output_path, "application_attempts", app_attempts)
 
     # Get start_time and end_time of the application
     start_time, end_time = get_application_time(app_info)
 
     # Get RM log
-    log_address = get_node_log_address(RM_ADDRESS, RM_LOG_REGEX)
+    log_address = get_node_log_address(RM_ADDRESS, RM_LOG_REGEX, RM_SCHEME)
     write_output(os.path.join(output_path, "node_log"), "resourcemanager_log",
-                 filter_node_log(log_address, start_time, end_time))
+                 filter_node_log(log_address, start_time, end_time, RM_SCHEME))
 
     # Get NodeManager logs in the duration of containers belonging to app_id
     if "amHostHttpAddress" in app_info:
         app_info = ET.fromstring(app_info)
         nm_address = app_info.find("amHostHttpAddress").text
-        log_address = get_node_log_address(nm_address, NM_LOG_REGEX)
-        write_output(os.path.join(output_path, "node_log"), "nodemanager_log", get_container_log(log_address, app_id))
+        log_address = get_node_log_address(nm_address, NM_LOG_REGEX, RM_SCHEME)
+        write_output(os.path.join(output_path, "node_log"), "nodemanager_log",
+                     get_container_log(log_address, app_id, RM_SCHEME))
 
     # Get application log
     command = run_cmd_and_save_output(os.path.join(output_path, "app_logs"), app_id, "yarn", "logs", "-applicationId",
@@ -109,19 +114,19 @@ def scheduler_related_issue():
     write_output(output_path, "jstacks_resourcemanager", jstacks_output)
 
     # Get Cluster Scheduler Info
-    scheduler_info = create_request("http://{}/ws/v1/cluster/scheduler".format(RM_ADDRESS))
+    scheduler_info = create_request(rm_url("ws/v1/cluster/scheduler"))
     write_output(output_path, "scheduler_info", scheduler_info)
 
     # Get Cluster Nodes Info
-    nodes_info = create_request("http://{}/ws/v1/cluster/nodes".format(RM_ADDRESS))
+    nodes_info = create_request(rm_url("ws/v1/cluster/nodes"))
     write_output(output_path, "nodemanager_info", nodes_info)
 
     # Get Scheduler Activities
-    scheduler_activities = create_request("http://{}/ws/v1/cluster/scheduler/bulk-activities".format(RM_ADDRESS))
+    scheduler_activities = create_request(rm_url("ws/v1/cluster/scheduler/bulk-activities"))
     write_output(output_path, "scheduler_activities", scheduler_activities)
 
     # Get Scheduler Configuration
-    scheduler_config = create_request("http://{}/ws/v1/cluster/scheduler-conf".format(RM_ADDRESS))
+    scheduler_config = create_request(rm_url("ws/v1/cluster/scheduler-conf"))
     write_output(output_path, "scheduler_configuration", scheduler_config)
 
     # Get YARN configuration yarn-site.xml
@@ -131,10 +136,10 @@ def scheduler_related_issue():
     # Get RM Debug log for the last 2 minutes
     enable_debug_log = set_rm_scheduler_log_level("DEBUG")
     print(enable_debug_log)
-    log_address = get_node_log_address(RM_ADDRESS, RM_LOG_REGEX)
+    log_address = get_node_log_address(RM_ADDRESS, RM_LOG_REGEX, RM_SCHEME)
     start_time, end_time = (format_datetime_no_seconds(datetime.now() - timedelta(seconds=120)),
                             format_datetime_no_seconds(datetime.now()))
-    rm_debug_log = filter_node_log(log_address, start_time, end_time)
+    rm_debug_log = filter_node_log(log_address, start_time, end_time, RM_SCHEME)
     write_output(output_path, "rm_debug_log_2min", rm_debug_log)
     enable_info_log = set_rm_scheduler_log_level("INFO")
     print(enable_info_log)
@@ -145,18 +150,68 @@ def scheduler_related_issue():
 
 
 def list_issues():
-    print("application_failed:appId", "application_hanging:appId", "scheduler_related_issue",
-          "rm_nm_start_failure:nodeId", sep="\n")
+    print("application_diagnostic:appId", "scheduler_related_issue", sep="\n")
 
 
-def parse_url_from_conf(conf_file, url_property_name):
+def resolve_hadoop_conf_dir():
+    for conf_dir in ("/etc/hadoop", "/etc/hadoop/conf"):
+        if os.path.isfile(os.path.join(conf_dir, YARN_SITE_XML)):
+            return conf_dir
+
+    print("yarn-site.xml not found under /etc/hadoop or /etc/hadoop/conf")
+    sys.exit(1)
+
+
+def web_url(scheme, address, path=""):
+    if path:
+        return "{}://{}/{}".format(scheme, address, path.lstrip("/"))
+    return "{}://{}".format(scheme, address)
+
+
+def rm_url(path):
+    return web_url(RM_SCHEME, RM_ADDRESS, path)
+
+
+def parse_property_from_conf(conf_file, property_prefix):
     root = ET.parse(os.path.join(HADOOP_CONF_DIR, conf_file))
+    matches = []
     for prop in root.findall("property"):
         prop_name = prop.find("name").text
-        if prop_name == url_property_name:
-            return prop.find("value").text
+        if prop_name.startswith(property_prefix + "."):  # handle HA environment e.g. yarn.resourcemanager.webapp.address.rm1
+            value_elem = prop.find("value")
+            if value_elem is not None and value_elem.text:
+                matches.append((prop_name, value_elem.text.strip()))
+    return matches
 
-    return None
+
+def pick_property_value(matches, property_prefix):
+    if not matches:
+        return None
+    if len(matches) == 1:
+        return matches[0][1]
+
+    current_host = socket.getfqdn().lower()
+    for prop_name, value in matches:
+        host_part = value.split(":")[0].lower()
+        if host_part == current_host:  # Get the address of the current host
+            print("Using {} ({})".format(prop_name, value))
+            return value
+
+
+def resolve_rm_webapp_address():
+    global RM_SCHEME
+    for property_prefix, scheme in (
+        (RM_WEBAPP_HTTPS_ADDRESS_KEY, "https"),
+        (RM_WEBAPP_HTTP_ADDRESS_KEY, "http"),
+    ):
+        matches = parse_property_from_conf(YARN_SITE_XML, property_prefix)
+        address = pick_property_value(matches, property_prefix)
+        if address:
+            RM_SCHEME = scheme
+            return address
+
+    print("RM webapp address not found in {}".format(YARN_SITE_XML))
+    sys.exit(1)
 
 
 def create_output_dir(dir_path):
@@ -193,50 +248,55 @@ def run_cmd_and_save_output(output_path, out_filename, *argv):
         return subprocess.Popen(argv, stdout=f)
 
 
-def create_request(url, xml_type=True):
-    headers = {}
-    # TODO auth can be handled here
+def build_curl_args(url, xml_type=True):
+    curl_args = ["curl", "-sS", "--negotiate", "-u", ":"]
+    if url.startswith("https://"):
+        curl_args.append("-k")
     if xml_type:
-        headers["Accept"] = "application/xml"
+        curl_args.extend(["-H", "Accept: application/xml"])
+    curl_args.append(url)
+    return curl_args
 
+
+def create_request(url, xml_type=True):
+    curl_args = build_curl_args(url, xml_type)
     try:
-        req = request.Request(url, headers=headers)
-        response = request.urlopen(req)
-        response_str = response.read().decode('utf-8')
-    except error.HTTPError as e:
-        response_str = "HTTP error occurred: {} - {}".format(e.code, e.reason)
+        response = subprocess.run(
+            curl_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        return response.stdout.decode('utf-8')
+    except subprocess.CalledProcessError as e:
+        response_str = "curl failed: {}".format(e.stderr.decode('utf-8'))
         print("Request failed: ", response_str)
-    except Exception as e:
-        response_str = "Unexpected error: {}".format(e)
-        print("Request failed: {}".format(response_str))
-
-    return response_str
+        return response_str
 
 
 def get_nodemanager_address(app_id):
-    app_info = create_request("http://{}/ws/v1/cluster/apps/{}".format(RM_ADDRESS, app_id))
+    app_info = create_request(rm_url("ws/v1/cluster/apps/{}".format(app_id)))
     app_info_xml = ET.fromstring(app_info)
     return app_info_xml.find("amHostHttpAddress").text
 
 
-def get_node_log_address(node_address, link_regex):
+def get_node_log_address(node_address, link_regex, scheme="http"):
     try:
-        log_page = create_request("http://{}/logs/".format(node_address), False)
+        log_page = create_request(web_url(scheme, node_address, "logs/"), False)
         matches = re.findall(link_regex, log_page, re.MULTILINE)
         if not matches:
-            return "Warning: No matching log links found at {}/logs/".format(node_address)
+            return "Warning: No matching log links found at {}://{}/logs/".format(scheme, node_address)
         return node_address + matches[0]
     except Exception as e:
         return "Failed to retrieve node logs address from {}: {}".format(node_address, e)
 
 
-def filter_node_log(node_log_address: str, start_time: str, end_time: str):
-    return run_command("curl", "-s", "http://{}".format(node_log_address), "|", "sed", "-n",
-                       "'/{}/,/{}/p'".format(start_time, end_time))
+def filter_node_log(node_log_address, start_time, end_time, scheme="http"):
+    url = web_url(scheme, node_log_address)
+    return run_command(*build_curl_args(url, xml_type=False), "|", "sed", "-n",
+                     "'/{}/,/{}/p'".format(start_time, end_time))
 
 
-def get_container_log(log_address, id):
-    return run_command("curl", "http://{}".format(log_address), "|", "grep", re.sub(r"^(job|application)", "container", id))
+def get_container_log(log_address, id, scheme="http"):
+    url = web_url(scheme, log_address)
+    return run_command(*build_curl_args(url, xml_type=False), "|", "grep",
+                       re.sub(r"^(job|application)", "container", id))
 
 
 def get_application_time(app_info_string):
@@ -273,8 +333,11 @@ def get_multiple_jstack(pids):
 
 
 def set_rm_scheduler_log_level(log_level):
-    return run_command("yarn", "daemonlog", "-setlevel", RM_ADDRESS,
-                       "org.apache.hadoop.yarn.server.resourcemanager.scheduler", log_level)
+    cmd = ["yarn", "daemonlog", "-setlevel", RM_ADDRESS,
+           "org.apache.hadoop.yarn.server.resourcemanager.scheduler", log_level]
+    if RM_SCHEME == "https":
+        cmd.extend(["-protocol", "https"])
+    return run_command(*cmd)
 
 
 def format_datetime_no_seconds(datetime_obj):
@@ -303,11 +366,10 @@ def main():
         list_issues()
         sys.exit(os.EX_OK)
 
-    global RM_ADDRESS
-    RM_ADDRESS = parse_url_from_conf(YARN_SITE_XML, RM_ADDRESS_PROPERTY_NAME)
-    if RM_ADDRESS is None:
-        print("RM address can't be found, exiting...")
-        sys.exit(1)
+    global HADOOP_CONF_DIR, RM_ADDRESS, RM_SCHEME
+    HADOOP_CONF_DIR = resolve_hadoop_conf_dir()
+    RM_ADDRESS = resolve_rm_webapp_address()
+    print("Using RM webapp at {}://{}".format(RM_SCHEME, RM_ADDRESS))
 
     selected_option = ISSUE_MAP[args.command]
     print(selected_option())  # print the resulted output path that will be used by the DiagnosticsService.java
