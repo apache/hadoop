@@ -107,103 +107,105 @@ public class TestFederationRMFailoverProxyProvider {
     final SubClusterId subClusterId = SubClusterId.newInstance("SC-1");
     final MiniYARNCluster cluster = new MiniYARNCluster(
         "testFederationRMFailoverProxyProvider", 3, 0, 1, 1);
+    try {
 
-    conf.setBoolean(YarnConfiguration.FEDERATION_FLUSH_CACHE_FOR_RM_ADDR,
-        facadeFlushCache);
+      conf.setBoolean(YarnConfiguration.FEDERATION_FLUSH_CACHE_FOR_RM_ADDR,
+          facadeFlushCache);
 
-    conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
-    conf.setBoolean(YarnConfiguration.FEDERATION_FAILOVER_ENABLED, true);
-    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
-    conf.set(YarnConfiguration.RM_CLUSTER_ID, "cluster1");
-    conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2,rm3");
+      conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
+      conf.setBoolean(YarnConfiguration.FEDERATION_FAILOVER_ENABLED, true);
+      conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+      conf.set(YarnConfiguration.RM_CLUSTER_ID, "cluster1");
+      conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2,rm3");
 
-    conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
-        2000);
+      conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
+          2000);
 
-    HATestUtil.setRpcAddressForRM("rm1", 10000, conf);
-    HATestUtil.setRpcAddressForRM("rm2", 20000, conf);
-    HATestUtil.setRpcAddressForRM("rm3", 30000, conf);
-    conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, true);
+      HATestUtil.setRpcAddressForRM("rm1", 10000, conf);
+      HATestUtil.setRpcAddressForRM("rm2", 20000, conf);
+      HATestUtil.setRpcAddressForRM("rm3", 30000, conf);
+      conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, true);
 
-    cluster.init(conf);
-    cluster.start();
+      cluster.init(conf);
+      cluster.start();
 
-    // Transition rm3 to active;
-    makeRMActive(subClusterId, cluster, 2);
+      // Transition rm3 to active;
+      makeRMActive(subClusterId, cluster, 2);
 
-    ApplicationClientProtocol client = FederationProxyProviderUtil
-        .createRMProxy(conf, ApplicationClientProtocol.class, subClusterId,
-            UserGroupInformation.getCurrentUser());
+      ApplicationClientProtocol client = FederationProxyProviderUtil
+          .createRMProxy(conf, ApplicationClientProtocol.class, subClusterId,
+              UserGroupInformation.getCurrentUser());
 
-    verify(stateStore, times(1))
-        .getSubClusters(any(GetSubClustersInfoRequest.class));
-
-    // client will retry until the rm becomes active.
-    GetClusterMetricsResponse response =
-        client.getClusterMetrics(GetClusterMetricsRequest.newInstance());
-
-    verify(stateStore, times(1))
-        .getSubClusters(any(GetSubClustersInfoRequest.class));
-
-    // validate response
-    checkResponse(response);
-
-    // transition rm3 to standby
-    cluster.getResourceManager(2).getRMContext().getRMAdminService()
-        .transitionToStandby(new HAServiceProtocol.StateChangeRequestInfo(
-            HAServiceProtocol.RequestSource.REQUEST_BY_USER));
-
-    // Transition rm2 to active;
-    makeRMActive(subClusterId, cluster, 1);
-
-    verify(stateStore, times(1))
-        .getSubClusters(any(GetSubClustersInfoRequest.class));
-
-    threadResponse = null;
-    Thread thread = new Thread(new Runnable() {
-      @Override
-      public void run() {
-        try {
-          // In non flush cache case, we will be hitting the cache with old RM
-          // address and keep failing before the cache is flushed
-          threadResponse =
-              client.getClusterMetrics(GetClusterMetricsRequest.newInstance());
-        } catch (YarnException | IOException e) {
-          e.printStackTrace();
-        }
-      }
-    });
-    thread.start();
-
-    if (!facadeFlushCache) {
-      // Add a wait so that hopefully the thread has started hitting old cached
-      Thread.sleep(500);
-
-      // Should still be hitting cache
       verify(stateStore, times(1))
           .getSubClusters(any(GetSubClustersInfoRequest.class));
 
-      // Force flush cache, so that it will pick up the new RM address
-      FederationStateStoreFacade.getInstance(conf).getSubCluster(subClusterId,
-          true);
-    }
+      // client will retry until the rm becomes active.
+      GetClusterMetricsResponse response =
+          client.getClusterMetrics(GetClusterMetricsRequest.newInstance());
 
-    // Wait for the thread to finish and grab result
-    thread.join();
-    response = threadResponse;
-
-    if (facadeFlushCache) {
-      verify(stateStore, atLeast(2))
+      verify(stateStore, times(1))
           .getSubClusters(any(GetSubClustersInfoRequest.class));
-    } else {
-      verify(stateStore, times(2))
+
+      // validate response
+      checkResponse(response);
+
+      // transition rm3 to standby
+      cluster.getResourceManager(2).getRMContext().getRMAdminService()
+          .transitionToStandby(new HAServiceProtocol.StateChangeRequestInfo(
+              HAServiceProtocol.RequestSource.REQUEST_BY_USER));
+
+      // Transition rm2 to active;
+      makeRMActive(subClusterId, cluster, 1);
+
+      verify(stateStore, times(1))
           .getSubClusters(any(GetSubClustersInfoRequest.class));
+
+      threadResponse = null;
+      Thread thread = new Thread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            // In non flush cache case, we will be hitting the cache with old RM
+            // address and keep failing before the cache is flushed
+            threadResponse =
+                client.getClusterMetrics(GetClusterMetricsRequest.newInstance());
+          } catch (YarnException | IOException e) {
+            e.printStackTrace();
+          }
+        }
+      });
+      thread.start();
+
+      if (!facadeFlushCache) {
+        // Add a wait so that hopefully the thread has started hitting old cached
+        Thread.sleep(500);
+
+        // Should still be hitting cache
+        verify(stateStore, times(1))
+            .getSubClusters(any(GetSubClustersInfoRequest.class));
+
+        // Force flush cache, so that it will pick up the new RM address
+        FederationStateStoreFacade.getInstance(conf).getSubCluster(subClusterId,
+            true);
+      }
+
+      // Wait for the thread to finish and grab result
+      thread.join();
+      response = threadResponse;
+
+      if (facadeFlushCache) {
+        verify(stateStore, atLeast(2))
+            .getSubClusters(any(GetSubClustersInfoRequest.class));
+      } else {
+        verify(stateStore, times(2))
+            .getSubClusters(any(GetSubClustersInfoRequest.class));
+      }
+
+      // validate response
+      checkResponse(response);
+    } finally {
+      cluster.stop();
     }
-
-    // validate response
-    checkResponse(response);
-
-    cluster.stop();
   }
 
   private void checkResponse(GetClusterMetricsResponse response) {

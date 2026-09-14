@@ -1112,6 +1112,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       = "dfs.blockreport.incremental.intervalMsec";
   public static final long    DFS_BLOCKREPORT_INCREMENTAL_INTERVAL_MSEC_DEFAULT
       = 0;
+  public static final String  DFS_DATANODE_IBR_MAX_PENDING_BLOCKS_KEY
+      = "dfs.datanode.ibr.max.pending.blocks";
+  public static final long    DFS_DATANODE_IBR_MAX_PENDING_BLOCKS_DEFAULT
+      = 1000000;
   public static final String  DFS_BLOCKREPORT_INTERVAL_MSEC_KEY = "dfs.blockreport.intervalMsec";
   public static final long    DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT = 6 * 60 * 60 * 1000;
   public static final String  DFS_BLOCKREPORT_INITIAL_DELAY_KEY = "dfs.blockreport.initialDelay";

@@ -228,46 +228,49 @@ public class TestReplication {
     int replicaCount = 0;
     short replFactor = 1;
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    cluster.waitActive();
-    fs = cluster.getFileSystem();
-    dfsClient = new DFSClient(new InetSocketAddress("localhost",
-                              cluster.getNameNodePort()), conf);
+    try {
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
+      dfsClient = new DFSClient(new InetSocketAddress("localhost",
+                                cluster.getNameNodePort()), conf);
   
-    // Create file with replication factor of 1
-    Path file1 = new Path("/tmp/testBadBlockReportOnTransfer/file1");
-    DFSTestUtil.createFile(fs, file1, 1024, replFactor, 0);
-    DFSTestUtil.waitReplication(fs, file1, replFactor);
+      // Create file with replication factor of 1
+      Path file1 = new Path("/tmp/testBadBlockReportOnTransfer/file1");
+      DFSTestUtil.createFile(fs, file1, 1024, replFactor, 0);
+      DFSTestUtil.waitReplication(fs, file1, replFactor);
   
-    // Corrupt the block belonging to the created file
-    ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, file1);
+      // Corrupt the block belonging to the created file
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, file1);
 
-    int blockFilesCorrupted =
-        corruptBlockByDeletingBlockFile?
-            cluster.corruptBlockOnDataNodesByDeletingBlockFile(block) :
-              cluster.corruptBlockOnDataNodes(block);       
+      int blockFilesCorrupted =
+          corruptBlockByDeletingBlockFile?
+              cluster.corruptBlockOnDataNodesByDeletingBlockFile(block) :
+                cluster.corruptBlockOnDataNodes(block);
 
-    assertEquals(replFactor, blockFilesCorrupted, "Corrupted too few blocks");
+      assertEquals(replFactor, blockFilesCorrupted, "Corrupted too few blocks");
 
-    // Increase replication factor, this should invoke transfer request
-    // Receiving datanode fails on checksum and reports it to namenode
-    replFactor = 2;
-    fs.setReplication(file1, replFactor);
+      // Increase replication factor, this should invoke transfer request
+      // Receiving datanode fails on checksum and reports it to namenode
+      replFactor = 2;
+      fs.setReplication(file1, replFactor);
   
-    // Now get block details and check if the block is corrupt
-    blocks = dfsClient.getNamenode().
-              getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
-    while (blocks.get(0).isCorrupt() != true) {
-      try {
-        LOG.info("Waiting until block is marked as corrupt...");
-        Thread.sleep(1000);
-      } catch (InterruptedException ie) {
-      }
+      // Now get block details and check if the block is corrupt
       blocks = dfsClient.getNamenode().
                 getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
+      while (blocks.get(0).isCorrupt() != true) {
+        try {
+          LOG.info("Waiting until block is marked as corrupt...");
+          Thread.sleep(1000);
+        } catch (InterruptedException ie) {
+        }
+        blocks = dfsClient.getNamenode().
+                  getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
+      }
+      replicaCount = blocks.get(0).getLocations().length;
+      assertTrue(replicaCount == 1);
+    } finally {
+      cluster.shutdown();
     }
-    replicaCount = blocks.get(0).getLocations().length;
-    assertTrue(replicaCount == 1);
-    cluster.shutdown();
   }
 
   @Test

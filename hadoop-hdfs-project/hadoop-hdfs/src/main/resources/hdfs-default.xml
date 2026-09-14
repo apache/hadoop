@@ -4509,6 +4509,21 @@
 </property>
 
 <property>
+  <name>dfs.datanode.ibr.max.pending.blocks</name>
+  <value>1000000</value>
+  <description>
+    Maximum number of pending block entries allowed in the IBR
+    (Incremental Block Report) queue per NameNode. When this limit is
+    reached, the queue is cleared to bound the DataNode's heap footprint,
+    and a Full Block Report is scheduled to resync with the NameNode. This
+    protects against unbounded memory growth (and eventual OOM) when a
+    NameNode is unreachable, for example a NameNode id listed in
+    dfs.ha.namenodes.&lt;nsId&gt; whose RPC address is not configured.
+    Set to 0 to disable.
+  </description>
+</property>
+
+<property>
   <name>dfs.checksum.type</name>
   <value>CRC32C</value>
   <description>

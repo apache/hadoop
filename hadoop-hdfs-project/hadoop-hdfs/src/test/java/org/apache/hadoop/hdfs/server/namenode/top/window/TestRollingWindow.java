@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.top.window;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestRollingWindow {
 
@@ -77,6 +78,12 @@ public class TestRollingWindow {
     assertEquals(
         5, window.getSum(time),
         "The sum of rolling window does not reflect rolling effect");
+  }
+
+  @Test
+  public void testRejectsUnevenBucketSize() {
+    assertThrows(IllegalArgumentException.class,
+        () -> new RollingWindow(WINDOW_LEN + 1, BUCKET_CNT));
   }
 
 }

@@ -604,7 +604,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return the corresponding thread pool
    */
   public ThreadPoolExecutor getAsyncExecutorForNamespace(String nsId) {
-    return asyncRouterHandlerExecutors.getOrDefault(nsId, routerDefaultAsyncHandlerExecutor);
+    ThreadPoolExecutor executor =
+        asyncRouterHandlerExecutors.getOrDefault(nsId, routerDefaultAsyncHandlerExecutor);
+    if (rpcMonitor != null && executor != null) {
+      rpcMonitor.recordAsyncHandlerQueueSize(nsId, executor.getQueue().size());
+    }
+    return executor;
   }
 
   /**

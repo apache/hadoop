@@ -105,7 +105,7 @@ public class TestNameNodeRpcServer {
   static final int ITERATIONS_TO_USE = 20;
 
   @Test
-  @Timeout(30000)
+  @Timeout(30)
   public void testNamenodeRpcClientIpProxyWithFailBack() throws Exception {
     // Make 3 nodes & racks so that we have a decent shot of detecting when
     // our change overrides the random choice of datanode.
@@ -165,7 +165,7 @@ public class TestNameNodeRpcServer {
   }
 
   @Test
-  @Timeout(30000)
+  @Timeout(30)
   public void testObserverHandleAddBlock() throws Exception {
     String baseDir = GenericTestUtils.getRandomizedTempPath();
     Configuration conf = new HdfsConfiguration();

@@ -33,6 +33,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -57,9 +58,9 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.Whitebox;
+import org.apache.hadoop.util.JsonUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.eclipse.jetty.util.ajax.JSON;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
@@ -197,7 +198,8 @@ public class TestWebHDFSForHA {
 
       // Mimic the client side logic by parsing the response from server
       //
-      Map<?, ?> m = (Map<?, ?>) JSON.parse(resp.getEntity().toString());
+      Map<?, ?> m = JsonUtils.parse(resp.getEntity().toString(),
+          new TypeReference<Map<String, Object>>() {});
       RemoteException re = JsonUtilClient.toRemoteException(m);
       Exception unwrapped = re.unwrapRemoteException(StandbyException.class);
       assertTrue(unwrapped instanceof StandbyException);

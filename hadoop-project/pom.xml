@@ -76,19 +76,19 @@
     <jaxb.version>2.3.9</jaxb.version>
 
     <!-- jackson versions -->
-    <jackson2.version>2.18.9</jackson2.version>
+    <jackson2.version>2.18.10</jackson2.version>
     <jackson2.databind.version>${jackson2.version}</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
     <httpcore.version>4.4.13</httpcore.version>
-    <httpclient5.version>5.5</httpclient5.version>
-    <httpcore5.version>5.3.6</httpcore5.version>
+    <httpclient5.version>5.6.3</httpclient5.version>
+    <httpcore5.version>5.4.3</httpcore5.version>
 
     <!-- SLF4J/LOG4J version -->
     <slf4j.version>1.7.36</slf4j.version>
     <reload4j.version>1.2.22</reload4j.version>
-    <log4j2.version>2.25.4</log4j2.version>
+    <log4j2.version>2.26.1</log4j2.version>
 
     <!-- com.google.re2j version -->
     <re2j.version>1.1</re2j.version>
@@ -152,9 +152,9 @@
     <jna.version>5.2.0</jna.version>
     <gson.version>2.9.0</gson.version>
     <metrics.version>3.2.4</metrics.version>
-    <netty4.version>4.1.135.Final</netty4.version>
+    <netty4.version>4.1.137.Final</netty4.version>
     <snappy-java.version>1.1.10.4</snappy-java.version>
-    <lz4-java.version>1.11.1</lz4-java.version>
+    <lz4-java.version>1.11.2</lz4-java.version>
     <zstd-jni.version>1.5.7-8</zstd-jni.version>
     <byte-buddy.version>1.17.6</byte-buddy.version>
 
@@ -207,6 +207,7 @@
     <exec-maven-plugin.version>1.3.1</exec-maven-plugin.version>
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
+    <surefire.fork.exitTimeout>60</surefire.fork.exitTimeout>
     <aws-java-sdk.version>1.12.720</aws-java-sdk.version>
     <aws-java-sdk-v2.version>2.35.4</aws-java-sdk-v2.version>
     <amazon-s3-encryption-client-java.version>4.0.0</amazon-s3-encryption-client-java.version>
@@ -923,11 +924,6 @@
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-webapp</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-        <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-util-ajax</artifactId>
         <version>${jetty.version}</version>
       </dependency>
       <dependency>
@@ -2594,6 +2590,7 @@
         <configuration>
           <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>${surefire.fork.timeout}</forkedProcessTimeoutInSeconds>
+          <forkedProcessExitTimeoutInSeconds>${surefire.fork.exitTimeout}</forkedProcessExitTimeoutInSeconds>
           <!-- @{argLine} is Surefire's late (deferred) property substitution: it
                is replaced at test-run time with the value of the "argLine"
                property. jacoco:prepare-agent sets that property to the

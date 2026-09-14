@@ -52,58 +52,59 @@ public class TestHAAuxiliaryPort {
             .addNN(new MiniDFSNNTopology.NNConf("nn1"))
             .addNN(new MiniDFSNNTopology.NNConf("nn2")));
 
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(topology)
         .numDataNodes(0)
-        .build();
-    cluster.transitionToActive(0);
-    cluster.waitActive();
+        .build()) {
+      cluster.transitionToActive(0);
+      cluster.waitActive();
 
-    NameNode nn0 = cluster.getNameNode(0);
-    NameNode nn1 = cluster.getNameNode(1);
+      NameNode nn0 = cluster.getNameNode(0);
+      NameNode nn1 = cluster.getNameNode(1);
 
-    // all the addresses below are valid nn0 addresses
-    NameNodeRpcServer rpcServer0 = (NameNodeRpcServer)nn0.getRpcServer();
-    InetSocketAddress server0RpcAddress = rpcServer0.getRpcAddress();
-    Set<InetSocketAddress> auxAddrServer0 =
-        rpcServer0.getAuxiliaryRpcAddresses();
-    assertEquals(2, auxAddrServer0.size());
+      // all the addresses below are valid nn0 addresses
+      NameNodeRpcServer rpcServer0 = (NameNodeRpcServer)nn0.getRpcServer();
+      InetSocketAddress server0RpcAddress = rpcServer0.getRpcAddress();
+      Set<InetSocketAddress> auxAddrServer0 =
+          rpcServer0.getAuxiliaryRpcAddresses();
+      assertEquals(2, auxAddrServer0.size());
 
-    // all the addresses below are valid nn1 addresses
-    NameNodeRpcServer rpcServer1 = (NameNodeRpcServer)nn1.getRpcServer();
-    InetSocketAddress server1RpcAddress = rpcServer1.getRpcAddress();
-    Set<InetSocketAddress> auxAddrServer1 =
-        rpcServer1.getAuxiliaryRpcAddresses();
-    assertEquals(2, auxAddrServer1.size());
+      // all the addresses below are valid nn1 addresses
+      NameNodeRpcServer rpcServer1 = (NameNodeRpcServer)nn1.getRpcServer();
+      InetSocketAddress server1RpcAddress = rpcServer1.getRpcAddress();
+      Set<InetSocketAddress> auxAddrServer1 =
+          rpcServer1.getAuxiliaryRpcAddresses();
+      assertEquals(2, auxAddrServer1.size());
 
-    // mkdir on nn0 uri 0
-    URI nn0URI = new URI("hdfs://localhost:" +
-        server0RpcAddress.getPort());
-    try (DFSClient client0 = new DFSClient(nn0URI, conf)){
-      client0.mkdirs("/test", null, true);
-      // should be available on other ports also
-      for (InetSocketAddress auxAddr : auxAddrServer0) {
-        nn0URI = new URI("hdfs://localhost:" + auxAddr.getPort());
-        try (DFSClient clientTmp = new DFSClient(nn0URI, conf)) {
-          assertTrue(clientTmp.exists("/test"));
+      // mkdir on nn0 uri 0
+      URI nn0URI = new URI("hdfs://localhost:" +
+          server0RpcAddress.getPort());
+      try (DFSClient client0 = new DFSClient(nn0URI, conf)){
+        client0.mkdirs("/test", null, true);
+        // should be available on other ports also
+        for (InetSocketAddress auxAddr : auxAddrServer0) {
+          nn0URI = new URI("hdfs://localhost:" + auxAddr.getPort());
+          try (DFSClient clientTmp = new DFSClient(nn0URI, conf)) {
+            assertTrue(clientTmp.exists("/test"));
+          }
         }
       }
-    }
 
-    // now perform a failover
-    cluster.shutdownNameNode(0);
-    cluster.transitionToActive(1);
+      // now perform a failover
+      cluster.shutdownNameNode(0);
+      cluster.transitionToActive(1);
 
-    // then try to read the file from the nn1
-    URI nn1URI = new URI("hdfs://localhost:" +
-        server1RpcAddress.getPort());
-    try (DFSClient client1 = new DFSClient(nn1URI, conf)) {
-      assertTrue(client1.exists("/test"));
-      // should be available on other ports also
-      for (InetSocketAddress auxAddr : auxAddrServer1) {
-        nn1URI = new URI("hdfs://localhost:" + auxAddr.getPort());
-        try (DFSClient clientTmp = new DFSClient(nn1URI, conf)) {
-          assertTrue(client1.exists("/test"));
+      // then try to read the file from the nn1
+      URI nn1URI = new URI("hdfs://localhost:" +
+          server1RpcAddress.getPort());
+      try (DFSClient client1 = new DFSClient(nn1URI, conf)) {
+        assertTrue(client1.exists("/test"));
+        // should be available on other ports also
+        for (InetSocketAddress auxAddr : auxAddrServer1) {
+          nn1URI = new URI("hdfs://localhost:" + auxAddr.getPort());
+          try (DFSClient clientTmp = new DFSClient(nn1URI, conf)) {
+            assertTrue(client1.exists("/test"));
+          }
         }
       }
     }
