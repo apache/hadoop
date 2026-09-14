@@ -2073,8 +2073,8 @@ public class SequenceFile {
         if (version >= CUSTOM_COMPRESS_VERSION) {
           String codecClassname = Text.readString(in);
           try {
-            Class<? extends CompressionCodec> codecClass
-              = conf.getClassByName(codecClassname).asSubclass(CompressionCodec.class);
+            Class<? extends CompressionCodec> codecClass =
+                ReflectionUtils.loadUninitedClass(conf, codecClassname, CompressionCodec.class);
             this.codec = ReflectionUtils.newInstance(codecClass, conf);
           } catch (ClassNotFoundException cnfe) {
             throw new IllegalArgumentException("Unknown codec: " + 
