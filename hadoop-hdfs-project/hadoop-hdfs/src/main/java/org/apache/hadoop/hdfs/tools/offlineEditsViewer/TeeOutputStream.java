@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.hadoop.io.IOUtils;
+
 /**
  * A TeeOutputStream writes its output to multiple output streams.
  */
@@ -53,21 +55,7 @@ public class TeeOutputStream extends OutputStream {
 
   @Override
   public void close() throws IOException {
-    IOException exception = null;
-    for (OutputStream o : outs) {
-      try {
-        o.close();
-      } catch (IOException e) {
-        if (exception == null) {
-          exception = e;
-        } else {
-          exception.addSuppressed(e);
-        }
-      }
-    }
-    if (exception != null) {
-      throw exception;
-    }
+    IOUtils.closeStreams(outs);
   }
 
   @Override

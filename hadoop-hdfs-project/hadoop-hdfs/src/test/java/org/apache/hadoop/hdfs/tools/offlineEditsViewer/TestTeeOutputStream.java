@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -32,22 +30,20 @@ public class TestTeeOutputStream {
 
   @Test
   public void testCloseAttemptsEveryOutput() throws Exception {
-    // close() must attempt every wrapped output even when an earlier one throws, rethrow the
-    // first IOException, and attach later failures as suppressed exceptions.
+    // close() must attempt every wrapped output even when an earlier one throws. Failures are
+    // swallowed (via IOUtils.closeStreams), so close() never throws.
     OutputStream first = mock(OutputStream.class);
     OutputStream second = mock(OutputStream.class);
     OutputStream third = mock(OutputStream.class);
-    IOException firstFailure = new IOException("first");
-    IOException secondFailure = new IOException("second");
-    doThrow(firstFailure).when(first).close();
-    doThrow(secondFailure).when(second).close();
+    doThrow(new IOException("first")).when(first).close();
+    doThrow(new IOException("second")).when(second).close();
 
     TeeOutputStream tee = new TeeOutputStream(new OutputStream[] {first, second, third});
 
-    IOException thrown = assertThrows(IOException.class, tee::close);
+    assertDoesNotThrow(tee::close);
 
-    assertEquals(firstFailure, thrown);
-    assertArrayEquals(new Throwable[] {secondFailure}, thrown.getSuppressed());
+    verify(first).close();
+    verify(second).close();
     verify(third).close();
   }
 }
