@@ -29,8 +29,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
 import org.apache.hadoop.fs.azurebfs.MockIntercept;
+import org.apache.hadoop.fs.azurebfs.contracts.services.DfsListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRICS_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRICS_SHOULD_EMIT_ON_IDLE_TIME;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsMetricsManager.ABFS_CLIENT_TIMER_THREAD_NAME;
@@ -124,6 +126,47 @@ public class TestAbfsClient {
         assertThat(isThreadRunning(ABFS_CLIENT_TIMER_THREAD_NAME))
                 .describedAs("Unexpected thread 'abfs-timer-client' found")
                 .isEqualTo(false);
+    }
+
+    /**
+     * Test that {@link AbfsClient#getVersionedFileStatusFromEntry} always builds the
+     * entry path using a forward slash, regardless of the platform-dependent
+     * {@link java.io.File#separator}. On Windows, {@code File.separator} is a
+     * backslash, and using it here used to break browsing of directories whose
+     * child entry names contain a colon (e.g. "dir:name"), because
+     * "\dir:name" gets misparsed as a URI with scheme "\dir".
+     */
+    @Test
+    public void testGetVersionedFileStatusFromEntryUsesForwardSlash() throws Exception {
+        final Configuration configuration = new Configuration();
+        AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, ACCOUNT_NAME);
+
+        AbfsCounters abfsCounters = spy(new AbfsCountersImpl(new URI("abcd")));
+        AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters)
+            .withFileSystemId(UUID.randomUUID().toString()).build();
+
+        AbfsClient client = new AbfsDfsClient(new URL("https://" + ACCOUNT_NAME + "/"),
+                null,
+                abfsConfiguration,
+                (AccessTokenProvider) null,
+                null,
+                null,
+                abfsClientContext);
+
+        final String entryName = "dir:withColon";
+        DfsListResultEntrySchema entry = new DfsListResultEntrySchema()
+            .withName(entryName)
+            .withIsDirectory(true);
+
+        VersionedFileStatus status = client.getVersionedFileStatusFromEntry(entry, null);
+
+        assertThat(status.getPath().toUri().getPath())
+                .describedAs("Entry path must be built with '/' regardless of the "
+                        + "platform's File.separator, so folder names containing ':' "
+                        + "are not misparsed as a URI scheme on Windows")
+                .isEqualTo(FORWARD_SLASH + entryName);
+
+        client.close();
     }
 
     /**
