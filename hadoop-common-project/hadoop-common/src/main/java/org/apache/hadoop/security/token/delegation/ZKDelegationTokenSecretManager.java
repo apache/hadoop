@@ -82,10 +82,6 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       + "zkConnectionTimeout";
   public static final String ZK_DTSM_ZK_SHUTDOWN_TIMEOUT = ZK_CONF_PREFIX
       + "zkShutdownTimeout";
-  // Max time in ms to wait for the key/token cache initial load on startup,
-  // 0 or negative waits indefinitely.
-  public static final String ZK_DTSM_ZK_CACHE_INIT_TIMEOUT = ZK_CONF_PREFIX
-      + "zkCacheInitTimeout";
   public static final String ZK_DTSM_ZNODE_WORKING_PATH = ZK_CONF_PREFIX
       + "znodeWorkingPath";
   public static final String ZK_DTSM_ZK_AUTH_TYPE = ZK_CONF_PREFIX
@@ -118,7 +114,6 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   public static final int ZK_DTSM_ZK_SESSION_TIMEOUT_DEFAULT = 10000;
   public static final int ZK_DTSM_ZK_CONNECTION_TIMEOUT_DEFAULT = 10000;
   public static final int ZK_DTSM_ZK_SHUTDOWN_TIMEOUT_DEFAULT = 10000;
-  public static final int ZK_DTSM_ZK_CACHE_INIT_TIMEOUT_DEFAULT = 0;
   public static final String ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT = "zkdtsm";
   // By default, increase seq number by 100 each time to reduce overflow
   // speed of znode dataVersion which is 32-integer now.
@@ -142,6 +137,14 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private static final ThreadLocal<CuratorFramework> CURATOR_TL =
       new ThreadLocal<CuratorFramework>();
 
+  // Bound on the wait for the initial cache load; 0 waits indefinitely.
+  private static volatile long cacheInitTimeoutMs = 0;
+
+  @VisibleForTesting
+  static void setCacheInitTimeoutMs(long timeoutMs) {
+    cacheInitTimeoutMs = timeoutMs;
+  }
+
   public static void setCurator(CuratorFramework curator) {
     CURATOR_TL.set(curator);
   }
@@ -158,7 +161,6 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private CuratorCacheBridge keyCache;
   private CuratorCacheBridge tokenCache;
   private final int seqNumBatchSize;
-  private final int cacheInitTimeoutMs;
   private int currentSeqNum;
   private int currentMaxSeqNum;
 
@@ -177,8 +179,6 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT);
     isTokenWatcherEnabled = conf.getBoolean(ZK_DTSM_TOKEN_WATCHER_ENABLED,
         ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT);
-    cacheInitTimeoutMs = conf.getInt(ZK_DTSM_ZK_CACHE_INIT_TIMEOUT,
-        ZK_DTSM_ZK_CACHE_INIT_TIMEOUT_DEFAULT);
     
     String workPath = conf.get(ZK_DTSM_ZNODE_WORKING_PATH, ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT);
     String nameSpace = workPath + "/" + ZK_DTSM_NAMESPACE;
@@ -439,8 +439,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       if (cacheInitTimeoutMs > 0) {
         if (!initialized.await(cacheInitTimeoutMs, TimeUnit.MILLISECONDS)) {
           throw new IOException("Timed out after " + cacheInitTimeoutMs
-              + " ms waiting for " + cacheName + " cache initialization, "
-              + "consider increasing " + ZK_DTSM_ZK_CACHE_INIT_TIMEOUT);
+              + " ms waiting for " + cacheName + " cache initialization");
         }
       } else {
         initialized.await();
