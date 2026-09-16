@@ -40,115 +40,6 @@ OUTPUT_TIME_FORMAT_WITHOUT_SECOND = '%Y-%m-%d %H:%M'  # e.g. 2025-05-28 11:57
 NUMBER_OF_JSTACK = 3
 
 
-def application_diagnostic():
-    """
-        Application Logs, Application Info, Application Attempts
-        Multiple JStack of Hanging Containers and NodeManager
-        ResourceManager logs during job duration.
-        NodeManager logs from NodeManager where hanging containers of jobs run during the duration of containers.
-    """
-
-    if args.arguments is None or len(args.arguments) == 0:
-        print("Missing application or job id, exiting...")
-        sys.exit(os.EX_USAGE)
-
-    app_id = args.arguments[0]
-
-    output_path = create_output_dir(os.path.join(TEMP_DIR, app_id))
-
-    # Get JStack of the hanging containers
-    nm_address = get_nodemanager_address(app_id)
-    app_jstack = create_request(web_url(RM_SCHEME, nm_address,
-                                        "ws/v1/node/apps/{}/jstack".format(app_id)), False)
-    write_output(output_path, "application_jstack", app_jstack)
-
-    # Get JStack of the hanging NodeManager
-    nm_jstack = create_request(web_url(RM_SCHEME, nm_address, "ws/v1/node/jstack"), False)
-    write_output(output_path, "nm_{}_jstack".format(nm_address), nm_jstack)
-
-    # Get application info
-    app_info= create_request(rm_url("ws/v1/cluster/apps/{}".format(app_id)))
-    write_output(output_path, "application_info", app_info)
-
-    # Get application attempts
-    app_attempts = create_request(rm_url("ws/v1/cluster/apps/{}/appattempts".format(app_id)))
-    write_output(output_path, "application_attempts", app_attempts)
-
-    # Get start_time and end_time of the application
-    start_time, end_time = get_application_time(app_info)
-
-    # Get RM log
-    log_address = get_node_log_address(RM_ADDRESS, RM_LOG_REGEX, RM_SCHEME)
-    write_output(os.path.join(output_path, "node_log"), "resourcemanager_log",
-                 filter_node_log(log_address, start_time, end_time, RM_SCHEME))
-
-    # Get NodeManager logs in the duration of containers belonging to app_id
-    if "amHostHttpAddress" in app_info:
-        app_info = ET.fromstring(app_info)
-        nm_address = app_info.find("amHostHttpAddress").text
-        log_address = get_node_log_address(nm_address, NM_LOG_REGEX, RM_SCHEME)
-        write_output(os.path.join(output_path, "node_log"), "nodemanager_log",
-                     get_container_log(log_address, app_id, RM_SCHEME))
-
-    # Get application log
-    command = run_cmd_and_save_output(os.path.join(output_path, "app_logs"), app_id, "yarn", "logs", "-applicationId",
-                                      app_id)  # TODO user permission?
-
-    command.communicate()
-    return output_path
-
-
-def scheduler_related_issue():
-    """
-        ResourceManager Scheduler Logs with DEBUG enabled for 2 minutes.
-        Multiple Jstack of ResourceManager
-        YARN and Scheduler Configuration
-        Cluster Scheduler API /ws/v1/cluster/scheduler and Cluster Nodes API /ws/v1/cluster/nodes response
-        Scheduler Activities /ws/v1/cluster/scheduler/bulk-activities response
-    """
-    output_path = create_output_dir(os.path.join(TEMP_DIR, "scheduler_related_issue" + str(time.time()).split(".")[0]))
-
-    # Multiple JStack of ResourceManager
-    rm_pids = get_resourcemanager_pid()
-    jstacks_output = get_multiple_jstack(rm_pids)
-    write_output(output_path, "jstacks_resourcemanager", jstacks_output)
-
-    # Get Cluster Scheduler Info
-    scheduler_info = create_request(rm_url("ws/v1/cluster/scheduler"))
-    write_output(output_path, "scheduler_info", scheduler_info)
-
-    # Get Cluster Nodes Info
-    nodes_info = create_request(rm_url("ws/v1/cluster/nodes"))
-    write_output(output_path, "nodemanager_info", nodes_info)
-
-    # Get Scheduler Activities
-    scheduler_activities = create_request(rm_url("ws/v1/cluster/scheduler/bulk-activities"))
-    write_output(output_path, "scheduler_activities", scheduler_activities)
-
-    # Get Scheduler Configuration
-    scheduler_config = create_request(rm_url("ws/v1/cluster/scheduler-conf"))
-    write_output(output_path, "scheduler_configuration", scheduler_config)
-
-    # Get YARN configuration yarn-site.xml
-    yarn_conf = run_command("cat", os.path.join(HADOOP_CONF_DIR, YARN_SITE_XML))
-    write_output(output_path, "yarn_site", yarn_conf)
-
-    # Get RM Debug log for the last 2 minutes
-    enable_debug_log = set_rm_scheduler_log_level("DEBUG")
-    print(enable_debug_log)
-    log_address = get_node_log_address(RM_ADDRESS, RM_LOG_REGEX, RM_SCHEME)
-    start_time, end_time = (format_datetime_no_seconds(datetime.now() - timedelta(seconds=120)),
-                            format_datetime_no_seconds(datetime.now()))
-    rm_debug_log = filter_node_log(log_address, start_time, end_time, RM_SCHEME)
-    write_output(output_path, "rm_debug_log_2min", rm_debug_log)
-    enable_info_log = set_rm_scheduler_log_level("INFO")
-    print(enable_info_log)
-
-    return output_path
-
-####################################################### Utils Functions ###############################################
-
-
 def list_issues():
     print("application_diagnostic:appId", "scheduler_related_issue", sep="\n")
 
@@ -184,7 +75,7 @@ def parse_property_from_conf(conf_file, property_prefix):
     return matches
 
 
-def pick_property_value(matches, property_prefix):
+def get_current_rm_address(matches):
     if not matches:
         return None
     if len(matches) == 1:
@@ -197,6 +88,10 @@ def pick_property_value(matches, property_prefix):
             print("Using {} ({})".format(prop_name, value))
             return value
 
+    prop_name, value = matches[0]
+    print("Multiple RM webapp addresses found; using {} ({})".format(prop_name, value))
+    return value
+
 
 def resolve_rm_webapp_address():
     global RM_SCHEME
@@ -205,7 +100,7 @@ def resolve_rm_webapp_address():
         (RM_WEBAPP_HTTP_ADDRESS_KEY, "http"),
     ):
         matches = parse_property_from_conf(YARN_SITE_XML, property_prefix)
-        address = pick_property_value(matches, property_prefix)
+        address = get_current_rm_address(matches)
         if address:
             RM_SCHEME = scheme
             return address
@@ -344,6 +239,112 @@ def set_rm_scheduler_log_level(log_level):
 def format_datetime_no_seconds(datetime_obj):
     return datetime_obj.strftime(OUTPUT_TIME_FORMAT_WITHOUT_SECOND)
 
+
+def application_diagnostic():
+    """
+        Application Logs, Application Info, Application Attempts
+        Multiple JStack of Hanging Containers and NodeManager
+        ResourceManager logs during job duration.
+        NodeManager logs from NodeManager where hanging containers of jobs run during the duration of containers.
+    """
+
+    if args.arguments is None or len(args.arguments) == 0:
+        print("Missing application or job id, exiting...")
+        sys.exit(os.EX_USAGE)
+
+    app_id = args.arguments[0]
+
+    output_path = create_output_dir(os.path.join(TEMP_DIR, app_id))
+
+    # Get JStack of the hanging containers
+    nm_address = get_nodemanager_address(app_id)
+    app_jstack = create_request(web_url(RM_SCHEME, nm_address,
+                                        "ws/v1/node/apps/{}/jstack".format(app_id)), False)
+    write_output(output_path, "application_jstack", app_jstack)
+
+    # Get JStack of the hanging NodeManager
+    nm_jstack = create_request(web_url(RM_SCHEME, nm_address, "ws/v1/node/jstack"), False)
+    write_output(output_path, "nm_{}_jstack".format(nm_address), nm_jstack)
+
+    # Get application info
+    app_info= create_request(rm_url("ws/v1/cluster/apps/{}".format(app_id)))
+    write_output(output_path, "application_info", app_info)
+
+    # Get application attempts
+    app_attempts = create_request(rm_url("ws/v1/cluster/apps/{}/appattempts".format(app_id)))
+    write_output(output_path, "application_attempts", app_attempts)
+
+    # Get start_time and end_time of the application
+    start_time, end_time = get_application_time(app_info)
+
+    # Get RM log
+    log_address = get_node_log_address(RM_ADDRESS, RM_LOG_REGEX, RM_SCHEME)
+    write_output(os.path.join(output_path, "node_log"), "resourcemanager_log",
+                 filter_node_log(log_address, start_time, end_time, RM_SCHEME))
+
+    # Get NodeManager logs in the duration of containers belonging to app_id
+    if "amHostHttpAddress" in app_info:
+        app_info = ET.fromstring(app_info)
+        nm_address = app_info.find("amHostHttpAddress").text
+        log_address = get_node_log_address(nm_address, NM_LOG_REGEX, RM_SCHEME)
+        write_output(os.path.join(output_path, "node_log"), "nodemanager_log",
+                     get_container_log(log_address, app_id, RM_SCHEME))
+
+    # Get application log
+    command = run_cmd_and_save_output(os.path.join(output_path, "app_logs"), app_id, "yarn", "logs", "-applicationId",
+                                      app_id)  # TODO user permission?
+
+    command.communicate()
+    return output_path
+
+
+def scheduler_related_issue():
+    """
+        ResourceManager Scheduler Logs with DEBUG enabled for 2 minutes.
+        Multiple Jstack of ResourceManager
+        YARN and Scheduler Configuration
+        Cluster Scheduler API /ws/v1/cluster/scheduler and Cluster Nodes API /ws/v1/cluster/nodes response
+        Scheduler Activities /ws/v1/cluster/scheduler/bulk-activities response
+    """
+    output_path = create_output_dir(os.path.join(TEMP_DIR, "scheduler_related_issue" + str(time.time()).split(".")[0]))
+
+    # Multiple JStack of ResourceManager
+    rm_pids = get_resourcemanager_pid()
+    jstacks_output = get_multiple_jstack(rm_pids)
+    write_output(output_path, "jstacks_resourcemanager", jstacks_output)
+
+    # Get Cluster Scheduler Info
+    scheduler_info = create_request(rm_url("ws/v1/cluster/scheduler"))
+    write_output(output_path, "scheduler_info", scheduler_info)
+
+    # Get Cluster Nodes Info
+    nodes_info = create_request(rm_url("ws/v1/cluster/nodes"))
+    write_output(output_path, "nodemanager_info", nodes_info)
+
+    # Get Scheduler Activities
+    scheduler_activities = create_request(rm_url("ws/v1/cluster/scheduler/bulk-activities"))
+    write_output(output_path, "scheduler_activities", scheduler_activities)
+
+    # Get Scheduler Configuration
+    scheduler_config = create_request(rm_url("ws/v1/cluster/scheduler-conf"))
+    write_output(output_path, "scheduler_configuration", scheduler_config)
+
+    # Get YARN configuration yarn-site.xml
+    yarn_conf = run_command("cat", os.path.join(HADOOP_CONF_DIR, YARN_SITE_XML))
+    write_output(output_path, "yarn_site", yarn_conf)
+
+    # Get RM Debug log for the last 2 minutes
+    enable_debug_log = set_rm_scheduler_log_level("DEBUG")
+    print(enable_debug_log)
+    log_address = get_node_log_address(RM_ADDRESS, RM_LOG_REGEX, RM_SCHEME)
+    start_time, end_time = (format_datetime_no_seconds(datetime.now() - timedelta(seconds=120)),
+                            format_datetime_no_seconds(datetime.now()))
+    rm_debug_log = filter_node_log(log_address, start_time, end_time, RM_SCHEME)
+    write_output(output_path, "rm_debug_log_2min", rm_debug_log)
+    enable_info_log = set_rm_scheduler_log_level("INFO")
+    print(enable_info_log)
+
+    return output_path
 
 def main():
 
