@@ -3373,6 +3373,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
+    FSPermissionChecker.setRenameToTrash(false);
     try {
       writeLock(RwLockMode.FS);
       try {
@@ -3387,6 +3388,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } catch (AccessControlException e)  {
       logAuditEvent(false, operationName, src, dst, null);
       throw e;
+    } finally {
+      FSPermissionChecker.setRenameToTrash(false);
     }
     assert ret != null;
     boolean success = ret.success;
@@ -3405,6 +3408,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
+    final boolean renameToTrash = options != null
+        && Arrays.asList(options).contains(Options.Rename.TO_TRASH);
+    FSPermissionChecker.setRenameToTrash(renameToTrash);
     try {
       writeLock(RwLockMode.GLOBAL);
       try {
@@ -3421,6 +3427,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName + " (options=" +
           Arrays.toString(options) + ")", src, dst, null);
       throw e;
+    } finally {
+      FSPermissionChecker.setRenameToTrash(false);
     }
     getEditLog().logSync();
     assert res != null;
