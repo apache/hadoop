@@ -293,10 +293,11 @@ def filter_node_log(node_log_address, start_time, end_time, scheme="http"):
                      "'/{}/,/{}/p'".format(start_time, end_time))
 
 
-def get_container_log(log_address, id, scheme="http"):
+def get_container_log(log_address, app_id, scheme="http"):
     url = web_url(scheme, log_address)
-    return run_command(*build_curl_args(url, xml_type=False), "|", "grep",
-                       re.sub(r"^(job|application)", "container", id))
+    grep_pattern = re.sub(r"^(job|application)", "container(_e[0-9]+)?", app_id)
+    return run_command(*build_curl_args(url, xml_type=False), "|", "grep", "-E",
+                       '"{}"'.format(grep_pattern))
 
 
 def get_application_time(app_info_string):
