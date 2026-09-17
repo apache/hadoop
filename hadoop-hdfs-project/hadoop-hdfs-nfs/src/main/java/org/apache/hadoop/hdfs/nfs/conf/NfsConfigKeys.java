@@ -25,6 +25,10 @@ public class NfsConfigKeys {
   public final static int DFS_NFS_SERVER_PORT_DEFAULT = 2049;
   public final static String DFS_NFS_MOUNTD_PORT_KEY = "nfs.mountd.port";
   public final static int DFS_NFS_MOUNTD_PORT_DEFAULT = 4242;
+
+  // The bind host for the NFS and mountd servers. Defaults to all interfaces.
+  public static final String DFS_NFS_SERVER_BIND_HOST_KEY = "nfs.server.bind.host";
+  public static final String DFS_NFS_SERVER_BIND_HOST_DEFAULT = "0.0.0.0";
   
   public static final String DFS_NFS_FILE_DUMP_KEY = "nfs.file.dump";
   public static final boolean DFS_NFS_FILE_DUMP_DEFAULT = true;

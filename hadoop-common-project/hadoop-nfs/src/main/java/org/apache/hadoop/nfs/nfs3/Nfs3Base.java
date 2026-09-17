@@ -63,7 +63,7 @@ public abstract class Nfs3Base {
 
   private void startTCPServer() {
     tcpServer = new SimpleTcpServer(rpcProgram.getPort(),
-        rpcProgram, 0);
+        rpcProgram.getBindHost(), rpcProgram, 0);
     rpcProgram.startDaemons();
     try {
       tcpServer.run();

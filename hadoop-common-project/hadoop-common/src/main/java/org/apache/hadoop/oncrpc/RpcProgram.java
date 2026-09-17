@@ -45,6 +45,7 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
   private final String program;
   private final String host;
   private int port; // Ephemeral port is chosen later
+  private final String bindHost;
   private final int progNumber;
   private final int lowProgVersion;
   private final int highProgVersion;
@@ -86,9 +87,35 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
       int lowProgVersion, int highProgVersion,
       DatagramSocket registrationSocket, boolean allowInsecurePorts,
       int portmapUdpTimeoutMillis) {
+    this(program, host, port, progNumber, lowProgVersion, highProgVersion,
+        registrationSocket, allowInsecurePorts, portmapUdpTimeoutMillis,
+        "0.0.0.0");
+  }
+
+  /**
+   * Constructor
+   *
+   * @param program program name
+   * @param host host where the Rpc server program is started
+   * @param port port where the Rpc server program is listening to
+   * @param progNumber program number as defined in RFC 1050
+   * @param lowProgVersion lowest version of the specification supported
+   * @param highProgVersion highest version of the specification supported
+   * @param registrationSocket if not null, use this socket to register
+   *        with portmap daemon
+   * @param allowInsecurePorts true to allow client connections from
+   *        unprivileged ports, false otherwise
+   * @param portmapUdpTimeoutMillis timeout in milliseconds for RPC connection
+   * @param bindHost local address to bind the server socket to
+   */
+  protected RpcProgram(String program, String host, int port, int progNumber,
+      int lowProgVersion, int highProgVersion,
+      DatagramSocket registrationSocket, boolean allowInsecurePorts,
+      int portmapUdpTimeoutMillis, String bindHost) {
     this.program = program;
     this.host = host;
     this.port = port;
+    this.bindHost = bindHost;
     this.progNumber = progNumber;
     this.lowProgVersion = lowProgVersion;
     this.highProgVersion = highProgVersion;
@@ -259,6 +286,10 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
 
   public int getPort() {
     return port;
+  }
+
+  public String getBindHost() {
+    return bindHost;
   }
 
   @VisibleForTesting
