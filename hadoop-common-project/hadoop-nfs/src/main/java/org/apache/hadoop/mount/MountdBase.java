@@ -18,6 +18,7 @@
 package org.apache.hadoop.mount;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 
 import org.apache.hadoop.oncrpc.RpcProgram;
 import org.apache.hadoop.oncrpc.SimpleTcpServer;
@@ -41,6 +42,7 @@ abstract public class MountdBase {
   private final RpcProgram rpcProgram;
   private int udpBoundPort; // Will set after server starts
   private int tcpBoundPort; // Will set after server starts
+  private boolean registered = false;
   private SimpleUdpServer udpServer = null;
   private SimpleTcpServer tcpServer = null;
 
@@ -99,6 +101,7 @@ abstract public class MountdBase {
     startUDPServer();
     startTCPServer();
     if (register) {
+      registered = true;
       ShutdownHookManager.get().addShutdownHook(new Unregister(),
           SHUTDOWN_HOOK_PRIORITY);
       try {
@@ -111,12 +114,20 @@ abstract public class MountdBase {
     }
   }
 
+  public InetSocketAddress getBoundTcpAddress() {
+    return tcpServer != null ? tcpServer.getBoundAddress() : null;
+  }
+
+  public InetSocketAddress getBoundUdpAddress() {
+    return udpServer != null ? udpServer.getBoundAddress() : null;
+  }
+
   public void stop() {
-    if (udpBoundPort > 0) {
+    if (registered && udpBoundPort > 0) {
       rpcProgram.unregister(PortmapMapping.TRANSPORT_UDP, udpBoundPort);
       udpBoundPort = 0;
     }
-    if (tcpBoundPort > 0) {
+    if (registered && tcpBoundPort > 0) {
       rpcProgram.unregister(PortmapMapping.TRANSPORT_TCP, tcpBoundPort);
       tcpBoundPort = 0;
     }

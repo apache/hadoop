@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.nfs.nfs3;
 
+import java.net.InetSocketAddress;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.oncrpc.RpcProgram;
 import org.apache.hadoop.oncrpc.SimpleTcpServer;
@@ -35,6 +37,7 @@ public abstract class Nfs3Base {
   public static final Logger LOG = LoggerFactory.getLogger(Nfs3Base.class);
   private final RpcProgram rpcProgram;
   private int nfsBoundPort; // Will set after server starts
+  private boolean registered = false;
   private SimpleTcpServer tcpServer = null;
 
   public RpcProgram getRpcProgram() {
@@ -50,6 +53,7 @@ public abstract class Nfs3Base {
     startTCPServer(); // Start TCP server
 
     if (register) {
+      registered = true;
       ShutdownHookManager.get().addShutdownHook(new NfsShutdownHook(),
           SHUTDOWN_HOOK_PRIORITY);
       try {
@@ -79,8 +83,12 @@ public abstract class Nfs3Base {
     nfsBoundPort = tcpServer.getBoundPort();
   }
 
+  public InetSocketAddress getBoundAddress() {
+    return tcpServer != null ? tcpServer.getBoundAddress() : null;
+  }
+
   public void stop() {
-    if (nfsBoundPort > 0) {
+    if (registered && nfsBoundPort > 0) {
       rpcProgram.unregister(PortmapMapping.TRANSPORT_TCP, nfsBoundPort);
       nfsBoundPort = 0;
     }
