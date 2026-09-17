@@ -42,7 +42,7 @@ public class TestNfsBindConfiguration {
   @Test
   public void testNfsConfigurationReturnsDefault() {
     NfsConfiguration conf = new NfsConfiguration();
-String bindHost = conf.get(NfsConfigKeys.DFS_NFS_SERVER_BIND_HOST_KEY);
+    String bindHost = conf.get(NfsConfigKeys.DFS_NFS_SERVER_BIND_HOST_KEY);
     assertEquals("0.0.0.0", bindHost);
   }
 

@@ -22,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.InetSocketAddress;
-import java.util.Random;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -60,10 +59,6 @@ public class TestSimpleServerBind {
     }
   }
 
-  private static int randomPort() {
-return 0;
-  }
-
   @Test
   public void testRpcProgramDefaultBindHostIsAllInterfaces() {
     NoopRpcProgram program = new NoopRpcProgram(9999);
@@ -87,7 +82,7 @@ return 0;
 
   @Test
   public void testTcpServerBindsToSpecifiedHost() throws InterruptedException {
-    int port = randomPort();
+    int port = 0;
     NoopRpcProgram program = new NoopRpcProgram(port);
     SimpleTcpServer server = new SimpleTcpServer(port, "127.0.0.1", program, 1);
     try {
@@ -103,7 +98,7 @@ return 0;
 
   @Test
   public void testTcpServerDefaultBindsToAllInterfaces() throws InterruptedException {
-    int port = randomPort();
+    int port = 0;
     NoopRpcProgram program = new NoopRpcProgram(port);
     // Use the legacy single-arg constructor; should bind to 0.0.0.0
     SimpleTcpServer server = new SimpleTcpServer(port, program, 1);
@@ -119,7 +114,7 @@ return 0;
 
   @Test
   public void testUdpServerBindsToSpecifiedHost() throws InterruptedException {
-    int port = randomPort();
+    int port = 0;
     NoopRpcProgram program = new NoopRpcProgram(port);
     SimpleUdpServer server = new SimpleUdpServer(port, "127.0.0.1", program, 1);
     try {
@@ -135,7 +130,7 @@ return 0;
 
   @Test
   public void testUdpServerDefaultBindsToAllInterfaces() throws InterruptedException {
-    int port = randomPort();
+    int port = 0;
     NoopRpcProgram program = new NoopRpcProgram(port);
     // Use the legacy single-arg constructor; should bind to 0.0.0.0
     SimpleUdpServer server = new SimpleUdpServer(port, program, 1);

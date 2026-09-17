@@ -22,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Random;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -94,17 +93,13 @@ public class TestNfsGatewayBindAddress {
     }
   }
 
-  private static int randomHighPort() {
-    return 20000 + new Random().nextInt(10000);
-  }
-
   // -----------------------------------------------------------------------
   // Nfs3Base (TCP) tests
   // -----------------------------------------------------------------------
 
   @Test
   public void testNfs3BaseBindsToConfiguredHost() throws IOException {
-    int port = randomHighPort();
+    int port = 0;
     StubRpcProgram program = new StubRpcProgram(port, "127.0.0.1");
     StubNfs3 nfs3 = new StubNfs3(program);
     try {
@@ -120,7 +115,7 @@ public class TestNfsGatewayBindAddress {
 
   @Test
   public void testNfs3BaseDefaultBindsToAllInterfaces() throws IOException {
-    int port = randomHighPort();
+    int port = 0;
     StubRpcProgram program = new StubRpcProgram(port, "0.0.0.0");
     StubNfs3 nfs3 = new StubNfs3(program);
     try {
@@ -140,7 +135,7 @@ public class TestNfsGatewayBindAddress {
 
   @Test
   public void testMountdBaseBindsToConfiguredHost() throws IOException {
-    int port = randomHighPort();
+    int port = 0;
     StubRpcProgram program = new StubRpcProgram(port, "127.0.0.1");
     StubMountd mountd = new StubMountd(program);
     try {
@@ -161,7 +156,7 @@ public class TestNfsGatewayBindAddress {
 
   @Test
   public void testMountdBaseDefaultBindsToAllInterfaces() throws IOException {
-    int port = randomHighPort();
+    int port = 0;
     StubRpcProgram program = new StubRpcProgram(port, "0.0.0.0");
     StubMountd mountd = new StubMountd(program);
     try {
