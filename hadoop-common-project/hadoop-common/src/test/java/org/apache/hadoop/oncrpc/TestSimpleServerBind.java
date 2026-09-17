@@ -61,7 +61,7 @@ public class TestSimpleServerBind {
   }
 
   private static int randomPort() {
-    return 20000 + new Random().nextInt(10000);
+return 0;
   }
 
   @Test
