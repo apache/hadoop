@@ -89,7 +89,7 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
       int portmapUdpTimeoutMillis) {
     this(program, host, port, progNumber, lowProgVersion, highProgVersion,
         registrationSocket, allowInsecurePorts, portmapUdpTimeoutMillis,
-        "0.0.0.0");
+        null);
   }
 
   /**

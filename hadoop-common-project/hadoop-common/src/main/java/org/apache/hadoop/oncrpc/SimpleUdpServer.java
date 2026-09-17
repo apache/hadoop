@@ -53,7 +53,7 @@ public class SimpleUdpServer {
 
   public SimpleUdpServer(int port, ChannelInboundHandlerAdapter program,
       int workerCount) {
-    this(port, "0.0.0.0", program, workerCount);
+    this(port, null, program, workerCount);
   }
 
   public SimpleUdpServer(int port, String bindHost,
@@ -86,7 +86,9 @@ public class SimpleUdpServer {
         });
 
     // Listen to the UDP port
-    ChannelFuture f = server.bind(new InetSocketAddress(bindHost, port)).sync();
+    ChannelFuture f = server.bind(bindHost != null
+        ? new InetSocketAddress(bindHost, port)
+        : new InetSocketAddress(port)).sync();
     ch = f.channel();
     InetSocketAddress socketAddr = (InetSocketAddress) ch.localAddress();
     boundPort = socketAddr.getPort();

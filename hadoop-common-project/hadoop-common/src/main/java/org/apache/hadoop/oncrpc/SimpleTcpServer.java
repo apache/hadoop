@@ -58,7 +58,7 @@ public class SimpleTcpServer {
    * @param workercount Number of worker threads
    */
   public SimpleTcpServer(int port, RpcProgram program, int workercount) {
-    this(port, "0.0.0.0", program, workercount);
+    this(port, null, program, workercount);
   }
 
   /**
@@ -98,7 +98,9 @@ public class SimpleTcpServer {
         .option(ChannelOption.SO_REUSEADDR, true);
 
     // Listen to TCP port
-    ChannelFuture f = server.bind(new InetSocketAddress(bindHost, port)).sync();
+    ChannelFuture f = server.bind(bindHost != null
+        ? new InetSocketAddress(bindHost, port)
+        : new InetSocketAddress(port)).sync();
     ch = f.channel();
     InetSocketAddress socketAddr = (InetSocketAddress) ch.localAddress();
     boundPort = socketAddr.getPort();

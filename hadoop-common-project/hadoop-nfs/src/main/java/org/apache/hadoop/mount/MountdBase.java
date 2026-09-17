@@ -98,10 +98,10 @@ abstract public class MountdBase {
   }
 
   public void start(boolean register) {
+    registered = register;
     startUDPServer();
     startTCPServer();
     if (register) {
-      registered = true;
       ShutdownHookManager.get().addShutdownHook(new Unregister(),
           SHUTDOWN_HOOK_PRIORITY);
       try {

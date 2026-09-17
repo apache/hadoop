@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.oncrpc;
 
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -60,10 +61,11 @@ public class TestSimpleServerBind {
   }
 
   @Test
-  public void testRpcProgramDefaultBindHostIsAllInterfaces() {
+  public void testRpcProgramDefaultBindHostIsNull() {
     NoopRpcProgram program = new NoopRpcProgram(9999);
-    // Legacy constructor should default to 0.0.0.0
-    assertEquals("0.0.0.0", program.getBindHost());
+    // Legacy constructor leaves bindHost null so the server uses new InetSocketAddress(port),
+    // which respects the JVM's preferred wildcard (0.0.0.0 or :: for IPv6).
+    assertNull(program.getBindHost());
   }
 
   @Test
@@ -97,16 +99,18 @@ public class TestSimpleServerBind {
   }
 
   @Test
-  public void testTcpServerDefaultBindsToAllInterfaces() throws InterruptedException {
+  public void testTcpServerDefaultBindsToWildcard() throws InterruptedException {
     int port = 0;
     NoopRpcProgram program = new NoopRpcProgram(port);
-    // Use the legacy single-arg constructor; should bind to 0.0.0.0
+    // Legacy constructor uses new InetSocketAddress(port) — the JVM's wildcard
+    // (0.0.0.0 on IPv4, :: on IPv6-first JVMs).
     SimpleTcpServer server = new SimpleTcpServer(port, program, 1);
     try {
       server.run();
       InetSocketAddress addr = server.getBoundAddress();
       assertNotNull(addr);
-      assertEquals("0.0.0.0", addr.getAddress().getHostAddress());
+      assertTrue(addr.getAddress().isAnyLocalAddress(),
+          "Legacy constructor should bind to the JVM wildcard address");
     } finally {
       server.shutdown();
     }
@@ -129,16 +133,18 @@ public class TestSimpleServerBind {
   }
 
   @Test
-  public void testUdpServerDefaultBindsToAllInterfaces() throws InterruptedException {
+  public void testUdpServerDefaultBindsToWildcard() throws InterruptedException {
     int port = 0;
     NoopRpcProgram program = new NoopRpcProgram(port);
-    // Use the legacy single-arg constructor; should bind to 0.0.0.0
+    // Legacy constructor uses new InetSocketAddress(port) — the JVM's wildcard
+    // (0.0.0.0 on IPv4, :: on IPv6-first JVMs).
     SimpleUdpServer server = new SimpleUdpServer(port, program, 1);
     try {
       server.run();
       InetSocketAddress addr = server.getBoundAddress();
       assertNotNull(addr);
-      assertEquals("0.0.0.0", addr.getAddress().getHostAddress());
+      assertTrue(addr.getAddress().isAnyLocalAddress(),
+          "Legacy constructor should bind to the JVM wildcard address");
     } finally {
       server.shutdown();
     }

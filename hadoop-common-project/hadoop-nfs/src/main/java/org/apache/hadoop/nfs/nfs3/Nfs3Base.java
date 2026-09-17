@@ -50,10 +50,10 @@ public abstract class Nfs3Base {
   }
 
   public void start(boolean register) {
+    registered = register;
     startTCPServer(); // Start TCP server
 
     if (register) {
-      registered = true;
       ShutdownHookManager.get().addShutdownHook(new NfsShutdownHook(),
           SHUTDOWN_HOOK_PRIORITY);
       try {
