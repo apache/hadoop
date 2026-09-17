@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
@@ -90,6 +91,15 @@ class StripedBlockWriter {
     init();
   }
 
+  static boolean prepareRetryAfterInvalidEncryptionKey(
+      DataEncryptionKeyFactory keyFactory, int retryCount) {
+    if (retryCount > 1) {
+      return false;
+    }
+    keyFactory.clearDataEncryptionKey();
+    return true;
+  }
+
   ByteBuffer getTargetBuffer() {
     return targetBuffer;
   }
@@ -113,12 +123,6 @@ class StripedBlockWriter {
     try {
       InetSocketAddress targetAddr =
           stripedWriter.getSocketAddress4Transfer(target);
-      socket = datanode.newSocket();
-      NetUtils.connect(socket, targetAddr,
-          datanode.getDnConf().getSocketTimeout());
-      socket.setTcpNoDelay(
-          datanode.getDnConf().getDataTransferServerTcpNoDelay());
-      socket.setSoTimeout(datanode.getDnConf().getSocketTimeout());
       DataNodeFaultInjector.get().stripedBlockWriterInit(targetBuffer);
 
       Token<BlockTokenIdentifier> blockToken =
@@ -127,15 +131,35 @@ class StripedBlockWriter {
               new StorageType[]{storageType}, new String[]{storageId});
 
       long writeTimeout = datanode.getDnConf().getSocketWriteTimeout();
-      OutputStream unbufOut = NetUtils.getOutputStream(socket, writeTimeout);
-      InputStream unbufIn = NetUtils.getInputStream(socket);
       DataEncryptionKeyFactory keyFactory =
           datanode.getDataEncryptionKeyFactoryForBlock(block);
-      IOStreamPair saslStreams = datanode.getSaslClient().socketSend(
-          socket, unbufOut, unbufIn, keyFactory, blockToken, target);
-
-      unbufOut = saslStreams.out;
-      unbufIn = saslStreams.in;
+      OutputStream unbufOut;
+      InputStream unbufIn;
+      int encryptionKeyRetryCount = 0;
+      while (true) {
+        try {
+          socket = datanode.newSocket();
+          NetUtils.connect(socket, targetAddr,
+              datanode.getDnConf().getSocketTimeout());
+          socket.setTcpNoDelay(
+              datanode.getDnConf().getDataTransferServerTcpNoDelay());
+          socket.setSoTimeout(datanode.getDnConf().getSocketTimeout());
+          unbufOut = NetUtils.getOutputStream(socket, writeTimeout);
+          unbufIn = NetUtils.getInputStream(socket);
+          IOStreamPair saslStreams = datanode.getSaslClient().socketSend(
+              socket, unbufOut, unbufIn, keyFactory, blockToken, target);
+          unbufOut = saslStreams.out;
+          unbufIn = saslStreams.in;
+          break;
+        } catch (InvalidEncryptionKeyException e) {
+          IOUtils.closeSocket(socket);
+          socket = null;
+          if (!prepareRetryAfterInvalidEncryptionKey(keyFactory,
+              ++encryptionKeyRetryCount)) {
+            throw e;
+          }
+        }
+      }
 
       out = new DataOutputStream(new BufferedOutputStream(unbufOut,
           DFSUtilClient.getSmallBufferSize(conf)));
