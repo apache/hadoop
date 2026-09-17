@@ -115,7 +115,7 @@ public class DatanodeManager {
   private final NetworkTopology networktopology;
 
   /** Configuration retained for building affinity-group topologies. */
-  private final Configuration conf;
+  private final Configuration configuration;
 
   /** Optional affinity manager providing favored DataNodes for block placement. */
   private DatanodeAffinityManager datanodeAffinityManager;
@@ -252,7 +252,7 @@ public class DatanodeManager {
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
-    this.conf = conf;
+    this.configuration = conf;
 
     this.useDfsNetworkTopology = conf.getBoolean(
         DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY,
@@ -593,7 +593,7 @@ public class DatanodeManager {
    */
   NetworkTopology createEmptyTopology() throws IOException {
     try {
-      return NetworkTopology.getInstance(conf);
+      return NetworkTopology.getInstance(configuration);
     } catch (Exception e) {
       LOG.warn("Failed to initialize NetworkTopology for affinity group", e);
       throw new IOException(e);

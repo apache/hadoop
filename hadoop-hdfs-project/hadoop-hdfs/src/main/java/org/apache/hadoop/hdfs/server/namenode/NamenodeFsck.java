@@ -578,7 +578,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
    *   Affinity favored nodes: DatanodeAffinityManager not configured
    * </pre>
    */
-  private void printFavoredNodes(String path) {
+  private void printFavoredNodes(String filePath) {
     DatanodeAffinityManager affinityManager =
         blockManager.getDatanodeManager().getDatanodeAffinityManager();
     if (affinityManager == null) {
@@ -602,7 +602,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
             entry.getKey(), e.getMessage());
         continue;
       }
-      if (keyPattern.matcher(path).find()) {
+      if (keyPattern.matcher(filePath).find()) {
         for (String addr : entry.getValue()) {
           if (seen.add(addr)) {
             favoredNodes.add(addr);

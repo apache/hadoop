@@ -469,7 +469,7 @@ public class BlockManager implements BlockStatsMXBean {
   private final BlockStoragePolicySuite storagePolicySuite;
 
   /** Configuration stored for rebuilding per-affinity-group placement policies. */
-  private Configuration conf;
+  private Configuration configuration;
 
   /**
    * Pairs a file-path {@link Pattern} with the {@link BlockPlacementPolicies}
@@ -481,15 +481,15 @@ public class BlockManager implements BlockStatsMXBean {
    * small in-pool node set and never needs a large exclusion list.
    */
   static final class AffinityPlacementGroup {
-    final Pattern pathPattern;
-    final BlockPlacementPolicies policies;
+    private final Pattern pathPattern;
+    private final BlockPlacementPolicies policies;
     /**
      * The group's restricted topology (same instance the {@link #policies} are
      * bound to). Retained so {@link #chooseTarget4AdditionalDatanode} can test
      * whether an existing pipeline's surviving replicas actually live inside
      * this group before routing recovery through the group's (small) policy.
      */
-    final NetworkTopology topology;
+    private final NetworkTopology topology;
 
     AffinityPlacementGroup(Pattern pathPattern, BlockPlacementPolicies policies,
         NetworkTopology topology) {
@@ -582,7 +582,7 @@ public class BlockManager implements BlockStatsMXBean {
         conf, datanodeManager.getFSClusterStats(),
         datanodeManager.getNetworkTopology(),
         datanodeManager.getHost2DatanodeMap());
-    this.conf = conf;
+    this.configuration = conf;
     // DatanodeManager already initialised the DatanodeAffinityManager (and
     // therefore ran refresh()) in its constructor, so group topologies are
     // ready to build the per-affinity-group placement policies.
@@ -914,7 +914,7 @@ public class BlockManager implements BlockStatsMXBean {
             datanodeManager.getNetworkTopology(),
             datanodeManager.getHost2DatanodeMap());
     placementPolicies = bpp;
-    this.conf = conf;
+    this.configuration = conf;
     buildAffinityBasedBlockPlacementPolicies();
   }
 
@@ -946,12 +946,12 @@ public class BlockManager implements BlockStatsMXBean {
           new ArrayList<>(topologies.size());
       for (DatanodeAffinityManager.AffinityGroupTopology entry : topologies) {
         final BlockPlacementPolicies groupPolicies = new BlockPlacementPolicies(
-            conf,
+            configuration,
             datanodeManager.getFSClusterStats(),
-            entry.topology,
+            entry.getTopology(),
             datanodeManager.getHost2DatanodeMap());
-        groups.add(new AffinityPlacementGroup(entry.pathPattern, groupPolicies,
-            entry.topology));
+        groups.add(new AffinityPlacementGroup(entry.getPathPattern(),
+            groupPolicies, entry.getTopology()));
       }
       affinityPlacementGroups = Collections.unmodifiableList(groups);
       LOG.info("BlockManager: rebuilt {} affinity placement group(s)",

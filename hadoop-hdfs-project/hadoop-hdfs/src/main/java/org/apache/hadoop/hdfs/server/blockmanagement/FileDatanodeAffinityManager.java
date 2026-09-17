@@ -73,9 +73,9 @@ public class FileDatanodeAffinityManager extends DatanodeAffinityManager {
 
   /** JSON-deserializable representation of one affinity group object. */
   static final class AffinityGroupEntry {
-    @JsonProperty("affinityGroupName") public String affinityGroupName;
-    @JsonProperty("regexPattern")      public String regexPattern;
-    @JsonProperty("datanodeRegex")     public String datanodeRegex;
+    @JsonProperty("affinityGroupName") private String affinityGroupName;
+    @JsonProperty("regexPattern")      private String regexPattern;
+    @JsonProperty("datanodeRegex")     private String datanodeRegex;
   }
 
   // -------------------------------------------------------------------------

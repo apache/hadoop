@@ -866,8 +866,8 @@ public class TestDatanodeAffinityBlockPlacement {
     NetworkTopology groupTopo = null;
     for (DatanodeAffinityManager.AffinityGroupTopology g :
         affinityManager.getAffinityGroupTopologies()) {
-      if (g.pathPattern.matcher(AFFINITY_DIR + "/x").find()) {
-        groupTopo = g.topology;
+      if (g.getPathPattern().matcher(AFFINITY_DIR + "/x").find()) {
+        groupTopo = g.getTopology();
         break;
       }
     }
@@ -935,8 +935,8 @@ public class TestDatanodeAffinityBlockPlacement {
     NetworkTopology groupTopo = null;
     for (DatanodeAffinityManager.AffinityGroupTopology g :
         affinityManager.getAffinityGroupTopologies()) {
-      if (g.pathPattern.matcher(AFFINITY_DIR + "/x").find()) {
-        groupTopo = g.topology;
+      if (g.getPathPattern().matcher(AFFINITY_DIR + "/x").find()) {
+        groupTopo = g.getTopology();
         break;
       }
     }
@@ -1012,12 +1012,12 @@ public class TestDatanodeAffinityBlockPlacement {
         affinityManager.getAffinityGroupTopologies();
     assertFalse(topos.isEmpty(), "At least one affinity group topology must exist");
     for (DatanodeAffinityManager.AffinityGroupTopology g : topos) {
-      assertNotNull(g.topology, "Group topology must be non-null");
-      assertFalse(g.topology instanceof DFSNetworkTopology,
+      assertNotNull(g.getTopology(), "Group topology must be non-null");
+      assertFalse(g.getTopology() instanceof DFSNetworkTopology,
           "Affinity group topology must NOT be a storage-type-aware "
               + "DFSNetworkTopology (its captured storage counts go stale for "
               + "affinity nodes and break placement after a NameNode restart)");
-      assertSame(NetworkTopology.class, g.topology.getClass(),
+      assertSame(NetworkTopology.class, g.getTopology().getClass(),
           "Affinity group topology must be exactly a plain "
               + "NetworkTopology");
     }

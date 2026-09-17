@@ -87,11 +87,11 @@ public abstract class DatanodeAffinityManager implements Configurable {
    */
   public static final class AffinityRecord {
     /** Human-readable group name, used for logging. */
-    public final String groupName;
+    private final String groupName;
     /** Java regex matched against the HDFS source path. */
-    public final String regexPattern;
+    private final String regexPattern;
     /** Java regex matched against cluster datanode hostnames. */
-    public final String datanodesRegex;
+    private final String datanodesRegex;
 
     public AffinityRecord(String groupName, String regexPattern,
         String datanodesRegex) {
@@ -121,7 +121,7 @@ public abstract class DatanodeAffinityManager implements Configurable {
   }
 
   /** Reference to the DatanodeManager for enumerating live cluster nodes. */
-  protected DatanodeManager datanodeManager;
+  private DatanodeManager datanodeManager;
 
   /**
    * Primary map to store file-regex to list of datanodes.
@@ -175,13 +175,21 @@ public abstract class DatanodeAffinityManager implements Configurable {
    */
   public static final class AffinityGroupTopology {
     /** File-path regex that identifies this affinity group. */
-    public final Pattern pathPattern;
+    private final Pattern pathPattern;
     /** NetworkTopology containing only this group's eligible DataNodes. */
-    public final NetworkTopology topology;
+    private final NetworkTopology topology;
 
     AffinityGroupTopology(Pattern pathPattern, NetworkTopology topology) {
       this.pathPattern = pathPattern;
       this.topology = topology;
+    }
+
+    public Pattern getPathPattern() {
+      return pathPattern;
+    }
+
+    public NetworkTopology getTopology() {
+      return topology;
     }
   }
 
@@ -257,56 +265,21 @@ public abstract class DatanodeAffinityManager implements Configurable {
     }
   }
 
-  private void internalRefresh() throws IOException {
-    List<AffinityRecord> records = loadAffinityRecords();
-
-    // Idempotency: skip the expensive datanode-resolution and topology-rebuild
-    // when the backing store returns exactly the same records as last time.
-    // The comparison is ORDER-SENSITIVE (List.equals): affinity group
-    // precedence is "first declared wins", so a pure reorder of overlapping
-    // rules is a semantic config change that must trigger a rebuild.
-    List<AffinityRecord> previous = this.lastLoadedRecords;
-    if (previous != null && records.equals(previous)) {
-      LOG.debug("DatanodeAffinityManager: records unchanged ({} record(s)),"
-          + " skipping rebuild", records.size());
-      // Even when the affinity records are identical, the set of live
-      // DataNodes may have changed since the last full rebuild (e.g. a node
-      // restarted, decommissioned, or was added between refreshes).  Re-run
-      // the default-topology reconciliation against the current isolated set
-      // so an explicit -refreshNodes always leaves the default topology
-      // consistent instead of returning early with stale membership.
-      if (datanodeManager != null && this.isolatedDatanodes != null) {
-        datanodeManager.postAffinityRefresh(this.isolatedDatanodes);
-      }
-      return;
-    }
-
-    Collection<DatanodeDescriptor> allDatanodes = datanodeManager != null
-        ? datanodeManager.getAllDatanodes()
-        : Collections.emptyList();
-
-    // Use ConcurrentHashMap so that onDatanodeRegistered() can safely read
-    // entries concurrently.  Values are CopyOnWriteArrayList so individual
-    // appends by onDatanodeRegistered() are thread-safe without locking the
-    // whole map.
-    Map<String, List<String>> newMap =
-        new ConcurrentHashMap<>();
-
-    // Per-group restricted NetworkTopology: contains only the eligible nodes
-    // for each affinity group.  ConcurrentHashMap for safe concurrent reads.
-    Map<String, NetworkTopology> newRegexToTopology = new ConcurrentHashMap<>();
-
-    // Compiled (datanodePattern → fileRegex) pairs for incremental updates.
-    List<AbstractMap.SimpleEntry<Pattern, String>> newDnPatterns =
-        new ArrayList<>();
-
-    // Distinct path regexes in declaration order. Group precedence for an
-    // overlapping path is "first declared wins" (findAffinityGroup returns the
-    // first match), so this list -- not the unordered ConcurrentHashMap -- must
-    // drive the order of affinityGroupTopologies to keep placement
-    // deterministic across refreshes.
-    LinkedHashSet<String> orderedRegexes = new LinkedHashSet<>();
-
+  /**
+   * Compile each affinity record and populate the per-refresh working
+   * structures: the path-regex to node-list map, the per-group restricted
+   * topologies, the datanode-pattern list consumed by
+   * {@link #onDatanodeRegistered(DatanodeDescriptor)}, and the
+   * declaration-ordered set of path regexes.  Records with a missing or invalid
+   * regex are skipped (and logged) so a single bad row never aborts the whole
+   * refresh.
+   */
+  private void buildRegexMappings(List<AffinityRecord> records,
+      Collection<DatanodeDescriptor> allDatanodes,
+      Map<String, List<String>> newMap,
+      Map<String, NetworkTopology> newRegexToTopology,
+      List<AbstractMap.SimpleEntry<Pattern, String>> newDnPatterns,
+      LinkedHashSet<String> orderedRegexes) {
     for (AffinityRecord record : records) {
       try {
         // Skip records missing required fields BEFORE compiling: a null regex
@@ -378,6 +351,97 @@ public abstract class DatanodeAffinityManager implements Configurable {
             record.groupName, e.getMessage());
       }
     }
+  }
+
+  /**
+   * Close the symmetric "removal race": internalRefresh() runs lock-free, so a
+   * DataNode can be removed (removeDatanode -&gt; onDatanodeRemoved) AFTER the
+   * getAllDatanodes() snapshot but BEFORE the fresh structures are published.
+   * Such a node was built into the freshly published structures from the stale
+   * snapshot, while onDatanodeRemoved() pruned only the PREVIOUSLY published
+   * structures -- so without this it would linger as a dead, unreachable node
+   * in the new group topology / isolated set (postAffinityRefresh() iterates
+   * only live nodes, so it never purges it). We still hold the snapshot
+   * descriptors, so re-running onDatanodeRemoved() against the now-published
+   * structures cleanly removes any snapshot node that is no longer live.
+   */
+  private void reconcileNodesRemovedDuringRefresh(
+      Collection<DatanodeDescriptor> snapshot) {
+    if (datanodeManager == null || snapshot.isEmpty()) {
+      return;
+    }
+    Set<String> stillLive = ConcurrentHashMap.newKeySet();
+    for (DatanodeDescriptor dn : datanodeManager.getAllDatanodes()) {
+      if (dn != null) {
+        String liveAddr = dn.getXferAddrWithHostname();
+        if (liveAddr != null) {
+          stillLive.add(liveAddr);
+        }
+      }
+    }
+    for (DatanodeDescriptor dn : snapshot) {
+      if (dn == null) {
+        continue;
+      }
+      String addr = dn.getXferAddrWithHostname();
+      if (addr != null && !stillLive.contains(addr)) {
+        onDatanodeRemoved(dn);
+      }
+    }
+  }
+
+  private void internalRefresh() throws IOException {
+    List<AffinityRecord> records = loadAffinityRecords();
+
+    // Idempotency: skip the expensive datanode-resolution and topology-rebuild
+    // when the backing store returns exactly the same records as last time.
+    // The comparison is ORDER-SENSITIVE (List.equals): affinity group
+    // precedence is "first declared wins", so a pure reorder of overlapping
+    // rules is a semantic config change that must trigger a rebuild.
+    List<AffinityRecord> previous = this.lastLoadedRecords;
+    if (previous != null && records.equals(previous)) {
+      LOG.debug("DatanodeAffinityManager: records unchanged ({} record(s)),"
+          + " skipping rebuild", records.size());
+      // Even when the affinity records are identical, the set of live
+      // DataNodes may have changed since the last full rebuild (e.g. a node
+      // restarted, decommissioned, or was added between refreshes).  Re-run
+      // the default-topology reconciliation against the current isolated set
+      // so an explicit -refreshNodes always leaves the default topology
+      // consistent instead of returning early with stale membership.
+      if (datanodeManager != null && this.isolatedDatanodes != null) {
+        datanodeManager.postAffinityRefresh(this.isolatedDatanodes);
+      }
+      return;
+    }
+
+    Collection<DatanodeDescriptor> allDatanodes = datanodeManager != null
+        ? datanodeManager.getAllDatanodes()
+        : Collections.emptyList();
+
+    // Use ConcurrentHashMap so that onDatanodeRegistered() can safely read
+    // entries concurrently.  Values are CopyOnWriteArrayList so individual
+    // appends by onDatanodeRegistered() are thread-safe without locking the
+    // whole map.
+    Map<String, List<String>> newMap =
+        new ConcurrentHashMap<>();
+
+    // Per-group restricted NetworkTopology: contains only the eligible nodes
+    // for each affinity group.  ConcurrentHashMap for safe concurrent reads.
+    Map<String, NetworkTopology> newRegexToTopology = new ConcurrentHashMap<>();
+
+    // Compiled (datanodePattern → fileRegex) pairs for incremental updates.
+    List<AbstractMap.SimpleEntry<Pattern, String>> newDnPatterns =
+        new ArrayList<>();
+
+    // Distinct path regexes in declaration order. Group precedence for an
+    // overlapping path is "first declared wins" (findAffinityGroup returns the
+    // first match), so this list -- not the unordered ConcurrentHashMap -- must
+    // drive the order of affinityGroupTopologies to keep placement
+    // deterministic across refreshes.
+    LinkedHashSet<String> orderedRegexes = new LinkedHashSet<>();
+
+    buildRegexMappings(records, allDatanodes, newMap, newRegexToTopology,
+        newDnPatterns, orderedRegexes);
 
     // Build affinityGroupTopologies in declaration order (first-declared wins
     // for overlapping path patterns) so group precedence is deterministic
@@ -429,39 +493,9 @@ public abstract class DatanodeAffinityManager implements Configurable {
     // skip the rebuild if the backing store has not changed.
     this.lastLoadedRecords = Collections.unmodifiableList(new ArrayList<>(records));
 
-    // Close the symmetric "removal race": internalRefresh() runs lock-free, so
-    // a DataNode can be removed (removeDatanode -> onDatanodeRemoved) AFTER the
-    // getAllDatanodes() snapshot above but BEFORE this publication. Such a node
-    // was built into the freshly published structures from the stale snapshot,
-    // while onDatanodeRemoved() pruned only the PREVIOUSLY published structures
-    // -- so without this it would linger as a dead, unreachable node in the new
-    // group topology / isolated set (and postAffinityRefresh() iterates only
-    // live nodes, so it never purges it). We still hold the snapshot
-    // descriptors, so re-running onDatanodeRemoved() against the now-published
-    // structures cleanly removes any snapshot node that is no longer live.
-    // Combined with removeDatanode's own onDatanodeRemoved() on the published
-    // structures, this closes the window for all practical interleavings; any
-    // node removed after the fresh check below is handled by that hook instead.
-    if (datanodeManager != null && !allDatanodes.isEmpty()) {
-      Set<String> stillLive = ConcurrentHashMap.newKeySet();
-      for (DatanodeDescriptor dn : datanodeManager.getAllDatanodes()) {
-        if (dn != null) {
-          String liveAddr = dn.getXferAddrWithHostname();
-          if (liveAddr != null) {
-            stillLive.add(liveAddr);
-          }
-        }
-      }
-      for (DatanodeDescriptor dn : allDatanodes) {
-        if (dn == null) {
-          continue;
-        }
-        String addr = dn.getXferAddrWithHostname();
-        if (addr != null && !stillLive.contains(addr)) {
-          onDatanodeRemoved(dn);
-        }
-      }
-    }
+    // Re-run onDatanodeRemoved() for any snapshot node that is no longer live,
+    // closing the symmetric removal race against the freshly published state.
+    reconcileNodesRemovedDuringRefresh(allDatanodes);
 
     // Notify DatanodeManager so it can update topology membership:
     // remove newly isolated nodes from the default NetworkTopology (so the
