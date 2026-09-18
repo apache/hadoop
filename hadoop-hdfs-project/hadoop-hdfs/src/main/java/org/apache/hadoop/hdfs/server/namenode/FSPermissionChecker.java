@@ -95,7 +95,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
   private final long accessControlEnforcerReportingThresholdMs;
 
   private static ThreadLocal<String> operationType = new ThreadLocal<>();
-  private static final ThreadLocal<Boolean> renameToTrash =
+  private static final ThreadLocal<Boolean> RENAME_TO_TRASH =
       ThreadLocal.withInitial(() -> Boolean.FALSE);
 
   protected FSPermissionChecker(String fsOwner, String supergroup,
@@ -173,11 +173,11 @@ public class FSPermissionChecker implements AccessControlEnforcer {
    * @param value true if the rename uses {@code Options.Rename.TO_TRASH}
    */
   public static void setRenameToTrash(boolean value) {
-    renameToTrash.set(value);
+    RENAME_TO_TRASH.set(value);
   }
 
   public static boolean isRenameToTrash() {
-    return Boolean.TRUE.equals(renameToTrash.get());
+    return Boolean.TRUE.equals(RENAME_TO_TRASH.get());
   }
 
   public boolean isMemberOfGroup(String group) {
