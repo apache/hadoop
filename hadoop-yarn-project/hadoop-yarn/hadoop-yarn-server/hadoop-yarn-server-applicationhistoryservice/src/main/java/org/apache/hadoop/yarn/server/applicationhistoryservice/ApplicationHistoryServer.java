@@ -71,6 +71,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.server.ServerProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -358,6 +359,10 @@ public class ApplicationHistoryServer extends CompositeService {
 
   protected ResourceConfig configure() {
     ResourceConfig config = new ResourceConfig();
+    // Timeline v1 DAOs expose Map/Set fields JAXB cannot describe, so Jersey 2
+    // WADL generation logs SEVERE on every OPTIONS auth probe (YARN-11989).
+    // Clients do not consume the generated WADL.
+    config.property(ServerProperties.WADL_FEATURE_DISABLE, Boolean.TRUE);
     config.packages("org.apache.hadoop.yarn.server.timeline.webapp");
     config.packages("org.apache.hadoop.yarn.server.applicationhistoryservice.webapp");
     config.packages("org.apache.hadoop.yarn.api.records.writer");

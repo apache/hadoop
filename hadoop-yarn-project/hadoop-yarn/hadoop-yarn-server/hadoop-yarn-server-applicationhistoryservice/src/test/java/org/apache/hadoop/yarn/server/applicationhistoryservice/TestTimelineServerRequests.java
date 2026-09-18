@@ -93,6 +93,42 @@ public class TestTimelineServerRequests {
     getEntity();
   }
 
+  @Test
+  void testOptionsDoesNotFailWhenWadlIsDisabled() {
+    String timelineUrl = String.format("http://%s:%d/ws/v1/timeline?user.name=foo",
+        HOST, testTimelineServer.getPort());
+    String wadlUrl = String.format("http://%s:%d/application.wadl?user.name=foo",
+        HOST, testTimelineServer.getPort());
+    Client client = ClientBuilder.newClient();
+    try {
+      Response about = client.target(timelineUrl)
+          .request(MediaType.APPLICATION_JSON).get();
+      try {
+        assertEquals(200, about.getStatus());
+      } finally {
+        about.close();
+      }
+
+      Response options = client.target(timelineUrl).request().options();
+      try {
+        assertTrue(options.getStatus() < 500,
+            "OPTIONS should not be a server error: " + options.getStatus());
+      } finally {
+        options.close();
+      }
+
+      Response wadl = client.target(wadlUrl).request().get();
+      try {
+        assertEquals(404, wadl.getStatus(),
+            "application.wadl should be unavailable when WADL is disabled");
+      } finally {
+        wadl.close();
+      }
+    } finally {
+      client.close();
+    }
+  }
+
   private void putEntity() throws IOException, YarnException {
     TimelineClient client = createTimelineClient();
     try {
