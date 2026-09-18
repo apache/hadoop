@@ -82,10 +82,14 @@ public class TestMountd {
         .numDataNodes(1).build()) {
       cluster.waitActive();
       Nfs3 nfs3 = new Nfs3(config);
-      nfs3.startServiceInternal(false);
-      RpcProgramNfs3 nfsd = (RpcProgramNfs3) nfs3.getRpcProgram();
-      assertEquals("127.0.0.1", nfsd.getBindHost(),
-          "nfs.server.bind.host must be forwarded to RpcProgramNfs3");
+      try {
+        nfs3.startServiceInternal(false);
+        RpcProgramNfs3 nfsd = (RpcProgramNfs3) nfs3.getRpcProgram();
+        assertEquals("127.0.0.1", nfsd.getBindHost(),
+            "nfs.server.bind.host must be forwarded to RpcProgramNfs3");
+      } finally {
+        nfs3.stop();
+      }
     }
   }
 
