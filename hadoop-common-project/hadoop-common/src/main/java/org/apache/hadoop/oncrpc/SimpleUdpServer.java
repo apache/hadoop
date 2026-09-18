@@ -43,7 +43,7 @@ public class SimpleUdpServer {
   private final int RECEIVE_BUFFER_SIZE = 65536;
 
   protected final int port;
-  protected final String bindHost;
+  private final String bindHost;
   protected final ChannelInboundHandlerAdapter rpcProgram;
   protected final int workerCount;
   protected int boundPort = -1; // Will be set after server starts

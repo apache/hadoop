@@ -69,7 +69,7 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
   }
 
   /**
-   * Constructor
+   * Constructor.
    *
    * @param program program name
    * @param host host where the Rpc server program is started
@@ -93,7 +93,7 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
   }
 
   /**
-   * Constructor
+   * Constructor.
    *
    * @param program program name
    * @param host host where the Rpc server program is started
@@ -108,6 +108,7 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
    * @param portmapUdpTimeoutMillis timeout in milliseconds for RPC connection
    * @param bindHost local address to bind the server socket to
    */
+  @SuppressWarnings("checkstyle:ParameterNumber")
   protected RpcProgram(String program, String host, int port, int progNumber,
       int lowProgVersion, int highProgVersion,
       DatagramSocket registrationSocket, boolean allowInsecurePorts,

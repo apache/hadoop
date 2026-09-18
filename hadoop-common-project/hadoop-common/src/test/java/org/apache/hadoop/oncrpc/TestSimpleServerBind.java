@@ -76,6 +76,7 @@ public class TestSimpleServerBind {
         100001, 1, 1, null, true, 500, "127.0.0.1") {
       @Override
       protected void handleInternal(ChannelHandlerContext ctx, RpcInfo info) {}
+
       @Override
       protected boolean isIdempotent(RpcCall call) { return false; }
     };

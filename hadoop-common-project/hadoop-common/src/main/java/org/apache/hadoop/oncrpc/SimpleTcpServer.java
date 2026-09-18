@@ -41,7 +41,7 @@ public class SimpleTcpServer {
   public static final Logger LOG =
       LoggerFactory.getLogger(SimpleTcpServer.class);
   protected final int port;
-  protected final String bindHost;
+  private final String bindHost;
   protected int boundPort = -1; // Will be set after server starts
   protected final ChannelInboundHandlerAdapter rpcProgram;
   private ServerBootstrap server;
