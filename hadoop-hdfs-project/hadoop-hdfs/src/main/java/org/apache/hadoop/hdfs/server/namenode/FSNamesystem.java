@@ -3388,8 +3388,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } catch (AccessControlException e)  {
       logAuditEvent(false, operationName, src, dst, null);
       throw e;
-    } finally {
-      FSPermissionChecker.setRenameToTrash(false);
     }
     assert ret != null;
     boolean success = ret.success;

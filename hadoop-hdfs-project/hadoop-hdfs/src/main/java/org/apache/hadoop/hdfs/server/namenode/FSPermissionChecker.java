@@ -165,6 +165,13 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     operationType.set(opType);
   }
 
+  /**
+   * Sets whether the current rename request is a trash move.
+   * This thread-local flag is consumed while building AuthorizationContext
+   * for external enforcers and must be reset by the caller after the request.
+   *
+   * @param value true if the rename uses {@code Options.Rename.TO_TRASH}
+   */
   public static void setRenameToTrash(boolean value) {
     renameToTrash.set(value);
   }
