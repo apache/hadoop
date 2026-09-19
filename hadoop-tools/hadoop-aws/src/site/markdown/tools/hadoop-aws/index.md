@@ -1736,7 +1736,13 @@ S3 endpoint implementation of this feature, deletes might be synchronous or
 asynchronous.
 
 The [VAST S3 endpoint](https://kb.vastdata.com/documentation/docs/using-trash-folder-for-s3-objects-6)
-supports such deletes.
+supports such deletes, but requires endpoint-specific request headers. Enabling
+`fs.s3a.delete.non-empty-directory.enabled` does not add those headers. The VAST
+use case depends on separate request-type header support; see
+[HADOOP-19860](https://github.com/apache/hadoop/pull/8417).
+Do not configure a delete-specific header globally: it can cause listing and
+other non-delete requests to fail. Before enabling this option, verify that the
+endpoint removes the directory contents and that non-delete requests still work.
 
 ## <a name="metrics"></a>Metrics
 
