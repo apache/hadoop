@@ -64,6 +64,7 @@ import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.LAST_SNAPSHOT
  *                          no diff.
  * DISABLE_WRITE           :disable write operations.
  * FINAL_DISTCP            :close all open files and do the final round distcp.
+ * VERIFY                  :optional verification after the final distcp.
  * FINISH                  :procedure finish.
  */
 public class DistCpProcedure extends BalanceProcedure {
@@ -73,7 +74,9 @@ public class DistCpProcedure extends BalanceProcedure {
 
   /* Stages of this procedure. */
   public enum Stage {
-    PRE_CHECK, INIT_DISTCP, DIFF_DISTCP, DISABLE_WRITE, FINAL_DISTCP, FINISH
+    PRE_CHECK, INIT_DISTCP, DIFF_DISTCP, DISABLE_WRITE, FINAL_DISTCP, FINISH,
+    /** Optionally verify source and destination content summaries. */
+    VERIFY
   }
 
   private FedBalanceContext context; // the balance context.
@@ -91,6 +94,8 @@ public class DistCpProcedure extends BalanceProcedure {
   private boolean useMountReadOnly;
   /* The threshold of diff entries. */
   private int diffThreshold;
+  /* Whether to run the optional verification phase. */
+  private boolean verify;
 
   private FsPermission fPerm; // the permission of the src.
   private AclStatus acl; // the acl of the src.
@@ -145,6 +150,7 @@ public class DistCpProcedure extends BalanceProcedure {
     this.forceCloseOpenFiles = context.getForceCloseOpenFiles();
     this.useMountReadOnly = context.getUseMountReadOnly();
     this.diffThreshold = context.getDiffThreshold();
+    this.verify = context.getVerify();
     srcFs = (DistributedFileSystem) context.getSrc().getFileSystem(conf);
     dstFs = (DistributedFileSystem) context.getDst().getFileSystem(conf);
   }
@@ -167,6 +173,9 @@ public class DistCpProcedure extends BalanceProcedure {
       return false;
     case FINAL_DISTCP:
       finalDistCp();
+      return false;
+    case VERIFY:
+      verify();
       return false;
     case FINISH:
       finish();
@@ -295,7 +304,7 @@ public class DistCpProcedure extends BalanceProcedure {
       if (job.isComplete()) {
         jobId = null; // unset jobId because the job is done.
         if (job.isSuccessful()) {
-          updateStage(Stage.FINISH);
+          updateStage(verify ? Stage.VERIFY : Stage.FINISH);
           return;
         } else {
           throw new IOException(
@@ -307,6 +316,28 @@ public class DistCpProcedure extends BalanceProcedure {
     } else {
       submitDiffDistCp();
     }
+  }
+
+  void verify() throws RetryException, IOException {
+    if (!verify) {
+      updateStage(Stage.FINISH);
+      return;
+    }
+    FedBalanceVerifier verifier =
+        new FedBalanceVerifier(srcFs, dstFs, src, dst);
+    FedBalanceVerifier.VerificationSummary summary;
+    try {
+      summary = verifier.verify();
+    } catch (IOException e) {
+      LOG.warn("FedBalance verification hit an error reading content "
+          + "summary, will retry.", e);
+      throw new RetryException();
+    }
+    if (!summary.matches()) {
+      throw new IOException("FedBalance verification failed. " + summary);
+    }
+    LOG.info("FedBalance verification succeeded. {}", summary);
+    updateStage(Stage.FINISH);
   }
 
   void finish() throws IOException {
@@ -564,6 +595,8 @@ public class DistCpProcedure extends BalanceProcedure {
     bandWidth = context.getBandwidthLimit();
     forceCloseOpenFiles = context.getForceCloseOpenFiles();
     useMountReadOnly = context.getUseMountReadOnly();
+    diffThreshold = context.getDiffThreshold();
+    verify = context.getVerify();
     this.client = new JobClient(conf);
   }
 
