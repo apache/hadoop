@@ -56,6 +56,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -697,12 +698,60 @@ final class BlockChecksumHelper {
         throws IOException {
       LOG.debug("Recalculate checksum for the missing/failed block index {}",
           errBlkIndex);
-      byte[] errIndices = new byte[1];
-      errIndices[0] = (byte) errBlkIndex;
+      byte errIndex = (byte) errBlkIndex;
+
+      // A failed checksum RPC does not remove the block from the location
+      // list. Exclude the target and place duplicate replicas after the
+      // independent sources, while retaining them as read fallbacks.
+      BitSet seenIndices = new BitSet();
+      int numSources = 0;
+      for (byte blockIndex : blockIndices) {
+        if (blockIndex != errIndex) {
+          numSources++;
+          seenIndices.set(blockIndex);
+        }
+      }
+
+      int cellsNum = (int) ((blockGroup.getNumBytes() - 1)
+          / ecPolicy.getCellSize() + 1);
+      int minRequiredSources = Math.min(
+          cellsNum, ecPolicy.getNumDataUnits());
+      int numUniqueSources = seenIndices.cardinality();
+      if (numUniqueSources < minRequiredSources) {
+        throw new IOException(String.format(
+            "Not enough unique sources to reconstruct block index %d "
+                + "in block group %s: required=%d, available=%d",
+            errBlkIndex, blockGroup, minRequiredSources, numUniqueSources));
+      }
+
+      byte[] sourceIndices = new byte[numSources];
+      DatanodeInfo[] sourceDatanodes = new DatanodeInfo[numSources];
+
+      seenIndices.clear();
+      int uniquePos = 0;
+      int duplicatePos = numUniqueSources;
+      for (int i = 0; i < blockIndices.length; i++) {
+        byte blockIndex = blockIndices[i];
+        if (blockIndex == errIndex) {
+          continue;
+        }
+
+        int sourcePos;
+        if (seenIndices.get(blockIndex)) {
+          sourcePos = duplicatePos++;
+        } else {
+          seenIndices.set(blockIndex);
+          sourcePos = uniquePos++;
+        }
+
+        sourceIndices[sourcePos] = blockIndex;
+        sourceDatanodes[sourcePos] = datanodes[i];
+      }
 
       StripedReconstructionInfo stripedReconInfo =
           new StripedReconstructionInfo(
-              blockGroup, ecPolicy, blockIndices, datanodes, errIndices);
+              blockGroup, ecPolicy, sourceIndices, sourceDatanodes,
+              new byte[] {errIndex});
       BlockChecksumType groupChecksumType =
           getBlockChecksumOptions().getBlockChecksumType();
       try (StripedBlockChecksumReconstructor checksumRecon =
