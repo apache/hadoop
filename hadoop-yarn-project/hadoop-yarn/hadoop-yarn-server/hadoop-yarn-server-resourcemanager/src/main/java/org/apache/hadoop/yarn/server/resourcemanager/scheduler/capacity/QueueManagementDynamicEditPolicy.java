@@ -191,7 +191,12 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
       try {
         startTime = clock.getTime();
 
-        queueManagementChanges = policyClazz.computeQueueManagementChanges();
+        parentQueue.getReadLock().lock();
+        try {
+          queueManagementChanges = policyClazz.computeQueueManagementChanges();
+        } finally {
+          parentQueue.getReadLock().unlock();
+        }
 
         //Scheduler update is asynchronous
         if (queueManagementChanges.size() > 0) {
