@@ -70,8 +70,8 @@
       <artifactId>jettison</artifactId>
     </dependency>
     <dependency>
-      <groupId>jakarta.servlet</groupId>
-      <artifactId>jakarta.servlet-api</artifactId>
+      <groupId>org.eclipse.jetty.toolchain</groupId>
+      <artifactId>jetty-servlet-api</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-codec</groupId>
@@ -203,7 +203,7 @@
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.test-framework.providers</groupId>
-      <artifactId>jersey-test-framework-provider-jetty</artifactId>
+      <artifactId>jersey-test-framework-provider-jdk-http</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

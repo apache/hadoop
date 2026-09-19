@@ -38,8 +38,37 @@ public class CertificateUtil {
    *          - the pem encoding from config without the header and footer
    * @return RSAPublicKey the RSA public key
    * @throws ServletException thrown if a processing error occurred
+   * @deprecated use {@link #toRSAPublicKey(String)}, which reports the
+   *             {@link CertificateException} it is really raising instead of
+   *             wrapping it in a servlet type. This method is kept so that
+   *             existing callers still compile and behave as before, and will
+   *             be removed with the move to the jakarta servlet namespace.
    */
-  public static RSAPublicKey parseRSAPublicKey(String pem) throws ServletException {
+  @Deprecated
+  public static RSAPublicKey parseRSAPublicKey(String pem)
+      throws ServletException {
+    try {
+      return toRSAPublicKey(pem);
+    } catch (CertificateException ce) {
+      // Report the exception toRSAPublicKey wrapped, not the wrapper, so that
+      // the cause a caller sees is the one this method has always reported:
+      // the CertificateException the parse itself raised. Wrapping the wrapper
+      // would add a level to the chain that was not there before.
+      Throwable cause = ce.getCause() == null ? ce : ce.getCause();
+      throw new ServletException(ce.getMessage(), cause);
+    }
+  }
+
+  /**
+   * Gets an RSAPublicKey from the provided PEM encoding.
+   *
+   * @param pem
+   *          - the pem encoding from config without the header and footer
+   * @return RSAPublicKey the RSA public key
+   * @throws CertificateException thrown if the PEM could not be parsed
+   */
+  public static RSAPublicKey toRSAPublicKey(String pem)
+      throws CertificateException {
     String fullPem = PEM_HEADER + pem + PEM_FOOTER;
     PublicKey key = null;
     try {
@@ -57,7 +86,7 @@ public class CertificateUtil {
       } else {
         message = "CertificateException - PEM may be corrupt";
       }
-      throw new ServletException(message, ce);
+      throw new CertificateException(message, ce);
     }
     return (RSAPublicKey) key;
   }
