@@ -21,13 +21,14 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 
-import org.eclipse.jetty.util.log.Log;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.Options;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -55,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
+  private static final Logger LOG = LoggerFactory.getLogger(TestRollingLevelDBTimelineStore.class);
   private FileContext fsContext;
   private File fsPath;
   private Configuration config = new YarnConfiguration();
@@ -375,7 +377,7 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
     long start = System.currentTimeMillis();
     int num = 1000000;
 
-    Log.getLog().info("Start test for " + num);
+    LOG.info("Start test for " + num);
 
     final String tezTaskAttemptId = "TEZ_TA";
     final String tezEntityId = "attempt_1429158534256_0001_1_00_000000_";
@@ -421,7 +423,7 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
     }
 
     long duration = System.currentTimeMillis() - start;
-    Log.getLog().info("Duration for " + num + ": " + duration);
+    LOG.info("Duration for " + num + ": " + duration);
   }
 
   /**

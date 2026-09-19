@@ -27,8 +27,8 @@ import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationFilter;
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticationHandler;
 
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletException;
 
 import java.io.IOException;
 import java.io.InputStreamReader;

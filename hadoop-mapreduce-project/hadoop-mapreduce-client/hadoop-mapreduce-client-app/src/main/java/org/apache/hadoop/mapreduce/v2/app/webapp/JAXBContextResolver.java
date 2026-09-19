@@ -26,11 +26,11 @@ import java.util.Set;
 import org.eclipse.persistence.jaxb.JAXBContextFactory;
 import org.eclipse.persistence.jaxb.MarshallerProperties;
 
-import javax.inject.Singleton;
+import jakarta.inject.Singleton;
 
-import javax.ws.rs.ext.ContextResolver;
-import javax.ws.rs.ext.Provider;
-import javax.xml.bind.JAXBContext;
+import jakarta.ws.rs.ext.ContextResolver;
+import jakarta.ws.rs.ext.Provider;
+import jakarta.xml.bind.JAXBContext;
 
 import org.apache.hadoop.mapreduce.v2.app.webapp.jsonprovider.ClassSerializationConfig;
 

@@ -33,11 +33,12 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
-import org.eclipse.jetty.websocket.api.Session;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
-import org.eclipse.jetty.websocket.api.annotations.WebSocket;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.OnClose;
+import jakarta.websocket.OnMessage;
+import jakarta.websocket.OnOpen;
+import jakarta.websocket.Session;
+import jakarta.websocket.server.ServerEndpoint;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -51,7 +52,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.LimitedPrivate({ "HDFS", "MapReduce", "YARN" })
 @InterfaceStability.Unstable
 
-@WebSocket
+@ServerEndpoint("/container/container/{id}")
 public class ContainerShellWebSocket {
   private static final Logger LOG =
       LoggerFactory.getLogger(ContainerShellWebSocket.class);
@@ -68,7 +69,7 @@ public class ContainerShellWebSocket {
     ContainerShellWebSocket.nmContext = nm;
   }
 
-  @OnWebSocketMessage
+  @OnMessage
   public void onText(Session session, String message) throws IOException {
 
     try {
@@ -88,7 +89,7 @@ public class ContainerShellWebSocket {
         pair.in.read(buffer, 0, Math.min(no, buffer.length));
         String formatted = new String(buffer, StandardCharsets.UTF_8)
             .replaceAll("\n", "\r\n");
-        session.getRemote().sendString(formatted);
+        session.getBasicRemote().sendText(formatted);
       }
     } catch (IOException e) {
       onClose(session, 1001, "Shutdown");
@@ -96,10 +97,10 @@ public class ContainerShellWebSocket {
 
   }
 
-  @OnWebSocketConnect
+  @OnOpen
   public void onConnect(Session session) {
     try {
-      URI containerURI = session.getUpgradeRequest().getRequestURI();
+      URI containerURI = session.getRequestURI();
       String command = "bash";
       String[] containerPath = containerURI.getPath().split("/");
       String cId = containerPath[2];
@@ -113,14 +114,17 @@ public class ContainerShellWebSocket {
       Container container = nmContext.getContainers().get(ContainerId
           .fromString(cId));
       if (!checkAuthorization(session, container)) {
-        session.close(1008, "Forbidden");
+        session.close(new CloseReason(
+            CloseReason.CloseCodes.VIOLATED_POLICY, "Forbidden"));
         return;
       }
       if (checkInsecureSetup()) {
-        session.close(1003, "Nonsecure mode is unsupported.");
+        session.close(new CloseReason(
+            CloseReason.CloseCodes.VIOLATED_POLICY,
+            "Nonsecure mode is unsupported."));
         return;
       }
-      LOG.info(session.getRemoteAddress().getHostString() + " connected!");
+      LOG.info("Session {} connected!", session.getId());
       LOG.info(
           "Making interactive connection to running docker container with ID: "
               + cId);
@@ -137,18 +141,23 @@ public class ContainerShellWebSocket {
 
   }
 
-  @OnWebSocketClose
+  @OnClose
   public void onClose(Session session, int status, String reason) {
     try {
-      LOG.info(session.getRemoteAddress().getHostString() + " closed!");
+      LOG.info("Session {} closed!", session.getId());
       String exit = "exit\r\n";
       pair.out.write(exit.getBytes(StandardCharsets.UTF_8));
       pair.out.flush();
       pair.in.close();
       pair.out.close();
     } catch (IOException e) {
+      LOG.debug("Error during session close cleanup", e);
     } finally {
-      session.close();
+      try {
+        session.close();
+      } catch (IOException e) {
+        LOG.debug("Error closing session", e);
+      }
     }
   }
 
@@ -164,13 +173,12 @@ public class ContainerShellWebSocket {
     boolean authorized = true;
     String user = "";
     if (UserGroupInformation.isSecurityEnabled()) {
-      user = new HadoopKerberosName(session.getUpgradeRequest()
-          .getUserPrincipal().getName()).getShortName();
+      user = new HadoopKerberosName(session.getUserPrincipal()
+          .getName()).getShortName();
     } else {
-      Map<String, List<String>> parameters = session.getUpgradeRequest()
-          .getParameterMap();
-      if (parameters.containsKey("user.name")) {
-        List<String> users = parameters.get("user.name");
+      List<String> users = session.getRequestParameterMap()
+          .get("user.name");
+      if (users != null && !users.isEmpty()) {
         user = users.get(0);
       }
     }

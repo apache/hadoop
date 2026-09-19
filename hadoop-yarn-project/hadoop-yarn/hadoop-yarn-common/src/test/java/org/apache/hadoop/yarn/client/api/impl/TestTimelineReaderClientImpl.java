@@ -23,11 +23,11 @@ import java.net.URI;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import javax.ws.rs.core.GenericType;
-import javax.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.core.GenericType;
+import jakarta.ws.rs.core.MultivaluedMap;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

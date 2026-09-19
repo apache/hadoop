@@ -23,7 +23,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 import java.io.IOException;
 import java.net.URLDecoder;
 
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;

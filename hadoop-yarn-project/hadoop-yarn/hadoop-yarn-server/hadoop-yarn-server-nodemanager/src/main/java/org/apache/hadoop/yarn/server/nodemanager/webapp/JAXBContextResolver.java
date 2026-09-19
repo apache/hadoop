@@ -22,10 +22,10 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Arrays;
-import javax.inject.Singleton;
-import javax.ws.rs.ext.ContextResolver;
-import javax.ws.rs.ext.Provider;
-import javax.xml.bind.JAXBContext;
+import jakarta.inject.Singleton;
+import jakarta.ws.rs.ext.ContextResolver;
+import jakarta.ws.rs.ext.Provider;
+import jakarta.xml.bind.JAXBContext;
 
 import org.eclipse.persistence.jaxb.JAXBContextFactory;
 import org.eclipse.persistence.jaxb.MarshallerProperties;

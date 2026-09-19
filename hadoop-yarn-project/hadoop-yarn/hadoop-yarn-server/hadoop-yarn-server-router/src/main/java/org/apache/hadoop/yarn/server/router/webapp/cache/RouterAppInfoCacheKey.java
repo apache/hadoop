@@ -24,7 +24,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Set;
 
 public class RouterAppInfoCacheKey {

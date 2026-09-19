@@ -111,15 +111,15 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.junit.jupiter.api.Test;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.webapp.WebAppContext;
+import org.eclipse.jetty.ee10.webapp.WebAppContext;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 
-import javax.ws.rs.HttpMethod;
-import javax.ws.rs.core.MediaType;
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.core.MediaType;
 
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 

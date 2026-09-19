@@ -22,8 +22,8 @@ import static org.mockito.Mockito.when;
 import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
 import org.junit.jupiter.api.Test;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.Properties;
 

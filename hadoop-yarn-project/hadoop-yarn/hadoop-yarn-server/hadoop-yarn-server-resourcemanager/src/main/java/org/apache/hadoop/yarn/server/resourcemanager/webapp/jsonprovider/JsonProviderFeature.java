@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider;
 
-import javax.ws.rs.core.Feature;
-import javax.ws.rs.core.FeatureContext;
+import jakarta.ws.rs.core.Feature;
+import jakarta.ws.rs.core.FeatureContext;
 
 /**
- * A JAX-RS {@link Feature} that registers custom MOXy JSON providers
+ * A Jakarta-RS {@link Feature} that registers custom MOXy JSON providers
  * for handling serialization and deserialization of JSON with or without
  * root elements.
  *
@@ -53,7 +53,7 @@ public class JsonProviderFeature implements Feature {
   /**
    * Configures the feature by registering the custom JSON providers.
    *
-   * @param context the {@link FeatureContext} provided by the JAX-RS runtime
+   * @param context the {@link FeatureContext} provided by the Jakarta-RS runtime
    * @return {@code true} to indicate that the feature was successfully configured
    */
   @Override

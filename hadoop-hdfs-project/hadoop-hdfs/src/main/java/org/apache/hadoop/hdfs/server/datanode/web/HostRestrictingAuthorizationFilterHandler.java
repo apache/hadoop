@@ -35,8 +35,8 @@ import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;

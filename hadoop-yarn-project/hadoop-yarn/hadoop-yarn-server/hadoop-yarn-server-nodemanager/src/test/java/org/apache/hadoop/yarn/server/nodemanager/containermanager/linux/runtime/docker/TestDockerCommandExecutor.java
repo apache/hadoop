@@ -34,6 +34,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -46,7 +48,6 @@ import java.util.concurrent.ConcurrentMap;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.CONTAINER_ID_STR;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor.DockerContainerStatus;
-import static org.eclipse.jetty.server.handler.gzip.GzipHttpOutputInterceptor.LOG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -60,6 +61,7 @@ import static org.mockito.Mockito.when;
  * Test common docker commands.
  */
 public class TestDockerCommandExecutor {
+  private static final Logger LOG = LoggerFactory.getLogger(TestDockerCommandExecutor.class);
 
   private static final String MOCK_CONTAINER_ID =
       "container_e11_1861047502093_13763105_01_000001";

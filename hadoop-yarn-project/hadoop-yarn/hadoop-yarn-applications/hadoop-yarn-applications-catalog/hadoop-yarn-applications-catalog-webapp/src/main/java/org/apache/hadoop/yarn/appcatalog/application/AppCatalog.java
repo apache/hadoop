@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.appcatalog.application;
 
-import javax.ws.rs.ApplicationPath;
-import javax.ws.rs.core.Application;
+import jakarta.ws.rs.ApplicationPath;
+import jakarta.ws.rs.core.Application;
 
 import org.apache.hadoop.yarn.appcatalog.controller.AppDetailsController;
 

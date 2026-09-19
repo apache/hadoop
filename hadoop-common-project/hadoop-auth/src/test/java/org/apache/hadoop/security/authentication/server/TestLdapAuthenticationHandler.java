@@ -24,8 +24,8 @@ import static org.mockito.Mockito.when;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import static org.apache.hadoop.security.authentication.server.LdapAuthenticationHandler.*;
 import static org.apache.hadoop.security.authentication.server.LdapConstants.*;

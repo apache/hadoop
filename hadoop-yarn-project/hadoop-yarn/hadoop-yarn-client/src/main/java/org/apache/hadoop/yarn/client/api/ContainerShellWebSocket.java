@@ -24,9 +24,10 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.eclipse.jetty.websocket.api.Callback;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
+import org.eclipse.jetty.websocket.api.annotations.OnWebSocketOpen;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
 import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 import org.jline.terminal.Terminal;
@@ -57,28 +58,27 @@ public class ContainerShellWebSocket {
   @OnWebSocketMessage
   public void onText(Session session, String message) throws IOException {
     if (!sttySet) {
-      session.getRemote().sendString("stty -echo");
-      session.getRemote().sendString("\r");
-      session.getRemote().flush();
+      session.sendText("stty -echo", Callback.NOOP);
+      session.sendText("\r", Callback.NOOP);
       sttySet = true;
     }
     terminal.output().write(message.getBytes(StandardCharsets.UTF_8));
     terminal.output().flush();
   }
 
-  @OnWebSocketConnect
+  @OnWebSocketOpen
   public void onConnect(Session s) {
     initTerminal(s);
-    LOG.info("{} connected!", s.getRemoteAddress().getHostString());
+    LOG.info("{} connected!", s.getRemoteSocketAddress());
   }
 
   @OnWebSocketClose
   public void onClose(Session session, int status, String reason) {
     if (status==1000) {
-      LOG.info("{} closed, status: {}", session.getRemoteAddress().getHostString(), status);
+      LOG.info("{} closed, status: {}", session.getRemoteSocketAddress(), status);
     } else {
       LOG.warn("{} closed, status:" +
-              " {} Reason: {}.", session.getRemoteAddress().getHostString(), status, reason);
+              " {} Reason: {}.", session.getRemoteSocketAddress(), status, reason);
     }
   }
 
@@ -88,24 +88,18 @@ public class ContainerShellWebSocket {
       Thread inputThread = new Thread(consoleReader, "consoleReader");
       inputThread.start();
       while (mySession.isOpen()) {
-        mySession.getRemote().flush();
         if (consoleReader.hasData()) {
           String message = consoleReader.read();
-          mySession.getRemote().sendString(message);
-          mySession.getRemote().sendString("\r");
+          mySession.sendText(message, Callback.NOOP);
+          mySession.sendText("\r", Callback.NOOP);
         }
         String message = "1{}";
-        mySession.getRemote().sendString(message);
+        mySession.sendText(message, Callback.NOOP);
         Thread.sleep(100);
-        mySession.getRemote().flush();
       }
       inputThread.join();
-    } catch (IOException | InterruptedException e) {
-      try {
-        mySession.disconnect();
-      } catch (IOException e1) {
-        LOG.error("Error closing connection: ", e1);
-      }
+    } catch (InterruptedException e) {
+      mySession.disconnect();
     }
   }
 
@@ -126,7 +120,7 @@ public class ContainerShellWebSocket {
           .terminal(terminal)
           .build();
     } catch (IOException e) {
-      session.close(1002, e.getMessage());
+      session.close(1002, e.getMessage(), Callback.NOOP);
     }
   }
 

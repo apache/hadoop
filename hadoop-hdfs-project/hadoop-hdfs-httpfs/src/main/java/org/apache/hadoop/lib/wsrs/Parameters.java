@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Class that contains all parsed JAX-RS parameters.
+ * Class that contains all parsed Jakarta-RS parameters.
  * <p>
  * Instances are created by the {@link ParametersProvider} class.
  */

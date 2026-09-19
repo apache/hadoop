@@ -32,7 +32,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.TimeoutException;
 
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.ClientBaseWithFixes;

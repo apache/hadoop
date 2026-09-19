@@ -80,7 +80,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import javax.ws.rs.ProcessingException;
+import jakarta.ws.rs.ProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

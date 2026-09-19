@@ -23,7 +23,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.yarn.webapp.WebApp;
 
-import javax.servlet.Filter;
+import jakarta.servlet.Filter;
 
 /**
  * Application master webapp

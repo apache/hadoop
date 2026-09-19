@@ -20,9 +20,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.federation;
 
 import java.io.StringWriter;
 
-import javax.ws.rs.core.MediaType;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Marshaller;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.Marshaller;
 
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbeatRequest;

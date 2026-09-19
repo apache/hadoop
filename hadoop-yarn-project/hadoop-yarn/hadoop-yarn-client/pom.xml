@@ -71,7 +71,7 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty.websocket</groupId>
-      <artifactId>websocket-client</artifactId>
+      <artifactId>jetty-websocket-jetty-client</artifactId>
     </dependency>
 
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->

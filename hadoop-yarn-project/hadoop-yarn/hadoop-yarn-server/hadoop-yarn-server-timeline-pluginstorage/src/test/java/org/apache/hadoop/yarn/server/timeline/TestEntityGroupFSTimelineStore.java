@@ -56,7 +56,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.util.MinimalPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
-import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
+import com.fasterxml.jackson.module.jakarta.xmlbind.JakartaXmlBindAnnotationIntrospector;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -691,7 +691,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
       jsonGenerator.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
       ObjectMapper objMapper = new ObjectMapper();
       objMapper.setAnnotationIntrospector(
-          new JaxbAnnotationIntrospector(TypeFactory.defaultInstance()));
+          new JakartaXmlBindAnnotationIntrospector(TypeFactory.defaultInstance()));
       objMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
       for (TimelineEntity entity : entities.getEntities()) {
         objMapper.writeValue(jsonGenerator, entity);

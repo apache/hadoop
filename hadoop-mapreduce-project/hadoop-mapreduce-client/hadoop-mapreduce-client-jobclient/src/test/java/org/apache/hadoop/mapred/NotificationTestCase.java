@@ -20,18 +20,18 @@ package org.apache.hadoop.mapred;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee10.servlet.ServletHolder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.io.DataOutputStream;
 
@@ -77,12 +77,14 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     }
     webServer = new Server(0);
 
-    ServletContextHandler context =
-        new ServletContextHandler(webServer, contextPath);
+    ServletContextHandler context = new ServletContextHandler();
+    context.setContextPath(contextPath);
 
     // create servlet handler
     context.addServlet(new ServletHolder(new NotificationServlet()),
                        servletPath);
+
+    webServer.setHandler(context);
 
     // Start webServer
     webServer.start();

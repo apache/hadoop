@@ -21,7 +21,7 @@ package org.apache.hadoop.http;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;

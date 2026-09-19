@@ -33,17 +33,17 @@ import org.apache.hadoop.security.http.CrossOriginFilter;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.WebApp;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletHandler;
-import org.eclipse.jetty.webapp.WebAppContext;
+import org.eclipse.jetty.ee10.servlet.FilterHolder;
+import org.eclipse.jetty.ee10.servlet.ServletHandler;
+import org.eclipse.jetty.ee10.webapp.WebAppContext;
 import org.junit.jupiter.api.Test;
 
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -225,16 +225,6 @@ public class TestRouter {
     }
 
     @Override
-    public String encodeUrl(String url) {
-      return null;
-    }
-
-    @Override
-    public String encodeRedirectUrl(String url) {
-      return null;
-    }
-
-    @Override
     public void sendError(int sc, String msg) throws IOException {
 
     }
@@ -281,11 +271,6 @@ public class TestRouter {
 
     @Override
     public void setStatus(int sc) {
-
-    }
-
-    @Override
-    public void setStatus(int sc, String sm) {
 
     }
 

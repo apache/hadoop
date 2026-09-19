@@ -27,7 +27,7 @@ import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 
-import javax.servlet.Filter;
+import jakarta.servlet.Filter;
 
 import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 

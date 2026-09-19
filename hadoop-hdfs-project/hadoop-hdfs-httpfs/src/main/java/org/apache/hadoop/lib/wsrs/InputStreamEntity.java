@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.http.server.HttpFSServerWebApp;
 import org.apache.hadoop.fs.http.server.metrics.HttpFSServerMetrics;
 import org.apache.hadoop.io.IOUtils;
 
-import javax.ws.rs.core.StreamingOutput;
+import jakarta.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;

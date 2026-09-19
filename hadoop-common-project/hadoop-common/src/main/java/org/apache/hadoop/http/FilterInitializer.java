@@ -20,7 +20,7 @@ package org.apache.hadoop.http;
 import org.apache.hadoop.conf.Configuration;
 
 /**
- * Initialize a javax.servlet.Filter. 
+ * Initialize a jakarta.servlet.Filter. 
  */
 public abstract class FilterInitializer {
   /**

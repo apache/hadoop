@@ -22,8 +22,8 @@ import org.glassfish.jersey.jettison.internal.entity.JettisonObjectProvider;
 import org.glassfish.jersey.test.JerseyTest;
 import org.junit.jupiter.api.BeforeEach;
 
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.Application;
+import jakarta.ws.rs.client.WebTarget;
+import jakarta.ws.rs.core.Application;
 
 public abstract class JerseyTestBase extends JerseyTest {
   public static final String JERSEY_RANDOM_PORT = "0";

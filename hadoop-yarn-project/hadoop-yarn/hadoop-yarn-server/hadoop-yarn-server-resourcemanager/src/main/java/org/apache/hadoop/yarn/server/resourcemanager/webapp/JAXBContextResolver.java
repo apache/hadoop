@@ -28,11 +28,11 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import javax.ws.rs.ext.ContextResolver;
-import javax.ws.rs.ext.Provider;
-import javax.xml.bind.JAXBContext;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
+import jakarta.ws.rs.ext.ContextResolver;
+import jakarta.ws.rs.ext.Provider;
+import jakarta.xml.bind.JAXBContext;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.ClassSerialisationConfig;
@@ -48,7 +48,7 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
   }
 
   @Inject
-  public JAXBContextResolver(@javax.inject.Named("conf") Configuration conf) throws Exception {
+  public JAXBContextResolver(@jakarta.inject.Named("conf") Configuration conf) throws Exception {
     ClassSerialisationConfig classSerialisationConfig = new ClassSerialisationConfig(conf);
     Set<Class<?>> wrappedClasses = classSerialisationConfig.getWrappedClasses();
     Set<Class<?>> unWrappedClasses = classSerialisationConfig.getUnWrappedClasses();

@@ -38,7 +38,7 @@ import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.glassfish.jersey.jettison.JettisonJaxbContext;
 import org.glassfish.jersey.jettison.JettisonMarshaller;
 
-import javax.ws.rs.client.Client;
+import jakarta.ws.rs.client.Client;
 import java.io.StringWriter;
 import java.util.List;
 import java.util.ArrayList;

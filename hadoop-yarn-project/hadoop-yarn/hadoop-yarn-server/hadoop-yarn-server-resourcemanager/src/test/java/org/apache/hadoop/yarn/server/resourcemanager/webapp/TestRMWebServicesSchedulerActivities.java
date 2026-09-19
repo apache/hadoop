@@ -59,14 +59,14 @@ import org.codehaus.jettison.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.MultivaluedHashMap;
-import javax.ws.rs.core.Application;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.ws.rs.client.WebTarget;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.core.MultivaluedHashMap;
+import jakarta.ws.rs.core.Application;
 
 import java.util.ArrayList;
 import java.util.Arrays;

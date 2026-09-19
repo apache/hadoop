@@ -33,11 +33,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -169,16 +169,6 @@ public class TestNMWebFilter {
     }
 
     @Override
-    public String encodeUrl(String url) {
-      return null;
-    }
-
-    @Override
-    public String encodeRedirectUrl(String url) {
-      return null;
-    }
-
-    @Override
     public void sendError(int sc, String msg) throws IOException {
 
     }
@@ -191,11 +181,6 @@ public class TestNMWebFilter {
     @Override
     public void setStatus(int status) {
       this.status = status;
-    }
-
-    @Override
-    public void setStatus(int sc, String sm) {
-
     }
 
     @Override
