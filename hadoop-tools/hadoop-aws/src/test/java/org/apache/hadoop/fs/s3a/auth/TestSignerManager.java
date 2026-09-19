@@ -97,7 +97,7 @@ public class TestSignerManager extends AbstractHadoopTestBase {
   }
 
   /**
-   * HADOOP-19805: createHttpSigner must call setConf(conf) when the signer
+   * HADOOP-19991: createHttpSigner must call setConf(conf) when the signer
    * implements Configurable.
    */
   @Test
@@ -391,14 +391,14 @@ public class TestSignerManager extends AbstractHadoopTestBase {
   }
 
   /**
-   * HttpSigner that implements Configurable for HADOOP-19805 test.
+   * HttpSigner that implements Configurable for HADOOP-19991 test.
    * Records the Configuration passed to setConf.
    */
   @Private
   public static class ConfigurableHttpSignerForTest extends Configured
       implements HttpSigner<AwsCredentialsIdentity> {
 
-    static volatile Configuration receivedConf;
+    private static volatile Configuration receivedConf;
 
     private final HttpSigner<AwsCredentialsIdentity> delegate =
         AwsV4HttpSigner.create();
