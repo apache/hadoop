@@ -318,4 +318,18 @@ public final class InternalConstants {
    */
   public static final String PRECONDITION_FAILED = "PreconditionFailed";
 
+  /**
+   * Read capacity to acquire for each page of a multipart list: {@value}.
+   */
+  public static final int MULTIPART_LIST_READ_CAPACITY = 1;
+
+  /**
+   * Write capacity to abort a multipart upload: {@value}.
+   */
+  public static final int MULTIPART_ABORT_WRITE_CAPACITY = 1;
+
+  /**
+   * Write capacity to delete a single object: {@value}.
+   */
+  public static final int OBJECT_DELETE_WRITE_CAPACITY = 1;
 }

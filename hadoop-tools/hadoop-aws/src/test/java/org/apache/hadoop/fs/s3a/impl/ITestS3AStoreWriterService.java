@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.fs.s3a.impl;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +26,11 @@ import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
+import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.MultipartTestUtils;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import java.io.IOException;
@@ -36,9 +41,9 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
 
 /**
- * Tests for {@link MultipartUtils}.
+ * Tests for StoreWriter.
  */
-public class ITestS3AMultipartUtils extends AbstractS3ATestBase {
+public class ITestS3AStoreWriterService extends AbstractS3ATestBase {
 
   private static final int UPLOAD_LEN = 1024;
   private static final String PART_FILENAME_BASE = "pending-part";

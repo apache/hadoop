@@ -48,7 +48,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.WriteOperationHelper;
+import org.apache.hadoop.fs.s3a.impl.write.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.auth.RolePolicies;
 import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
@@ -718,7 +718,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
           fs.createSpan(MULTIPART_UPLOAD_ABORTED,
               prefix, null);
       final WriteOperationHelper writeOperationHelper
-          = fs.getWriteOperationHelper();
+          = fs.createWriteOperationHelper(fs.getActiveAuditSpan());
 
       int count = 0;
       while (uploads.hasNext()) {
