@@ -219,7 +219,9 @@ public class AppsBlock extends HtmlBlock {
               ? "Unassigned" :
               Apps.isApplicationFinalState(app.getAppState())
                   ? "History" : "ApplicationMaster";
-      appsTableData.append(trackingURL == null ? "#" : "href='" + trackingURL)
+      appsTableData.append(trackingURL == null ? "#" : "href='"
+          + StringEscapeUtils.escapeEcmaScript(
+              StringEscapeUtils.escapeHtml4(trackingURL)))
         .append("'>").append(trackingUI).append("</a>\"],\n");
 
     }
