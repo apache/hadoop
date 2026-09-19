@@ -32,7 +32,8 @@ import org.apache.hadoop.mapred.JobContext;
 import org.apache.hadoop.mapreduce.CustomJobEndNotifier;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
-import org.eclipse.jetty.util.log.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <p>This class handles job end notification. Submitters of jobs can choose to
@@ -48,6 +49,9 @@ import org.eclipse.jetty.util.log.Log;
  * (eg. SUCCEEDED/KILLED/FAILED) </li> </ul>
  */
 public class JobEndNotifier implements Configurable {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(JobEndNotifier.class);
+
   private static final String JOB_ID = "$jobId";
   private static final String JOB_STATUS = "$jobStatus";
 
@@ -109,11 +113,11 @@ public class JobEndNotifier implements Configurable {
         int port = Integer.parseInt(portConf);
         proxyToUse = new Proxy(proxyType,
           new InetSocketAddress(hostname, port));
-        Log.getLog().info("Job end notification using proxy type \""
+        LOG.info("Job end notification using proxy type \""
             + proxyType + "\" hostname \"" + hostname + "\" and port \"" + port
             + "\"");
       } catch(NumberFormatException nfe) {
-        Log.getLog().warn("Job end notification couldn't parse configured"
+        LOG.warn("Job end notification couldn't parse configured"
             + "proxy's port " + portConf + ". Not going to use a proxy");
       }
     }
@@ -141,24 +145,24 @@ public class JobEndNotifier implements Configurable {
   private boolean notifyViaBuiltInNotifier() {
     boolean success = false;
     try {
-      Log.getLog().info("Job end notification trying " + urlToNotify);
+      LOG.info("Job end notification trying " + urlToNotify);
       HttpURLConnection conn =
         (HttpURLConnection) urlToNotify.openConnection(proxyToUse);
       conn.setConnectTimeout(timeout);
       conn.setReadTimeout(timeout);
       conn.setAllowUserInteraction(false);
       if(conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
-        Log.getLog().warn("Job end notification to " + urlToNotify
+        LOG.warn("Job end notification to " + urlToNotify
             + " failed with code: " + conn.getResponseCode() + " and message \""
             + conn.getResponseMessage() + "\"");
       }
       else {
         success = true;
-        Log.getLog().info("Job end notification to " + urlToNotify
+        LOG.info("Job end notification to " + urlToNotify
             + " succeeded");
       }
     } catch(IOException ioe) {
-      Log.getLog().warn("Job end notification to " + urlToNotify + " failed",
+      LOG.warn("Job end notification to " + urlToNotify + " failed",
           ioe);
     }
     return success;
@@ -169,7 +173,7 @@ public class JobEndNotifier implements Configurable {
    */
   private boolean notifyViaCustomNotifier() {
     try {
-      Log.getLog().info("Will be using " + customJobEndNotifierClassName
+      LOG.info("Will be using " + customJobEndNotifierClassName
                         + " for Job end notification");
 
       final Class<? extends CustomJobEndNotifier> customJobEndNotifierClass =
@@ -180,15 +184,15 @@ public class JobEndNotifier implements Configurable {
 
       boolean success = customJobEndNotifier.notifyOnce(urlToNotify, conf);
       if (success) {
-        Log.getLog().info("Job end notification to " + urlToNotify
+        LOG.info("Job end notification to " + urlToNotify
                           + " succeeded");
       } else {
-        Log.getLog().warn("Job end notification to " + urlToNotify
+        LOG.warn("Job end notification to " + urlToNotify
                           + " failed");
       }
       return success;
     } catch (Exception e) {
-      Log.getLog().warn("Job end notification to " + urlToNotify
+      LOG.warn("Job end notification to " + urlToNotify
                         + " failed", e);
       return false;
     }
@@ -215,24 +219,24 @@ public class JobEndNotifier implements Configurable {
     try {
       urlToNotify = new URL(userUrl);
     } catch (MalformedURLException mue) {
-      Log.getLog().warn("Job end notification couldn't parse " + userUrl, mue);
+      LOG.warn("Job end notification couldn't parse " + userUrl, mue);
       return;
     }
 
     // Send notification
     boolean success = false;
     while (numTries-- > 0 && !success) {
-      Log.getLog().info("Job end notification attempts left " + numTries);
+      LOG.info("Job end notification attempts left " + numTries);
       success = notifyURLOnce();
       if (!success) {
         Thread.sleep(waitInterval);
       }
     }
     if (!success) {
-      Log.getLog().warn("Job end notification failed to notify : "
+      LOG.warn("Job end notification failed to notify : "
           + urlToNotify);
     } else {
-      Log.getLog().info("Job end notification succeeded for "
+      LOG.info("Job end notification succeeded for "
           + jobReport.getJobId());
     }
   }

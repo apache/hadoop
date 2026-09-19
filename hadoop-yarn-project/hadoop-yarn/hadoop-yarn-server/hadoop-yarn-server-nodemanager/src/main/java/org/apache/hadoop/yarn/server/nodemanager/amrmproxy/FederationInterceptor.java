@@ -99,7 +99,6 @@ import org.apache.hadoop.yarn.util.AsyncCallback;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -290,7 +289,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     this.finishAMCalled = false;
     this.lastSCResponseTime = new ConcurrentHashMap<>();
     this.lastAMHeartbeatTime = this.clock.getTime();
-    this.nmTokenMapFromRegisterSecondaryCluster = new ConcurrentHashSet<>();
+    this.nmTokenMapFromRegisterSecondaryCluster = ConcurrentHashMap.newKeySet();
   }
 
   /**

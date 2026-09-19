@@ -60,6 +60,19 @@
       <artifactId>hadoop-yarn-server-common</artifactId>
     </dependency>
 
+    <!-- Router serves the UI2 war through
+         org.eclipse.jetty.ee8.webapp.WebAppContext. Declared at compile scope,
+         since a test scope would override the compile-scoped copy inherited
+         here and take it off the Router's own runtime classpath. jetty-server,
+         jetty-ee8-servlet and jetty-util are named by the tests but
+         deliberately left undeclared: they already arrive through
+         jetty-ee8-webapp at the same version and scope, and declaring them
+         directly reorders the servlet API this module resolves against. -->
+    <dependency>
+      <groupId>org.eclipse.jetty.ee8</groupId>
+      <artifactId>jetty-ee8-webapp</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-common</artifactId>

@@ -178,8 +178,7 @@ public class NamenodeWebHdfsMethods {
           + Param.toSortedString(", ", parameters));
     }
 
-    //clear content type
-    response.setContentType(null);
+    JettyUtils.clearContentType(response);
   }
 
   private static NamenodeProtocols getRPCServer(NameNode namenode)

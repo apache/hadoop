@@ -61,7 +61,6 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.task.reduce.ShuffleHeader;
-import org.eclipse.jetty.http.HttpHeader;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
@@ -128,6 +127,15 @@ import static org.apache.hadoop.mapred.ShuffleHandler.LOG;
  * </pre>
  */
 public class ShuffleChannelHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
+  /**
+   * Spelled out rather than taken from a library so that the bytes on the wire
+   * do not depend on which library supplies the constant: Netty's
+   * HttpHeaderNames and HttpHeaderValues are lowercase AsciiStrings, and these
+   * headers have been sent capitalised since this handler was written.
+   */
+  static final String CONNECTION = "Connection";
+  static final String KEEP_ALIVE = "Keep-Alive";
+
   private final ShuffleChannelHandlerContext handlerCtx;
 
   ShuffleChannelHandler(ShuffleChannelHandlerContext ctx) {
@@ -420,11 +428,10 @@ public class ShuffleChannelHandler extends SimpleChannelInboundHandler<FullHttpR
   protected void setResponseHeaders(HttpResponse response,
                                     boolean keepAliveParam, long contentLength) {
     if (!handlerCtx.connectionKeepAliveEnabled && !keepAliveParam) {
-      response.headers().set(HttpHeader.CONNECTION.asString(), CONNECTION_CLOSE);
+      response.headers().set(CONNECTION, CONNECTION_CLOSE);
     } else {
-      response.headers().set(HttpHeader.CONNECTION.asString(),
-          HttpHeader.KEEP_ALIVE.asString());
-      response.headers().set(HttpHeader.KEEP_ALIVE.asString(),
+      response.headers().set(CONNECTION, KEEP_ALIVE);
+      response.headers().set(KEEP_ALIVE,
           "timeout=" + handlerCtx.connectionKeepAliveTimeOut);
     }
 

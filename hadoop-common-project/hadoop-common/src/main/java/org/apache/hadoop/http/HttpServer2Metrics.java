@@ -30,6 +30,14 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 /**
  * This class collects all the metrics of Jetty's StatisticsHandler
  * and expose them as Hadoop Metrics.
+ *
+ * Jetty 12 rebuilt StatisticsHandler around the core request lifecycle. The
+ * dispatch counters it used to publish are now handle counters measuring the
+ * same thing under a different name, and are read as such here so the metric
+ * names Hadoop emits do not move. Its four async counters and its count of
+ * expired async requests have no counterpart, because the core no longer sees
+ * servlet async activity, so those five metrics are no longer emitted rather
+ * than reported as a constant.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -42,53 +50,33 @@ public class HttpServer2Metrics {
   private final int acceptorThreads;
   private final int selectorThreads;
 
-  @Metric("number of requested that have been asynchronously dispatched")
-  public int asyncDispatches() {
-    return handler.getAsyncDispatches();
-  }
-  @Metric("total number of async requests")
-  public int asyncRequests() {
-    return handler.getAsyncRequests();
-  }
-  @Metric("currently waiting async requests")
-  public int asyncRequestsWaiting() {
-    return handler.getAsyncRequestsWaiting();
-  }
-  @Metric("maximum number of waiting async requests")
-  public int asyncRequestsWaitingMax() {
-    return handler.getAsyncRequestsWaitingMax();
-  }
   @Metric("number of dispatches")
   public int dispatched() {
-    return handler.getDispatched();
+    return handler.getHandleTotal();
   }
   @Metric("number of dispatches currently active")
   public int dispatchedActive() {
-    return handler.getDispatchedActive();
+    return handler.getHandleActive();
   }
   @Metric("maximum number of active dispatches being handled")
   public int dispatchedActiveMax() {
-    return handler.getDispatchedActiveMax();
+    return handler.getHandleActiveMax();
   }
   @Metric("maximum time spend in dispatch handling (in ms)")
   public long dispatchedTimeMax() {
-    return handler.getDispatchedTimeMax();
+    return handler.getHandleTimeMax();
   }
   @Metric("mean time spent in dispatch handling (in ms)")
   public double dispatchedTimeMean() {
-    return handler.getDispatchedTimeMean();
+    return handler.getHandleTimeMean();
   }
   @Metric("standard deviation for dispatch handling (in ms)")
   public double dispatchedTimeStdDev() {
-    return handler.getDispatchedTimeStdDev();
+    return handler.getHandleTimeStdDev();
   }
   @Metric("total time spent in dispatch handling (in ms)")
   public long dispatchedTimeTotal() {
-    return handler.getDispatchedTimeTotal();
-  }
-  @Metric("number of async requests requests that have expired")
-  public int expires() {
-    return handler.getExpires();
+    return handler.getHandleTimeTotal();
   }
   @Metric("number of requests")
   public int requests() {
@@ -140,11 +128,11 @@ public class HttpServer2Metrics {
   }
   @Metric("total number of bytes across all responses")
   public long responsesBytesTotal() {
-    return handler.getResponsesBytesTotal();
+    return handler.getBytesWritten();
   }
   @Metric("time in milliseconds stats have been collected for")
   public long statsOnMs() {
-    return handler.getStatsOnMs();
+    return handler.getStatisticsDuration().toMillis();
   }
   @Metric("maximum number of threads in the pool")
   public int maxThreads() {
