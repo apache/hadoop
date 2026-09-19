@@ -57,6 +57,7 @@ import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
@@ -67,8 +68,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
@@ -340,6 +343,229 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
 
   @MethodSource("getParameters")
   @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testClusterMetricsWithPartitions(boolean pLegacyQueueMode)
+      throws Exception {
+    initTestRMWebServicesForCSWithPartitions(pLegacyQueueMode);
+    WebTarget r = targetWithJsonObject();
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path("metrics").request(MediaType.APPLICATION_JSON).get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+
+    JSONObject clusterMetrics = response.readEntity(JSONObject.class)
+        .getJSONObject("clusterMetrics");
+    assertEquals(2 * 1024 + 2 * 128 * 1024, clusterMetrics.getInt("totalMB"));
+    assertEquals(2 + 2 * 128, clusterMetrics.getInt("totalVirtualCores"));
+    assertEquals(2 * 1024 + 2 * 128 * 1024, clusterMetrics.getInt("availableMB"));
+    assertEquals(2 + 2 * 128, clusterMetrics.getInt("availableVirtualCores"));
+    assertEquals(0, clusterMetrics.getInt("allocatedMB"));
+    assertEquals(0, clusterMetrics.getInt("allocatedVirtualCores"));
+    assertEquals(0, clusterMetrics.getInt("reservedMB"));
+    assertEquals(0, clusterMetrics.getInt("reservedVirtualCores"));
+    assertEquals(0, clusterMetrics.getInt("pendingMB"));
+    assertEquals(0, clusterMetrics.getInt("pendingVirtualCores"));
+    assertTrue(clusterMetrics.getBoolean("crossPartitionMetricsAvailable"));
+
+    verifyResourceInfo(clusterMetrics.getJSONObject("totalClusterResourcesAcrossPartition"),
+        2 * 1024 + 2 * 128 * 1024, 2 + 2 * 128);
+    verifyResourceInfo(clusterMetrics.getJSONObject("totalUsedResourcesAcrossPartition"),
+        0, 0);
+    verifyResourceInfo(clusterMetrics.getJSONObject("totalReservedResourcesAcrossPartition"),
+        0, 0);
+    assertEquals(0, clusterMetrics.getInt("totalAllocatedContainersAcrossPartition"));
+
+    JSONArray partitionMetrics = clusterMetrics.getJSONArray("partitionClusterMetrics");
+    assertEquals(3, partitionMetrics.length());
+
+    verifyPartitionMetrics(partitionMetrics, DEFAULT_PARTITION,
+        128 * 1024, 128, 0, 0, 0, 0, 128 * 1024, 128);
+    verifyPartitionMetrics(partitionMetrics, LABEL_LX,
+        2 * 1024, 2, 0, 0, 0, 0, 2 * 1024, 2);
+    verifyPartitionMetrics(partitionMetrics, LABEL_LY,
+        128 * 1024, 128, 0, 0, 0, 0, 128 * 1024, 128);
+  }
+
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testClusterMetricsWithPartitionsXML(boolean pLegacyQueueMode) throws Exception {
+    initTestRMWebServicesForCSWithPartitions(pLegacyQueueMode);
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path("metrics").request(MediaType.APPLICATION_XML).get(Response.class);
+    assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+
+    String xml = response.readEntity(String.class);
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
+    DocumentBuilder db = dbf.newDocumentBuilder();
+    InputSource is = new InputSource();
+    is.setCharacterStream(new StringReader(xml));
+    Document dom = db.parse(is);
+
+    NodeList nodes = dom.getElementsByTagName("clusterMetrics");
+    assertEquals(1, nodes.getLength());
+    Element clusterMetrics = (Element) nodes.item(0);
+
+    assertEquals(2 * 1024 + 2 * 128 * 1024,
+        WebServicesTestUtils.getXmlLong(clusterMetrics, "totalMB"));
+    assertEquals(2 + 2 * 128,
+        WebServicesTestUtils.getXmlLong(clusterMetrics, "totalVirtualCores"));
+    assertEquals(2 * 1024 + 2 * 128 * 1024,
+        WebServicesTestUtils.getXmlLong(clusterMetrics, "availableMB"));
+    assertEquals(2 + 2 * 128,
+        WebServicesTestUtils.getXmlLong(clusterMetrics, "availableVirtualCores"));
+    assertEquals(0, WebServicesTestUtils.getXmlLong(clusterMetrics, "allocatedMB"));
+    assertEquals(0,
+        WebServicesTestUtils.getXmlLong(clusterMetrics, "allocatedVirtualCores"));
+    assertEquals(0, WebServicesTestUtils.getXmlLong(clusterMetrics, "reservedMB"));
+    assertEquals(0,
+        WebServicesTestUtils.getXmlLong(clusterMetrics, "reservedVirtualCores"));
+    assertEquals(0, WebServicesTestUtils.getXmlLong(clusterMetrics, "pendingMB"));
+    assertEquals(0,
+        WebServicesTestUtils.getXmlLong(clusterMetrics, "pendingVirtualCores"));
+    assertTrue(WebServicesTestUtils.getXmlBoolean(
+        clusterMetrics, "crossPartitionMetricsAvailable"));
+
+    verifyResourceInfoXML(getSingleChild(clusterMetrics,
+            "totalClusterResourcesAcrossPartition"),
+        2 * 1024 + 2 * 128 * 1024, 2 + 2 * 128);
+    verifyResourceInfoXML(getSingleChild(clusterMetrics,
+            "totalUsedResourcesAcrossPartition"), 0, 0);
+    verifyResourceInfoXML(getSingleChild(clusterMetrics,
+            "totalReservedResourcesAcrossPartition"), 0, 0);
+    assertEquals(0, WebServicesTestUtils.getXmlInt(clusterMetrics,
+        "totalAllocatedContainersAcrossPartition"));
+
+    NodeList partitionMetricsXml = clusterMetrics.getElementsByTagName("partitionClusterMetrics");
+    assertEquals(3, partitionMetricsXml.getLength());
+
+    verifyPartitionMetricsXML(partitionMetricsXml, DEFAULT_PARTITION,
+        128 * 1024, 128, 0, 0, 0, 0, 128 * 1024, 128);
+    verifyPartitionMetricsXML(partitionMetricsXml, LABEL_LX,
+        2 * 1024, 2, 0, 0, 0, 0, 2 * 1024, 2);
+    verifyPartitionMetricsXML(partitionMetricsXml, LABEL_LY,
+        128 * 1024, 128, 0, 0, 0, 0, 128 * 1024, 128);
+  }
+
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testClusterMetricsWithPartitionsWithReserved(
+      boolean pLegacyQueueMode) throws Exception {
+    initTestRMWebServicesForCSWithPartitions(pLegacyQueueMode);
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    ResourceUsage rootUsage = cs.getRootQueue().getQueueResourceUsage();
+    rootUsage.incUsed(LABEL_LX, Resource.newInstance(2 * 1024, 2));
+    rootUsage.incReserved(LABEL_LX, Resource.newInstance(1024, 1));
+    rootUsage.incUsed(LABEL_LY, Resource.newInstance(4 * 1024, 4));
+    rootUsage.incReserved(LABEL_LY, Resource.newInstance(1024, 1));
+
+    WebTarget r = targetWithJsonObject();
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path("metrics").request(MediaType.APPLICATION_JSON).get(Response.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+
+    JSONObject clusterMetrics = response.readEntity(JSONObject.class)
+        .getJSONObject("clusterMetrics");
+    assertEquals(2 * 1024 + 2 * 128 * 1024, clusterMetrics.getInt("totalMB"));
+    assertEquals(2 + 2 * 128, clusterMetrics.getInt("totalVirtualCores"));
+    assertEquals(4 * 1024, clusterMetrics.getInt("allocatedMB"));
+    assertEquals(4, clusterMetrics.getInt("allocatedVirtualCores"));
+    assertEquals(2 * 1024, clusterMetrics.getInt("reservedMB"));
+    assertEquals(2, clusterMetrics.getInt("reservedVirtualCores"));
+    assertEquals(2 * 1024 + 2 * 128 * 1024 - 6 * 1024,
+        clusterMetrics.getInt("availableMB"));
+    assertEquals(2 + 2 * 128 - 6, clusterMetrics.getInt("availableVirtualCores"));
+    assertTrue(clusterMetrics.getBoolean("crossPartitionMetricsAvailable"));
+
+    verifyResourceInfo(clusterMetrics.getJSONObject(
+        "totalUsedResourcesAcrossPartition"), 6 * 1024, 6);
+    verifyResourceInfo(clusterMetrics.getJSONObject(
+        "totalReservedResourcesAcrossPartition"), 2 * 1024, 2);
+    verifyResourceInfo(clusterMetrics.getJSONObject(
+        "totalClusterResourcesAcrossPartition"),
+        2 * 1024 + 2 * 128 * 1024, 2 + 2 * 128);
+
+    JSONArray partitionMetrics = clusterMetrics.getJSONArray(
+        "partitionClusterMetrics");
+    assertEquals(3, partitionMetrics.length());
+    verifyPartitionMetrics(partitionMetrics, DEFAULT_PARTITION,
+        128 * 1024, 128, 0, 0, 0, 0, 128 * 1024, 128);
+    verifyPartitionMetrics(partitionMetrics, LABEL_LX,
+        2 * 1024, 2, 1024, 1, 1024, 1, 0, 0);
+    verifyPartitionMetrics(partitionMetrics, LABEL_LY,
+        128 * 1024, 128, 3 * 1024, 3, 1024, 1, 124 * 1024, 124);
+  }
+
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
+  public void testClusterMetricsWithPartitionsWithReservedXML(
+      boolean pLegacyQueueMode) throws Exception {
+    initTestRMWebServicesForCSWithPartitions(pLegacyQueueMode);
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    ResourceUsage rootUsage = cs.getRootQueue().getQueueResourceUsage();
+    rootUsage.incUsed(LABEL_LX, Resource.newInstance(2 * 1024, 2));
+    rootUsage.incReserved(LABEL_LX, Resource.newInstance(1024, 1));
+    rootUsage.incUsed(LABEL_LY, Resource.newInstance(4 * 1024, 4));
+    rootUsage.incReserved(LABEL_LY, Resource.newInstance(1024, 1));
+
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path("metrics").request(MediaType.APPLICATION_XML).get(Response.class);
+    assertEquals(MediaType.APPLICATION_XML_TYPE + ";" + JettyUtils.UTF_8,
+        response.getMediaType().toString());
+
+    String xml = response.readEntity(String.class);
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
+    DocumentBuilder db = dbf.newDocumentBuilder();
+    InputSource is = new InputSource();
+    is.setCharacterStream(new StringReader(xml));
+    Document dom = db.parse(is);
+
+    NodeList nodes = dom.getElementsByTagName("clusterMetrics");
+    assertEquals(1, nodes.getLength());
+    Element clusterMetrics = (Element) nodes.item(0);
+
+    assertEquals(2 * 1024 + 2 * 128 * 1024,
+        WebServicesTestUtils.getXmlLong(clusterMetrics, "totalMB"));
+    assertEquals(2 + 2 * 128,
+        WebServicesTestUtils.getXmlLong(clusterMetrics, "totalVirtualCores"));
+    assertEquals(4 * 1024,
+        WebServicesTestUtils.getXmlLong(clusterMetrics, "allocatedMB"));
+    assertEquals(4,
+        WebServicesTestUtils.getXmlLong(clusterMetrics, "allocatedVirtualCores"));
+    assertEquals(2 * 1024,
+        WebServicesTestUtils.getXmlLong(clusterMetrics, "reservedMB"));
+    assertEquals(2,
+        WebServicesTestUtils.getXmlLong(clusterMetrics, "reservedVirtualCores"));
+    assertEquals(2 * 1024 + 2 * 128 * 1024 - 6 * 1024,
+        WebServicesTestUtils.getXmlLong(clusterMetrics, "availableMB"));
+    assertEquals(2 + 2 * 128 - 6,
+        WebServicesTestUtils.getXmlLong(clusterMetrics, "availableVirtualCores"));
+    assertTrue(WebServicesTestUtils.getXmlBoolean(
+        clusterMetrics, "crossPartitionMetricsAvailable"));
+
+    verifyResourceInfoXML(getSingleChild(clusterMetrics,
+            "totalClusterResourcesAcrossPartition"),
+        2 * 1024 + 2 * 128 * 1024, 2 + 2 * 128);
+    verifyResourceInfoXML(getSingleChild(clusterMetrics,
+            "totalUsedResourcesAcrossPartition"), 6 * 1024, 6);
+    verifyResourceInfoXML(getSingleChild(clusterMetrics,
+            "totalReservedResourcesAcrossPartition"), 2 * 1024, 2);
+
+    NodeList partitionMetricsXml = clusterMetrics
+        .getElementsByTagName("partitionClusterMetrics");
+    assertEquals(3, partitionMetricsXml.getLength());
+    verifyPartitionMetricsXML(partitionMetricsXml, DEFAULT_PARTITION,
+        128 * 1024, 128, 0, 0, 0, 0, 128 * 1024, 128);
+    verifyPartitionMetricsXML(partitionMetricsXml, LABEL_LX,
+        2 * 1024, 2, 1024, 1, 1024, 1, 0, 0);
+    verifyPartitionMetricsXML(partitionMetricsXml, LABEL_LY,
+        128 * 1024, 128, 3 * 1024, 3, 1024, 1, 124 * 1024, 124);
+  }
+
+  @MethodSource("getParameters")
+  @ParameterizedTest(name = "{index}: legacy-queue-mode={0}")
   public void testPartitionInSchedulerActivities(boolean pLegacyQueueMode)
       throws Exception {
     initTestRMWebServicesForCSWithPartitions(pLegacyQueueMode);
@@ -410,6 +636,113 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
         queueCObj.get(0).optString(FN_ACT_ALLOCATION_STATE));
     assertEquals(ActivityDiagnosticConstant.QUEUE_DO_NOT_NEED_MORE_RESOURCE,
         queueCObj.get(0).optString(FN_ACT_DIAGNOSTIC));
+  }
+
+  private void verifyResourceInfo(JSONObject resourceInfo, long memory,
+      int vCores) throws JSONException {
+    assertEquals(memory, resourceInfo.getLong("memory"));
+    assertEquals(vCores, resourceInfo.getInt("vCores"));
+  }
+
+  private void verifyPartitionMetrics(JSONArray partitionMetrics,
+      String partitionName, long totalMB, int totalVirtualCores,
+      long allocatedMB, int allocatedVirtualCores,
+      long reservedMB, int reservedVirtualCores,
+      long availableMB, int availableVirtualCores) throws JSONException {
+    JSONObject partitionMetric = getPartitionMetrics(
+        partitionMetrics, partitionName);
+    assertEquals(partitionName, partitionMetric.getString("partitionName"));
+    assertEquals(totalMB, partitionMetric.getLong("totalMB"));
+    assertEquals(totalVirtualCores,
+        partitionMetric.getInt("totalVirtualCores"));
+    assertEquals(allocatedMB, partitionMetric.getLong("allocatedMB"));
+    assertEquals(allocatedVirtualCores,
+        partitionMetric.getInt("allocatedVirtualCores"));
+    assertEquals(reservedMB, partitionMetric.getLong("reservedMB"));
+    assertEquals(reservedVirtualCores,
+        partitionMetric.getInt("reservedVirtualCores"));
+    assertEquals(availableMB, partitionMetric.getLong("availableMB"));
+    assertEquals(availableVirtualCores,
+        partitionMetric.getInt("availableVirtualCores"));
+    assertEquals(0, partitionMetric.getLong("pendingMB"));
+    assertEquals(0, partitionMetric.getInt("pendingVirtualCores"));
+    assertEquals(0, partitionMetric.getInt("containersAllocated"));
+    assertEquals(0, partitionMetric.getInt("containersReserved"));
+    assertEquals(0, partitionMetric.getInt("containersPending"));
+  }
+
+  private JSONObject getPartitionMetrics(JSONArray partitionMetrics,
+      String partitionName) throws JSONException {
+    for (int i = 0; i < partitionMetrics.length(); i++) {
+      JSONObject partitionMetric = partitionMetrics.getJSONObject(i);
+      if (partitionName.equals(partitionMetric.getString("partitionName"))) {
+        return partitionMetric;
+      }
+    }
+    fail("Missing partition metrics for " + partitionName);
+    return null;
+  }
+
+  private void verifyResourceInfoXML(Element resourceInfo, long memory,
+      int vCores) {
+    assertEquals(memory, WebServicesTestUtils.getXmlLong(resourceInfo, "memory"));
+    assertEquals(vCores, WebServicesTestUtils.getXmlInt(resourceInfo, "vCores"));
+  }
+
+  private void verifyPartitionMetricsXML(NodeList partitionMetrics,
+      String partitionName, long totalMB, int totalVirtualCores,
+      long allocatedMB, int allocatedVirtualCores,
+      long reservedMB, int reservedVirtualCores,
+      long availableMB, int availableVirtualCores) {
+    Element partitionMetric = getPartitionMetricsXML(partitionMetrics, partitionName);
+    assertEquals(partitionName,
+        WebServicesTestUtils.getXmlString(partitionMetric, "partitionName"));
+    assertEquals(totalMB,
+        WebServicesTestUtils.getXmlLong(partitionMetric, "totalMB"));
+    assertEquals(totalVirtualCores,
+        WebServicesTestUtils.getXmlLong(partitionMetric, "totalVirtualCores"));
+    assertEquals(allocatedMB,
+        WebServicesTestUtils.getXmlLong(partitionMetric, "allocatedMB"));
+    assertEquals(allocatedVirtualCores, WebServicesTestUtils.getXmlLong(
+        partitionMetric, "allocatedVirtualCores"));
+    assertEquals(reservedMB,
+        WebServicesTestUtils.getXmlLong(partitionMetric, "reservedMB"));
+    assertEquals(reservedVirtualCores, WebServicesTestUtils.getXmlLong(
+        partitionMetric, "reservedVirtualCores"));
+    assertEquals(availableMB,
+        WebServicesTestUtils.getXmlLong(partitionMetric, "availableMB"));
+    assertEquals(availableVirtualCores, WebServicesTestUtils.getXmlLong(
+        partitionMetric, "availableVirtualCores"));
+    assertEquals(0,
+        WebServicesTestUtils.getXmlLong(partitionMetric, "pendingMB"));
+    assertEquals(0,
+        WebServicesTestUtils.getXmlLong(partitionMetric, "pendingVirtualCores"));
+    assertEquals(0,
+        WebServicesTestUtils.getXmlInt(partitionMetric, "containersAllocated"));
+    assertEquals(0,
+        WebServicesTestUtils.getXmlInt(partitionMetric, "containersReserved"));
+    assertEquals(0,
+        WebServicesTestUtils.getXmlInt(partitionMetric, "containersPending"));
+  }
+
+  private Element getPartitionMetricsXML(NodeList partitionMetrics,
+      String partitionName) {
+    for (int i = 0; i < partitionMetrics.getLength(); i++) {
+      Element partitionMetric = (Element) partitionMetrics.item(i);
+      if (partitionName.equals(WebServicesTestUtils.getXmlString(
+          partitionMetric, "partitionName"))) {
+        return partitionMetric;
+      }
+    }
+    fail("Missing partition metrics for " + partitionName);
+    return null;
+  }
+
+  private Element getSingleChild(Element parent, String name) {
+    NodeList nodes = parent.getElementsByTagName(name);
+    assertEquals(1, nodes.getLength(),
+        "Expected exactly one <" + name + "> under <" + parent.getNodeName() + ">");
+    return (Element) nodes.item(0);
   }
 
   private void verifySchedulerInfoXML(Document dom) throws Exception {
