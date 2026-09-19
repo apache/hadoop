@@ -345,12 +345,16 @@ public class NameNodeMetrics {
     blockOpsQueued.set(size);
   }
 
-  public void setDeleteBlocksQueued(int size) {
-    deleteBlocksQueued.set(size);
-  }
-
   public void incrPendingDeleteBlocksCount(int size) {
     pendingDeleteBlocksCount.incr(size);
+  }
+
+  public void incrDeleteBlocksQueued() {
+    deleteBlocksQueued.incr();
+  }
+
+  public void decrDeleteBlocksQueued() {
+    deleteBlocksQueued.decr();
   }
 
   public void decrPendingDeleteBlocksCount() {
