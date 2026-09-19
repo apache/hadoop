@@ -18,11 +18,17 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task
 
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Test the attributes of the {@link DockerContainerDeletionTask} class.
@@ -51,6 +57,19 @@ public class TestDockerContainerDeletionTask {
   @Test
   public void testGetContainerId() {
     assertEquals(CONTAINER_ID, deletionTask.getContainerId());
+  }
+
+  @Test
+  public void testRunCallsDeletionTaskFinished() throws IOException {
+    LinuxContainerExecutor exec = mock(LinuxContainerExecutor.class);
+    NMStateStoreService stateStore = mock(NMStateStoreService.class);
+    when(deletionService.getContainerExecutor()).thenReturn(exec);
+    when(deletionService.getStateStore()).thenReturn(stateStore);
+
+    deletionTask.run();
+
+    verify(exec).removeDockerContainer(CONTAINER_ID);
+    verify(stateStore).removeDeletionTask(ID);
   }
 
   @Test
