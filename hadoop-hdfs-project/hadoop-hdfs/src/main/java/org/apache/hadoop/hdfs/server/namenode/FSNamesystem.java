@@ -2209,10 +2209,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void setOwner(String src, String username, String group)
       throws IOException {
+    setOwner(src, username, group, NameNode.getRemoteUser());
+  }
+
+  void setOwner(String src, String username, String group, UserGroupInformation caller)
+      throws IOException {
     final String operationName = "setOwner";
     FileStatus auditStat = null;
     checkOperation(OperationCategory.WRITE);
-    final FSPermissionChecker pc = getPermissionChecker();
+    final FSPermissionChecker pc = getPermissionChecker(caller);
     FSPermissionChecker.setOperationType(operationName);
     try {
       writeLock(RwLockMode.FS);
@@ -3477,6 +3482,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return dir.getPermissionChecker();
   }
 
+  FSPermissionChecker getPermissionChecker(UserGroupInformation caller)
+      throws AccessControlException {
+    return dir.getPermissionChecker(caller);
+  }
+
   /**
    * Remove leases and inodes related to a given path
    * @param removedUCFiles INodes whose leases need to be released
@@ -3586,10 +3596,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   boolean mkdirs(String src, PermissionStatus permissions,
       boolean createParent) throws IOException {
+    return mkdirs(src, permissions, createParent, NameNode.getRemoteUser());
+  }
+
+  boolean mkdirs(String src, PermissionStatus permissions,
+      boolean createParent, UserGroupInformation caller) throws IOException {
     final String operationName = "mkdirs";
     FileStatus auditStat = null;
     checkOperation(OperationCategory.WRITE);
-    final FSPermissionChecker pc = getPermissionChecker();
+    final FSPermissionChecker pc = getPermissionChecker(caller);
     FSPermissionChecker.setOperationType(operationName);
     try {
       writeLock(RwLockMode.FS);
@@ -3692,6 +3707,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void setQuota(String src, long nsQuota, long ssQuota, StorageType type)
       throws IOException {
+    setQuota(src, nsQuota, ssQuota, type, NameNode.getRemoteUser());
+  }
+
+  void setQuota(String src, long nsQuota, long ssQuota, StorageType type,
+      UserGroupInformation caller) throws IOException {
     if (type != null) {
       requireEffectiveLayoutVersionForFeature(Feature.QUOTA_BY_STORAGE_TYPE);
     }
@@ -3700,10 +3720,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     checkOperation(OperationCategory.WRITE);
     final String operationName = getQuotaCommand(nsQuota, ssQuota);
-    final FSPermissionChecker pc = getPermissionChecker();
+    final FSPermissionChecker pc = getPermissionChecker(caller);
     FSPermissionChecker.setOperationType(operationName);
     if(!allowOwnerSetQuota) {
-      checkSuperuserPrivilege(operationName, src);
+      checkSuperuserPrivilege(pc, operationName, src);
     }
     try {
       // Need to compute the curren space usage
@@ -9207,9 +9227,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void checkSuperuserPrivilege(String operationName, String path)
       throws IOException {
     if (isPermissionEnabled) {
+      FSPermissionChecker pc = getPermissionChecker();
+      checkSuperuserPrivilege(pc, operationName, path);
+    }
+  }
+
+  void checkSuperuserPrivilege(FSPermissionChecker pc, String operationName, String path)
+      throws IOException {
+    if (isPermissionEnabled) {
       try {
         FSPermissionChecker.setOperationType(operationName);
-        FSPermissionChecker pc = getPermissionChecker();
         pc.checkSuperuserPrivilege(path);
       } catch(AccessControlException ace){
         logAuditEvent(false, operationName, path);
