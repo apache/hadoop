@@ -95,6 +95,8 @@ public class FSPermissionChecker implements AccessControlEnforcer {
   private final long accessControlEnforcerReportingThresholdMs;
 
   private static ThreadLocal<String> operationType = new ThreadLocal<>();
+  private static final ThreadLocal<Boolean> RENAME_TO_TRASH =
+      ThreadLocal.withInitial(() -> Boolean.FALSE);
 
   protected FSPermissionChecker(String fsOwner, String supergroup,
       UserGroupInformation callerUgi,
@@ -161,6 +163,21 @@ public class FSPermissionChecker implements AccessControlEnforcer {
 
   public static void setOperationType(String opType) {
     operationType.set(opType);
+  }
+
+  /**
+   * Sets whether the current rename request is a trash move.
+   * This thread-local flag is consumed while building AuthorizationContext
+   * for external enforcers and must be reset by the caller after the request.
+   *
+   * @param value true if the rename uses {@code Options.Rename.TO_TRASH}
+   */
+  public static void setRenameToTrash(boolean value) {
+    RENAME_TO_TRASH.set(value);
+  }
+
+  public static boolean isRenameToTrash() {
+    return Boolean.TRUE.equals(RENAME_TO_TRASH.get());
   }
 
   public boolean isMemberOfGroup(String group) {
@@ -255,7 +272,8 @@ public class FSPermissionChecker implements AccessControlEnforcer {
         supergroup(supergroup).
         callerUgi(callerUgi).
         operationName(opType).
-        callerContext(CallerContext.getCurrent());
+        callerContext(CallerContext.getCurrent()).
+        renameToTrash(isRenameToTrash());
 
     // Add path to the context builder only if it is not null.
     if (path != null && !path.isEmpty()) {
@@ -393,7 +411,8 @@ public class FSPermissionChecker implements AccessControlEnforcer {
             subAccess(subAccess).
             ignoreEmptyDir(ignoreEmptyDir).
             operationName(opType).
-            callerContext(CallerContext.getCurrent());
+            callerContext(CallerContext.getCurrent()).
+            renameToTrash(isRenameToTrash());
         accessControlEnforcer.checkPermissionWithContext(builder.build());
       } else {
         accessControlEnforcer.checkPermission(fsOwner, supergroup, callerUgi, inodeAttrs,
@@ -451,7 +470,8 @@ public class FSPermissionChecker implements AccessControlEnforcer {
                                    // children
             .ignoreEmptyDir(false)
             .operationName(opType)
-            .callerContext(CallerContext.getCurrent());
+            .callerContext(CallerContext.getCurrent())
+            .renameToTrash(isRenameToTrash());
 
         accessControlEnforcer.checkPermissionWithContext(builder.build());
       } else {
