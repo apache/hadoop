@@ -243,6 +243,8 @@
     <yarnpkg.version>v1.22.5</yarnpkg.version>
     <apache-ant.version>1.10.13</apache-ant.version>
     <jmh.version>1.20</jmh.version>
+    <system-rules.version>1.18.0</system-rules.version>
+    <system-lambda.version>1.2.1</system-lambda.version>
   </properties>
 
   <dependencyManagement>
@@ -1216,7 +1218,7 @@
       <dependency>
         <groupId>com.github.stefanbirkner</groupId>
         <artifactId>system-rules</artifactId>
-        <version>1.18.0</version>
+        <version>${system-rules.version}</version>
         <exclusions>
           <exclusion>
             <groupId>junit</groupId>
@@ -1227,6 +1229,12 @@
             <artifactId>hamcrest-core</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.github.stefanbirkner</groupId>
+        <artifactId>system-lambda</artifactId>
+        <version>${system-lambda.version}</version>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
