@@ -1014,11 +1014,11 @@ public class CommonConfigurationKeysPublic {
   public static final String HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_KEY =
     "hadoop.security.secret-manager.key-generator.algorithm";
   public static final String HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_DEFAULT =
-    "HmacSHA1";
+    "HmacSHA256";
 
   public static final String HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_KEY =
     "hadoop.security.secret-manager.key-length";
-  public static final int HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_DEFAULT = 64;
+  public static final int HADOOP_SECURITY_SECRET_MANAGER_KEY_LENGTH_DEFAULT = 256;
 
   /**
    * @see
