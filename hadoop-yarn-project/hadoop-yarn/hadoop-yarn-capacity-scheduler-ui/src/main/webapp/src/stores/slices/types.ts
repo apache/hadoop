@@ -34,6 +34,7 @@ import type {
 } from '~/types';
 import type { PlacementRulesSlice } from './placementRulesSlice';
 import type { CapacityEditorSlice } from './capacityEditorSlice';
+import type { RootCapacityAutoStagingResult } from './rootCapacityAutoStaging';
 
 export interface BaseStoreSlice {
   apiClient: YarnApiClient;
@@ -107,6 +108,10 @@ export interface StagedChangesSlice {
     triggeringQueuePath: string,
     triggeringProperty: string,
   ) => void;
+  resolveRootCapacityStagingForFlexibleAutoCreation: (
+    queuePath: string,
+    changedData: Record<string, string>,
+  ) => RootCapacityAutoStagingResult | null;
 }
 
 export interface QueueSelectionSlice {
