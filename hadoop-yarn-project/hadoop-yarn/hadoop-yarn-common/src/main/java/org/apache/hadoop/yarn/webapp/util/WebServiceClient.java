@@ -67,8 +67,7 @@ public class WebServiceClient {
     return instance;
   }
 
-  @VisibleForTesting
-  SSLFactory getSSLFactory() {
+  public static SSLFactory getSSLFactory() {
     return sslFactory;
   }
 
