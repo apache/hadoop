@@ -1,4 +1,22 @@
 /**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
  * Capacity validation utilities
  *
  * These functions extract changes from capacity editor drafts
@@ -6,6 +24,7 @@
  */
 
 import type { CapacityRowDraft } from '~/stores/slices/capacityEditorSlice';
+import type { SchedulerStore } from '~/stores/schedulerStore';
 import {
   convertVectorDraftToString,
   DEFAULT_PARTITION_VALUE,
@@ -15,9 +34,247 @@ import { buildPropertyKey } from '~/utils/propertyUtils';
 import { validateQueue } from '~/features/validation/service';
 import type { ValidationIssue, StagedChange, SchedulerInfo } from '~/types';
 
+const ACCESSIBLE_NODE_LABELS_PROPERTY = 'accessible-node-labels';
+const LABEL_PARTITION_ACCESS_RULE = 'label-partition-access';
+const LABEL_PARTITION_CAPACITY_REQUIRES_ACCESS_RULE =
+  'label-partition-capacity-requires-access';
+
+type AccessibleLabelAccess = 'all' | 'none' | Set<string>;
+
+export type QueuePropertyReader = Pick<SchedulerStore, 'hasQueueProperty' | 'getQueuePropertyValue'>;
+
+export const parseAccessibleNodeLabels = (value: string): AccessibleLabelAccess => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 'none';
+  }
+  if (trimmed === '*') {
+    return 'all';
+  }
+  return new Set(trimmed.split(',').map((label) => label.trim()).filter(Boolean));
+};
+
+export const isLabelInAccessibleList = (
+  label: string,
+  accessibleLabels: AccessibleLabelAccess,
+): boolean => {
+  if (accessibleLabels === 'all') {
+    return true;
+  }
+  if (accessibleLabels === 'none') {
+    return false;
+  }
+  return accessibleLabels.has(label);
+};
+
+const parseQueueAccessibleNodeLabelsProperty = (
+  queuePath: string,
+  store: QueuePropertyReader,
+): AccessibleLabelAccess | null => {
+  if (!store.hasQueueProperty(queuePath, ACCESSIBLE_NODE_LABELS_PROPERTY)) {
+    return null;
+  }
+
+  return parseAccessibleNodeLabels(
+    store.getQueuePropertyValue(queuePath, ACCESSIBLE_NODE_LABELS_PROPERTY).value,
+  );
+};
+
+/**
+ * Returns whether a queue lists the label in its own accessible-node-labels property.
+ */
+export function isLabelListedInQueue(
+  queuePath: string,
+  label: string,
+  store: QueuePropertyReader,
+): boolean {
+  const accessibleLabels = parseQueueAccessibleNodeLabelsProperty(queuePath, store);
+  if (accessibleLabels === null) {
+    return false;
+  }
+
+  return isLabelInAccessibleList(label, accessibleLabels);
+};
+
+/** Labels with non-empty label-partition capacity configured on the queue. */
+export const getLabelsWithPartitionCapacityConfigured = (
+  queuePath: string,
+  config: Map<string, string>,
+): Set<string> => {
+  const prefix = buildPropertyKey(queuePath, `${ACCESSIBLE_NODE_LABELS_PROPERTY}.`);
+  const labels = new Set<string>();
+
+  config.forEach((value, key) => {
+    if (!key.startsWith(prefix) || !value.trim()) {
+      return;
+    }
+
+    const remainder = key.slice(prefix.length);
+    const match = remainder.match(/^([^.]+)\.(capacity|maximum-capacity)$/);
+    if (match?.[1]) {
+      labels.add(match[1]);
+    }
+  });
+
+  return labels;
+};
+
+/**
+ * Block removing a label from accessible-node-labels while label-partition capacity
+ * for that label remains configured on the queue.
+ */
+export function getAccessibleLabelRemovalIssues(
+  queuePath: string,
+  newAccessibleNodeLabels: string,
+  config: Map<string, string>,
+): ValidationIssue[] {
+  const accessibleLabels = parseAccessibleNodeLabels(newAccessibleNodeLabels);
+  const configuredLabels = getLabelsWithPartitionCapacityConfigured(queuePath, config);
+  const issues: ValidationIssue[] = [];
+
+  configuredLabels.forEach((label) => {
+    if (isLabelInAccessibleList(label, accessibleLabels)) {
+      return;
+    }
+
+    issues.push({
+      queuePath,
+      field: ACCESSIBLE_NODE_LABELS_PROPERTY,
+      severity: 'error',
+      rule: LABEL_PARTITION_CAPACITY_REQUIRES_ACCESS_RULE,
+      message: `Cannot remove "${label}" from accessible-node-labels while label partition capacity is configured. Clear label partition capacity first.`,
+    });
+  });
+
+  return issues;
+}
+
 export interface DraftCacheEntry {
   drafts: Record<string, CapacityRowDraft>;
   draftOrder: string[];
+}
+
+const getDraftCapacityValues = (draft: CapacityRowDraft) => ({
+  capacityValue:
+    draft.mode === 'vector'
+      ? convertVectorDraftToString(draft.vectorCapacity).trim()
+      : draft.capacityValue.trim(),
+  maxCapacityValue:
+    draft.mode === 'vector'
+      ? convertVectorDraftToString(draft.vectorMaxCapacity).trim()
+      : draft.maxCapacityValue.trim(),
+});
+
+const createLabelPartitionAccessIssue = (
+  queuePath: string,
+  field: string,
+  label: string,
+  propertyLabel: 'capacity' | 'maximum capacity',
+): ValidationIssue => ({
+  queuePath,
+  field,
+  severity: 'error',
+  rule: LABEL_PARTITION_ACCESS_RULE,
+  message: `Add "${label}" to accessible-node-labels before setting label partition ${propertyLabel}.`,
+});
+
+/**
+ * Validates label-partition capacity drafts for queues that do not list the label
+ * in their own accessible-node-labels property.
+ */
+export function getLabelPartitionAccessIssues(
+  rows: CapacityRowDraft[],
+  selectedNodeLabel: string | null,
+  store: QueuePropertyReader,
+): ValidationIssue[] {
+  if (!selectedNodeLabel) {
+    return [];
+  }
+
+  const capacityField = getPropertyNameForLabel(selectedNodeLabel, 'capacity');
+  const maxCapacityField = getPropertyNameForLabel(selectedNodeLabel, 'maximum-capacity');
+  const issues: ValidationIssue[] = [];
+
+  rows.forEach((row) => {
+    if (isLabelListedInQueue(row.queuePath, selectedNodeLabel, store)) {
+      return;
+    }
+
+    const { capacityValue, maxCapacityValue } = getDraftCapacityValues(row);
+
+    if (capacityValue) {
+      issues.push(
+        createLabelPartitionAccessIssue(
+          row.queuePath,
+          capacityField,
+          selectedNodeLabel,
+          'capacity',
+        ),
+      );
+    }
+
+    if (maxCapacityValue) {
+      issues.push(
+        createLabelPartitionAccessIssue(
+          row.queuePath,
+          maxCapacityField,
+          selectedNodeLabel,
+          'maximum capacity',
+        ),
+      );
+    }
+  });
+
+  return issues;
+};
+
+const mergeCapacityEditorDraftCache = (
+  draftCache: Record<string, DraftCacheEntry>,
+  currentDrafts: Record<string, CapacityRowDraft>,
+  currentDraftOrder: string[],
+  selectedNodeLabel: string | null,
+): Record<string, DraftCacheEntry> => {
+  const currentCacheKey = selectedNodeLabel ?? DEFAULT_PARTITION_VALUE;
+
+  return {
+    ...draftCache,
+    [currentCacheKey]: {
+      drafts: { ...currentDrafts },
+      draftOrder: [...currentDraftOrder],
+    },
+  };
+};
+
+/** Validates all cached label-partition drafts in the capacity editor. */
+export function getLabelPartitionAccessIssuesForEditor(
+  draftCache: Record<string, DraftCacheEntry>,
+  currentDrafts: Record<string, CapacityRowDraft>,
+  currentDraftOrder: string[],
+  selectedNodeLabel: string | null,
+  store: QueuePropertyReader,
+): ValidationIssue[] {
+  const completeDraftCache = mergeCapacityEditorDraftCache(
+    draftCache,
+    currentDrafts,
+    currentDraftOrder,
+    selectedNodeLabel,
+  );
+
+  const issues: ValidationIssue[] = [];
+
+  Object.entries(completeDraftCache).forEach(([cacheKey, cachedData]) => {
+    if (cacheKey === DEFAULT_PARTITION_VALUE) {
+      return;
+    }
+
+    const rows = cachedData.draftOrder
+      .map((queuePath) => cachedData.drafts[queuePath])
+      .filter((row): row is CapacityRowDraft => Boolean(row));
+
+    issues.push(...getLabelPartitionAccessIssues(rows, cacheKey, store));
+  });
+
+  return issues;
 }
 
 export interface ExtractChangesParams {
@@ -42,17 +299,13 @@ export function extractChangesFromDrafts({
   const normalizeValue = (value: string) => value.trim();
   const changesByQueue = new Map<string, Record<string, string>>();
 
-  // Build a complete cache including the current drafts
-  const currentCacheKey = selectedNodeLabel ?? DEFAULT_PARTITION_VALUE;
-  const completeDraftCache: Record<string, DraftCacheEntry> = {
-    ...draftCache,
-    [currentCacheKey]: {
-      drafts: { ...currentDrafts },
-      draftOrder: [...currentDraftOrder],
-    },
-  };
+  const completeDraftCache = mergeCapacityEditorDraftCache(
+    draftCache,
+    currentDrafts,
+    currentDraftOrder,
+    selectedNodeLabel,
+  );
 
-  // Process all cached labels (including the currently selected one)
   Object.entries(completeDraftCache).forEach(([cacheKey, cachedData]) => {
     const label = cacheKey === DEFAULT_PARTITION_VALUE ? null : cacheKey;
     const capacityProperty = getPropertyNameForLabel(label, 'capacity');
