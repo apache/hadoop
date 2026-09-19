@@ -1930,6 +1930,35 @@ public class TestDistributedFileSystem {
   }
 
   @Test
+  public void testCreateFileWithRelativePath() throws Exception {
+    Configuration conf = getTestConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build()) {
+      DistributedFileSystem fs = cluster.getFileSystem();
+      fs.mkdirs(fs.getHomeDirectory());
+
+      // HDFS-17843: createFile() and create() with favored nodes should both
+      // handle relative paths the same way as fs.create().
+      Path relative = new Path("testRelativeCreate");
+      try (FSDataOutputStream out = fs.createFile(relative).build()) {
+        out.write(42);
+      }
+      assertTrue(fs.exists(fs.makeQualified(relative)),
+          "File created via createFile() with relative path should exist");
+
+      Path relativeFavored = new Path("testRelativeCreateFavored");
+      try (FSDataOutputStream out = fs.create(relativeFavored,
+          FsPermission.getFileDefault(), true, 4096, (short) 1,
+          fs.getDefaultBlockSize(relativeFavored), null,
+          new InetSocketAddress[0])) {
+        out.write(42);
+      }
+      assertTrue(fs.exists(fs.makeQualified(relativeFavored)),
+          "File created via create() with favored nodes and relative path should exist");
+    }
+  }
+
+  @Test
   public void testDFSDataOutputStreamBuilderForAppend() throws IOException {
     Configuration conf = getTestConfiguration();
     String testFile = "/testDFSDataOutputStreamBuilderForAppend";
