@@ -43,6 +43,7 @@ public class SimpleUdpServer {
   private final int RECEIVE_BUFFER_SIZE = 65536;
 
   protected final int port;
+  private final String bindHost;
   protected final ChannelInboundHandlerAdapter rpcProgram;
   protected final int workerCount;
   protected int boundPort = -1; // Will be set after server starts
@@ -52,7 +53,13 @@ public class SimpleUdpServer {
 
   public SimpleUdpServer(int port, ChannelInboundHandlerAdapter program,
       int workerCount) {
+    this(port, null, program, workerCount);
+  }
+
+  public SimpleUdpServer(int port, String bindHost,
+      ChannelInboundHandlerAdapter program, int workerCount) {
     this.port = port;
+    this.bindHost = bindHost;
     this.rpcProgram = program;
     this.workerCount = workerCount;
   }
@@ -79,7 +86,9 @@ public class SimpleUdpServer {
         });
 
     // Listen to the UDP port
-    ChannelFuture f = server.bind(new InetSocketAddress(port)).sync();
+    ChannelFuture f = server.bind(bindHost != null
+        ? new InetSocketAddress(bindHost, port)
+        : new InetSocketAddress(port)).sync();
     ch = f.channel();
     InetSocketAddress socketAddr = (InetSocketAddress) ch.localAddress();
     boundPort = socketAddr.getPort();
@@ -91,6 +100,10 @@ public class SimpleUdpServer {
   // boundPort will be set only after server starts
   public int getBoundPort() {
     return this.boundPort;
+  }
+
+  public InetSocketAddress getBoundAddress() {
+    return ch != null ? (InetSocketAddress) ch.localAddress() : null;
   }
 
   public void shutdown() {
