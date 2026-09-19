@@ -79,6 +79,17 @@
                 <resourceValue>12.5%</resourceValue>
               </capacityVectorEntries>
             </queueCapacityVectorInfo>
+            <maximumQueueCapacityVectorInfo>
+              <configuredCapacityVector>[memory-mb=50.0%,vcores=50.0%]</configuredCapacityVector>
+              <capacityVectorEntries>
+                <resourceName>memory-mb</resourceName>
+                <resourceValue>50.0%</resourceValue>
+              </capacityVectorEntries>
+              <capacityVectorEntries>
+                <resourceName>vcores</resourceName>
+                <resourceValue>50.0%</resourceValue>
+              </capacityVectorEntries>
+            </maximumQueueCapacityVectorInfo>
             <capacity>12.5</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>50.0</maxCapacity>
@@ -190,6 +201,9 @@
             <queueCapacityVectorInfo>
               <configuredCapacityVector>[]</configuredCapacityVector>
             </queueCapacityVectorInfo>
+            <maximumQueueCapacityVectorInfo>
+              <configuredCapacityVector>[]</configuredCapacityVector>
+            </maximumQueueCapacityVectorInfo>
             <capacity>0.0</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
@@ -1065,6 +1079,17 @@
                 <resourceValue>50.0%</resourceValue>
               </capacityVectorEntries>
             </queueCapacityVectorInfo>
+            <maximumQueueCapacityVectorInfo>
+              <configuredCapacityVector>[memory-mb=0.0,vcores=0.0]</configuredCapacityVector>
+              <capacityVectorEntries>
+                <resourceName>memory-mb</resourceName>
+                <resourceValue>0.0</resourceValue>
+              </capacityVectorEntries>
+              <capacityVectorEntries>
+                <resourceName>vcores</resourceName>
+                <resourceValue>0.0</resourceValue>
+              </capacityVectorEntries>
+            </maximumQueueCapacityVectorInfo>
             <capacity>50.0</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
@@ -1793,6 +1818,17 @@
                 <resourceValue>37.5%</resourceValue>
               </capacityVectorEntries>
             </queueCapacityVectorInfo>
+            <maximumQueueCapacityVectorInfo>
+              <configuredCapacityVector>[memory-mb=0.0,vcores=0.0]</configuredCapacityVector>
+              <capacityVectorEntries>
+                <resourceName>memory-mb</resourceName>
+                <resourceValue>0.0</resourceValue>
+              </capacityVectorEntries>
+              <capacityVectorEntries>
+                <resourceName>vcores</resourceName>
+                <resourceValue>0.0</resourceValue>
+              </capacityVectorEntries>
+            </maximumQueueCapacityVectorInfo>
             <capacity>37.5</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
@@ -2249,6 +2285,17 @@
             <resourceValue>100.0%</resourceValue>
           </capacityVectorEntries>
         </queueCapacityVectorInfo>
+        <maximumQueueCapacityVectorInfo>
+          <configuredCapacityVector>[memory-mb=100.0%,vcores=100.0%]</configuredCapacityVector>
+          <capacityVectorEntries>
+            <resourceName>memory-mb</resourceName>
+            <resourceValue>100.0%</resourceValue>
+          </capacityVectorEntries>
+          <capacityVectorEntries>
+            <resourceName>vcores</resourceName>
+            <resourceValue>100.0%</resourceValue>
+          </capacityVectorEntries>
+        </maximumQueueCapacityVectorInfo>
         <capacity>100.0</capacity>
         <usedCapacity>0.0</usedCapacity>
         <maxCapacity>100.0</maxCapacity>
