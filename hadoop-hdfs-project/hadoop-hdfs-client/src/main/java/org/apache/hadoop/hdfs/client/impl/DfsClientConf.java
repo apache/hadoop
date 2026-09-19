@@ -155,6 +155,16 @@ public class DfsClientConf {
 
   private final long hedgedReadThresholdMillis;
   private final int hedgedReadThreadpoolSize;
+
+  private final boolean prefetchEnabled;
+  private final long prefetchTotalSize;
+  private final long prefetchTtlMs;
+  private final long prefetchMaxBytes;
+  private final int prefetchThreadpoolSize;
+  private final int prefetchThreads;
+  private final int prefetchChunkSize;
+  private final boolean prefetchMetricsLogEnabled;
+  private final long prefetchMetricsLogIntervalMs;
   private final List<Class<? extends ReplicaAccessorBuilder>>
       replicaAccessorBuilderClasses;
 
@@ -285,6 +295,34 @@ public class DfsClientConf {
     hedgedReadThreadpoolSize = conf.getInt(
         HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_KEY,
         HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_DEFAULT);
+
+    prefetchEnabled = conf.getBoolean(
+        HdfsClientConfigKeys.Prefetch.ENABLED_KEY,
+        HdfsClientConfigKeys.Prefetch.ENABLED_DEFAULT);
+    prefetchTotalSize = conf.getLong(
+        HdfsClientConfigKeys.Prefetch.SIZE_KEY,
+        HdfsClientConfigKeys.Prefetch.SIZE_DEFAULT);
+    prefetchTtlMs = Math.max(0L, conf.getLong(
+        HdfsClientConfigKeys.Prefetch.TTL_MS_KEY,
+        HdfsClientConfigKeys.Prefetch.TTL_MS_DEFAULT));
+    prefetchMaxBytes = conf.getLong(
+        HdfsClientConfigKeys.Prefetch.MAX_BYTES_KEY,
+        HdfsClientConfigKeys.Prefetch.MAX_BYTES_DEFAULT);
+    prefetchThreadpoolSize = conf.getInt(
+        HdfsClientConfigKeys.Prefetch.THREADPOOL_SIZE_KEY,
+        HdfsClientConfigKeys.Prefetch.THREADPOOL_SIZE_DEFAULT);
+    prefetchThreads = conf.getInt(
+        HdfsClientConfigKeys.Prefetch.THREADS_KEY,
+        HdfsClientConfigKeys.Prefetch.THREADS_DEFAULT);
+    prefetchChunkSize = conf.getInt(
+        HdfsClientConfigKeys.Prefetch.CHUNK_SIZE_KEY,
+        HdfsClientConfigKeys.Prefetch.CHUNK_SIZE_DEFAULT);
+    prefetchMetricsLogEnabled = conf.getBoolean(
+        HdfsClientConfigKeys.Prefetch.METRICS_LOG_ENABLED_KEY,
+        HdfsClientConfigKeys.Prefetch.METRICS_LOG_ENABLED_DEFAULT);
+    prefetchMetricsLogIntervalMs = conf.getLong(
+        HdfsClientConfigKeys.Prefetch.METRICS_LOG_INTERVAL_MS_KEY,
+        HdfsClientConfigKeys.Prefetch.METRICS_LOG_INTERVAL_MS_DEFAULT);
 
     deadNodeDetectionEnabled =
         conf.getBoolean(DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY,
@@ -673,6 +711,56 @@ public class DfsClientConf {
    */
   public int getClientShortCircuitNum() {
     return clientShortCircuitNum;
+  }
+
+  /** @return whether sequential read-ahead prefetch is enabled. */
+  public boolean isPrefetchEnabled() {
+    return prefetchEnabled;
+  }
+
+  /** @return total per-stream prefetch memory in bytes. */
+  public long getPrefetchTotalSize() {
+    return prefetchTotalSize;
+  }
+
+  /** @return prefetch buffer time-to-live (millis) from last access. */
+  public long getPrefetchTtlMs() {
+    return prefetchTtlMs;
+  }
+
+  /**
+   * @return global cap on prefetch bytes shared by all prefetching streams in
+   *     the JVM (the prefetch budget and thread pool are process-wide, not
+   *     per-DFSClient; the first client to enable prefetch initializes them and
+   *     a later client only grows the budget to its own larger value).
+   */
+  public long getPrefetchMaxBytes() {
+    return prefetchMaxBytes;
+  }
+
+  /** @return shared prefetch worker pool size; {@code <= 0} disables prefetch. */
+  public int getPrefetchThreadpoolSize() {
+    return prefetchThreadpoolSize;
+  }
+
+  /** @return max blocks a single stream prefetches concurrently. */
+  public int getPrefetchThreads() {
+    return prefetchThreads;
+  }
+
+  /** @return chunk size (bytes) at which block readiness is published. */
+  public int getPrefetchChunkSize() {
+    return prefetchChunkSize;
+  }
+
+  /** @return whether to periodically log per-stream read-cache metrics. */
+  public boolean isPrefetchMetricsLogEnabled() {
+    return prefetchMetricsLogEnabled;
+  }
+
+  /** @return interval (millis) between read-cache metric log lines. */
+  public long getPrefetchMetricsLogIntervalMs() {
+    return prefetchMetricsLogIntervalMs;
   }
 
   /**
