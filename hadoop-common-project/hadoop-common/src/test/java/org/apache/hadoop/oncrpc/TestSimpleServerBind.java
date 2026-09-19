@@ -78,7 +78,10 @@ public class TestSimpleServerBind {
       protected void handleInternal(ChannelHandlerContext ctx, RpcInfo info) {}
 
       @Override
-      protected boolean isIdempotent(RpcCall call) { return false; }
+      protected boolean isIdempotent(RpcCall call) {
+        return false;
+      }
+
     };
     assertEquals("127.0.0.1", program.getBindHost());
   }
