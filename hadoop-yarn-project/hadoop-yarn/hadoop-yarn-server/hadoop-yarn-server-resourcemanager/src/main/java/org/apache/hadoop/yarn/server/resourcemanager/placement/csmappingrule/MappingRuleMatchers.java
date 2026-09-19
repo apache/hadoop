@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
 
 import java.util.Arrays;
@@ -241,6 +242,39 @@ public class MappingRuleMatchers {
    */
   public static MappingRuleMatcher createUserMatcher(String userName) {
     return new VariableMatcher("%user", userName);
+  }
+
+  /**
+   * Creates a matcher for one or more comma-separated usernames. The entire
+   * string {@code *} matches all users; otherwise each comma-separated token
+   * is matched against the submitting user.
+   *
+   * @param matches one username, comma-separated usernames, or {@code *}
+   * @return matcher for the provided user match expression
+   */
+  public static MappingRuleMatcher createUserMatcherFromMatches(String matches) {
+    if ("*".equals(matches)) {
+      return createAllMatcher();
+    }
+
+    String[] users = StringUtils.splitPreserveAllTokens(matches, ',');
+    if (users.length == 1) {
+      String user = StringUtils.trim(users[0]);
+      if (user.isEmpty()) {
+        throw new IllegalArgumentException("Match string contains an empty username");
+      }
+      return createUserMatcher(user);
+    }
+
+    MappingRuleMatcher[] matchers = new MappingRuleMatcher[users.length];
+    for (int i = 0; i < users.length; i++) {
+      String user = StringUtils.trim(users[i]);
+      if (user.isEmpty()) {
+        throw new IllegalArgumentException("Match string contains an empty username");
+      }
+      matchers[i] = createUserMatcher(user);
+    }
+    return new OrMatcher(matchers);
   }
 
   /**
