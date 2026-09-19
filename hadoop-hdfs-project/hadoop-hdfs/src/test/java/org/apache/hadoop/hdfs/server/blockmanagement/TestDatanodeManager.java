@@ -1277,4 +1277,31 @@ public class TestDatanodeManager {
       assertTrue(numECReconstructedTasks >= 0);
     }
   }
+
+  @Test
+  public void testGetDatanodeListForReportWithCache() throws IOException {
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Configuration conf = new Configuration();
+    // Just need a huge number so the cache doesn't time out
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_DATANODE_LIST_CACHE_EXPIRATION_MS_KEY, 9000000000L);
+    DatanodeManager dm = Mockito.spy(mockDatanodeManager(fsn, conf));
+    dm.registerDatanode(new DatanodeRegistration(
+        new DatanodeID("127.0.0.1", "localhost", "storageid", 9000, 0, 0, 0), null, null,
+        "version"));
+
+    // First call will proc the live report
+    dm.getDatanodeListForReportWithCache(HdfsConstants.DatanodeReportType.LIVE);
+    // Second will bypass the live report and hit the cache
+    dm.getDatanodeListForReportWithCache(HdfsConstants.DatanodeReportType.LIVE);
+    Mockito.verify(dm, Mockito.times(1))
+        .getDatanodeListForReport(HdfsConstants.DatanodeReportType.LIVE);
+    // Third call will still bypass the live report and hit the cache again
+    dm.getDatanodeListForReportWithCache(HdfsConstants.DatanodeReportType.LIVE);
+    Mockito.verify(dm, Mockito.times(1))
+        .getDatanodeListForReport(HdfsConstants.DatanodeReportType.LIVE);
+    // Make a call that will never hit the cache and the total number of live calls should increase
+    dm.getDatanodeStorageReport(HdfsConstants.DatanodeReportType.LIVE);
+    Mockito.verify(dm, Mockito.times(2))
+        .getDatanodeListForReport(HdfsConstants.DatanodeReportType.LIVE);
+  }
 }
