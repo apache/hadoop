@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_READ
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
@@ -362,6 +363,36 @@ public class TestDFSInputStream {
     } finally {
       DFSClientFaultInjector.set(oldFaultInjector);
       IOUtils.closeStream(out);
+    }
+  }
+
+  @Test
+  @Timeout(30)
+  public void testCloseReleasesBlockReaderWhenClientAlreadyClosed()
+      throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build()) {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path file = new Path("/testfile");
+      DFSTestUtil.createFile(fs, file, 4096, (short) 1, 0);
+
+      DFSClient client = new DFSClient(cluster.getURI(), conf);
+      DFSInputStream in = client.open("/testfile");
+      assertTrue(in.read() != -1);
+      assertNotNull(in.getCurrentBlockReader());
+
+      // Close the client before the stream. close() must still release the
+      // block reader (and its socket to the DataNode) even though
+      // checkOpen() fails with "Filesystem closed".
+      client.close();
+      try {
+        in.close();
+      } catch (IOException e) {
+        GenericTestUtils.assertExceptionContains("Filesystem closed", e);
+      }
+      assertNull(in.getCurrentBlockReader());
     }
   }
 }
