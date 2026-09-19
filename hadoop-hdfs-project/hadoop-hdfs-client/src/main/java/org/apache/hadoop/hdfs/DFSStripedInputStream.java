@@ -278,12 +278,25 @@ public class DFSStripedInputStream extends DFSInputStream {
               "block" + block.getBlock(), e);
           // re-fetch the block in case the block has been moved
           fetchBlockAt(block.getStartOffset());
-          addToLocalDeadNodes(dnInfo.info);
+          block = refreshLocatedBlock(block);
+          if (locatedBlockContainsNode(block, dnInfo.info)) {
+            addToLocalDeadNodes(dnInfo.info);
+          }
         }
       }
       if (reader != null) {
         readerInfos[chunkIndex] =
             new BlockReaderInfo(reader, dnInfo.info, offsetInBlock);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean locatedBlockContainsNode(LocatedBlock block,
+      DatanodeInfo node) {
+    for (DatanodeInfo location : block.getLocations()) {
+      if (location.equals(node)) {
         return true;
       }
     }
@@ -432,6 +445,7 @@ public class DFSStripedInputStream extends DFSInputStream {
             DFSClient.LOG.info(
                 "DFSStripedInputStream read meets exception:{}, will retry again.",
                 ioe.toString());
+            openInfo(true);
             isRetryRead = true;
           } else {
             throw ioe;
