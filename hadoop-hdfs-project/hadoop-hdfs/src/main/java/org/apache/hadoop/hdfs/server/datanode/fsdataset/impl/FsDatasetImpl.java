@@ -1410,7 +1410,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       // The other reason is that an "append" is occurring to this block.
 
       // check the validity of the parameter
-      if (newGS < b.getGenerationStamp()) {
+      if (newGS <= b.getGenerationStamp()) {
         throw new IOException("The new generation stamp " + newGS +
             " should be greater than the replica " + b + "'s generation stamp");
       }
