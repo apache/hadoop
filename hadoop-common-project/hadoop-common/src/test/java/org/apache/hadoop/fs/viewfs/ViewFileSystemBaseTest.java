@@ -71,6 +71,7 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_C
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT;
 import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -229,14 +230,11 @@ abstract public class ViewFileSystemBaseTest {
 
   @Test
   public void testBasicPaths() {
-    assertEquals(fsView.getUri(), FsConstants.VIEWFS_URI);
-    assertEquals(fsView.getWorkingDirectory(),
-        fsView.makeQualified(
-            new Path("/user/" + System.getProperty("user.name"))));
-    assertEquals(
-        fsView.getHomeDirectory(),
-        fsView.makeQualified(
-        new Path("/user/" + System.getProperty("user.name"))));
+    assertThat(fsView.getUri()).isEqualTo(FsConstants.VIEWFS_URI);
+    assertThat(fsView.getWorkingDirectory()).isEqualTo(
+        fsView.makeQualified(new Path("/user/" + System.getProperty("user.name"))));
+    assertThat(fsView.getHomeDirectory()).isEqualTo(
+        fsView.makeQualified(new Path("/user/" + System.getProperty("user.name"))));
     assertEquals(
         fsView.makeQualified(new Path("/foo/bar")),
         new Path("/foo/bar").makeQualified(FsConstants.VIEWFS_URI, null));
