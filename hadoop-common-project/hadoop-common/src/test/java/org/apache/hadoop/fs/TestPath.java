@@ -40,6 +40,7 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -571,15 +572,15 @@ public class TestPath {
   public void testTrailingSlashAndUriResolve() throws URISyntaxException {
     // Path from String: trailing slash is normalized away
     Path fromString = new Path("hdfs://host/dir/");
-    assertEquals("hdfs://host/dir", fromString.toUri().toString());
-    assertEquals(URI.create("hdfs://host/x"),
-        fromString.toUri().resolve("x"));
+    assertThat(fromString.toUri().toString()).isEqualTo("hdfs://host/dir");
+    assertThat(fromString.toUri().resolve("x"))
+        .isEqualTo(URI.create("hdfs://host/x"));
 
     // Path from URI: trailing slash is preserved
     Path fromUri = new Path(new URI("hdfs://host/dir/"));
-    assertEquals("hdfs://host/dir/", fromUri.toUri().toString());
-    assertEquals(URI.create("hdfs://host/dir/x"),
-        fromUri.toUri().resolve("x"));
+    assertThat(fromUri.toUri().toString()).isEqualTo("hdfs://host/dir/");
+    assertThat(fromUri.toUri().resolve("x"))
+        .isEqualTo(URI.create("hdfs://host/dir/x"));
   }
 
 }
