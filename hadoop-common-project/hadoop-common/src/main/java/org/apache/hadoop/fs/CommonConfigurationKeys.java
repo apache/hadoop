@@ -84,6 +84,17 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** Default value for IPC_MAXIMUM_DATA_LENGTH. */
   public static final int IPC_MAXIMUM_DATA_LENGTH_DEFAULT = 128 * 1024 * 1024;
 
+  /**
+   * Threshold in bytes above which a WARN log is emitted for large IPC
+   * requests, even when the request is still within
+   * {@link #IPC_MAXIMUM_DATA_LENGTH}.
+   */
+  public static final String IPC_DATA_LENGTH_WARN_THRESHOLD =
+      "ipc.data.length.warn.threshold";
+  /** Default value for IPC_DATA_LENGTH_WARN_THRESHOLD. */
+  public static final int IPC_DATA_LENGTH_WARN_THRESHOLD_DEFAULT =
+      64 * 1024 * 1024;
+
   /** Max response size a client will accept. */
   public static final String IPC_MAXIMUM_RESPONSE_LENGTH =
       "ipc.maximum.response.length";
