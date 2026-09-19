@@ -35,7 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
+import org.apache.hadoop.hdfs.net.NetworkTopologyFactory;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -201,10 +201,6 @@ public class DatanodeManager {
    */
   private final boolean dataNodeDiskStatsEnabled;
 
-  /**
-   * If we use DfsNetworkTopology to choose nodes for placing replicas.
-   */
-  private final boolean useDfsNetworkTopology;
 
   private static final String IP_PORT_SEPARATOR = ":";
 
@@ -235,14 +231,7 @@ public class DatanodeManager {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
 
-    this.useDfsNetworkTopology = conf.getBoolean(
-        DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY,
-        DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT);
-    if (useDfsNetworkTopology) {
-      networktopology = DFSNetworkTopology.getInstance(conf);
-    } else {
-      networktopology = NetworkTopology.getInstance(conf);
-    }
+    networktopology = NetworkTopologyFactory.create(conf);
     this.heartbeatManager = new HeartbeatManager(namesystem,
         blockManager, conf);
     this.datanodeAdminManager = new DatanodeAdminManager(namesystem,
