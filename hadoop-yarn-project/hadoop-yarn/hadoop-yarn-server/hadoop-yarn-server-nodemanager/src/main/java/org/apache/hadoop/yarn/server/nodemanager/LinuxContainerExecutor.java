@@ -182,7 +182,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     TOO_LONG_EXECUTOR_PATH(81),
     CANNOT_GET_EXECUTABLE_NAME_FROM_KERNEL(82),
     CANNOT_GET_EXECUTABLE_NAME_FROM_PID(83),
-    WRONG_PATH_OF_EXECUTABLE(84);
+    WRONG_PATH_OF_EXECUTABLE(84),
+    WRAPPED_EXIT_CODE_USER_CONTAINER_FAILED(85);
     private final int code;
 
     ExitCode(int exitCode) {
