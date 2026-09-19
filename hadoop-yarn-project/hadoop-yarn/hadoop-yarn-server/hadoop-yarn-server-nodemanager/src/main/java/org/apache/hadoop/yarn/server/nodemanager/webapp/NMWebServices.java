@@ -31,6 +31,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecord;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecords;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
@@ -107,7 +108,9 @@ public class NMWebServices {
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private String redirectWSUrl;
   private LogAggregationFileControllerFactory factory;
+  private DiagnosticJStackService diagnosticJStackService;
   private boolean filterAppsByUser = false;
+  private boolean isJStackEndpointsEnable = false;
 
   @javax.ws.rs.core.Context
   private HttpServletRequest request;
@@ -132,6 +135,11 @@ public class NMWebServices {
     this.filterAppsByUser = this.nmContext.getConf().getBoolean(
         YarnConfiguration.FILTER_ENTITY_LIST_BY_USER,
         YarnConfiguration.DEFAULT_DISPLAY_APPS_FOR_LOGGED_IN_USER);
+    this.isJStackEndpointsEnable = this.nmContext.getConf().getBoolean(
+            YarnConfiguration.NM_JSTACK_ENDPOINTS_ENABLED,
+            YarnConfiguration.DEFAULT_NM_JSTACK_ENDPOINTS_ENABLED
+    );
+    this.diagnosticJStackService = new DiagnosticJStackService(this.nmContext);
   }
 
   public NMWebServices(final Context nm, final ResourceView view,
@@ -626,6 +634,68 @@ public class NMWebServices {
       return Response.status(Status.INTERNAL_SERVER_ERROR).entity(e).build();
     }
     return Response.ok().build();
+  }
+
+
+  @GET
+  @Path("/jstack/{numberOfJStack}")
+  @Produces({ MediaType.TEXT_PLAIN})
+  public Response getNodeThreadDump(@javax.ws.rs.core.Context HttpServletRequest req,
+      @PathParam("numberOfJStack") int numberOfJStack) {
+    if (!isJStackEndpointsEnable) {
+      return Response.status(Status.METHOD_NOT_ALLOWED)
+              .build();
+    }
+
+    try {
+      return Response.status(Status.OK)
+              .entity(diagnosticJStackService.collectNodeThreadDump(numberOfJStack, req))
+              .build();
+    } catch (YarnRuntimeException e) {
+      return Response.status(Status.FORBIDDEN)
+              .entity(e.getMessage())
+              .build();
+    } catch (IOException e){
+      return Response.status(Status.INTERNAL_SERVER_ERROR)
+              .entity("Shell command has failed: " + e.getMessage() + ". " +
+                      "For more information please check the NodeManager logs.")
+              .build();
+    }
+
+  }
+
+
+  @GET
+  @Path("/apps/{appid}/jstack/{numberOfJStack}")
+  @Produces({MediaType.TEXT_PLAIN})
+  public Response getApplicationJStack(@javax.ws.rs.core.Context HttpServletRequest req,
+      @PathParam("appid") String appId,
+      @PathParam("numberOfJStack") int numberOfJStack) {
+    if (!isJStackEndpointsEnable) {
+      return Response.status(Status.METHOD_NOT_ALLOWED)
+              .build();
+    }
+
+    try {
+      return Response.status(Status.OK)
+              .entity(diagnosticJStackService
+                      .collectApplicationThreadDump(appId, numberOfJStack, req))
+              .build();
+    } catch (IllegalArgumentException e){
+      return Response.status(Status.BAD_REQUEST)
+              .entity("The applicationId is invalid: " + appId + ". " + e.getMessage())
+              .build();
+    } catch (YarnRuntimeException e) {
+      return Response.status(Status.FORBIDDEN)
+              .entity(e.getMessage())
+              .build();
+    } catch (IOException e){
+      return Response.status(Status.INTERNAL_SERVER_ERROR)
+              .entity("Shell command has failed: " + e.getMessage() + ". " +
+                "For more information please check the NodeManager logs.")
+              .build();
+    }
+
   }
 
   private long parseLongParam(String bytes) {
