@@ -183,52 +183,52 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
 
     List<QueueManagementChange> queueManagementChanges =
         Collections.emptyList();
-    if (!parentQueue.shouldFailAutoCreationWhenGuaranteedCapacityExceeded()) {
-
-      AutoCreatedQueueManagementPolicy policyClazz =
-          parentQueue.getAutoCreatedQueueManagementPolicy();
-      long startTime = 0;
-      try {
-        startTime = clock.getTime();
-
-        parentQueue.getReadLock().lock();
+    parentQueue.getReadLock().lock();
+    try {
+      if (!parentQueue.shouldFailAutoCreationWhenGuaranteedCapacityExceeded()) {
+  
+        AutoCreatedQueueManagementPolicy policyClazz =
+            parentQueue.getAutoCreatedQueueManagementPolicy();
+        long startTime = 0;
         try {
+          startTime = clock.getTime();
+  
           queueManagementChanges = policyClazz.computeQueueManagementChanges();
-        } finally {
-          parentQueue.getReadLock().unlock();
-        }
-
-        //Scheduler update is asynchronous
-        if (queueManagementChanges.size() > 0) {
-          QueueManagementChangeEvent queueManagementChangeEvent =
-              new QueueManagementChangeEvent(parentQueue,
-                  queueManagementChanges);
-          scheduler.getRMContext().getDispatcher().getEventHandler().handle(
-              queueManagementChangeEvent);
-        }
-
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("{} uses {} millisecond" + " to run",
-              policyClazz.getClass().getName(), clock.getTime() - startTime);
+  
+          //Scheduler update is asynchronous
           if (queueManagementChanges.size() > 0) {
-            LOG.debug(" Updated queue management changes for parent queue" + " "
-                    + "{}: [{}]", parentQueue.getQueuePath(),
-                queueManagementChanges.size() < 25 ?
-                    queueManagementChanges.toString() :
-                    queueManagementChanges.size());
+            QueueManagementChangeEvent queueManagementChangeEvent =
+                new QueueManagementChangeEvent(parentQueue,
+                    queueManagementChanges);
+            scheduler.getRMContext().getDispatcher().getEventHandler().handle(
+                queueManagementChangeEvent);
           }
+  
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("{} uses {} millisecond" + " to run",
+                policyClazz.getClass().getName(), clock.getTime() - startTime);
+            if (queueManagementChanges.size() > 0) {
+              LOG.debug(" Updated queue management changes for parent queue" + " "
+                      + "{}: [{}]", parentQueue.getQueuePath(),
+                  queueManagementChanges.size() < 25 ?
+                      queueManagementChanges.toString() :
+                      queueManagementChanges.size());
+            }
+          }
+        } catch (YarnException e) {
+          LOG.error(
+              "Could not compute child queue management updates for parent "
+                  + "queue "
+                  + parentQueue.getQueuePath(), e);
         }
-      } catch (YarnException e) {
-        LOG.error(
-            "Could not compute child queue management updates for parent "
-                + "queue "
-                + parentQueue.getQueuePath(), e);
+      } else{
+        LOG.debug("Skipping queue management updates for parent queue {} "
+            + "since configuration for auto creating queues beyond "
+            + "parent's guaranteed capacity is disabled",
+            parentQueue.getQueuePath());
       }
-    } else{
-      LOG.debug("Skipping queue management updates for parent queue {} "
-          + "since configuration for auto creating queues beyond "
-          + "parent's guaranteed capacity is disabled",
-          parentQueue.getQueuePath());
+    } finally {
+      parentQueue.getReadLock().unlock();
     }
     return queueManagementChanges;
   }
