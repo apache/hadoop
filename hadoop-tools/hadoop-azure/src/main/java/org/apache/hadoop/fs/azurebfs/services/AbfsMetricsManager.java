@@ -160,7 +160,11 @@ public class AbfsMetricsManager implements Closeable {
         abfsCounters.initializeMetrics(metricFormat, abfsConfiguration);
         // Metrics emitter scheduler
         this.metricsEmitScheduler
-            = Executors.newSingleThreadScheduledExecutor();
+            = Executors.newSingleThreadScheduledExecutor(r -> {
+              Thread t = new Thread(r, "ABFS-Metrics-Emit-Scheduler");
+              t.setDaemon(true);
+              return t;
+            });
         // run every 1 minute to check the metrics count
         this.metricsEmitScheduler.scheduleWithFixedDelay(
             () -> {
