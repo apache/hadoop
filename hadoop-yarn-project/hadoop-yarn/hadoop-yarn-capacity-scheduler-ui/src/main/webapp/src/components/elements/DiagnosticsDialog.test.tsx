@@ -17,13 +17,19 @@
  */
 
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DiagnosticsDialog } from './DiagnosticsDialog';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 
 vi.mock('~/stores/schedulerStore');
+
+vi.mock('sonner', () => ({
+  toast: {
+    error: vi.fn(),
+  },
+}));
 
 // Mock UI primitives that rely on portals or complex behaviors
 vi.mock('~/components/ui/dialog', () => ({
@@ -67,6 +73,10 @@ describe('DiagnosticsDialog', () => {
     nodeLabels: [{ name: 'x', exclusivity: true }],
     nodeToLabels: [{ nodeId: 'node-1', nodeLabels: ['x'] }],
     nodes: [],
+    apiClient: {
+      getBulkSchedulerActivities: vi.fn(),
+      getResourceManagerJstack: vi.fn(),
+    },
   });
 
   let storeState: ReturnType<typeof createStoreState>;
@@ -124,7 +134,9 @@ describe('DiagnosticsDialog', () => {
     try {
       await user.click(downloadButton);
 
-      expect(createObjectURLMock).toHaveBeenCalledTimes(1);
+      await waitFor(() => {
+        expect(createObjectURLMock).toHaveBeenCalledTimes(1);
+      });
       const firstCall = createObjectURLMock.mock.calls[0] as unknown[] | undefined;
       expect(firstCall).toBeDefined();
       const blobArg = firstCall?.[0];
@@ -154,4 +166,108 @@ describe('DiagnosticsDialog', () => {
       });
     }
   });
+  it('fetches bulk activities when selected', async () => {
+    const user = userEvent.setup();
+    const bulkActivities = { bulkActivities: { activities: [{ nodeId: 'n1:8041' }] } };
+    vi.mocked(storeState.apiClient.getBulkSchedulerActivities).mockResolvedValue(bulkActivities);
+
+    render(<DiagnosticsDialog />);
+
+    const originalCreateObjectURL = URL.createObjectURL;
+    const createObjectURLMock = vi.fn(() => 'blob:url');
+    Object.assign(URL, {
+      createObjectURL: createObjectURLMock,
+      revokeObjectURL: vi.fn(),
+    });
+
+    const originalCreateElement = document.createElement.bind(document);
+    const anchorElement = originalCreateElement('a');
+    vi.spyOn(anchorElement, 'click').mockImplementation(() => {});
+    const createElementMock = vi
+      .spyOn(document, 'createElement')
+      .mockImplementation((tagName: string) => {
+        if (tagName === 'a') {
+          return anchorElement;
+        }
+        return originalCreateElement(tagName);
+      });
+
+    try {
+      await user.click(screen.getByLabelText('Scheduler Bulk Activities'));
+      await user.clear(screen.getByLabelText('Bulk activities count'));
+      await user.type(screen.getByLabelText('Bulk activities count'), '5');
+      await user.click(screen.getByRole('button', { name: /^download$/i }));
+
+      await waitFor(() => {
+        expect(storeState.apiClient.getBulkSchedulerActivities).toHaveBeenCalledWith(5);
+        expect(createObjectURLMock).toHaveBeenCalledTimes(1);
+      });
+
+      const blobArg = createObjectURLMock.mock.calls[0]?.[0] as Blob;
+      const payload = JSON.parse(await blobArg.text());
+      expect(payload.datasets.bulkActivities).toEqual(bulkActivities);
+      expect(payload.requestParams).toEqual({
+        bulkActivities: { activitiesCount: 5 },
+      });
+    } finally {
+      createElementMock.mockRestore();
+      Object.assign(URL, {
+        createObjectURL: originalCreateObjectURL,
+        revokeObjectURL: URL.revokeObjectURL,
+      });
+    }
+  });
+
+  it('fetches RM jstack when selected', async () => {
+    const user = userEvent.setup();
+    const threadDump = '--- JStack iteration 0 ---\nFull thread dump';
+    vi.mocked(storeState.apiClient.getResourceManagerJstack).mockResolvedValue(threadDump);
+
+    render(<DiagnosticsDialog />);
+
+    const originalCreateObjectURL = URL.createObjectURL;
+    const createObjectURLMock = vi.fn(() => 'blob:url');
+    Object.assign(URL, {
+      createObjectURL: createObjectURLMock,
+      revokeObjectURL: vi.fn(),
+    });
+
+    const originalCreateElement = document.createElement.bind(document);
+    const anchorElement = originalCreateElement('a');
+    vi.spyOn(anchorElement, 'click').mockImplementation(() => {});
+    const createElementMock = vi
+      .spyOn(document, 'createElement')
+      .mockImplementation((tagName: string) => {
+        if (tagName === 'a') {
+          return anchorElement;
+        }
+        return originalCreateElement(tagName);
+      });
+
+    try {
+      await user.click(screen.getByLabelText('ResourceManager JStack'));
+      await user.clear(screen.getByLabelText('ResourceManager jstack count'));
+      await user.type(screen.getByLabelText('ResourceManager jstack count'), '2');
+      await user.click(screen.getByRole('button', { name: /^download$/i }));
+
+      await waitFor(() => {
+        expect(storeState.apiClient.getResourceManagerJstack).toHaveBeenCalledWith(2);
+        expect(createObjectURLMock).toHaveBeenCalledTimes(1);
+      });
+
+      const blobArg = createObjectURLMock.mock.calls[0]?.[0] as Blob;
+      const payload = JSON.parse(await blobArg.text());
+      expect(payload.datasets.rmJstack).toBe(threadDump);
+      expect(payload.requestParams).toEqual({
+        rmJstack: { numberOfJStack: 2 },
+      });
+    } finally {
+      createElementMock.mockRestore();
+      Object.assign(URL, {
+        createObjectURL: originalCreateObjectURL,
+        revokeObjectURL: URL.revokeObjectURL,
+      });
+    }
+  });
+
 });

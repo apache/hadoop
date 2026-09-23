@@ -34,8 +34,22 @@ import type {
   VersionResponse,
   YarnConfigResponse,
   ValidationResponse,
+  BulkActivitiesResponse,
 } from '~/types';
-import { HTTP_AUTH_PROPERTY, READ_ONLY_PROPERTY } from '~/config';
+
+/** Matches RMWebServices DEFAULT_ACTIVITIES_COUNT. */
+export const DEFAULT_DIAGNOSTIC_BULK_ACTIVITIES_COUNT = 10;
+
+/** Matches RMWebServices MAX_ACTIVITIES_COUNT. */
+export const MAX_DIAGNOSTIC_BULK_ACTIVITIES_COUNT = 500;
+
+/** Default jstack iterations for RM diagnostics export. */
+export const DEFAULT_DIAGNOSTIC_RM_JSTACK_COUNT = 2;
+
+/** Upper bound for RM jstack iterations in the diagnostics UI. */
+export const MAX_DIAGNOSTIC_RM_JSTACK_COUNT = 10;
+
+import { READ_ONLY_PROPERTY } from '~/config';
 
 export class YarnApiClient {
   private readonly baseUrl: string;
@@ -188,6 +202,32 @@ export class YarnApiClient {
   }
 
   /**
+   * GET /ws/v1/cluster/scheduler/bulk-activities - Scheduler bulk activities
+   */
+  async getBulkSchedulerActivities(
+    activitiesCount: number = DEFAULT_DIAGNOSTIC_BULK_ACTIVITIES_COUNT,
+  ): Promise<BulkActivitiesResponse> {
+    return this.request<BulkActivitiesResponse>(
+      'GET',
+      `/scheduler/bulk-activities?activitiesCount=${activitiesCount}`,
+    );
+  }
+
+  /**
+   * GET /ws/v1/cluster/jstack/{numberOfJStack} - ResourceManager thread dump (plain text)
+   */
+  async getResourceManagerJstack(
+    numberOfJStack: number = DEFAULT_DIAGNOSTIC_RM_JSTACK_COUNT,
+  ): Promise<string> {
+    return this.request<string>('GET', `/jstack/${numberOfJStack}`, {
+      headers: {
+        Accept: 'text/plain',
+      },
+      responseFormat: 'text',
+    });
+  }
+
+  /**
    * POST /ws/v1/cluster/replace-node-to-labels - Replace node label assignments
    */
   async replaceNodeToLabels(nodeToLabels: { nodeId: string; labels: string[] }[]): Promise<void> {
@@ -238,13 +278,11 @@ export class YarnApiClient {
   }
 
   /**
-   * Detect YARN security mode by checking the HTTP authentication type.
-   * This governs the REST API layer, which may differ from the cluster-wide
-   * hadoop.security.authentication setting (e.g. Kerberos RPC + simple HTTP).
+   * Detect YARN security mode by checking hadoop.security.authentication
    */
   private async detectSecurityMode(): Promise<void> {
     try {
-      const authMode = await this.getConfiguration(HTTP_AUTH_PROPERTY);
+      const authMode = await this.getConfiguration('hadoop.security.authentication');
       this.securityMode = authMode.toLowerCase() === 'simple' ? 'simple' : 'kerberos';
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -294,7 +332,11 @@ export class YarnApiClient {
   private async request<T = void>(
     method: string,
     path: string,
-    options: RequestInit & { skipAuth?: boolean; expectJson?: boolean } = {},
+    options: RequestInit & {
+      skipAuth?: boolean;
+      expectJson?: boolean;
+      responseFormat?: 'json' | 'text';
+    } = {},
   ): Promise<T> {
     // Lazy initialization: Start detection on first request (ensures MSW is ready)
     if (this.initPromise === null && this.securityMode === null) {
@@ -320,8 +362,7 @@ export class YarnApiClient {
       await this.initPromise;
     }
 
-    // Build URL by appending path to baseUrl
-    const { skipAuth, expectJson = true, ...fetchOptions } = options;
+    const { skipAuth, expectJson = true, responseFormat = 'json', ...fetchOptions } = options;
     let url = `${this.baseUrl}${path}`;
 
     // Add user.name parameter for simple auth mode (unless skipAuth is true)
@@ -357,6 +398,10 @@ export class YarnApiClient {
       const contentType = response.headers.get('content-type') || '';
       if (!expectJson) {
         return undefined as T;
+      }
+
+      if (responseFormat === 'text') {
+        return (await response.text()) as T;
       }
 
       if (contentType.includes('application/json')) {
