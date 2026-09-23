@@ -70,6 +70,14 @@ public final class Constants {
   public static final String MAX_ERROR_RETRIES_KEY = "fs.oss.attempts.maximum";
   public static final int MAX_ERROR_RETRIES_DEFAULT = 10;
 
+  // Retry only a CompleteMultipartUpload rejected by OSS throttling.
+  public static final String MULTIPART_COMPLETE_RETRY_LIMIT_KEY =
+      "fs.oss.multipart.complete.retry.limit";
+  public static final int MULTIPART_COMPLETE_RETRY_LIMIT_DEFAULT = 3;
+  public static final String MULTIPART_COMPLETE_RETRY_INTERVAL_KEY =
+      "fs.oss.multipart.complete.retry.interval";
+  public static final long MULTIPART_COMPLETE_RETRY_INTERVAL_DEFAULT = 500;
+
   // Time until we give up trying to establish a connection to oss
   public static final String ESTABLISH_TIMEOUT_KEY =
       "fs.oss.connection.establish.timeout";
