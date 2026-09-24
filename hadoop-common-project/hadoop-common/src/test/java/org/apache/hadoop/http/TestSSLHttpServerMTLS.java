@@ -158,8 +158,13 @@ public class TestSSLHttpServerMTLS extends HttpServerFunctionalTest {
     // request is refused, not which of those the client gets to see.  Assert
     // the refusal and exclude only ConnectException, which would mean we
     // never reached the server at all.
+    // getResponseCode() rather than getInputStream(): the latter also throws
+    // for an HTTP error status, so it would accept a 403 or a 500 reached over
+    // a handshake the server should have refused.  getResponseCode() returns
+    // such a status instead of throwing, and only throws when no status line
+    // was ever read - that is, when the connection failed below HTTP.
     IOException e =
-        assertThrows(IOException.class, () -> conn.getInputStream());
+        assertThrows(IOException.class, () -> conn.getResponseCode());
     assertFalse(e instanceof ConnectException,
         "expected the request to be refused by the server, but it was "
             + "never reached: " + e);
