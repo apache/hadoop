@@ -129,7 +129,11 @@ public class JWTRedirectAuthenticationHandler extends
       try {
         publicKey = CertificateUtil.toRSAPublicKey(pemPublicKey);
       } catch (CertificateException ce) {
-        throw new ServletException(ce.getMessage(), ce);
+        // Report the exception toRSAPublicKey wrapped, not the wrapper, as
+        // CertificateUtil#parseRSAPublicKey does: the cause of this
+        // ServletException stays the CertificateException the parse raised.
+        Throwable cause = ce.getCause() == null ? ce : ce.getCause();
+        throw new ServletException(ce.getMessage(), cause);
       }
     }
     // setup the list of valid audiences for token validation
