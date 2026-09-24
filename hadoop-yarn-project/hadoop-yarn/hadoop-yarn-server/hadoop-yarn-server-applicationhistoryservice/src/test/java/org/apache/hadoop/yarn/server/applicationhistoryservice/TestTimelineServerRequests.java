@@ -111,8 +111,8 @@ public class TestTimelineServerRequests {
 
       Response options = client.target(timelineUrl).request().options();
       try {
-        assertTrue(options.getStatus() < 500,
-            "OPTIONS should not be a server error: " + options.getStatus());
+        assertEquals(200, options.getStatus(),
+            "OPTIONS authentication probe should succeed");
       } finally {
         options.close();
       }
