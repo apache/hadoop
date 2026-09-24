@@ -14,6 +14,7 @@
 package org.apache.hadoop.security.authentication.server;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -25,6 +26,7 @@ import java.io.File;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.List;
@@ -84,6 +86,29 @@ public class TestJWTRedirectAuthenticationHandler extends
           "Public key for signature validation must be provisioned"));
     } catch (AuthenticationException ae) {
       fail("alternateAuthentication should NOT have thrown a AuthenticationException");
+    }
+  }
+
+  /**
+   * A PEM that does not parse is reported as a ServletException whose cause
+   * is the CertificateException the parse raised, as it was before init moved
+   * to CertificateUtil#toRSAPublicKey, and not the wrapper that method adds.
+   */
+  @Test
+  public void testCorruptPublicKeyPEMCauseChain() throws Exception {
+    Properties props = getProperties();
+    props.setProperty(JWTRedirectAuthenticationHandler.PUBLIC_KEY_PEM,
+        "not a certificate");
+    try {
+      handler.init(props);
+      fail("init should have thrown a ServletException");
+    } catch (ServletException se) {
+      assertTrue(se.getMessage().contains("corrupt"), se.getMessage());
+      Throwable cause = se.getCause();
+      assertTrue(cause instanceof CertificateException,
+          "expected a CertificateException, got " + cause);
+      assertFalse(cause.getCause() instanceof CertificateException,
+          "the wrapper toRSAPublicKey adds must not appear in the chain");
     }
   }
 
