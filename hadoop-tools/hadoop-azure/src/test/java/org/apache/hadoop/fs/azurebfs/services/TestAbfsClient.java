@@ -22,6 +22,8 @@ import java.net.URI;
 import java.net.URL;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
 
@@ -124,6 +126,43 @@ public class TestAbfsClient {
         assertThat(isThreadRunning(ABFS_CLIENT_TIMER_THREAD_NAME))
                 .describedAs("Unexpected thread 'abfs-timer-client' found")
                 .isEqualTo(false);
+    }
+
+    /**
+     * Test that the metrics emit scheduler thread is a daemon thread.
+     * A non-daemon scheduler thread keeps the JVM from exiting when the
+     * filesystem is never closed.
+     */
+    @Test
+    public void testMetricsEmitSchedulerThreadIsDaemon() throws Exception {
+        final Configuration configuration = new Configuration();
+        AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, ACCOUNT_NAME);
+
+        AbfsCounters abfsCounters = spy(new AbfsCountersImpl(new URI("abcd")));
+        AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters)
+            .withFileSystemId(UUID.randomUUID().toString()).build();
+
+        // Get an instance of AbfsClient.
+        AbfsClient client = new AbfsDfsClient(new URL("https://" + ACCOUNT_NAME + "/"),
+                null,
+                abfsConfiguration,
+                (AccessTokenProvider) null,
+                null,
+                null,
+                abfsClientContext);
+
+        ScheduledExecutorService metricsEmitScheduler
+            = client.getAbfsMetricsManager().getMetricsEmitScheduler();
+        assertThat(metricsEmitScheduler)
+                .describedAs("Metrics emit scheduler should be initialized")
+                .isNotNull();
+
+        AtomicBoolean isDaemon = new AtomicBoolean(false);
+        metricsEmitScheduler.submit(() -> isDaemon.set(Thread.currentThread().isDaemon())).get();
+        assertThat(isDaemon.get())
+                .describedAs("Metrics emit scheduler thread should be a daemon thread")
+                .isTrue();
+        client.close();
     }
 
     /**
