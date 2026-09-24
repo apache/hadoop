@@ -848,6 +848,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     // Directly return if this check fails.
     ContainerAllocation result;
     ContainerAllocation lastReservation = null;
+    FiCaSchedulerNode lastReservationNode = null;
 
     AppPlacementAllocator<FiCaSchedulerNode> schedulingPS =
         application.getAppSchedulingInfo().getAppPlacementAllocator(
@@ -911,8 +912,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
           resourceLimits, schedulerKey, reservedContainer);
 
       if (AllocationState.ALLOCATED == result.getAllocationState()) {
-        result = doAllocation(result, node, schedulerKey, reservedContainer);
-        break;
+        return doAllocation(result, node, schedulerKey, reservedContainer);
       }
 
       // In MultiNodePlacement, Try Allocate on other Available nodes
@@ -921,13 +921,19 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // iterator could not fit and returns RESERVED allocation.
       if (AllocationState.RESERVED == result.getAllocationState()) {
         lastReservation = result;
+        lastReservationNode = node;
         if (iter.hasNext()) {
           continue;
         } else {
-          result = doAllocation(lastReservation, node, schedulerKey,
-              reservedContainer);
+          return doAllocation(lastReservation, lastReservationNode,
+              schedulerKey, reservedContainer);
         }
       }
+    }
+
+    if (lastReservation != null) {
+      return doAllocation(lastReservation, lastReservationNode, schedulerKey,
+          reservedContainer);
     }
 
     return result;
