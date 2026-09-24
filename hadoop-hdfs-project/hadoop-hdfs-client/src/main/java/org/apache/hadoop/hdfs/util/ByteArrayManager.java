@@ -24,6 +24,7 @@ import java.util.Queue;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Time;
 
 import org.apache.hadoop.util.Preconditions;
@@ -215,6 +216,11 @@ public abstract class ByteArrayManager {
       return freeQueue.size();
     }
 
+    @VisibleForTesting
+    synchronized int getNumAllocated() {
+      return numAllocated;
+    }
+
     @Override
     public synchronized String toString() {
       return "[" + byteArrayLength + ": " + numAllocated + "/"
@@ -240,6 +246,15 @@ public abstract class ByteArrayManager {
         map.put(arrayLength, manager);
       }
       return manager;
+    }
+
+    @VisibleForTesting
+    synchronized int countAllocated() {
+      int total = 0;
+      for (FixedLengthManager m : map.values()) {
+        total += m.getNumAllocated();
+      }
+      return total;
     }
   }
 
