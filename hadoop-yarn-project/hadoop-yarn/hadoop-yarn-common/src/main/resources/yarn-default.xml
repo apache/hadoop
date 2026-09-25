@@ -5869,6 +5869,16 @@
 
   <property>
     <description>
+      This configuration will be used to turn on/turn off resourcemanager jstack
+      endpoint /ws/v1/cluster/jstack/{numberOfJStack}.
+      The purpose is to minimise security risk. By default is set to false.
+    </description>
+    <name>yarn.resourcemanager.jstack-endpoints.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
       Set the connect timeout interval, in milliseconds.
       A value of 0 means no timeout, otherwise values must be between 1 and Integer#MAX_VALUE.
       This ensures that the connection is established within a specified time,

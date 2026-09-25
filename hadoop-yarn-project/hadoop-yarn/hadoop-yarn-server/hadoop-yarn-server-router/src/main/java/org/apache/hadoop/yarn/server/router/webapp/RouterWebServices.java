@@ -301,6 +301,19 @@ public class RouterWebServices implements RMWebServiceProtocol {
   }
 
   @GET
+  @Path(RMWSConsts.JSTACK)
+  @Produces({ MediaType.TEXT_PLAIN })
+  @Override
+  public Response getResourceManagerThreadDump(
+      @Context HttpServletRequest req,
+      @PathParam("numberOfJStack") int numberOfJStack) {
+    init();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(null);
+    return pipeline.getRootInterceptor().getResourceManagerThreadDump(req,
+        numberOfJStack);
+  }
+
+  @GET
   @Path(RMWSConsts.SCHEDULER)
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
