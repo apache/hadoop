@@ -262,9 +262,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.JsonUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.tracing.Tracer;
-import org.eclipse.jetty.util.ajax.JSON;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
@@ -2236,6 +2236,31 @@ public class DataNode extends ReconfigurableBase
     return blockPoolManager.getAllNamenodeThreads();
   }
 
+  /**
+   * Signal every block pool service to stop, without waiting for its threads
+   * to exit, so that a caller shutting down several DataNodes in one JVM can
+   * signal them all before joining any of them. A later {@code shutdown()} on
+   * this DataNode still does the joining; {@code stop()} is idempotent.
+   *
+   * <p>Joining one DataNode while the others still run can hang: DataNodes in
+   * a single JVM share an {@link org.apache.hadoop.ipc.Client} through
+   * ClientCache, so they share its per-address Connection objects too. A
+   * BPServiceActor that is still retrying a dead NameNode holds that
+   * Connection's monitor across its connect-retry sleeps, and an actor of the
+   * DataNode being shut down can sit BLOCKED on that monitor. A BLOCKED thread
+   * cannot observe the interrupt that {@code stop()} sends, so the join waits
+   * for as long as the surviving DataNodes keep re-acquiring the monitor.
+   * Signalling everyone first lets the holder abort its sleep and release it.
+   */
+  @VisibleForTesting
+  public void signalBlockPoolShutdown() {
+    if (blockPoolManager == null) {
+      return;
+    }
+    blockPoolManager.signalShutDownAll(
+        blockPoolManager.getAllNamenodeThreads());
+  }
+
   BPOfferService getBPOfferService(String bpid){
     return blockPoolManager.get(bpid);
   }
@@ -2500,6 +2525,9 @@ public class DataNode extends ReconfigurableBase
       LOG.debug("requestShortCircuitFdsForRead failed", e);
       throw new ShortCircuitFdsUnsupportedException("This DataNode's " +
           "FsDatasetSpi does not support short-circuit local reads");
+    } catch (IOException e) {
+      IOUtils.cleanupWithLogger(LOG, fis);
+      throw e;
     }
     return fis;
   }
@@ -3763,7 +3791,7 @@ public class DataNode extends ReconfigurableBase
         }
       }
     }
-    return JSON.toString(info);
+    return JsonUtils.toString(info);
   }
 
  /**
@@ -3781,7 +3809,7 @@ public class DataNode extends ReconfigurableBase
    */
   @Override // DataNodeMXBean
   public String getBPServiceActorInfo() {
-    return JSON.toString(getBPServiceActorInfoMap());
+    return JsonUtils.toString(getBPServiceActorInfoMap());
   }
 
   @VisibleForTesting
@@ -3808,7 +3836,7 @@ public class DataNode extends ReconfigurableBase
       LOG.debug("Storage not yet initialized.");
       return "";
     }
-    return JSON.toString(data.getVolumeInfoMap());
+    return JsonUtils.toString(data.getVolumeInfoMap());
   }
   
   @Override // DataNodeMXBean
@@ -4339,7 +4367,7 @@ public class DataNode extends ReconfigurableBase
       return null;
     }
     Set<String> slowDisks = diskMetrics.getDiskOutliersStats().keySet();
-    return JSON.toString(slowDisks);
+    return JsonUtils.toString(slowDisks);
   }
 
 

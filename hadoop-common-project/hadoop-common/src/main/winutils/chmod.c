@@ -367,10 +367,10 @@ static BOOL ParseCommandLineArguments(
       // Check if the given path name is a file or directory
       // Only set recursive flag if the given path is a directory
       //
-      dwRtnCode = GetFileInformationByName(*path, FALSE, &fileInfo);
+      dwRtnCode = GetFileInformationByPathName(*path, FALSE, &fileInfo);
       if (dwRtnCode != ERROR_SUCCESS)
       {
-        ReportErrorCode(L"GetFileInformationByName", dwRtnCode);
+        ReportErrorCode(L"GetFileInformationByPathName", dwRtnCode);
         return FALSE;
       }
 

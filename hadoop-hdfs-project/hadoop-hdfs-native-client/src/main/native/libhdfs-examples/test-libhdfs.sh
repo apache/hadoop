@@ -24,7 +24,6 @@
 # c) LIBHDFS_BUILD_DIR - optional; the location of the hdfs_test
 # executable. Defaults to the parent directory.
 # d) OS_NAME - used to choose how to locate libjvm.so
-# e) CLOVER_JAR - optional; the location of the Clover code coverage tool's jar.
 #
 
 if [ "x$HADOOP_HOME" == "x" ]; then
@@ -58,9 +57,6 @@ echo "Found HDFS test jar at $HDFS_TEST_JAR"
 # CLASSPATH initially contains $HDFS_TEST_CONF_DIR
 CLASSPATH="${HDFS_TEST_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
-
-# add Clover jar file needed for code coverage runs
-CLASSPATH=${CLASSPATH}:${CLOVER_JAR};
 
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=$'\n'

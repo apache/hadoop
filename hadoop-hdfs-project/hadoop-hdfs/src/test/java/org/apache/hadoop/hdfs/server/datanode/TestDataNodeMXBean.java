@@ -18,17 +18,15 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.lang.management.ManagementFactory;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -44,7 +42,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.Test;
-import org.eclipse.jetty.util.ajax.JSON;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -57,6 +54,7 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
 
   public static final Logger LOG =
       LoggerFactory.getLogger(TestDataNodeMXBean.class);
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   @Test
   public void testDataNodeMXBean() throws Exception {
@@ -195,17 +193,14 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
           "BPServiceActorInfo");
       assertEquals(dn.getBPServiceActorInfo(), bpActorInfo);
       LOG.info("bpActorInfo is " + bpActorInfo);
-      TypeReference<ArrayList<Map<String, String>>> typeRef
-          = new TypeReference<ArrayList<Map<String, String>>>() {};
-      ArrayList<Map<String, String>> bpActorInfoList =
-          new ObjectMapper().readValue(bpActorInfo, typeRef);
+      JsonNode bpActorInfoList = MAPPER.readTree(bpActorInfo);
       int maxDataLength =
-          Integer.valueOf(bpActorInfoList.get(0).get("maxDataLength"));
+          Integer.parseInt(bpActorInfoList.get(0).get("maxDataLength").asText());
       int confMaxDataLength = dn.getConf().getInt(
           CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH,
           CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
       int maxBlockReportSize =
-          Integer.valueOf(bpActorInfoList.get(0).get("maxBlockReportSize"));
+          Integer.parseInt(bpActorInfoList.get(0).get("maxBlockReportSize").asText());
       LOG.info("maxDataLength is " + maxDataLength);
       LOG.info("maxBlockReportSize is " + maxBlockReportSize);
       assertTrue(maxBlockReportSize > 0,
@@ -256,16 +251,16 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private int getTotalNumBlocks(MBeanServer mbs, ObjectName mxbeanName)
           throws Exception {
     int totalBlocks = 0;
     String volumeInfo = (String) mbs.getAttribute(mxbeanName, "VolumeInfo");
-    Map<?, ?> m = (Map<?, ?>) JSON.parse(volumeInfo);
-    Collection<Map<String, Long>> values =
-            (Collection<Map<String, Long>>) m.values();
-    for (Map<String, Long> volumeInfoMap : values) {
-      totalBlocks += volumeInfoMap.get("numBlocks");
+    JsonNode m = MAPPER.readTree(volumeInfo);
+    for (JsonNode volumeInfoMap : m) {
+      JsonNode numBlocks = volumeInfoMap.get("numBlocks");
+      if (numBlocks != null) {
+        totalBlocks += numBlocks.intValue();
+      }
     }
     return totalBlocks;
   }

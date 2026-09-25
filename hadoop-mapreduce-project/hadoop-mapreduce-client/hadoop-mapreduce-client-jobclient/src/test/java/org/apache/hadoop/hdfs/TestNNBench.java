@@ -92,15 +92,18 @@ public class TestNNBench extends HadoopTestCase {
   public void testNNBenchCrossCluster() throws Exception {
     MiniDFSCluster dfsCluster = new MiniDFSCluster.Builder(new JobConf())
             .numDataNodes(1).build();
-    dfsCluster.waitClusterUp();
-    String nnAddress = dfsCluster.getNameNode(0).getHostAndPort();
-    String baseDir = "hdfs://" + nnAddress + BASE_DIR;
-    runNNBench(createJobConf(), "create_write", baseDir);
+    try {
+      dfsCluster.waitClusterUp();
+      String nnAddress = dfsCluster.getNameNode(0).getHostAndPort();
+      String baseDir = "hdfs://" + nnAddress + BASE_DIR;
+      runNNBench(createJobConf(), "create_write", baseDir);
 
-    Path path = new Path(BASE_DIR + "/data/file_0_0");
-    assertTrue(dfsCluster.getFileSystem().exists(path),
-        "create_write should create the file");
-    dfsCluster.shutdown();
+      Path path = new Path(BASE_DIR + "/data/file_0_0");
+      assertTrue(dfsCluster.getFileSystem().exists(path),
+          "create_write should create the file");
+    } finally {
+      dfsCluster.shutdown();
+    }
   }
 
   private void runNNBench(Configuration conf, String operation, String baseDir)

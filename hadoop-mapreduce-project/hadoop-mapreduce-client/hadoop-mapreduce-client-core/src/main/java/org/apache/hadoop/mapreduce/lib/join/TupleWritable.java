@@ -31,6 +31,7 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Writable type storing multiple {@link org.apache.hadoop.io.Writable}s.
@@ -191,7 +192,10 @@ public class TupleWritable implements Writable, Iterable<Writable> {
     Class<? extends Writable>[] cls = new Class[card];
     try {
       for (int i = 0; i < card; ++i) {
-        cls[i] = Class.forName(Text.readString(in)).asSubclass(Writable.class);
+        cls[i] = ReflectionUtils.loadUninitedClass(
+            getClass().getClassLoader(),
+            Text.readString(in),
+            Writable.class);
       }
       for (int i = 0; i < card; ++i) {
         if (cls[i].equals(NullWritable.class)) {

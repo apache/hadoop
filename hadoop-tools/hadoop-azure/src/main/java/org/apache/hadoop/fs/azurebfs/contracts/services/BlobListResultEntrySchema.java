@@ -73,18 +73,10 @@ public class BlobListResultEntrySchema implements ListResultEntrySchema {
 
   @Override
   public String lastModified() {
-    return String.valueOf(lastModifiedTime);
-  }
-
-  public String creation() {
-    return String.valueOf(lastModifiedTime);
-  }
-
-  public String lastModifiedTime() {
     return lastModifiedTime;
   }
 
-  public String creationTime() {
+  public String creation() {
     return creationTime;
   }
 

@@ -33,6 +33,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
@@ -48,7 +50,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.jupiter.api.Timeout;
 
 /**
@@ -57,6 +58,7 @@ import org.junit.jupiter.api.Timeout;
 @Timeout(300)
 public class TestBlockStatsMXBean {
 
+  private static final ObjectMapper MAPPER = new ObjectMapper();
   private MiniDFSCluster cluster;
 
   @BeforeEach
@@ -125,42 +127,40 @@ public class TestBlockStatsMXBean {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void testStorageTypeStatsJMX() throws Exception {
     URL baseUrl = new URL (cluster.getHttpUri(0));
     String result = readOutput(new URL(baseUrl, "/jmx"));
 
-    Map<String, Object> stat = (Map<String, Object>) JSON.parse(result);
-    Object[] beans =(Object[]) stat.get("beans");
-    Map<String, Object> blockStats  = null;
-    for (Object bean : beans) {
-      Map<String, Object> map = (Map<String, Object>) bean;
-      if (map.get("name").equals("Hadoop:service=NameNode,name=BlockStats")) {
-        blockStats = map;
+    JsonNode stat = MAPPER.readTree(result);
+    JsonNode beans = stat.get("beans");
+    assertNotNull(beans);
+    JsonNode blockStats = null;
+    for (JsonNode bean : beans) {
+      if ("Hadoop:service=NameNode,name=BlockStats".equals(bean.get("name").asText())) {
+        blockStats = bean;
+        break;
       }
     }
     assertNotNull(blockStats);
-    Object[] storageTypeStatsList =
-        (Object[])blockStats.get("StorageTypeStats");
+    JsonNode storageTypeStatsList = blockStats.get("StorageTypeStats");
     assertNotNull(storageTypeStatsList);
-    assertEquals(4, storageTypeStatsList.length);
+    assertEquals(4, storageTypeStatsList.size());
 
-    Set<String> typesPresent = new HashSet<> ();
-    for (Object obj : storageTypeStatsList) {
-      Map<String, Object> entry = (Map<String, Object>)obj;
-      String storageType = (String)entry.get("key");
-      Map<String,Object> storageTypeStats = (Map<String,Object>)entry.get("value");
+    Set<String> typesPresent = new HashSet<>();
+    for (JsonNode entry : storageTypeStatsList) {
+      String storageType = entry.get("key").asText();
+      JsonNode storageTypeStats = entry.get("value");
       typesPresent.add(storageType);
       switch (storageType) {
       case "ARCHIVE":
       case "DISK":
-        assertEquals(3L, storageTypeStats.get("nodesInService"));
+        assertEquals(3L, storageTypeStats.get("nodesInService").asLong());
         break;
       case "RAM_DISK":
-        assertEquals(7L, storageTypeStats.get("nodesInService"));
+        assertEquals(7L, storageTypeStats.get("nodesInService").asLong());
         break;
       case "NVDIMM":
-        assertEquals(1L, storageTypeStats.get("nodesInService"));
+        assertEquals(1L, storageTypeStats.get("nodesInService").asLong());
         break;
       default:
         fail();
@@ -294,24 +294,24 @@ public class TestBlockStatsMXBean {
     URL baseUrl = new URL(cluster.getHttpUri(0));
     String result = readOutput(new URL(baseUrl, "/jmx"));
 
-    Map<String, Object> stat = (Map<String, Object>) JSON.parse(result);
-    Object[] beans = (Object[]) stat.get("beans");
-    Map<String, Object> blockStats = null;
-    for (Object bean : beans) {
-      Map<String, Object> map = (Map<String, Object>) bean;
-      if (map.get("name").equals("Hadoop:service=NameNode,name=BlockStats")) {
-        blockStats = map;
+    JsonNode stat = MAPPER.readTree(result);
+    JsonNode beans = stat.get("beans");
+    assertNotNull(beans);
+    JsonNode blockStats = null;
+    for (JsonNode bean : beans) {
+      if ("Hadoop:service=NameNode,name=BlockStats".equals(bean.get("name").asText())) {
+        blockStats = bean;
+        break;
       }
     }
     assertNotNull(blockStats);
-    Object[] storageTypeStatsList =
-        (Object[]) blockStats.get("StorageTypeStats");
+    JsonNode storageTypeStatsList = blockStats.get("StorageTypeStats");
     assertNotNull(storageTypeStatsList);
-    Map<String, Object> entry = (Map<String, Object>) storageTypeStatsList[0];
-    Map<String, Object> storageTypeStats = (Map<String, Object>) entry.get("value");
+    JsonNode entry = storageTypeStatsList.get(0);
+    JsonNode storageTypeStats = entry.get("value");
 
-    assertTrue(storageTypeStats.containsKey("percentUsed"));
-    assertTrue(storageTypeStats.containsKey("percentBlockPoolUsed"));
-    assertTrue(storageTypeStats.containsKey("percentRemaining"));
+    assertNotNull(storageTypeStats.get("percentUsed"));
+    assertNotNull(storageTypeStats.get("percentBlockPoolUsed"));
+    assertNotNull(storageTypeStats.get("percentRemaining"));
   }
 }

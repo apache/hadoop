@@ -31,6 +31,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_S3_ENCRYPTION_CONTEXT;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_CONTEXT;
 
 /**
@@ -61,7 +62,7 @@ public final class S3AEncryption {
     }
     if (encryptionContext == null) {
       // no encryption context, return ""
-      return "";
+      return DEFAULT_S3_ENCRYPTION_CONTEXT;
     }
     return encryptionContext;
   }

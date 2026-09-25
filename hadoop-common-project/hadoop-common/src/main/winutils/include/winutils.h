@@ -126,7 +126,7 @@ void ReadlinkUsage();
 int SystemInfo();
 void SystemInfoUsage();
 
-DWORD GetFileInformationByName(__in LPCWSTR pathName,  __in BOOL followLink,
+DWORD GetFileInformationByPathName(__in LPCWSTR pathName,  __in BOOL followLink,
   __out LPBY_HANDLE_FILE_INFORMATION lpFileInformation);
 
 DWORD CheckAccessForCurrentUser(

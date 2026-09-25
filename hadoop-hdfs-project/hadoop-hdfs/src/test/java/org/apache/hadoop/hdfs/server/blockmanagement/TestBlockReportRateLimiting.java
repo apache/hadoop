@@ -138,28 +138,31 @@ public class TestBlockReportRateLimiting {
     final int NUM_DATANODES = 5;
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
-    cluster.waitActive();
-    for (int n = 1; n <= NUM_DATANODES; n++) {
-      LOG.info("Waiting for " + n + " datanode(s) to report in.");
-      fbrSem.release();
-      Uninterruptibles.sleepUninterruptibly(20, TimeUnit.MILLISECONDS);
-      final int currentN = n;
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          synchronized (injector) {
-            if (fbrDns.size() > currentN) {
-              setFailure(failure, "Expected at most " + currentN +
-                  " datanodes to have sent a block report, but actually " +
-                  fbrDns.size() + " have.");
+    try {
+      cluster.waitActive();
+      for (int n = 1; n <= NUM_DATANODES; n++) {
+        LOG.info("Waiting for " + n + " datanode(s) to report in.");
+        fbrSem.release();
+        Uninterruptibles.sleepUninterruptibly(20, TimeUnit.MILLISECONDS);
+        final int currentN = n;
+        GenericTestUtils.waitFor(new Supplier<Boolean>() {
+          @Override
+          public Boolean get() {
+            synchronized (injector) {
+              if (fbrDns.size() > currentN) {
+                setFailure(failure, "Expected at most " + currentN +
+                    " datanodes to have sent a block report, but actually " +
+                    fbrDns.size() + " have.");
+              }
+              return (fbrDns.size() >= currentN);
             }
-            return (fbrDns.size() >= currentN);
           }
-        }
-      }, 25, 50000);
+        }, 25, 50000);
+      }
+      assertEquals("", failure.get());
+    } finally {
+      cluster.shutdown();
     }
-    cluster.shutdown();
-    assertEquals("", failure.get());
   }
 
   /**

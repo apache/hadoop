@@ -22,7 +22,6 @@ import java.util.Comparator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.serializer.DeserializerComparator;
 
 /**
  * <p>
@@ -30,7 +29,6 @@ import org.apache.hadoop.io.serializer.DeserializerComparator;
  * objects.
  * </p>
  * @param <T> generic type.
- * @see DeserializerComparator
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

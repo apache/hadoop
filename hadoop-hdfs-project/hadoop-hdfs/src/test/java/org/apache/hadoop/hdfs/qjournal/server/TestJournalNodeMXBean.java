@@ -32,10 +32,10 @@ import javax.management.ObjectName;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.util.JsonUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.eclipse.jetty.util.ajax.JSON;
 
 /**
  * Test {@link JournalNodeMXBean}
@@ -95,7 +95,7 @@ public class TestJournalNodeMXBean {
     Map<String, String> infoMap1 = new HashMap<>();
     infoMap1.put("Formatted", "false");
     jMap.put(MiniJournalCluster.CLUSTER_WAITACTIVE_URI, infoMap1);
-    assertEquals(JSON.toString(jMap), journalStatus);
+    assertEquals(JsonUtils.toString(jMap), journalStatus);
 
     // check attributes
     String hostAndPort = (String) mbs.getAttribute(mxbeanName, "HostAndPort");
@@ -123,6 +123,6 @@ public class TestJournalNodeMXBean {
     // re-check 
     journalStatus = (String) mbs.getAttribute(mxbeanName, "JournalsStatus");
     assertEquals(jn.getJournalsStatus(), journalStatus);
-    assertEquals(JSON.toString(jMap), journalStatus);
+    assertEquals(JsonUtils.toString(jMap), journalStatus);
   }
 }

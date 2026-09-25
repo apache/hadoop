@@ -225,11 +225,11 @@ public class TestMiniDFSCluster {
     try {
       DistributedFileSystem dfs = cluster4.getFileSystem();
       dfs.setSafeMode(SafeModeAction.ENTER);
-      cluster4.shutdown();
     } finally {
+      cluster4.shutdown();
       while(cluster4.isClusterUp()){
         Thread.sleep(1000);
-      }  
+      }
     }
   }
 

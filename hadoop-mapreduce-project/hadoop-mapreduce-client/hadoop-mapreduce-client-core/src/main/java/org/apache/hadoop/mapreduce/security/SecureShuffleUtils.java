@@ -24,13 +24,13 @@ import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import javax.crypto.SecretKey;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,7 +74,7 @@ public class SecureShuffleUtils {
    */
   private static boolean verifyHash(byte[] hash, byte[] msg, SecretKey key) {
     byte[] msg_hash = generateByteHash(msg, key);
-    return WritableComparator.compareBytes(msg_hash, 0, msg_hash.length, hash, 0, hash.length) == 0;
+    return MessageDigest.isEqual(msg_hash, hash);
   }
   
   /**

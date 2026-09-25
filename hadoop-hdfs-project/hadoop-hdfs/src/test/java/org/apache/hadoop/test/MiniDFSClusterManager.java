@@ -36,7 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-import org.eclipse.jetty.util.ajax.JSON;
+import org.apache.hadoop.util.JsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -162,7 +162,7 @@ public class MiniDFSClusterManager {
       }
 
       FileWriter fw = new FileWriter(new File(writeDetails));
-      fw.write(new JSON().toJSON(map));
+      fw.write(JsonUtils.toString(map));
       fw.close();
     }
   }

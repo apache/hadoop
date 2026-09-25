@@ -57,6 +57,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -77,6 +78,13 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
           new Path("/"), new FsPermission((short)0777));
     } catch (IOException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  @AfterAll
+  public static void shutdownCluster() {
+    if (cluster != null) {
+      cluster.shutdown();
     }
   }
 

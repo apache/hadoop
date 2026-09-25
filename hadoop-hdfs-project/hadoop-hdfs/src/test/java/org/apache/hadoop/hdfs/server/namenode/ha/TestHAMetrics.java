@@ -192,36 +192,38 @@ public class TestHAMetrics {
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, Integer.MAX_VALUE);
 
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).nnTopology(
-        MiniDFSNNTopology.simpleHATopology(3)).numDataNodes(1).build();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).nnTopology(
+        MiniDFSNNTopology.simpleHATopology(3)).numDataNodes(1).build()) {
 
-    cluster.waitActive();
+      cluster.waitActive();
 
-    NameNode nn0 = cluster.getNameNode(0);
-    NameNode nn1 = cluster.getNameNode(1);
-    NameNode nn2 = cluster.getNameNode(2);
+      NameNode nn0 = cluster.getNameNode(0);
+      NameNode nn1 = cluster.getNameNode(1);
+      NameNode nn2 = cluster.getNameNode(2);
 
-    // All namenodes are in standby by default
-    assertEquals(HAServiceProtocol.HAServiceState.STANDBY.ordinal(), nn0.getNameNodeState());
-    assertEquals(HAServiceProtocol.HAServiceState.STANDBY.ordinal(), nn1.getNameNodeState());
-    assertEquals(HAServiceProtocol.HAServiceState.STANDBY.ordinal(), nn2.getNameNodeState());
+      // All namenodes are in standby by default
+      assertEquals(HAServiceProtocol.HAServiceState.STANDBY.ordinal(), nn0.getNameNodeState());
+      assertEquals(HAServiceProtocol.HAServiceState.STANDBY.ordinal(), nn1.getNameNodeState());
+      assertEquals(HAServiceProtocol.HAServiceState.STANDBY.ordinal(), nn2.getNameNodeState());
 
-    // Transition nn0 to be active
-    cluster.transitionToActive(0);
-    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE.ordinal(), nn0.getNameNodeState());
+      // Transition nn0 to be active
+      cluster.transitionToActive(0);
+      assertEquals(HAServiceProtocol.HAServiceState.ACTIVE.ordinal(), nn0.getNameNodeState());
 
-    // Transition nn1 to be active
-    cluster.transitionToStandby(0);
-    cluster.transitionToActive(1);
-    assertEquals(HAServiceProtocol.HAServiceState.STANDBY.ordinal(), nn0.getNameNodeState());
-    assertEquals(HAServiceProtocol.HAServiceState.ACTIVE.ordinal(), nn1.getNameNodeState());
+      // Transition nn1 to be active
+      cluster.transitionToStandby(0);
+      cluster.transitionToActive(1);
+      assertEquals(HAServiceProtocol.HAServiceState.STANDBY.ordinal(), nn0.getNameNodeState());
+      assertEquals(HAServiceProtocol.HAServiceState.ACTIVE.ordinal(), nn1.getNameNodeState());
 
-    // Transition nn2 to observer
-    cluster.transitionToObserver(2);
-    assertEquals(HAServiceProtocol.HAServiceState.OBSERVER.ordinal(), nn2.getNameNodeState());
+      // Transition nn2 to observer
+      cluster.transitionToObserver(2);
+      assertEquals(HAServiceProtocol.HAServiceState.OBSERVER.ordinal(), nn2.getNameNodeState());
 
-    // Shutdown nn2. Now getNameNodeState should return the INITIALIZING state.
-    cluster.shutdownNameNode(2);
-    assertEquals(HAServiceProtocol.HAServiceState.INITIALIZING.ordinal(), nn2.getNameNodeState());
+      // Shutdown nn2. Now getNameNodeState should return the INITIALIZING state.
+      cluster.shutdownNameNode(2);
+      assertEquals(HAServiceProtocol.HAServiceState.INITIALIZING.ordinal(),
+          nn2.getNameNodeState());
+    }
   }
 }

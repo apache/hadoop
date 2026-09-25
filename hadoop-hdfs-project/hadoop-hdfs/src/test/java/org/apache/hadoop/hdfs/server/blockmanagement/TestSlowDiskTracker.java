@@ -44,7 +44,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.SlowDiskTracker
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.FakeTimer;
 
-import java.util.function.Supplier;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +57,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * Tests for {@link SlowDiskTracker}.

@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PART_UPLOAD_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_S3_ENCRYPTION_CONTEXT;
 import static org.apache.hadoop.fs.s3a.impl.PutObjectOptions.defaultOptions;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -89,7 +90,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
         .withBucket("bucket")
         .withEncryptionSecrets(
             new EncryptionSecrets(S3AEncryptionMethods.SSE_KMS,
-                "kms:key", ""))
+                "kms:key", DEFAULT_S3_ENCRYPTION_CONTEXT))
         .build();
     createFactoryObjects(factory);
   }
@@ -329,7 +330,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
         .encodeToString(encryptionKey);
     final String encryptionKeyMd5 = Md5Utils.md5AsBase64(encryptionKey);
     final EncryptionSecrets encryptionSecrets = new EncryptionSecrets(S3AEncryptionMethods.SSE_C,
-        encryptionKeyBase64, null);
+        encryptionKeyBase64);
     RequestFactory factory = RequestFactoryImpl.builder()
         .withBucket("bucket")
         .withChecksumAlgorithm(ChecksumAlgorithm.CRC32_C)
