@@ -65,17 +65,6 @@ def application_diagnostic() -> str:
     logger.info("Collecting application diagnostics for %s", app_id)
     output_path = _create_output_dir(os.path.join(_TEMP_DIR, app_id))
 
-    nm_address = _get_nodemanager_address(app_id)
-    app_jstack = _create_request(
-        _web_url(_NODE_SCHEME, nm_address, "ws/v1/node/apps/{}/jstack/{}".format(app_id, _NUMBER_OF_JSTACK)),
-        False)
-    _write_output(output_path, "application_jstack", app_jstack)
-
-    nm_jstack = _create_request(
-        _web_url(_NODE_SCHEME, nm_address, "ws/v1/node/jstack/{}".format(_NUMBER_OF_JSTACK)),
-        False)
-    _write_output(output_path, "nm_{}_jstack".format(nm_address), nm_jstack)
-
     app_info = _create_request(_rm_url("ws/v1/cluster/apps/{}".format(app_id)))
     _write_output(output_path, "application_info", app_info)
 
@@ -88,12 +77,26 @@ def application_diagnostic() -> str:
     _write_output(os.path.join(output_path, "node_log"), "resourcemanager_log",
                   _filter_node_log(log_address, start_time, end_time, _NODE_SCHEME))
 
-    if "amHostHttpAddress" in app_info:
-        app_info_xml = ET.fromstring(app_info)
-        nm_address = app_info_xml.find("amHostHttpAddress").text
+    nm_address = _get_nodemanager_address(app_info)
+    if nm_address:
+        app_jstack = _create_request(
+            _web_url(_NODE_SCHEME, nm_address,
+                     "ws/v1/node/apps/{}/jstack/{}".format(app_id, _NUMBER_OF_JSTACK)),
+            False)
+        _write_output(output_path, "application_jstack", app_jstack)
+
+        nm_jstack = _create_request(
+            _web_url(_NODE_SCHEME, nm_address, "ws/v1/node/jstack/{}".format(_NUMBER_OF_JSTACK)),
+            False)
+        _write_output(output_path, "nm_{}_jstack".format(nm_address), nm_jstack)
+
         log_address = _get_node_log_address(nm_address, _NM_LOG_REGEX, _NODE_SCHEME)
         _write_output(os.path.join(output_path, "node_log"), "nodemanager_log",
                       _get_container_log(log_address, app_id, _NODE_SCHEME))
+    else:
+        logger.info(
+            "No NodeManager host (amHostHttpAddress) for %s; skipping NM jstack and NM logs",
+            app_id)
 
     command = _run_cmd_and_save_output(os.path.join(output_path, "app_logs"), app_id,
                                        "yarn", "logs", "-applicationId", app_id)
@@ -106,41 +109,36 @@ def scheduler_related_issue() -> str:
     """
     ResourceManager Scheduler Logs with DEBUG enabled for 2 minutes.
     Multiple Jstack of ResourceManager
-    YARN and Scheduler Configuration
-    Cluster Scheduler API /ws/v1/cluster/scheduler and Cluster Nodes API /ws/v1/cluster/nodes response
+    YARN-SITE.XML
     Scheduler Activities /ws/v1/cluster/scheduler/bulk-activities response
     """
     logger.info("Collecting scheduler-related diagnostics")
     output_path = _create_output_dir(
         os.path.join(_TEMP_DIR, "scheduler_related_issue" + str(time.time()).split(".")[0]))
 
-    rm_jstack = _create_request(_rm_url("ws/v1/node/jstack/{}".format(_NUMBER_OF_JSTACK)), False)
+    rm_jstack = _create_request(_rm_url("ws/v1/cluster/jstack/{}".format(_NUMBER_OF_JSTACK)), False)
     _write_output(output_path, "rm_{}_jstack".format(_RM_ADDRESS), rm_jstack)
 
-    scheduler_info = _create_request(_rm_url("ws/v1/cluster/scheduler"))
-    _write_output(output_path, "scheduler_info", scheduler_info)
-
-    nodes_info = _create_request(_rm_url("ws/v1/cluster/nodes"))
-    _write_output(output_path, "nodemanager_info", nodes_info)
 
     scheduler_activities = _create_request(_rm_url("ws/v1/cluster/scheduler/bulk-activities"))
     _write_output(output_path, "scheduler_activities", scheduler_activities)
 
-    scheduler_config = _create_request(_rm_url("ws/v1/cluster/scheduler-conf"))
-    _write_output(output_path, "scheduler_configuration", scheduler_config)
-
     yarn_conf = _run_command("cat", os.path.join(_HADOOP_CONF_DIR, _YARN_SITE_XML))
     _write_output(output_path, "yarn_site", yarn_conf)
 
-    enable_debug_log = _set_rm_scheduler_log_level("DEBUG")
-    logger.info("Set RM scheduler log level to DEBUG: %s", enable_debug_log)
-    log_address = _get_node_log_address(_RM_ADDRESS, _RM_LOG_REGEX, _NODE_SCHEME)
-    start_time, end_time = (_format_datetime_no_seconds(datetime.now() - timedelta(seconds=120)),
-                            _format_datetime_no_seconds(datetime.now()))
-    rm_debug_log = _filter_node_log(log_address, start_time, end_time, _NODE_SCHEME)
-    _write_output(output_path, "rm_debug_log_2min", rm_debug_log)
-    enable_info_log = _set_rm_scheduler_log_level("INFO")
-    logger.info("Restored RM scheduler log level to INFO: %s", enable_info_log)
+    try:
+        enable_debug_log = _set_rm_scheduler_log_level("DEBUG")
+        logger.info("Set RM scheduler log level to DEBUG: %s", enable_debug_log)
+        log_address = _get_node_log_address(_RM_ADDRESS, _RM_LOG_REGEX, _NODE_SCHEME)
+        start_time, end_time = (_format_datetime_no_seconds(datetime.now()),
+                                (_format_datetime_no_seconds(datetime.now()) + timedelta(seconds=120)))
+        logger.info("Waiting for 2 minutes to collect RM DEBUG logs")
+        time.sleep(120)
+        rm_debug_log = _filter_node_log(log_address, start_time, end_time, _NODE_SCHEME)
+        _write_output(output_path, "rm_debug_log_2min", rm_debug_log)
+    finally:
+        enable_info_log = _set_rm_scheduler_log_level("INFO")
+        logger.info("Restored RM scheduler log level to INFO: %s", enable_info_log)
 
     logger.info("Scheduler diagnostics written to %s", output_path)
     return output_path
@@ -189,8 +187,8 @@ def _get_current_rm_address(matches: List[Tuple[str, str]]) -> Optional[str]:
 def _resolve_rm_webapp_address() -> str:
     global _NODE_SCHEME
     for property_prefix, scheme in (
-        (_RM_WEBAPP_HTTPS_ADDRESS_KEY, "https"),
-        (_RM_WEBAPP_HTTP_ADDRESS_KEY, "http"),
+            (_RM_WEBAPP_HTTPS_ADDRESS_KEY, "https"),
+            (_RM_WEBAPP_HTTP_ADDRESS_KEY, "http"),
     ):
         matches = _parse_property_from_conf(_YARN_SITE_XML, property_prefix)
         address = _get_current_rm_address(matches)
@@ -264,10 +262,16 @@ def _create_request(url: str, xml_type: bool = True) -> str:
         return response_str
 
 
-def _get_nodemanager_address(app_id: str) -> str:
-    app_info = _create_request(_rm_url("ws/v1/cluster/apps/{}".format(app_id)))
-    app_info_xml = ET.fromstring(app_info)
-    return app_info_xml.find("amHostHttpAddress").text
+def _get_nodemanager_address(app_info: str) -> Optional[str]:
+    try:
+        address = ET.fromstring(app_info).findtext("amHostHttpAddress")
+    except ET.ParseError as e:
+        logger.warning("Unable to parse application info: %s", e)
+        return None
+
+    if not address or not address.strip():
+        return None
+    return address
 
 
 def _get_node_log_address(node_address: str, link_regex: str, scheme: str = "http") -> str:
@@ -351,7 +355,8 @@ def main() -> None:
     logger.info("Using RM webapp at %s://%s", _NODE_SCHEME, _RM_ADDRESS)
 
     selected_option = issue_map[args.command]
-    print(selected_option())  # DiagnosticsService.java reads the output path from stdout
+    # DiagnosticsService.java reads OUTPUT_DIR:<path> from stdout
+    print("OUTPUT_DIR:{}".format(selected_option()))
 
 
 if __name__ == "__main__":
