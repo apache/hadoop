@@ -30,7 +30,8 @@ import {
   DEFAULT_PARTITION_VALUE,
   getPropertyNameForLabel,
 } from './capacityEditor';
-import { buildPropertyKey } from '~/utils/propertyUtils';
+import { buildPropertyKey, getParentQueuePath } from '~/utils/propertyUtils';
+import { SPECIAL_VALUES } from '~/types';
 import { validateQueue } from '~/features/validation/service';
 import type { ValidationIssue, StagedChange, SchedulerInfo } from '~/types';
 
@@ -81,20 +82,30 @@ const parseQueueAccessibleNodeLabelsProperty = (
 };
 
 /**
- * Returns whether a queue lists the label in its own accessible-node-labels property.
+ * Returns whether the queue can access the label.
+ * Checks parent queues recursively until it finds a queue that explicitly lists the label.
+ * Reject the implicit all label (*) from root queue.
  */
-export function isLabelListedInQueue(
+export function isLabelListedInQueueHierarchy(
   queuePath: string,
   label: string,
   store: QueuePropertyReader,
 ): boolean {
-  const accessibleLabels = parseQueueAccessibleNodeLabelsProperty(queuePath, store);
-  if (accessibleLabels === null) {
-    return false;
+  if (queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME) {
+    return true;
   }
 
-  return isLabelInAccessibleList(label, accessibleLabels);
-};
+  let currentPath: string | null = queuePath;
+  while (currentPath && currentPath !== SPECIAL_VALUES.ROOT_QUEUE_NAME) {
+    const accessibleLabels = parseQueueAccessibleNodeLabelsProperty(currentPath, store);
+    if (accessibleLabels !== null) {
+      return isLabelInAccessibleList(label, accessibleLabels);
+    }
+    currentPath = getParentQueuePath(currentPath);
+  }
+
+  return false;
+}
 
 /** Labels with non-empty label-partition capacity configured on the queue. */
 export const getLabelsWithPartitionCapacityConfigured = (
@@ -179,8 +190,8 @@ const createLabelPartitionAccessIssue = (
 });
 
 /**
- * Validates label-partition capacity drafts for queues that do not list the label
- * in their own accessible-node-labels property.
+ * Validates label-partition capacity drafts for queues that do not have inherited access
+ * to the selected label.
  */
 export function getLabelPartitionAccessIssues(
   rows: CapacityRowDraft[],
@@ -196,7 +207,7 @@ export function getLabelPartitionAccessIssues(
   const issues: ValidationIssue[] = [];
 
   rows.forEach((row) => {
-    if (isLabelListedInQueue(row.queuePath, selectedNodeLabel, store)) {
+    if (isLabelListedInQueueHierarchy(row.queuePath, selectedNodeLabel, store)) {
       return;
     }
 

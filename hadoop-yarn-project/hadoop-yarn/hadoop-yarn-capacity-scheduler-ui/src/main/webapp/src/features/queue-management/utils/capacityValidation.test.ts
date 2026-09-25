@@ -18,47 +18,79 @@
 
 import { describe, expect, it } from 'vitest';
 import type { CapacityRowDraft } from '~/stores/slices/capacityEditorSlice';
+import { buildPropertyKey } from '~/utils/propertyUtils';
+import type { QueuePropertyReader } from './capacityValidation';
 import {
   getLabelPartitionAccessIssues,
   getAccessibleLabelRemovalIssues,
-  isLabelListedInQueue,
+  isLabelListedInQueueHierarchy,
 } from './capacityValidation';
 
-describe('isLabelListedInQueue', () => {
-  it('returns false when the queue has no accessible-node-labels property', () => {
-    const store = {
-      hasQueueProperty: () => false,
-      getQueuePropertyValue: () => ({ value: '', isStaged: false }),
-    };
+const createStoreFromConfig = (
+  config: Record<string, string>,
+): QueuePropertyReader => ({
+  hasQueueProperty: (queuePath, property) =>
+    Object.prototype.hasOwnProperty.call(config, buildPropertyKey(queuePath, property)),
+  getQueuePropertyValue: (queuePath, property) => ({
+    value: config[buildPropertyKey(queuePath, property)] ?? '',
+    isStaged: false,
+  }),
+});
 
-    expect(isLabelListedInQueue('root.default', 'gpu', store)).toBe(false);
+describe('isLabelListedInQueueHierarchy', () => {
+  it('returns false when no queue in the path declares accessible-node-labels', () => {
+    const store = createStoreFromConfig({});
+
+    expect(isLabelListedInQueueHierarchy('root.default', 'gpu', store)).toBe(false);
   });
 
-  it('returns false when accessible-node-labels is empty', () => {
-    const store = {
-      hasQueueProperty: () => true,
-      getQueuePropertyValue: () => ({ value: '', isStaged: false }),
-    };
+  it('returns false when accessible-node-labels is explicitly empty', () => {
+    const store = createStoreFromConfig({
+      [buildPropertyKey('root.default', 'accessible-node-labels')]: '',
+    });
 
-    expect(isLabelListedInQueue('root.default', 'gpu', store)).toBe(false);
+    expect(isLabelListedInQueueHierarchy('root.default', 'gpu', store)).toBe(false);
+  });
+
+  it('does not inherit when the queue explicitly sets accessible-node-labels to empty', () => {
+    const store = createStoreFromConfig({
+      [buildPropertyKey('root.team', 'accessible-node-labels')]: 'gpu',
+      [buildPropertyKey('root.team.child', 'accessible-node-labels')]: '',
+    });
+
+    expect(isLabelListedInQueueHierarchy('root.team.child', 'gpu', store)).toBe(false);
+  });
+
+  it('inherits gpu access from the parent when accessible-node-labels is unset on the child', () => {
+    const store = createStoreFromConfig({
+      [buildPropertyKey('root.team', 'accessible-node-labels')]: 'gpu',
+    });
+
+    expect(isLabelListedInQueueHierarchy('root.team.child', 'gpu', store)).toBe(true);
+  });
+
+  it('returns false for a label not granted by the inherited accessible-node-labels', () => {
+    const store = createStoreFromConfig({
+      [buildPropertyKey('root.team', 'accessible-node-labels')]: 'gpu',
+    });
+
+    expect(isLabelListedInQueueHierarchy('root.team.child', 'fpga', store)).toBe(false);
   });
 
   it('returns true when the label is listed on the queue', () => {
-    const store = {
-      hasQueueProperty: () => true,
-      getQueuePropertyValue: () => ({ value: 'gpu,label3', isStaged: false }),
-    };
+    const store = createStoreFromConfig({
+      [buildPropertyKey('root.default', 'accessible-node-labels')]: 'gpu,label3',
+    });
 
-    expect(isLabelListedInQueue('root.default', 'label3', store)).toBe(true);
+    expect(isLabelListedInQueueHierarchy('root.default', 'label3', store)).toBe(true);
   });
 
   it('returns true when the queue lists all labels via wildcard', () => {
-    const store = {
-      hasQueueProperty: () => true,
-      getQueuePropertyValue: () => ({ value: '*', isStaged: false }),
-    };
+    const store = createStoreFromConfig({
+      [buildPropertyKey('root.default', 'accessible-node-labels')]: '*',
+    });
 
-    expect(isLabelListedInQueue('root.default', 'label3', store)).toBe(true);
+    expect(isLabelListedInQueueHierarchy('root.default', 'label3', store)).toBe(true);
   });
 });
 
@@ -120,6 +152,20 @@ describe('getLabelPartitionAccessIssues', () => {
     expect(issues).toHaveLength(2);
     expect(issues[0]?.field).toBe('accessible-node-labels.gpu.capacity');
     expect(issues[1]?.field).toBe('accessible-node-labels.gpu.maximum-capacity');
+  });
+
+  it('allows label partition capacity when the child inherits access from its parent', () => {
+    const store = createStoreFromConfig({
+      [buildPropertyKey('root.team', 'accessible-node-labels')]: 'gpu',
+    });
+
+    const issues = getLabelPartitionAccessIssues(
+      [createRow({ queuePath: 'root.team.child', capacityValue: '50' })],
+      'gpu',
+      store,
+    );
+
+    expect(issues).toEqual([]);
   });
 });
 
