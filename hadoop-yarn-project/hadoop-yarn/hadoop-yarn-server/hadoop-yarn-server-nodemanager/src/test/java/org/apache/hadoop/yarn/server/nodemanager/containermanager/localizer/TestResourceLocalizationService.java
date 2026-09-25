@@ -63,8 +63,11 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.util.Sets;
@@ -87,6 +90,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -2648,6 +2652,71 @@ public class TestResourceLocalizationService {
       }
     }
 
+  }
+
+  /**
+   * The Public Localizer must stay up when it dequeues a completed download it
+   * has no record of. Before YARN-11993 run() returned on that path, so the
+   * finally block shut the download pool down and every later public
+   * localization on the node was rejected until the NodeManager restarted.
+   */
+  @Test
+  @Timeout(value = 30)
+  public void testPublicLocalizerSurvivesUnknownResource() throws Exception {
+    conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS,
+        lfs.makeQualified(new Path(basedir, "0")).toString());
+
+    DrainDispatcher dispatcher = new DrainDispatcher();
+    dispatcher.init(conf);
+    dispatcher.start();
+
+    // Nothing is localized here, so the dirs handler is never asked for a
+    // path; mocking it keeps the test off the disk.
+    LocalDirsHandlerService mockDirsHandler =
+        mock(LocalDirsHandlerService.class);
+
+    ResourceLocalizationService service =
+        new ResourceLocalizationService(dispatcher,
+            mock(ContainerExecutor.class), mock(DeletionService.class),
+            mockDirsHandler, nmContext, metrics);
+    dispatcher.register(LocalizationEventType.class, service);
+    service.init(conf);
+
+    PublicLocalizer publicLocalizer = service.getPublicLocalizer();
+    try {
+      publicLocalizer.start();
+
+      // Submit straight to the completion queue so the Future is never
+      // recorded in pending. That is exactly the state in which
+      // pending.remove(completed) returns null.
+      final CountDownLatch downloaded = new CountDownLatch(1);
+      final Path unknown = new Path(basedir, "unknown");
+      publicLocalizer.queue.submit(() -> {
+        downloaded.countDown();
+        return unknown;
+      });
+      assertTrue(downloaded.await(10, TimeUnit.SECONDS),
+          "public download never ran");
+      assertEquals(0, publicLocalizer.pending.size());
+
+      // The localizer should log the unknown resource and carry on. If it
+      // exits instead, run()'s finally block shuts the download pool down.
+      try {
+        GenericTestUtils.waitFor(() -> !publicLocalizer.isAlive()
+            || publicLocalizer.threadPool.isShutdown(), 20, 5000);
+        fail("Public Localizer exited after taking an unknown resource");
+      } catch (TimeoutException expected) {
+        // The localizer stayed up, which is what YARN-11993 fixed.
+      }
+
+      assertTrue(publicLocalizer.isAlive(), "Public Localizer thread died");
+      assertFalse(publicLocalizer.threadPool.isShutdown(),
+          "Public Localizer shut its download pool down");
+    } finally {
+      publicLocalizer.interrupt();
+      service.stop();
+      dispatcher.stop();
+    }
   }
 
   private boolean waitForPrivateDownloadToStart(
