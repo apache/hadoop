@@ -592,6 +592,43 @@
         </properties>
       </profile>
       <profile>
+        <!-- PhantomJS 2.1.1 bundles OpenSSL 1.x, which aborts with "Auto
+             configuration failed" (libproviders.so) when it reads an
+             OpenSSL 3 openssl.cnf. Start it through /bin/sh with
+             OPENSSL_CONF=/dev/null, scoped to the PhantomJS process only.
+             Same workaround as RANGER-4791; see ariya/phantomjs#15449. -->
+        <id>phantomjs-openssl-conf</id>
+        <activation>
+          <os>
+            <family>unix</family>
+          </os>
+        </activation>
+        <build>
+          <plugins>
+            <plugin>
+              <groupId>com.github.searls</groupId>
+              <artifactId>jasmine-maven-plugin</artifactId>
+              <configuration>
+                <webDriverCapabilities combine.self="override">
+                  <capability>
+                    <name>phantomjs.binary.path</name>
+                    <value>/bin/sh</value>
+                  </capability>
+                  <capability>
+                    <name>phantomjs.cli.args</name>
+                    <list>
+                      <arg>-c</arg>
+                      <arg>OPENSSL_CONF=/dev/null exec "$0" "$@"</arg>
+                      <arg>${phantomjs.binary}</arg>
+                    </list>
+                  </capability>
+                </webDriverCapabilities>
+              </configuration>
+            </plugin>
+          </plugins>
+        </build>
+      </profile>
+      <profile>
         <id>rest-docs</id>
         <build>
           <plugins>
