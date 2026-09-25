@@ -53,6 +53,21 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-annotations</artifactId>
     </dependency>
+
+    <!-- ApplicationHistoryServer uses org.eclipse.jetty.webapp.WebAppContext and
+         org.eclipse.jetty.servlet.FilterHolder. Declared provided, matching the
+         scope they already resolve at through the provided hadoop-common above. -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-webapp</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlet</artifactId>
+      <scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-inline</artifactId>
