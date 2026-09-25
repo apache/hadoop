@@ -792,14 +792,17 @@ public class NetUtils {
   }
 
   /**
-   * Get port as integer from host port string like host:port.
+   * Get port as integer from a host:port or [IPv6]:port string.
    *
-   * @param addr host + port string like host:port.
+   * @param addr host and port string, with brackets around IPv6 literals.
    * @return an integer value representing the port.
    * @throws IllegalArgumentException if the input is not in the correct format.
    */
   public static int getPortFromHostPortString(String addr)
       throws IllegalArgumentException {
+    if (addr.startsWith("[")) {
+      return createSocketAddrUnresolved(addr).getPort();
+    }
     String[] hostport = addr.split(":");
     if (hostport.length != 2) {
       String errorMsg = "Address should be <host>:<port>, but it is " + addr;

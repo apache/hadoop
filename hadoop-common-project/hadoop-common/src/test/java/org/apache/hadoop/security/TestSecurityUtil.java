@@ -368,8 +368,8 @@ public class TestSecurityUtil {
 
   @Test
   public void testSocketAddrWithIPv6() throws Exception {
-    SecurityUtil.setTokenServiceUseIp(false);
     String host = "::1";
+    NetUtils.addStaticResolution(host, host);
     InetSocketAddress addr = NetUtils.createSocketAddr("[::1]:123");
     verifyAddress(addr, host, InetAddress.getByName(host).getHostAddress(), 123);
   }

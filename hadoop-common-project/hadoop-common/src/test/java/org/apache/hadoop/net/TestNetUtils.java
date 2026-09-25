@@ -800,12 +800,15 @@ public class TestNetUtils {
   public void testGetPortFromHostPortString() throws Exception {
 
     assertEquals(1002, NetUtils.getPortFromHostPortString("testHost:1002"));
+    assertEquals(123, NetUtils.getPortFromHostPortString(NetUtils.getHostPortString("::1", 123)));
 
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         () ->  NetUtils.getPortFromHostPortString("testHost"));
 
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         () ->  NetUtils.getPortFromHostPortString("testHost:randomString"));
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        () -> NetUtils.getPortFromHostPortString("::1:123"));
   }
 
   @Test
