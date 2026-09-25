@@ -632,7 +632,7 @@
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.test-framework.providers</groupId>
-      <artifactId>jersey-test-framework-provider-jetty</artifactId>
+      <artifactId>jersey-test-framework-provider-jdk-http</artifactId>
       <exclusions>
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
@@ -940,11 +940,13 @@
                         <exclude>com/sun/security/*</exclude>
                         <exclude>com/sun/jndi/*</exclude>
                         <exclude>com/sun/management/*</exclude>
+                        <exclude>com/sun/net/httpserver/*</exclude>
                         <exclude>com/sun/tools/**/*</exclude>
                         <exclude>com/sun/javadoc/**/*</exclude>
                         <exclude>com/sun/security/**/*</exclude>
                         <exclude>com/sun/jndi/**/*</exclude>
                         <exclude>com/sun/management/**/*</exclude>
+                        <exclude>com/sun/net/httpserver/**/*</exclude>
                         <exclude>com/ibm/security/*</exclude>
                         <exclude>com/ibm/security/**/*</exclude>
                         <!-- Exclude zstd-jni -->
