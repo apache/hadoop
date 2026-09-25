@@ -961,6 +961,16 @@
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
           </exclusion>
+          <!--
+            jetty-annotations brings javax.annotation-api, a second copy of the
+            javax.annotation classes jakarta.annotation-api already provides
+            through Jersey, the same way javax.servlet-api duplicated
+            jakarta.servlet-api.
+          -->
+          <exclusion>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
