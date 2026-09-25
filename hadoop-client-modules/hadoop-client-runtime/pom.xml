@@ -166,11 +166,22 @@
                       <!-- Excluding Jetty dependencies to resolve `BanDuplicateClasses` issues caused by
                        duplicate Jetty classes in `hadoop-client-minicluster` and `hadoop-client-runtime`.
                        so keeping it here leads to conflicts.
+
+                       jetty-util is not named here. It is this jar's to ship, as
+                       hadoop-client-minicluster says when it excludes it from
+                       hadoop-minicluster, hadoop-yarn-server-nodemanager and
+                       hadoop-yarn-server-web-proxy. YARN-11793 excluded it here
+                       because jersey-test-framework-provider-jetty pulled it into
+                       the minicluster on a path that module does not exclude;
+                       HADOOP-19970 moved that test container onto the JDK's HTTP
+                       server, so that path is gone and excluding it here as well
+                       would leave org.eclipse.jetty.util in neither jar.
+
+                       jetty-continuation went the same way: that test container
+                       was the only thing still dragging it in.
                       -->
-                      <exclude>org.eclipse.jetty:jetty-util</exclude>
                       <exclude>org.eclipse.jetty:jetty-util-ajax</exclude>
                       <exclude>org.eclipse.jetty:jetty-server</exclude>
-                      <exclude>org.eclipse.jetty:jetty-continuation</exclude>
                       <exclude>org.ow2.asm:*</exclude>
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>
