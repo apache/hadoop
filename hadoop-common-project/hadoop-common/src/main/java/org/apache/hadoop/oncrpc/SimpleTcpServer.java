@@ -114,6 +114,10 @@ public class SimpleTcpServer {
     return this.boundPort;
   }
 
+  /**
+   * Returns the local address this server is listening on.
+   * @return local listen address, or null if the server is not running
+   */
   public InetSocketAddress getBoundAddress() {
     return ch != null ? (InetSocketAddress) ch.localAddress() : null;
   }

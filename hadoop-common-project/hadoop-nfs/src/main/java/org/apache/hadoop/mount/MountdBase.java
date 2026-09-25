@@ -114,10 +114,18 @@ abstract public class MountdBase {
     }
   }
 
+  /**
+   * Returns the local TCP listen address of mountd.
+   * @return local TCP listen address, or null if the server is not running
+   */
   public InetSocketAddress getBoundTcpAddress() {
     return tcpServer != null ? tcpServer.getBoundAddress() : null;
   }
 
+  /**
+   * Returns the local UDP listen address of mountd.
+   * @return local UDP listen address, or null if the server is not running
+   */
   public InetSocketAddress getBoundUdpAddress() {
     return udpServer != null ? udpServer.getBoundAddress() : null;
   }

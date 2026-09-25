@@ -83,6 +83,10 @@ public abstract class Nfs3Base {
     nfsBoundPort = tcpServer.getBoundPort();
   }
 
+  /**
+   * Returns the local TCP listen address of the NFSv3 service.
+   * @return local TCP listen address, or null if the server is not running
+   */
   public InetSocketAddress getBoundAddress() {
     return tcpServer != null ? tcpServer.getBoundAddress() : null;
   }

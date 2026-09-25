@@ -289,6 +289,10 @@ public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
     return port;
   }
 
+  /**
+   * Returns the local address this RPC program binds its server socket to.
+   * @return bind address, or null to use the JVM default wildcard
+   */
   public String getBindHost() {
     return bindHost;
   }
