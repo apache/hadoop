@@ -137,7 +137,7 @@ public class TimelineClientImpl extends TimelineClient {
         PseudoAuthenticationHandler.TYPE;
     authType = conf.get(YarnConfiguration.TIMELINE_HTTP_AUTH_TYPE,
         defaultAuth);
-    LOG.info("Timeline service address: " + getTimelineServiceAddress());
+
     super.serviceInit(conf);
   }
 
@@ -151,6 +151,12 @@ public class TimelineClientImpl extends TimelineClient {
 
   @Override
   protected void serviceStart() throws Exception {
+    String protoPrefix = "http://";
+    if (YarnConfiguration.useHttps(getConfig())) {
+      protoPrefix = "https://";
+    }
+    LOG.info("Timeline service address: "
+        + protoPrefix + getTimelineServiceAddress() + " (" + connector + ")");
     timelineWriter = createTimelineWriter(getConfig(), authUgi,
         connector.getClient(), TimelineConnector.constructResURI(getConfig(),
             timelineServiceAddress, RESOURCE_URI_STR_V1), connector.getRetryPolicy());
