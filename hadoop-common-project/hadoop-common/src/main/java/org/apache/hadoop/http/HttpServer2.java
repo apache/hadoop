@@ -188,6 +188,17 @@ public final class HttpServer2 implements FilterContainer {
           + "SUSPICIOUS_PATH_CHARACTERS";
 
   /**
+   * Whether an HTTPS client may renegotiate the TLS 1.2 session it opened.
+   * Jetty 9.4 allowed it by default; Jetty 12 refuses it and closes the
+   * connection, which also closes off the renegotiation denial of service of
+   * CVE-2011-1473. The default keeps Jetty 12's refusal. TLS 1.3 has no
+   * renegotiation, so the setting does not affect it.
+   */
+  public static final String HTTP_SSL_RENEGOTIATION_ALLOWED_KEY =
+      "hadoop.http.ssl.renegotiation.allowed";
+  public static final boolean HTTP_SSL_RENEGOTIATION_ALLOWED_DEFAULT = false;
+
+  /**
    * Prefix under which a context init parameter reaches Jetty's DefaultServlet.
    * <p>
    * This is not the package the servlet lives in: ee8 moved the class to
@@ -713,6 +724,11 @@ public final class HttpServer2 implements FilterContainer {
       }
 
       setEnabledProtocols(sslContextFactory);
+
+      // Set it either way: Jetty 9.4 and Jetty 12 disagree on the default.
+      sslContextFactory.setRenegotiationAllowed(conf.getBoolean(
+          HTTP_SSL_RENEGOTIATION_ALLOWED_KEY,
+          HTTP_SSL_RENEGOTIATION_ALLOWED_DEFAULT));
 
       long storesReloadInterval =
           conf.getLong(FileBasedKeyStoresFactory.SSL_STORES_RELOAD_INTERVAL_TPL_KEY,
