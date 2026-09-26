@@ -202,7 +202,18 @@ public class RouterClientRMService extends AbstractService
     if (this.server != null) {
       this.server.stop();
     }
-    userPipelineMap.clear();
+    // serviceStart() started the secret manager's ExpiredTokenRemover; stop it
+    // here, once the server accepts no more requests, so it does not outlive
+    // this service and keep using the federation state store. Server#stop does
+    // not wait for handlers already running, so one of those may still use the
+    // secret manager. Mirrors RMSecretManagerService#serviceStop.
+    if (this.routerDTSecretManager != null) {
+      this.routerDTSecretManager.stopThreads();
+    }
+    // serviceStart() creates the map, so it is null if the service never started.
+    if (userPipelineMap != null) {
+      userPipelineMap.clear();
+    }
     super.serviceStop();
   }
 
