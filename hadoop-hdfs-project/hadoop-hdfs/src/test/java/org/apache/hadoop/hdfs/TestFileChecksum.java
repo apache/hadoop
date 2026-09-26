@@ -23,12 +23,24 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Options.ChecksumCombineMode;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumOptions;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
+import org.apache.hadoop.hdfs.protocol.StripedBlockInfo;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Timeout;
@@ -39,6 +51,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.slf4j.event.Level;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Random;
 
@@ -100,12 +113,19 @@ public class TestFileChecksum {
   }
 
   public static void setup(String mode) throws IOException {
+    setup(mode, false);
+  }
+
+  private static void setup(String mode,
+      boolean enableEcReconstructionValidation) throws IOException {
     checksumCombineMode = mode;
     int numDNs = dataBlocks + parityBlocks + 2;
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     conf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_VALIDATION_KEY,
+        enableEcReconstructionValidation);
     conf.set(HdfsClientConfigKeys.DFS_CHECKSUM_COMBINE_MODE_KEY,
         checksumCombineMode);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
@@ -678,6 +698,84 @@ public class TestFileChecksum {
       assertEquals(fileChecksum, fileChecksum1, "checksum should be same");
     } finally {
       DataNodeFaultInjector.set(oldInjector);
+    }
+  }
+
+  @MethodSource("getParameters")
+  @ParameterizedTest
+  @Timeout(value = 90)
+  public void testStripedFileChecksumReconstructionExcludesFailedTarget(
+      String pMode) throws Exception {
+    setup(pMode, true);
+    BlockChecksumType checksumType =
+        ChecksumCombineMode.COMPOSITE_CRC.name().equals(pMode)
+            ? BlockChecksumType.COMPOSITE_CRC : BlockChecksumType.MD5CRC;
+
+    assertBlockGroupChecksumWithFailedTarget(
+        ecDir + "/stripedFileChecksumFailedTarget", blockGroupSize,
+        checksumType);
+    assertBlockGroupChecksumWithFailedTarget(
+        ecDir + "/shortStripedFileChecksumFailedTarget", 100,
+        checksumType);
+  }
+
+  private void assertBlockGroupChecksumWithFailedTarget(String stripedFile,
+      int fileLength, BlockChecksumType checksumType) throws Exception {
+    prepareTestFiles(fileLength, new String[] {stripedFile});
+
+    LocatedStripedBlock blockGroup = (LocatedStripedBlock)
+        client.getLocatedBlocks(stripedFile, 0).get(0);
+    OpBlockChecksumResponseProto expected = getBlockGroupChecksum(blockGroup,
+        blockGroup.getBlockTokens(), checksumType);
+
+    // Keep the target live and fail only its child BLOCK_CHECKSUM request.
+    // Reconstruction obtains a fresh token for its READ_BLOCK requests.
+    Token<BlockTokenIdentifier>[] invalidTokens =
+        blockGroup.getBlockTokens().clone();
+    int targetPos = firstSelectedDataBlockPosition(blockGroup);
+    invalidTokens[targetPos] = new Token<>();
+
+    OpBlockChecksumResponseProto reconstructed = getBlockGroupChecksum(
+        blockGroup, invalidTokens, checksumType);
+    assertEquals(expected, reconstructed);
+  }
+
+  private int firstSelectedDataBlockPosition(LocatedStripedBlock blockGroup) {
+    byte[] blockIndices = blockGroup.getBlockIndices();
+    int cellsNum = (int) ((blockGroup.getBlock().getNumBytes() - 1)
+        / cellSize + 1);
+    int minRequiredSources = Math.min(cellsNum, dataBlocks);
+    for (int i = 0; i < minRequiredSources; i++) {
+      if (blockIndices[i] < dataBlocks) {
+        return i;
+      }
+    }
+    throw new AssertionError(
+        "No data block found in the selected reconstruction sources");
+  }
+
+  private OpBlockChecksumResponseProto getBlockGroupChecksum(
+      LocatedStripedBlock blockGroup,
+      Token<BlockTokenIdentifier>[] blockTokens,
+      BlockChecksumType checksumType) throws IOException {
+    StripedBlockInfo stripedBlockInfo = new StripedBlockInfo(
+        blockGroup.getBlock(), blockGroup.getLocations(), blockTokens,
+        blockGroup.getBlockIndices(), ecPolicy);
+    int timeout = client.getConf().getChecksumEcSocketTimeout()
+        + client.getConf().getSocketTimeout();
+
+    try (IOStreamPair pair = client.connectToDN(blockGroup.getLocations()[0],
+        timeout, blockGroup.getBlockToken())) {
+      new Sender((DataOutputStream) pair.out).blockGroupChecksum(
+          stripedBlockInfo, blockGroup.getBlockToken(),
+          blockGroup.getBlock().getNumBytes(),
+          new BlockChecksumOptions(checksumType));
+
+      BlockOpResponseProto reply = BlockOpResponseProto.parseFrom(
+          PBHelperClient.vintPrefixed(pair.in));
+      DataTransferProtoUtil.checkBlockOpStatus(reply,
+          "for block group " + blockGroup.getBlock());
+      return reply.getChecksumResponse();
     }
   }
 
