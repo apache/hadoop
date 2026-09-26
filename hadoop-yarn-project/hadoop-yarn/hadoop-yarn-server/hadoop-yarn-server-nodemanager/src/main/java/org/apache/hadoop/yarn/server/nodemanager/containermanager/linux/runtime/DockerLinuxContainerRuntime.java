@@ -910,7 +910,7 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
                 containerIdStr);
       } catch (IOException e) {
         throw new RuntimeException(
-            "Fail to read additional docker client config file from " + clientConfig);
+            "Failed to read additional docker client config file: " + clientConfig, e);
       }
     }
     return additionalDockerCredentials;
