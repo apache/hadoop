@@ -39,6 +39,7 @@ public class StorageTypeStats {
   private long capacityRemaining = 0L;
   private long blockPoolUsed = 0L;
   private int nodesInService = 0;
+  private int totalNodes = 0;
   private StorageType storageType;
 
   @VisibleForTesting
@@ -130,6 +131,10 @@ public class StorageTypeStats {
     return nodesInService;
   }
 
+  public int getTotalNodes() {
+    return totalNodes;
+  }
+
   public int getNodesInServiceXceiverCount() {
     return nodesInServiceXceiverCount;
   }
@@ -145,6 +150,7 @@ public class StorageTypeStats {
     capacityRemaining = other.capacityRemaining;
     blockPoolUsed = other.blockPoolUsed;
     nodesInService = other.nodesInService;
+    totalNodes = other.totalNodes;
   }
 
   void addStorage(final DatanodeStorageInfo info,
@@ -162,6 +168,7 @@ public class StorageTypeStats {
   }
 
   void addNode(final DatanodeDescriptor node) {
+    totalNodes++;
     if (node.isInService()) {
       nodesInService++;
       nodesInServiceXceiverCount += node.getXceiverCount();
@@ -183,6 +190,7 @@ public class StorageTypeStats {
   }
 
   void subtractNode(final DatanodeDescriptor node) {
+    totalNodes--;
     if (node.isInService()) {
       nodesInService--;
       nodesInServiceXceiverCount -= node.getXceiverCount();
