@@ -70,9 +70,9 @@ describe('nodeLabelsSlice', () => {
         refreshSchedulerData: vi.fn(async () => {}),
         stagedChanges: [],
         applyError: null,
-        ...initialState,
         // Slice properties and methods
         ...createNodeLabelsSlice(set, get, api),
+        ...initialState,
         // Stub implementations for methods we don't test
         ...({} as any),
       })),
@@ -437,6 +437,104 @@ describe('nodeLabelsSlice', () => {
         { nodeId: 'node1', labels: [] },
       ]);
       expect(store.getState().nodeToLabels).toEqual([{ nodeId: 'node1', nodeLabels: [] }]);
+    });
+
+    it('should also clear host:0 when unassigning the last NM with the host-level label', async () => {
+      store = createTestStore({
+        nodeToLabels: [
+          { nodeId: 'localhost:8041', nodeLabels: ['p2'] },
+          { nodeId: 'localhost:8042', nodeLabels: ['p1'] },
+          { nodeId: 'localhost:0', nodeLabels: ['p1'] },
+        ],
+      });
+
+      vi.mocked(store.getState().apiClient.replaceNodeToLabels).mockResolvedValue(undefined);
+      vi.mocked(store.getState().apiClient.getNodeToLabels).mockResolvedValue({
+        nodeToLabels: {
+          entry: [
+            { key: 'localhost:8041', value: { nodeLabelInfo: { name: 'p2' } } },
+          ],
+        },
+      });
+
+      await store.getState().assignNodeToLabel('localhost:8042', null);
+
+      expect(store.getState().apiClient.replaceNodeToLabels).toHaveBeenCalledWith([
+        { nodeId: 'localhost:8042', labels: [] },
+        { nodeId: 'localhost:0', labels: [] },
+      ]);
+    });
+
+    it('should clear host:0 and sibling NMs for host-wide rmadmin assignments', async () => {
+      store = createTestStore({
+        nodeToLabels: [
+          { nodeId: 'ccycloud-2.example.com:8041', nodeLabels: ['label4'] },
+          { nodeId: 'ccycloud-2.example.com:8042', nodeLabels: ['label4'] },
+          { nodeId: 'ccycloud-2.example.com:0', nodeLabels: ['label4'] },
+        ],
+      });
+
+      vi.mocked(store.getState().apiClient.replaceNodeToLabels).mockResolvedValue(undefined);
+      vi.mocked(store.getState().apiClient.getNodeToLabels).mockResolvedValue({
+        nodeToLabels: { entry: [] },
+      });
+
+      await store.getState().assignNodeToLabel('ccycloud-2.example.com:8041', null);
+
+      expect(store.getState().apiClient.replaceNodeToLabels).toHaveBeenCalledWith([
+        { nodeId: 'ccycloud-2.example.com:8041', labels: [] },
+        { nodeId: 'ccycloud-2.example.com:0', labels: [] },
+        { nodeId: 'ccycloud-2.example.com:8042', labels: [] },
+      ]);
+    });
+
+    it('should not clear host:0 when unassigning an NM with a different label', async () => {
+      store = createTestStore({
+        nodeToLabels: [
+          { nodeId: 'localhost:8041', nodeLabels: ['p2'] },
+          { nodeId: 'localhost:8042', nodeLabels: ['p1'] },
+          { nodeId: 'localhost:0', nodeLabels: ['p1'] },
+        ],
+      });
+
+      vi.mocked(store.getState().apiClient.replaceNodeToLabels).mockResolvedValue(undefined);
+      vi.mocked(store.getState().apiClient.getNodeToLabels).mockResolvedValue({
+        nodeToLabels: {
+          entry: [
+            { key: 'localhost:8042', value: { nodeLabelInfo: { name: 'p1' } } },
+            { key: 'localhost:0', value: { nodeLabelInfo: { name: 'p1' } } },
+          ],
+        },
+      });
+
+      await store.getState().assignNodeToLabel('localhost:8041', null);
+
+      expect(store.getState().apiClient.replaceNodeToLabels).toHaveBeenCalledWith([
+        { nodeId: 'localhost:8041', labels: [] },
+      ]);
+    });
+
+    it('should clear host:0 and all matching sibling NMs for host-wide labels', async () => {
+      store = createTestStore({
+        nodeToLabels: [
+          { nodeId: 'localhost:8041', nodeLabels: ['p1'] },
+          { nodeId: 'localhost:8042', nodeLabels: ['p1'] },
+          { nodeId: 'localhost:0', nodeLabels: ['p1'] },
+        ],
+      });
+
+      vi.mocked(store.getState().apiClient.replaceNodeToLabels).mockResolvedValue(undefined);
+      vi.mocked(store.getState().apiClient.getNodeToLabels).mockResolvedValue({
+        nodeToLabels: { entry: [] },
+      });
+
+      await store.getState().assignNodeToLabel('localhost:8041', null);
+
+      expect(store.getState().apiClient.replaceNodeToLabels).toHaveBeenCalledWith([
+        { nodeId: 'localhost:8041', labels: [] },
+        { nodeId: 'localhost:0', labels: [] },
+        { nodeId: 'localhost:8042', labels: [] },
+      ]);
     });
 
     it('should throw error in read-only mode', async () => {
