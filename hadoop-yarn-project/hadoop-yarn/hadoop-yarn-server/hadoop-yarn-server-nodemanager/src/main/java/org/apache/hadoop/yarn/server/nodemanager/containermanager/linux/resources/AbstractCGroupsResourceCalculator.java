@@ -58,19 +58,16 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
 
   private final List<String> totalJiffiesKeys;
   private final String rssMemoryKey;
-  private final String virtualMemoryKey;
 
   protected AbstractCGroupsResourceCalculator(
       String pid,
       List<String> totalJiffiesKeys,
-      String rssMemoryKey,
-      String virtualMemoryKey
+      String rssMemoryKey
   ) {
     super(pid);
     this.pid = pid;
     this.totalJiffiesKeys = totalJiffiesKeys;
     this.rssMemoryKey = rssMemoryKey;
-    this.virtualMemoryKey = virtualMemoryKey;
   }
 
   @Override
@@ -94,8 +91,27 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
 
   @Override
   public long getVirtualMemorySize(int olderThanAge) {
-    return 1 < olderThanAge ? UNAVAILABLE : getStat(virtualMemoryKey);
+    return 1 < olderThanAge ? UNAVAILABLE : calculateVirtualMemory();
   }
+
+  /**
+   * Calculates the virtual memory size of the process tree.
+   *
+   * The way the virtual memory is derived from the cgroup interface files
+   * differs between cgroup v1 and v2, therefore each implementation provides
+   * its own calculation:
+   * <ul>
+   *   <li>cgroup v1 exposes memory+swap in a single file
+   *   ({@code memory.memsw.usage_in_bytes}).</li>
+   *   <li>cgroup v2 exposes the swap usage separately
+   *   ({@code memory.swap.current}) and it has to be combined with the
+   *   RSS (resident memory ({@code memory.stat#anon})) to obtain the virtual memory size.</li>
+   * </ul>
+   *
+   * @return the virtual memory size in bytes, {@link #UNAVAILABLE} if it
+   *         cannot be calculated.
+   */
+  protected abstract long calculateVirtualMemory();
 
   @Override
   public String getProcessTreeDump() {
@@ -157,7 +173,7 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
     return reduce == 0 ? UNAVAILABLE : reduce;
   }
 
-  private long getStat(String key) {
+  protected long getStat(String key) {
     return Long.parseLong(stats.getOrDefault(key, String.valueOf(UNAVAILABLE)));
   }
 
