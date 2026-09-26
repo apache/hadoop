@@ -3118,42 +3118,30 @@ public class BlockManager implements BlockStatsMXBean {
     if (excessRedundancyMap.size() == 0) {
       return;
     }
+
+    long now = Time.monotonicNow();
+    Map<String, List<ExcessBlockInfo>> pendingScanBlocks = getPendingScanBlocks(now);
+    if (pendingScanBlocks.isEmpty()) {
+      return;
+    }
+
     // TODO: Change to readLock(FSNamesysteLockMode.BM) since invalidateBlocks is thread safe.
     namesystem.writeLock(RwLockMode.BM);
-    long now = Time.monotonicNow();
-    int processed = 0;
+    String datanodeUuid = null;
+    BlockInfo blockInfo = null;
     try {
-      Iterator<Map.Entry<String, LightWeightHashSet<Block>>> iter =
-          excessRedundancyMap.getExcessRedundancyMap().entrySet().iterator();
-      while (iter.hasNext() && processed < excessRedundancyTimeoutCheckLimit) {
-        Map.Entry<String, LightWeightHashSet<Block>> entry = iter.next();
-        String datanodeUuid = entry.getKey();
-        LightWeightHashSet<Block> blocks = entry.getValue();
-        // Sort blocks by timestamp in descending order.
-        List<ExcessBlockInfo> sortedBlocks = blocks.stream()
-            .filter(block -> block instanceof ExcessBlockInfo)
-            .map(block -> (ExcessBlockInfo) block)
-            .sorted(Comparator.comparingLong(ExcessBlockInfo::getTimeStamp))
-            .collect(Collectors.toList());
-
-        for (ExcessBlockInfo excessBlockInfo : sortedBlocks) {
-          if (processed >= excessRedundancyTimeoutCheckLimit) {
-            break;
-          }
-
-          processed++;
-          // If the datanode doesn't have any excess block that has exceeded the timeout,
-          // can exit this loop.
-          if (now <= excessBlockInfo.getTimeStamp() + excessRedundancyTimeout) {
-            break;
-          }
-
-          BlockInfo blockInfo = excessBlockInfo.getBlockInfo();
-          BlockInfo bi = blocksMap.getStoredBlock(blockInfo);
-          if (bi == null || bi.isDeleted()) {
+      for (Map.Entry<String, List<ExcessBlockInfo>> entry : pendingScanBlocks.entrySet()) {
+        for (ExcessBlockInfo excessBlockInfo : entry.getValue()) {
+          datanodeUuid = entry.getKey();
+          blockInfo = excessBlockInfo.getBlockInfo();
+          BlockInfo storedBlock = blocksMap.getStoredBlock(blockInfo);
+          Block storedExcessBlock =
+              excessRedundancyMap.getExcessBlockInfo(datanodeUuid, blockInfo);
+          if (storedBlock == null || storedBlock.isDeleted()
+              || !(storedExcessBlock instanceof ExcessBlockInfo)) {
             continue;
           }
-
+          blockInfo = ((ExcessBlockInfo) storedExcessBlock).getBlockInfo();
           Iterator<DatanodeStorageInfo> iterator = blockInfo.getStorageInfos();
           while (iterator.hasNext()) {
             DatanodeStorageInfo datanodeStorageInfo = iterator.next();
@@ -3172,10 +3160,43 @@ public class BlockManager implements BlockStatsMXBean {
           }
         }
       }
+    } catch (Throwable e) {
+      LOG.error("Fail to process excess block {} for {}.", blockInfo, datanodeUuid, e);
     } finally {
       namesystem.writeUnlock(RwLockMode.BM, "processTimedOutExcessBlocks");
       LOG.info("processTimedOutExcessBlocks {} msecs.", (Time.monotonicNow() - now));
     }
+  }
+
+  private Map<String, List<ExcessBlockInfo>> getPendingScanBlocks(long now) {
+    int processed = 0;
+    Map<String, List<ExcessBlockInfo>> pendingScanBlocks = new HashMap<>();
+    for (String dnUUID : excessRedundancyMap.getExcessDNs()) {
+      ArrayList<Block> excessBlocks = excessRedundancyMap.getExcessBlocks(dnUUID);
+      if (excessBlocks == null || excessBlocks.isEmpty()) {
+        continue;
+      }
+      List<ExcessBlockInfo> sortedBlocks = excessBlocks.stream()
+          .filter(block -> block instanceof ExcessBlockInfo)
+          .map(block -> (ExcessBlockInfo) block)
+          .sorted(Comparator.comparingLong(ExcessBlockInfo::getTimeStamp))
+          .collect(Collectors.toList());
+      for (ExcessBlockInfo block : sortedBlocks) {
+        if (processed >= excessRedundancyTimeoutCheckLimit) {
+          return pendingScanBlocks; // or break outer loop if you need to continue elsewhere
+        }
+
+        processed++;
+        if (now <= block.getTimeStamp() + excessRedundancyTimeout) {
+          // Since the list is sorted, no further block will be expired
+          break;
+        }
+        pendingScanBlocks
+            .computeIfAbsent(dnUUID, k -> new ArrayList<>())
+            .add(block);
+      }
+    }
+    return pendingScanBlocks;
   }
   
   Collection<Block> processReport(
