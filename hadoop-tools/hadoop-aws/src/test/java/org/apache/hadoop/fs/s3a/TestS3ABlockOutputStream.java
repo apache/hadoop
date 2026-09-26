@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.audit.AuditTestSupport;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
-import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.impl.write.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.test.MinimalWriteOperationHelperCallbacks;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.util.Progressable;
@@ -98,12 +98,14 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
     when(s3a.getRequestFactory())
         .thenReturn(MockS3AFileSystem.REQUEST_FACTORY);
     final Configuration conf = new Configuration();
-    WriteOperationHelper woh = new WriteOperationHelper(s3a,
-        conf,
-        new EmptyS3AStatisticsContext(),
+    WriteOperationHelper woh = new WriteOperationHelper(
         noopAuditor(conf),
         AuditTestSupport.NOOP_SPAN,
-        new MinimalWriteOperationHelperCallbacks(null)); // raises NPE if S3 client used
+        new MinimalWriteOperationHelperCallbacks("bucket",
+            null,
+            MockS3AFileSystem.REQUEST_FACTORY)
+    );
+    // raises NPE if S3 client used
     // first one works
     String key = "destKey";
     woh.newUploadPartRequestBuilder(key,

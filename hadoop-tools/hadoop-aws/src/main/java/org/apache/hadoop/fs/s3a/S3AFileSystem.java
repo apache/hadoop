@@ -25,13 +25,9 @@ import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
@@ -53,19 +49,13 @@ import javax.annotation.Nullable;
 
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
-import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
-import software.amazon.awssdk.services.s3.model.ListMultipartUploadsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
-import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
@@ -77,8 +67,6 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.model.StorageClass;
-import software.amazon.awssdk.services.s3.model.UploadPartRequest;
-import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 import software.amazon.awssdk.transfer.s3.model.CompletedCopy;
 import software.amazon.awssdk.transfer.s3.model.Copy;
 import software.amazon.awssdk.transfer.s3.model.CopyRequest;
@@ -146,7 +134,6 @@ import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.impl.StoreContextFactory;
-import org.apache.hadoop.fs.s3a.impl.UploadContentProviders;
 import org.apache.hadoop.fs.s3a.impl.CSEUtils;
 import org.apache.hadoop.fs.s3a.impl.streams.InputStreamType;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
@@ -154,6 +141,7 @@ import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamCallbacks;
 import org.apache.hadoop.fs.s3a.impl.streams.StreamFactoryRequirements;
 import org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration;
 import org.apache.hadoop.fs.s3a.impl.write.WriteObjectFlags;
+import org.apache.hadoop.fs.s3a.impl.write.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -253,7 +241,6 @@ import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FIL
 import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_OVERWRITE;
 import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
-import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_OCTET_STREAM;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_REQUIRED_EXCEPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.ARN_BUCKET_OPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
@@ -272,7 +259,6 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_RE
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.pairedTrackerFactory;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.util.RateLimitingFactory.unlimitedRate;
@@ -1368,9 +1354,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Get the store for low-level operations.
+   * This is absolutely not for external access; it's a single method
+   * to ease use throughout internal code.
    * @return the store the S3A FS is working through.
    */
-  private S3AStore getStore() {
+  @InterfaceAudience.Private
+  public S3AStore getStore() {
     return store;
   }
 
@@ -1435,41 +1424,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             Duration.ofSeconds(DEFAULT_PURGE_EXISTING_MULTIPART_AGE),
             TimeUnit.SECONDS,
             Duration.ZERO);
-        abortOutstandingMultipartUploads(purgeDuration.getSeconds());
+        getStore().getStoreWriter().abortOutstandingMultipartUploads(
+            purgeDuration.getSeconds(),
+            "",
+            maxKeys,
+            createStoreContext());
       } catch (AccessDeniedException e) {
         instrumentation.errorIgnored();
         LOG.debug("Failed to purge multipart uploads against {}," +
             " FS may be read only", bucket);
       }
     }
-  }
-
-  /**
-   * Abort all outstanding MPUs older than a given age.
-   * @param seconds time in seconds
-   * @throws IOException on any failure, other than 403 "permission denied"
-   */
-  @Retries.RetryTranslated
-  public void abortOutstandingMultipartUploads(long seconds)
-      throws IOException {
-    Preconditions.checkArgument(seconds >= 0);
-    Instant purgeBefore =
-        Instant.now().minusSeconds(seconds);
-    LOG.debug("Purging outstanding multipart uploads older than {}",
-        purgeBefore);
-    invoker.retry("Purging multipart uploads", bucket, true,
-        () -> {
-          RemoteIterator<MultipartUpload> uploadIterator =
-              MultipartUtils.listMultipartUploads(createStoreContext(),
-                  getS3Client(), null, maxKeys);
-
-          while (uploadIterator.hasNext()) {
-            MultipartUpload upload = uploadIterator.next();
-            if (upload.initiated().compareTo(purgeBefore) < 0) {
-              abortMultipartUpload(upload);
-            }
-          }
-        });
   }
 
   /**
@@ -1942,31 +1907,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
 
   /**
-   * Callbacks for WriteOperationHelper.
-   */
-  private final class WriteOperationHelperCallbacksImpl
-      implements WriteOperationHelper.WriteOperationHelperCallbacks {
-
-    @Override
-    @Retries.OnceRaw
-    public CompleteMultipartUploadResponse completeMultipartUpload(
-        CompleteMultipartUploadRequest request) {
-      return getStore().completeMultipartUpload(request);
-    }
-
-    @Override
-    @Retries.OnceRaw
-    public UploadPartResponse uploadPart(
-        final UploadPartRequest request,
-        final RequestBody body,
-        final DurationTrackerFactory durationTrackerFactory)
-        throws AwsServiceException, UncheckedIOException {
-      return getStore().uploadPart(request, body, durationTrackerFactory);
-    }
-
-  }
-
-  /**
    * Create the read context for reading from the referenced file,
    * using FS state as well as the status.
    * @param fileStatus file status.
@@ -2230,21 +2170,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         new S3ABlockOutputStream(builder),
         null);
   }
-  /**
-   * Create a Write Operation Helper with the current active span.
-   * All operations made through this helper will activate the
-   * span before execution.
-   *
-   * This class permits other low-level operations against the store.
-   * It is unstable and
-   * only intended for code with intimate knowledge of the object store.
-   * If using this, be prepared for changes even on minor point releases.
-   * @return a new helper.
-   */
-  @InterfaceAudience.Private
-  public WriteOperationHelper getWriteOperationHelper() {
-    return createWriteOperationHelper(getActiveAuditSpan());
-  }
 
   /**
    * Create a Write Operation Helper with the given span.
@@ -2255,12 +2180,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @InterfaceAudience.Private
   public WriteOperationHelper createWriteOperationHelper(AuditSpan auditSpan) {
-    return new WriteOperationHelper(this,
-        getConf(),
-        statisticsContext,
+    return new WriteOperationHelper(
         getAuditSpanSource(),
         auditSpan,
-        new WriteOperationHelperCallbacksImpl());
+        getStore().createWriteOperationHelperCallbacks()
+    );
   }
 
   /**
@@ -2710,12 +2634,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     span.activate();
     // this deactivates the audit span somehow
     final RemoteIterator<MultipartUpload> uploads =
-        listUploadsUnderPrefix(storeContext, prefix);
+        getStore().getStoreWriter().listMultipartUploads(storeContext, prefix, maxKeys);
     // so reactivate it.
     span.activate();
     return foreach(uploads, upload ->
             invoker.retry("Aborting multipart commit", upload.key(), true, () ->
-                abortMultipartUpload(upload)));
+                getStore().getStoreWriter().abortMultipartUpload(upload)));
   }
 
   /**
@@ -2947,14 +2871,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param ex exception.
    */
   public void operationRetried(Exception ex) {
-    if (isThrottleException(ex)) {
-      LOG.debug("Request throttled");
-      incrementStatistic(STORE_IO_THROTTLED);
-      statisticsContext.addValueToQuantiles(STORE_IO_THROTTLE_RATE, 1);
-    } else {
-      incrementStatistic(STORE_IO_RETRY);
-      incrementStatistic(IGNORED_ERRORS);
-    }
+    getStore().operationRetried(ex);
   }
 
   /**
@@ -3186,7 +3103,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Increments the {@code OBJECT_DELETE_REQUESTS} and write
    * operation statistics.
    * This call does <i>not</i> create any mock parent entries.
-   *
+   * <p>
+   * This method MUST NOT check for the fs being open, because
+   * it will be called during any exit cleanup.
    * Retry policy: retry untranslated; delete considered idempotent.
    * @param key key to blob to delete.
    * @throws SdkException problems working with S3
@@ -3295,128 +3214,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.OnceRaw
   public UploadInfo putObject(PutObjectRequest putObjectRequest, File file,
       ProgressableProgressListener listener) throws IOException {
-    return getStore().putObject(putObjectRequest, file, listener);
-  }
-
-  /**
-   * PUT an object directly (i.e. not via the transfer manager).
-   * Byte length is calculated from the file length, or, if there is no
-   * file, from the content length of the header.
-   *
-   * Retry Policy: none.
-   * Auditing: must be inside an audit span.
-   * <i>Important: this call will close any input stream in the request.</i>
-   * @param putObjectRequest the request
-   * @param putOptions put object options
-   * @param uploadData data to be uploaded
-   * @param durationTrackerFactory factory for duration tracking
-   * @return the upload initiated
-   * @throws SdkException on problems
-   */
-  @VisibleForTesting
-  @Retries.OnceRaw("For PUT; post-PUT actions are RetryExceptionsSwallowed")
-  PutObjectResponse putObjectDirect(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions,
-      S3ADataBlocks.BlockUploadData uploadData,
-      DurationTrackerFactory durationTrackerFactory)
-      throws SdkException {
-
-    long len = getPutRequestLength(putObjectRequest);
-    LOG.debug("PUT {} bytes to {}", len, putObjectRequest.key());
-    incrementPutStartStatistics(len);
-    final UploadContentProviders.BaseContentProvider provider =
-        uploadData.getContentProvider();
-    try {
-      PutObjectResponse response =
-          trackDurationOfSupplier(nonNullDurationTrackerFactory(durationTrackerFactory),
-              OBJECT_PUT_REQUESTS.getSymbol(),
-              () -> getS3Client().putObject(putObjectRequest,
-                  RequestBody.fromContentProvider(
-                      provider,
-                      provider.getSize(),
-                      CONTENT_TYPE_OCTET_STREAM)));
-      incrementPutCompletedStatistics(true, len);
-      return response;
-    } catch (SdkException e) {
-      incrementPutCompletedStatistics(false, len);
-      throw e;
-    }
-  }
-
-  /**
-   * Get the length of the PUT, verifying that the length is known.
-   * @param putObjectRequest a request bound to a file or a stream.
-   * @return the request length
-   * @throws IllegalArgumentException if the length is negative
-   */
-  private long getPutRequestLength(PutObjectRequest putObjectRequest) {
-    long len = putObjectRequest.contentLength();
-
-    Preconditions.checkState(len >= 0, "Cannot PUT object of unknown length");
-    return len;
-  }
-
-  /**
-   * Upload part of a multi-partition file.
-   * Increments the write and put counters.
-   * <i>Important: this call does not close any input stream in the body.</i>
-   *
-   * Retry Policy: none.
-   * @param durationTrackerFactory duration tracker factory for operation
-   * @param request the upload part request.
-   * @param body the request body.
-   * @return the result of the operation.
-   * @throws AwsServiceException on problems
-   */
-  @Retries.OnceRaw
-  UploadPartResponse uploadPart(UploadPartRequest request, RequestBody body,
-      final DurationTrackerFactory durationTrackerFactory)
-      throws AwsServiceException {
-    long len = request.contentLength();
-    incrementPutStartStatistics(len);
-    try {
-      UploadPartResponse uploadPartResponse = trackDurationOfSupplier(
-          nonNullDurationTrackerFactory(durationTrackerFactory),
-          MULTIPART_UPLOAD_PART_PUT.getSymbol(), () ->
-              getS3Client().uploadPart(request, body));
-      incrementPutCompletedStatistics(true, len);
-      return uploadPartResponse;
-    } catch (AwsServiceException e) {
-      incrementPutCompletedStatistics(false, len);
-      throw e;
-    }
-  }
-
-  /**
-   * At the start of a put/multipart upload operation, update the
-   * relevant counters.
-   *
-   * @param bytes bytes in the request.
-   */
-  protected void incrementPutStartStatistics(long bytes) {
-    getStore().incrementPutStartStatistics(bytes);
-  }
-
-  /**
-   * At the end of a put/multipart upload operation, update the
-   * relevant counters and gauges.
-   *
-   * @param success did the operation succeed?
-   * @param bytes bytes in the request.
-   */
-  protected void incrementPutCompletedStatistics(boolean success, long bytes) {
-    getStore().incrementPutCompletedStatistics(success, bytes);
-  }
-
-  /**
-   * Callback for use in progress callbacks from put/multipart upload events.
-   * Increments those statistics which are expected to be updated during
-   * the ongoing upload operation.
-   * @param key key to file that is being written (for logging)
-   * @param bytes bytes successfully uploaded.
-   */
-  protected void incrementPutProgressStatistics(String key, long bytes) {
-    getStore().incrementPutProgressStatistics(key, bytes);
+    return getStore().getStoreWriter()
+        .putObject(putObjectRequest, file, listener);
   }
 
   /**
@@ -4284,7 +4083,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     ProgressableProgressListener listener =
         new ProgressableProgressListener(store, key, progress);
     UploadInfo info = putObject(putObjectRequest, file, listener);
-    PutObjectResponse result = getStore().waitForUploadCompletion(key, info).response();
+    PutObjectResponse result = getStore().getStoreWriter()
+        .waitForUploadCompletion(key, info).response();
     listener.uploadCompleted(info.getFileUpload());
     return result;
   }
@@ -4427,6 +4227,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     if (isClosed) {
       throw new PathIOException(uri.toString(), E_FS_CLOSED);
     }
+  }
+
+  /**
+   * Check the FS is running.
+   * @throws IllegalStateException if closed
+   */
+  protected void checkRunning() throws IllegalStateException {
+    Preconditions.checkState(!isClosed, "FileSystem is closed");
   }
 
   /**
@@ -4650,23 +4458,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Initiate a multipart upload from the preconfigured request.
-   * Retry policy: none + untranslated.
-   * @param request request to initiate
-   * @return the result of the call
-   * @throws SdkException on failures inside the AWS SDK
-   * @throws IOException Other IO problems
-   */
-  @Retries.OnceRaw
-  CreateMultipartUploadResponse initiateMultipartUpload(
-      CreateMultipartUploadRequest request) throws IOException {
-    LOG.debug("Initiate multipart upload to {}", request.key());
-    return trackDurationOfSupplier(getDurationTrackerFactory(),
-        OBJECT_MULTIPART_UPLOAD_INITIATED.getSymbol(),
-        () -> getS3Client().createMultipartUpload(request));
-  }
-
-  /**
    * Perform post-write actions.
    * <p>
    * This operation MUST be called after any PUT/multipart PUT completes
@@ -4715,12 +4506,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         new byte[0], 0, 0, null);
 
     invoker.retry("PUT 0-byte object ", objectName, true,
-        () -> putObjectDirect(
+        () -> getStore().getStoreWriter().putObjectDirect(
             getRequestFactory().newDirectoryMarkerRequest(objectName).build(),
             putOptions,
             uploadData,
             getDurationTrackerFactory()));
-    incrementPutProgressStatistics(objectName, 0);
+    incrementWriteOperations();
     instrumentation.directoryCreated();
   }
 
@@ -5259,8 +5050,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * List any pending multipart uploads whose keys begin with prefix, using
    * an iterator that can handle an unlimited number of entries.
-   * See {@link #listMultipartUploads(String)} for a non-iterator version of
-   * this.
    *
    * @param prefix optional key prefix to search
    * @return Iterator over multipart uploads.
@@ -5271,100 +5060,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @AuditEntryPoint
   public RemoteIterator<MultipartUpload> listUploads(@Nullable String prefix)
       throws IOException {
-    // span is picked up retained in the listing.
     checkNotClosed();
+    // span is picked up retained in the listing.
     try (AuditSpan span = createSpan(MULTIPART_UPLOAD_LIST.getSymbol(),
         prefix, null)) {
-      return listUploadsUnderPrefix(createStoreContext(), prefix);
+      return getStore().getStoreWriter()
+          .listMultipartUploads(createStoreContext(), prefix, maxKeys);
     }
   }
 
-  /**
-   * List any pending multipart uploads whose keys begin with prefix, using
-   * an iterator that can handle an unlimited number of entries.
-   * See {@link #listMultipartUploads(String)} for a non-iterator version of
-   * this.
-   * @param storeContext store conext.
-   * @param prefix optional key prefix to search
-   * @return Iterator over multipart uploads.
-   * @throws IOException on failure
-   */
-  @InterfaceAudience.Private
-  @Retries.RetryTranslated
-  public RemoteIterator<MultipartUpload> listUploadsUnderPrefix(
-      final StoreContext storeContext,
-      final @Nullable String prefix)
-      throws IOException {
-    // span is picked up retained in the listing.
-    String p = prefix;
-    if (prefix != null && !prefix.isEmpty() && !prefix.endsWith("/")) {
-      p = prefix + "/";
-    }
-    // duration tracking is done in iterator.
-    return MultipartUtils.listMultipartUploads(storeContext, getS3Client(), p, maxKeys);
-  }
-
-  /**
-   * Listing all multipart uploads; limited to the first few hundred.
-   * See {@link #listUploads(String)} for an iterator-based version that does
-   * not limit the number of entries returned.
-   * Retry policy: retry, translated.
-   * @return a listing of multipart uploads.
-   * @param prefix prefix to scan for, "" for none
-   * @throws IOException IO failure, including any uprated SdkException
-   */
-  @InterfaceAudience.Private
-  @Retries.RetryTranslated
-  public List<MultipartUpload> listMultipartUploads(String prefix)
-      throws IOException {
-    // add a trailing / if needed.
-    if (prefix != null && !prefix.isEmpty() && !prefix.endsWith("/")) {
-      prefix = prefix + "/";
-    }
-    String p = prefix;
-    return invoker.retry("listMultipartUploads", p, true, () -> {
-      final ListMultipartUploadsRequest request = getRequestFactory()
-          .newListMultipartUploadsRequestBuilder(p).build();
-      return trackDuration(getInstrumentation(), MULTIPART_UPLOAD_LIST.getSymbol(), () ->
-          getS3Client().listMultipartUploads(request).uploads());
-    });
-  }
-
-  /**
-   * Abort a multipart upload.
-   * Retry policy: none.
-   * @param destKey destination key
-   * @param uploadId Upload ID
-   * @throws IOException IO failure, including any uprated SdkException
-   */
-  @Retries.OnceTranslated
-  public void abortMultipartUpload(String destKey, String uploadId) throws IOException {
-    LOG.debug("Aborting multipart upload {} to {}", uploadId, destKey);
-    trackDuration(getInstrumentation(), OBJECT_MULTIPART_UPLOAD_ABORTED.getSymbol(), () ->
-        getS3Client().abortMultipartUpload(
-            getRequestFactory().newAbortMultipartUploadRequestBuilder(
-                destKey,
-                uploadId).build()));
-  }
-
-  /**
-   * Abort a multipart upload.
-   * Retry policy: none.
-   * @param upload the listed upload to abort.
-   * @throws IOException IO failure, including any uprated SdkException
-   */
-  @Retries.OnceTranslated
-  public void abortMultipartUpload(MultipartUpload upload) throws IOException {
-    String destKey = upload.key();
-    String uploadId = upload.uploadId();
-    if (LOG.isDebugEnabled()) {
-      DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-      LOG.debug("Aborting multipart upload {} to {} initiated by {} on {}",
-          uploadId, destKey, upload.initiator(),
-          df.format(Date.from(upload.initiated())));
-    }
-    abortMultipartUpload(destKey, uploadId);
-  }
 
   /**
    * Create a new instance of the committer statistics.
