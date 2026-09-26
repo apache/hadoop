@@ -56,6 +56,8 @@ public class FedBalanceContext implements Writable {
   private long delayDuration;
   /* The threshold of diff entries. */
   private int diffThreshold;
+  /* Whether to run the optional verification phase. */
+  private boolean verify;
 
   private Configuration conf;
 
@@ -97,6 +99,15 @@ public class FedBalanceContext implements Writable {
     return diffThreshold;
   }
 
+  /**
+   * Get whether the optional verification phase should run.
+   *
+   * @return true if the optional verification phase should run.
+   */
+  public boolean getVerify() {
+    return verify;
+  }
+
   public TrashOption getTrashOpt() {
     return trashOpt;
   }
@@ -114,6 +125,7 @@ public class FedBalanceContext implements Writable {
     out.writeInt(trashOpt.ordinal());
     out.writeLong(delayDuration);
     out.writeInt(diffThreshold);
+    out.writeBoolean(verify);
   }
 
   @Override
@@ -130,6 +142,7 @@ public class FedBalanceContext implements Writable {
     trashOpt = TrashOption.values()[in.readInt()];
     delayDuration = in.readLong();
     diffThreshold = in.readInt();
+    verify = in.readBoolean();
   }
 
   @Override
@@ -155,6 +168,7 @@ public class FedBalanceContext implements Writable {
         .append(trashOpt, bc.trashOpt)
         .append(delayDuration, bc.delayDuration)
         .append(diffThreshold, bc.diffThreshold)
+        .append(verify, bc.verify)
         .isEquals();
   }
 
@@ -171,6 +185,7 @@ public class FedBalanceContext implements Writable {
         .append(trashOpt)
         .append(delayDuration)
         .append(diffThreshold)
+        .append(verify)
         .build();
   }
 
@@ -204,6 +219,7 @@ public class FedBalanceContext implements Writable {
       break;
     }
     builder.append(" Delay duration is ").append(delayDuration).append("ms.");
+    builder.append(" Verify is ").append(verify).append(".");
     return builder.toString();
   }
 
@@ -219,6 +235,7 @@ public class FedBalanceContext implements Writable {
     private TrashOption trashOpt;
     private long delayDuration;
     private int diffThreshold;
+    private boolean verify;
 
     /**
      * This class helps building the FedBalanceContext.
@@ -306,6 +323,16 @@ public class FedBalanceContext implements Writable {
     }
 
     /**
+     * Specify whether the optional verification phase should run.
+     * @param value true if running verification.
+     * @return the builder.
+     */
+    public Builder setVerify(boolean value) {
+      this.verify = value;
+      return this;
+    }
+
+    /**
      * Build the FedBalanceContext.
      *
      * @return the FedBalanceContext obj.
@@ -323,6 +350,7 @@ public class FedBalanceContext implements Writable {
       context.trashOpt = this.trashOpt;
       context.delayDuration = this.delayDuration;
       context.diffThreshold = this.diffThreshold;
+      context.verify = this.verify;
       return context;
     }
   }

@@ -18,9 +18,20 @@
 package org.apache.hadoop.tools.fedbalance;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.VERIFY_ENABLED;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.TrashOption;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.SCHEDULER_JOURNAL_URI;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.WORK_THREAD_NUM;
 
@@ -30,5 +41,35 @@ public class TestFedBalance {
     Configuration conf = FedBalance.getDefaultConf();
     assertNotNull(conf.get(SCHEDULER_JOURNAL_URI));
     assertNotNull(conf.get(WORK_THREAD_NUM));
+    assertFalse(conf.getBoolean(VERIFY_ENABLED, true));
+  }
+
+  @Test
+  public void testFedBalanceOptionsRegistered() {
+    assertTrue(FedBalanceOptions.CLI_OPTIONS.hasOption(
+        FedBalanceOptions.VERIFY.getOpt()));
+  }
+
+  @Test
+  public void testFedBalanceContextVerifySerialization() throws IOException {
+    Configuration conf = new Configuration(false);
+    FedBalanceContext context = new FedBalanceContext.Builder(
+        new Path("hdfs://src.example.com/src"),
+        new Path("hdfs://dst.example.com/dst"), FedBalance.NO_MOUNT, conf)
+        .setMapNum(10)
+        .setBandwidthLimit(1)
+        .setTrash(TrashOption.TRASH)
+        .setDelayDuration(1000)
+        .setVerify(true)
+        .build();
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    context.write(new DataOutputStream(out));
+
+    FedBalanceContext recovered = new FedBalanceContext();
+    recovered.readFields(new DataInputStream(
+        new ByteArrayInputStream(out.toByteArray())));
+
+    assertTrue(recovered.getVerify());
   }
 }
