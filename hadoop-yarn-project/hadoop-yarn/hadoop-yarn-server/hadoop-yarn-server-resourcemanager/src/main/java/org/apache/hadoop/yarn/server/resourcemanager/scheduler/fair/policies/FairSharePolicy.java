@@ -116,18 +116,45 @@ public class FairSharePolicy extends SchedulingPolicy {
       return res;
     }
 
+    /**
+     * Compare queues based on demand, distinguishing between truly empty queues
+     * and queues with pending applications waiting for AM allocation.
+     *
+     * A queue is considered "truly empty" only when it has no runnable apps.
+     * Queues with pending apps (getNumRunnableApps() > 0) should not be
+     * deprioritized, as they need resources for AM allocation.
+     *
+     * This prevents queue starvation where queues with pending apps but
+     * demand=0 (no running containers yet) get perpetually deprioritized.
+     */
     private int compareDemand(Schedulable s1, Schedulable s2) {
-      int res = 0;
-      long demand1 = s1.getDemand().getMemorySize();
-      long demand2 = s2.getDemand().getMemorySize();
-
-      if ((demand1 == 0) && (demand2 > 0)) {
-        res = 1;
-      } else if ((demand2 == 0) && (demand1 > 0)) {
-        res = -1;
+      // Check if s1 is truly empty (no runnable apps at all)
+      boolean s1EmptyQueue = false;
+      if (s1 instanceof FSQueue) {
+        s1EmptyQueue = (((FSQueue)s1).getNumRunnableApps() == 0);
+      } else {
+        s1EmptyQueue = (s1.getDemand().getMemorySize() == 0);
       }
 
-      return res;
+      // Check if s2 is truly empty (no runnable apps at all)
+      boolean s2EmptyQueue = false;
+      if (s2 instanceof FSQueue) {
+        s2EmptyQueue = (((FSQueue)s2).getNumRunnableApps() == 0);
+      } else {
+        s2EmptyQueue = (s2.getDemand().getMemorySize() == 0);
+      }
+
+      // Both empty or both non-empty: continue to next comparison stage
+      if (s1EmptyQueue == s2EmptyQueue) {
+        return 0;
+      }
+
+      // One is empty, the other is not: prioritize the non-empty queue
+      if (s1EmptyQueue) {
+        return 1;  // s1 is empty, lower priority
+      } else {
+        return -1;  // s2 is empty, lower priority
+      }
     }
 
     private int compareMinShareUsage(Schedulable s1, Schedulable s2,
