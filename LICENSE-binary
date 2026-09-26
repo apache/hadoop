@@ -374,9 +374,9 @@ org.apache.commons:commons-lang3:3.20.0
 org.apache.commons:commons-math3:3.6.1
 org.apache.commons:commons-text:1.14.0
 org.apache.commons:commons-validator:1.6
-org.apache.curator:curator-client:5.2.0
-org.apache.curator:curator-framework:5.2.0
-org.apache.curator:curator-recipes:5.2.0
+org.apache.curator:curator-client:5.7.0
+org.apache.curator:curator-framework:5.7.0
+org.apache.curator:curator-recipes:5.7.0
 org.apache.hbase:hbase-annotations:2.5.8
 org.apache.hbase:hbase-client:2.5.8
 org.apache.hbase:hbase-common:2.5.8
