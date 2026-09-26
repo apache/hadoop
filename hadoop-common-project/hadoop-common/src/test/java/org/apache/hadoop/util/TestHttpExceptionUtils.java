@@ -37,6 +37,8 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -109,10 +111,81 @@ public class TestHttpExceptionUtils {
     when(conn.getErrorStream()).thenReturn(is);
     when(conn.getResponseMessage()).thenReturn("msg");
     when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
+    // The body wins over the reason phrase: a servlet's reason travels in the
+    // body now, so "stream" is the detail and "msg" is only the canonical
+    // text for the status code.
     LambdaTestUtils.interceptAndValidateMessageContains(IOException.class,
-        Arrays.asList(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), "msg",
+        Arrays.asList(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), "stream",
         "com.fasterxml.jackson.core.JsonParseException"),
         () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
+  }
+
+  @Test
+  public void testValidateResponseHtmlErrorPageReportsTheReason()
+      throws Exception {
+    // What AuthenticationFilter's sendError looks like on the wire.
+    String page = "<html><head><title>Error 403 Invalid signature</title>"
+        + "<style>h1 {color: red}</style></head><body>"
+        + "<h1>HTTP ERROR 403</h1><p>Reason: Invalid signature</p>"
+        + "</body></html>";
+    HttpURLConnection conn = connectionReturning(page, "Forbidden", "text/html");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+    LambdaTestUtils.interceptAndValidateMessageContains(IOException.class,
+        Arrays.asList("Invalid signature"),
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK));
+  }
+
+  @Test
+  public void testValidateResponseFallsBackToThePhraseWithNoBody()
+      throws Exception {
+    HttpURLConnection conn = connectionReturning(null, "Forbidden", "text/html");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+    LambdaTestUtils.interceptAndValidateMessageContains(IOException.class,
+        Arrays.asList("Forbidden"),
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK));
+  }
+
+  @Test
+  public void testValidateResponseStillRebuildsTheEnvelopeException()
+      throws Exception {
+    // The rewind must not disturb the envelope path: a JSON body still
+    // reconstructs its exception rather than being quoted back as text.
+    Map<String, Object> json = new HashMap<String, Object>();
+    json.put(HttpExceptionUtils.ERROR_EXCEPTION_JSON,
+        IllegalStateException.class.getSimpleName());
+    json.put(HttpExceptionUtils.ERROR_CLASSNAME_JSON,
+        IllegalStateException.class.getName());
+    json.put(HttpExceptionUtils.ERROR_MESSAGE_JSON, "EX");
+    Map<String, Object> response = new HashMap<String, Object>();
+    response.put(HttpExceptionUtils.ERROR_JSON, json);
+    String body = new ObjectMapper().writeValueAsString(response);
+    HttpURLConnection conn =
+        connectionReturning(body, "Forbidden", "application/json");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+    LambdaTestUtils.intercept(IllegalStateException.class, "EX",
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK));
+  }
+
+  @Test
+  public void testValidateResponseParsesAnEnvelopeTooLargeToRewind()
+      throws Exception {
+    // Larger than the rewind buffer: the parser reads straight through, so the
+    // exception is still rebuilt - only the text fallback is given up.
+    Map<String, Object> json = new HashMap<String, Object>();
+    json.put(HttpExceptionUtils.ERROR_EXCEPTION_JSON,
+        IllegalStateException.class.getSimpleName());
+    json.put(HttpExceptionUtils.ERROR_CLASSNAME_JSON,
+        IllegalStateException.class.getName());
+    json.put(HttpExceptionUtils.ERROR_MESSAGE_JSON,
+        "x".repeat(64 * 1024));
+    Map<String, Object> response = new HashMap<String, Object>();
+    response.put(HttpExceptionUtils.ERROR_JSON, json);
+    String body = new ObjectMapper().writeValueAsString(response);
+    HttpURLConnection conn =
+        connectionReturning(body, "Forbidden", "application/json");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_FORBIDDEN);
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK));
   }
 
   @Test
@@ -177,5 +250,87 @@ public class TestHttpExceptionUtils {
         Arrays.asList(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST),
         "java.lang.String", "EX"),
         () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
+  }
+
+  private static HttpURLConnection connectionReturning(String body,
+      String phrase) throws IOException {
+    return connectionReturning(body, phrase, null);
+  }
+
+  private static HttpURLConnection connectionReturning(String body,
+      String phrase, String contentType) throws IOException {
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getErrorStream()).thenReturn(body == null ? null
+        : new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)));
+    when(conn.getResponseMessage()).thenReturn(phrase);
+    when(conn.getContentType()).thenReturn(contentType);
+    return conn;
+  }
+
+  @Test
+  public void testResponseDetailPrefersTheBody() throws Exception {
+    assertEquals("the real reason", HttpExceptionUtils.getResponseDetail(
+        connectionReturning("the real reason", "Forbidden")));
+  }
+
+  @Test
+  public void testResponseDetailStripsAnErrorPage() throws Exception {
+    // what a container renders for sendError(403, "the real reason")
+    String page = "<html>\n<head>\n<title>Error 403 the real reason</title>\n"
+        + "</head>\n<body><h2>HTTP ERROR 403</h2>\n"
+        + "<table><tr><th>MESSAGE:</th><td>the real reason</td></tr></table>\n"
+        + "</body>\n</html>\n";
+    String detail = HttpExceptionUtils.getResponseDetail(
+        connectionReturning(page, "Forbidden"));
+    assertTrue(detail.contains("the real reason"), detail);
+    assertFalse(detail.contains("<"), "markup survived: " + detail);
+  }
+
+  @Test
+  public void testResponseDetailFallsBackToThePhrase() throws Exception {
+    assertEquals("Forbidden", HttpExceptionUtils.getResponseDetail(
+        connectionReturning(null, "Forbidden")));
+    assertEquals("Forbidden", HttpExceptionUtils.getResponseDetail(
+        connectionReturning("   \n  ", "Forbidden")));
+  }
+
+  @Test
+  public void testResponseDetailIsNeverNull() throws Exception {
+    assertEquals("", HttpExceptionUtils.getResponseDetail(
+        connectionReturning(null, null)));
+  }
+
+  /**
+   * A refusal carrying the JSON envelope is reported by its reason phrase, not
+   * by the envelope. Such a response is sent with setStatus rather than
+   * sendError - see {@link HttpExceptionUtils#createServletExceptionResponse}
+   * - so it never had a reason of its own in the phrase, and quoting the JSON
+   * back would replace a readable "Forbidden" with a line of markup. Callers
+   * that want what is inside it use validateResponse.
+   */
+  @Test
+  public void testResponseDetailLeavesTheJsonEnvelopeAlone() throws Exception {
+    String envelope = "{\"RemoteException\":{\"message\":\"User: client is not"
+        + " allowed to impersonate foo1\",\"exception\":\"AuthorizationException\","
+        + "\"javaClassName\":\"org.apache.hadoop.security.authorize."
+        + "AuthorizationException\"}}";
+
+    assertEquals("Forbidden", HttpExceptionUtils.getResponseDetail(
+        connectionReturning(envelope, "Forbidden", "application/json")));
+    // the header may carry parameters
+    assertEquals("Forbidden", HttpExceptionUtils.getResponseDetail(
+        connectionReturning(envelope, "Forbidden",
+            "application/json; charset=utf-8")));
+  }
+
+  /**
+   * A body that is not JSON is still preferred, which is the case the reader
+   * exists for: Jetty 12 puts what sendError was given in the body and leaves
+   * the phrase canonical.
+   */
+  @Test
+  public void testResponseDetailStillPrefersANonJsonBody() throws Exception {
+    assertEquals("the real reason", HttpExceptionUtils.getResponseDetail(
+        connectionReturning("the real reason", "Forbidden", "text/plain")));
   }
 }

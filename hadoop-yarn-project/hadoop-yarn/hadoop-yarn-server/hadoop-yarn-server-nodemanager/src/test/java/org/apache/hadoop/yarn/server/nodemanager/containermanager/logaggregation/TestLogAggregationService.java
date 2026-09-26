@@ -156,7 +156,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import org.eclipse.jetty.util.MultiException;
+import org.eclipse.jetty.util.ExceptionUtil;
 
 import java.util.function.Supplier;
 import org.slf4j.LoggerFactory;
@@ -1456,7 +1456,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     List<T> actualEvents = eventCaptor.getAllValues();
 
     // batch up exceptions so junit presents them as one
-    MultiException failures = new MultiException();
+    ExceptionUtil.MultiException failures = new ExceptionUtil.MultiException();
     try {
       assertEquals(expectedEvents.length, actualEvents.size(), "expected events");
     } catch (Throwable e) {

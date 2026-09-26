@@ -39,6 +39,45 @@
         <javascript.test>*Spec</javascript.test>
     </properties>
 
+  <dependencyManagement>
+    <!--
+        hadoop-project pins every Jetty artifact to ${jetty.version} so that one
+        release lands on each module's classpath. Here that release has to be
+        Solr's: Solr 8 calls Jetty 9.4 APIs that Jetty 12 removed, and the two
+        lines cannot share a classpath because they share jetty-http, jetty-io
+        and jetty-util. Nothing in this module uses Hadoop's Jetty - it builds a
+        war and runs Solr embedded - so the whole module follows Solr, and these
+        entries override what it inherits.
+    -->
+    <dependencies>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-server</artifactId>
+        <version>${solr.jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-http</artifactId>
+        <version>${solr.jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-util</artifactId>
+        <version>${solr.jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-io</artifactId>
+        <version>${solr.jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-client</artifactId>
+        <version>${solr.jetty.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
     <dependency>
       <groupId>io.swagger</groupId>
@@ -87,25 +126,32 @@
           <scope>test</scope>
       </dependency>
 
+      <!--
+          Solr 8 is compiled against Jetty 9.4 - EmbeddedSolrServer's own
+          constructor loads HttpShardHandlerFactory, which reaches for
+          org.eclipse.jetty.client.api.Request, a package Jetty 12 does not
+          have. So this module follows Solr's Jetty rather than Hadoop's;
+          see the dependencyManagement block above.
+      -->
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
           <artifactId>http2-hpack</artifactId>
-          <version>${jetty.version}</version>
+          <version>${solr.jetty.version}</version>
       </dependency>
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
           <artifactId>http2-client</artifactId>
-          <version>${jetty.version}</version>
+          <version>${solr.jetty.version}</version>
       </dependency>
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
           <artifactId>http2-common</artifactId>
-          <version>${jetty.version}</version>
+          <version>${solr.jetty.version}</version>
       </dependency>
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
           <artifactId>http2-http-client-transport</artifactId>
-          <version>${jetty.version}</version>
+          <version>${solr.jetty.version}</version>
       </dependency>
 
       <dependency>
@@ -281,6 +327,36 @@
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
+            <!--
+                Hadoop's Jetty has no business on this classpath. The module is
+                packaged as a war and served by someone else's container, so it
+                never starts an HttpServer2, and the dependencyManagement block
+                above has already pinned everything else to the Jetty 9.4 that
+                Solr calls. Leaving Jetty 12's ee8 classes on top of that would
+                work only for as long as nothing touched them.
+
+                Repeated on every Hadoop dependency that carries them: Maven has
+                no way to share an exclusion set, and excluding on one of these
+                achieves nothing while the others still bring it. Keep in step.
+            -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-servlet</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-webapp</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-server</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-client</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -291,16 +367,70 @@
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-common</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-servlet</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-webapp</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-server</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-client</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-services-core</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-servlet</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-webapp</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-server</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-client</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-services-api</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-servlet</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8</groupId>
+                    <artifactId>jetty-ee8-webapp</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-server</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.ee8.websocket</groupId>
+                    <artifactId>jetty-ee8-websocket-jetty-client</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

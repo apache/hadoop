@@ -34,6 +34,8 @@ import org.apache.hadoop.util.JsonUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.ServerConnector;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -109,6 +111,20 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }    
   }
 
+  /** Writes back the path info exactly as the container parsed it. */
+  @SuppressWarnings("serial")
+  public static class PathInfoServlet extends HttpServlet {
+    @Override
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws IOException {
+      response.setContentType("text/plain; charset=utf-8");
+      response.setStatus(HttpServletResponse.SC_OK);
+      try (PrintWriter out = response.getWriter()) {
+        out.println(request.getPathInfo());
+      }
+    }
+  }
+
   @SuppressWarnings("serial")
   public static class EchoServlet extends HttpServlet {
     @SuppressWarnings("unchecked")
@@ -146,6 +162,23 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }
   }
 
+  /**
+   * Stands in for a JAX-RS resource that picks its own content type: it drops
+   * whatever QuotingInputFilter left on the response, then sets the type the
+   * way Jersey does, through a header.
+   */
+  @SuppressWarnings("serial")
+  public static class OwnContentTypeServlet extends HttpServlet {
+    @Override
+    public void doGet(HttpServletRequest request,
+                      HttpServletResponse response
+                      ) throws ServletException, IOException {
+      JettyUtils.clearContentType(response);
+      response.addHeader("Content-Type", request.getParameter("type"));
+      response.setStatus(HttpServletResponse.SC_OK);
+    }
+  }
+
   @BeforeAll
   public static void setup() throws Exception {
     Configuration conf = new Configuration();
@@ -154,9 +187,12 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED, true);
     server = createTestServer(conf);
     server.addServlet("echo", "/echo", EchoServlet.class);
+    server.addServlet("pathinfo", "/pathinfo/*", PathInfoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
     server.addServlet("htmlcontent", "/htmlcontent", HtmlContentServlet.class);
     server.addServlet("longheader", "/longheader", LongHeaderServlet.class);
+    server.addServlet("owncontenttype", "/owncontenttype",
+        OwnContentTypeServlet.class);
     server.addJerseyResourcePackage(
         JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
@@ -277,6 +313,102 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         conn.getContentType());
   }
 
+  /**
+   * A resource that clears the content type QuotingInputFilter set, then picks
+   * its own, must not be given a charset back.
+   * <p>
+   * Jetty 12 remembers that a charset had been set explicitly even after the
+   * content type carrying it is cleared, and appends that memory to the next
+   * content type - as ";charset=null" for a type with no charset of its own.
+   * Only types that assume a charset, application/json among them, escape it,
+   * which is why octet-stream and xml are the ones asserted here.
+   */
+  @Test
+  public void testClearedContentTypeCarriesNoCharset() throws Exception {
+    for (String type : new String[] {MediaType.APPLICATION_OCTET_STREAM,
+        MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON}) {
+      URL url = new URL(baseUrl, "/owncontenttype?type=" + type);
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.connect();
+      assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
+      assertEquals(type, conn.getContentType(),
+          "the cleared charset came back for " + type);
+      conn.disconnect();
+    }
+  }
+
+  /**
+   * /static must never list what is in it. The setting that stops it is a
+   * context init parameter, which the DefaultServlet reads under a prefix of
+   * its own choosing: get the prefix wrong and the parameter is not rejected,
+   * it is ignored, and dirAllowed falls back to its default of true. That is
+   * silent, so the endpoint is asserted rather than the setting.
+   */
+  @Test
+  public void testStaticContextDoesNotListDirectories() throws Exception {
+    URL staticUrl = new URL(baseUrl, "/static/");
+    HttpURLConnection conn = (HttpURLConnection) staticUrl.openConnection();
+    conn.connect();
+    assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode(),
+        "/static served a directory listing");
+
+    // The context is otherwise working, so the 403 above is dirAllowed doing
+    // its job and not the whole context being broken.
+    URL cssUrl = new URL(baseUrl, "/static/test.css");
+    conn = (HttpURLConnection) cssUrl.openConnection();
+    conn.connect();
+    assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
+  }
+
+  /**
+   * A path with an empty segment has to reach the servlet, which is where
+   * Hadoop decides what it means. Jetty 12 rejects one at the connector by
+   * default, with a bare 400 and no body - WebHDFS clients parse a JSON
+   * RemoteException out of that response, and there is nothing there to parse.
+   * The ambiguities that actually matter stay rejected, so an encoded
+   * separator is asserted here too.
+   */
+  @Test
+  public void testHadoopPathsReachTheServlet() throws Exception {
+    assertPathInfo("//tmp//file", "/pathinfo//tmp//file");
+    // A file whose name contains a '%' arrives as %25.
+    assertPathInfo("/a%b", "/pathinfo/a%25b");
+    assertPathInfo("/@;%$", "/pathinfo/%40%3B%25%24");
+    // A '\' is a path separator on Windows and just a character on HDFS.
+    assertPathInfo("/a\\b", "/pathinfo/a%5Cb");
+  }
+
+  /**
+   * The other half of the same setting: a path that would read as one thing
+   * to a filter and another to a servlet still has to be refused.
+   */
+  @Test
+  public void testAmbiguousPathsAreStillRejected() throws Exception {
+    assertNotServed("an encoded path separator", "/pathinfo/tmp%2Ffile");
+    assertNotServed("an encoded dot-segment", "/pathinfo/a%2E%2E%2Fb");
+  }
+
+  private static void assertPathInfo(String expected, String path)
+      throws Exception {
+    URL url = new URL(baseUrl, path);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.connect();
+    assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode(),
+        path + " was rejected before the servlet ran");
+    assertEquals(expected, readOutput(url).trim(),
+        path + " did not reach the servlet as sent");
+  }
+
+  private static void assertNotServed(String what, String path)
+      throws Exception {
+    URL url = new URL(baseUrl, path);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.connect();
+    assertThat(conn.getResponseCode())
+        .as(what + " must not be served")
+        .isNotEqualTo(HttpServletResponse.SC_OK);
+  }
+
   @Test
   public void testHttpServer2Metrics() throws Exception {
     final HttpServer2Metrics metrics = server.getMetrics();
@@ -286,8 +418,10 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
     assertThat(conn.getResponseCode()).isEqualTo(200);
-    final int after = metrics.responses2xx();
-    assertThat(after).isGreaterThan(before);
+    // Jetty 12 books the response when the exchange completes on the server,
+    // which can be after the client has read the status line, so the counter
+    // is given a moment rather than read straight away.
+    GenericTestUtils.waitFor(() -> metrics.responses2xx() > before, 50, 10000);
   }
 
   @Test
@@ -323,9 +457,12 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   /**
-   * Jetty StatisticsHandler must be inserted via Server#insertHandler
-   * instead of Server#setHandler. The server fails to start if
-   * the handler is added by setHandler.
+   * Jetty StatisticsHandler must be inserted via Server#insertHandler instead
+   * of Server#setHandler. On 9.4 the difference showed up as a server that
+   * refused to start, so the test could assert the failure; Jetty 12 starts a
+   * childless handler quite happily and serves 404s from it, which is worse.
+   * So the assertion is that the server still serves after the handler goes
+   * in - the reason to prefer insertHandler in the first place.
    */
   @Test
   public void testSetStatisticsHandler() throws Exception {
@@ -334,11 +471,30 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conf.setBoolean(
         CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED, false);
     final HttpServer2 testServer = createTestServer(conf);
-    testServer.webServer.setHandler(new StatisticsHandler());
+    testServer.addServlet("echo", "/echo", EchoServlet.class);
+
+    final Handler tree = testServer.webServer.getHandler();
+    assertThat(tree).isNotNull();
+    final StatisticsHandler statistics = new StatisticsHandler();
+    testServer.webServer.insertHandler(statistics);
+    assertThat(statistics.getHandler())
+        .as("insertHandler keeps the handler tree underneath")
+        .isSameAs(tree);
+
     try {
       testServer.start();
-      fail("IOException should be thrown.");
-    } catch (IOException ignore) {
+      final URL echoUrl = new URL(getServerURL(testServer), "/echo?a=b");
+      final HttpURLConnection conn =
+          (HttpURLConnection) echoUrl.openConnection();
+      conn.connect();
+      assertThat(conn.getResponseCode())
+          .as("the webapp stopped serving once StatisticsHandler was inserted")
+          .isEqualTo(HttpServletResponse.SC_OK);
+      // Booked when the exchange completes on the server, which can be after
+      // the client has read the status line - see testHttpServer2Metrics.
+      GenericTestUtils.waitFor(() -> statistics.getRequests() > 0, 50, 10000);
+    } finally {
+      testServer.stop();
     }
   }
 
