@@ -20,10 +20,16 @@ package org.apache.hadoop.yarn.server.webapp;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.view.BlockForTest;
@@ -31,7 +37,11 @@ import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlockForTest;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestAppsBlock {
 
@@ -64,6 +74,54 @@ public class TestAppsBlock {
       // instead of catching it.
       appBlock.render(block);
     });
+  }
+
+  /**
+   * The tracking URL is registered by the application master, so it must be
+   * escaped before it is written into the apps table script block.
+   */
+  @Test
+  public void testTrackingUrlIsEscaped() {
+    String trackingUrl = "http://tracking/\"</script><script>alert(1)</script>";
+
+    ApplicationReport report = mock(ApplicationReport.class);
+    when(report.getApplicationId())
+        .thenReturn(ApplicationId.newInstance(0, 1));
+    when(report.getUser()).thenReturn("user");
+    when(report.getQueue()).thenReturn("default");
+    when(report.getName()).thenReturn("app");
+    when(report.getApplicationType()).thenReturn("type");
+    when(report.getYarnApplicationState())
+        .thenReturn(YarnApplicationState.RUNNING);
+    when(report.getFinalApplicationStatus())
+        .thenReturn(FinalApplicationStatus.UNDEFINED);
+    when(report.getTrackingUrl()).thenReturn(trackingUrl);
+
+    AppsBlock appsBlock = new AppsBlock(null, null) {
+      @Override
+      public String url(String... parts) {
+        return "/app";
+      }
+    };
+    appsBlock.reqAppStates = EnumSet.noneOf(YarnApplicationState.class);
+    appsBlock.appReports = Collections.singletonList(report);
+
+    OutputStream outputStream = new ByteArrayOutputStream();
+    PrintWriter printWriter = new PrintWriter(outputStream);
+    HtmlBlock html = new HtmlBlockForTest();
+    HtmlBlock.Block block = new BlockForTest(html, printWriter, 10, false) {
+      @Override
+      protected void subView(Class<? extends SubView> cls) {
+      }
+    };
+    appsBlock.renderData(block);
+    printWriter.flush();
+
+    String rendered = outputStream.toString();
+    assertFalse(rendered.contains("<script>alert(1)</script>"),
+        "tracking url was not escaped: " + rendered);
+    assertTrue(rendered.contains("&lt;\\/script&gt;&lt;script&gt;"),
+        "tracking url was not escaped: " + rendered);
   }
 
   private static HtmlBlock.Block createBlockToCreateTo(
