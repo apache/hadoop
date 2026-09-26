@@ -909,7 +909,24 @@
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>javax.servlet-api</artifactId>
           </exclusion>
+          <!--
+            The exclusion above names a group jetty-server has never used, so it
+            matches nothing. The real coordinates are javax.servlet, and without
+            this that API lands on the classpath beside the managed
+            jakarta.servlet-api; both publish the javax.servlet packages, so
+            which one a module compiles and runs against comes down to the order
+            of the jars.
+          -->
+          <exclusion>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+          </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-http</artifactId>
+        <version>${jetty.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
@@ -938,6 +955,21 @@
           <exclusion>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-webapp</artifactId>
+          </exclusion>
+          <!-- Reaches the servlet API again through websocket-servlet. -->
+          <exclusion>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+          </exclusion>
+          <!--
+            jetty-annotations brings javax.annotation-api, a second copy of the
+            javax.annotation classes jakarta.annotation-api already provides
+            through Jersey, the same way javax.servlet-api duplicated
+            jakarta.servlet-api.
+          -->
+          <exclusion>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -2177,14 +2209,8 @@
       </dependency>
       <dependency>
         <groupId>org.glassfish.jersey.test-framework.providers</groupId>
-        <artifactId>jersey-test-framework-provider-jetty</artifactId>
+        <artifactId>jersey-test-framework-provider-jdk-http</artifactId>
         <version>${jersey2.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.glassfish.jersey.media</groupId>
