@@ -328,7 +328,7 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   public void testTaskAttemptIdBogus() throws JSONException, Exception {
 
     testTaskAttemptIdErrorGeneric("bogusid",
-        "TaskAttemptId string : bogusid is not properly formed");
+        "java.lang.Exception: TaskAttemptId string : bogusid is not properly formed");
   }
 
   @Test
@@ -336,14 +336,14 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
 
     testTaskAttemptIdErrorGeneric(
         "attempt_0_12345_m_000000_0",
-        "Error getting info on task attempt id attempt_0_12345_m_000000_0");
+        "java.lang.Exception: Error getting info on task attempt id attempt_0_12345_m_000000_0");
   }
 
   @Test
   public void testTaskAttemptIdInvalid() throws JSONException, Exception {
 
     testTaskAttemptIdErrorGeneric("attempt_0_12345_d_000000_0",
-        "Bad TaskType identifier. " +
+        "java.lang.Exception: Bad TaskType identifier. " +
         "TaskAttemptId string : attempt_0_12345_d_000000_0 is not properly formed.");
   }
 
@@ -351,14 +351,14 @@ public class TestAMWebServicesAttempts extends JerseyTestBase {
   public void testTaskAttemptIdInvalid2() throws JSONException, Exception {
 
     testTaskAttemptIdErrorGeneric("attempt_12345_m_000000_0",
-        "TaskAttemptId string : attempt_12345_m_000000_0 is not properly formed");
+        "java.lang.Exception: TaskAttemptId string : attempt_12345_m_000000_0 is not properly formed");
   }
 
   @Test
   public void testTaskAttemptIdInvalid3() throws JSONException, Exception {
 
     testTaskAttemptIdErrorGeneric("attempt_0_12345_m_000000",
-        "TaskAttemptId string : attempt_0_12345_m_000000 is not properly formed");
+        "java.lang.Exception: TaskAttemptId string : attempt_0_12345_m_000000 is not properly formed");
   }
 
   private void testTaskAttemptIdErrorGeneric(String attid, String error)
