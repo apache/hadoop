@@ -2122,6 +2122,54 @@ public class TestFsDatasetImpl {
     }
   }
 
+  /**
+   * HDFS-17850: Verify that append() rejects a newGS equal to the replica's
+   * current generation stamp.  A client bug that reuses the same GS should
+   * fail immediately rather than silently corrupting the replica state.
+   */
+  @Test
+  @Timeout(value = 60)
+  public void testAppendRejectsSameGenerationStamp() throws Exception {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      BlockReaderTestUtil util = new BlockReaderTestUtil(cluster,
+          new HdfsConfiguration(conf));
+      Path path = new Path("/testAppendSameGS");
+      util.writeFile(path, 1);
+      String bpid = cluster.getNameNode().getNamesystem().getBlockPoolId();
+      DataNode dn = cluster.getDataNodes().get(0);
+      FsDatasetImpl dnFSDataset = (FsDatasetImpl) dn.getFSDataset();
+      LocatedBlock blk = util.getFileBlocks(path, 512).get(0);
+      ExtendedBlock block = blk.getBlock();
+      long currentGS = block.getGenerationStamp();
+
+      // newGS == currentGS must be rejected (HDFS-17850 fix)
+      try {
+        dnFSDataset.append(block, currentGS, block.getNumBytes());
+        fail("Expected IOException when newGS equals current generation stamp");
+      } catch (IOException e) {
+        assertTrue(e.getMessage().contains("should be greater than"),
+            "Unexpected error message: " + e.getMessage());
+      }
+
+      // newGS < currentGS must also be rejected (pre-existing behaviour)
+      try {
+        dnFSDataset.append(block, currentGS - 1, block.getNumBytes());
+        fail("Expected IOException when newGS is less than current generation stamp");
+      } catch (IOException e) {
+        assertTrue(e.getMessage().contains("should be greater than"),
+            "Unexpected error message: " + e.getMessage());
+      }
+
+      // newGS > currentGS must succeed
+      dnFSDataset.append(block, currentGS + 1, block.getNumBytes());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   @Test
   @Timeout(value = 30)
   public void testAppend() {
