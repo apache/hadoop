@@ -764,13 +764,41 @@ public class TestStandbyCheckpoints {
     nns[0].getRpcServer().rollEditLog();
     HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(23));
 
+    // The wait above only says the active holds the new image.  nns[2] is an
+    // observer and observers run no StandbyCheckpointer, so nns[1] is the
+    // uploader, and it stamps its own lastCheckpointTime only once
+    // doCheckpoint() has returned -- after ImageServlet has already stamped
+    // the active during the upload.  So nns[1] can still be reporting the
+    // previous checkpoint here, which reads as an interval of zero.  Anchor
+    // on nns[1] holding checkpoint 23 first: doWork() stamps the time after
+    // every doCheckpoint(), including the "Skipping" return when no new txns
+    // arrived, so the timestamp alone would also move on a period tick that
+    // checkpointed nothing.
+    HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(23));
+    GenericTestUtils.waitFor(
+        () -> nns[1].getNamesystem().getStandbyLastCheckpointTime()
+            > snnCheckpointTime1, 100, 30000,
+        "standby lastCheckpointTime never moved past " + snnCheckpointTime1);
+
+    // The active stamps mostRecentCheckpointTime after the rename that
+    // waitForCheckpoint observes, so wait for it in its own right rather than
+    // inferring it from the standby's.
+    GenericTestUtils.waitFor(
+        () -> nns[0].getNamesystem().getLastCheckpointTime()
+            > annCheckpointTime1, 100, 30000,
+        "active lastCheckpointTime never moved past " + annCheckpointTime1);
+
     long snnCheckpointTime2 = nns[1].getNamesystem().getStandbyLastCheckpointTime();
     long annCheckpointTime2 = nns[0].getNamesystem().getLastCheckpointTime();
 
     // Make sure that both standby and active NNs' lastCheckpointTime intervals are larger
     // than 3 DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY.
-    assertTrue(snnCheckpointTime2 - snnCheckpointTime1 >= 3000
-        && annCheckpointTime2 - annCheckpointTime1 >= 3000);
+    assertTrue(snnCheckpointTime2 - snnCheckpointTime1 >= 3000,
+        "standby checkpoint interval was "
+            + (snnCheckpointTime2 - snnCheckpointTime1) + "ms");
+    assertTrue(annCheckpointTime2 - annCheckpointTime1 >= 3000,
+        "active checkpoint interval was "
+            + (annCheckpointTime2 - annCheckpointTime1) + "ms");
   }
 
   private void doEdits(int start, int stop) throws IOException {
@@ -824,6 +852,15 @@ public class TestStandbyCheckpoints {
     doEdits(11, 20);
     nns[0].getRpcServer().rollEditLog();
     HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(23));
+
+    // As in testLastCheckpointTime, the active holding the image does not mean
+    // nns[1] has stamped itself yet: it does that only after doCheckpoint()
+    // returns, which is after the upload the wait above observed.
+    HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(23));
+    GenericTestUtils.waitFor(
+        () -> nns[1].getNamesystem().getStandbyLastCheckpointTime()
+            > snnCheckpointTime1, 100, 30000,
+        "standby lastCheckpointTime never moved past " + snnCheckpointTime1);
 
     long snnCheckpointTime2 = nns[1].getNamesystem().getStandbyLastCheckpointTime();
 
