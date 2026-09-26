@@ -38,4 +38,5 @@ public class JournalFaultInjector {
 
   public void beforePersistPaxosData() throws IOException {}
   public void afterPersistPaxosData() throws IOException {}
+  public void writeEdits() throws IOException {}
 }
