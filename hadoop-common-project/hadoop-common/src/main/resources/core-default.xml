@@ -4614,6 +4614,22 @@ are idle beyond the keepalive window.
   </property>
 
   <property>
+    <name>hadoop.http.ssl.renegotiation.allowed</name>
+    <value>false</value>
+    <description>
+      Whether a client of an HTTPS endpoint served by HttpServer2 may
+      renegotiate the TLS 1.2 session it opened. When false, the server closes
+      the connection on a client's renegotiation request.
+
+      Jetty 9.4, which earlier Hadoop releases used, allowed this; Jetty 12
+      refuses it, and so does this default, which also closes off the
+      renegotiation denial of service of CVE-2011-1473. Java and curl clients
+      do not renegotiate on their own. Set to true only for a client that
+      needs it. TLS 1.3 has no renegotiation.
+    </description>
+  </property>
+
+  <property>
     <name>hadoop.metrics.jvm.use-thread-mxbean</name>
     <value>false</value>
     <description>
