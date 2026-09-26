@@ -26,11 +26,16 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -56,6 +61,7 @@ import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider.*;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -76,6 +82,8 @@ public class TestObserverReadProxyProvider {
   private final static long SLOW_RESPONSE_SLEEP_TIME = TimeUnit.SECONDS.toMillis(5); // 5 s
   private final static long NAMENODE_HA_STATE_PROBE_TIMEOUT_SHORT = TimeUnit.SECONDS.toMillis(2);
   private final static long NAMENODE_HA_STATE_PROBE_TIMEOUT_LONG = TimeUnit.SECONDS.toMillis(25);
+  /** Generous: this only has to be shorter than the @Timeout that backstops it. */
+  private final static long SATURATED_SUBMIT_DEADLINE_MS = TimeUnit.SECONDS.toMillis(20);
   private final GenericTestUtils.LogCapturer proxyLog =
       GenericTestUtils.LogCapturer.captureLogs(ObserverReadProxyProvider.LOG);
 
@@ -519,6 +527,106 @@ public class TestObserverReadProxyProvider {
     namenodeAnswers[3].setObserverState();
 
     doRead();
+  }
+
+  /**
+   * The probing pool must reject work once it is full instead of parking the
+   * submitter. {@link ObserverReadProxyProvider#getHAServiceStateWithTimeout}
+   * catches {@link RejectedExecutionException} to fall back to the active
+   * NameNode, so an executor that blocks in submit() makes that fallback
+   * unreachable -- and parks the caller while it holds the provider's monitor,
+   * since the probe is reached through the synchronized changeProxy().
+   */
+  @Test
+  @Timeout(value = 60)
+  public void testProbingPoolRejectsOnceSaturated() throws Exception {
+    setupProxyProvider(1);
+    CountDownLatch release = new CountDownLatch(1);
+    ExecutorService pool = proxyProvider.getNnProbingThreadPool();
+    try {
+      fillProbingPool(pool, release);
+      Throwable thrown = runWithDeadline(() -> pool.submit(() -> null),
+          SATURATED_SUBMIT_DEADLINE_MS, "submit past capacity");
+      assertTrue(thrown instanceof RejectedExecutionException,
+          "submit past capacity should be rejected, but threw " + thrown);
+    } finally {
+      release.countDown();
+    }
+  }
+
+  /**
+   * With the pool saturated, the HA state probe must give up and return null
+   * so the caller falls back to the active NameNode.
+   */
+  @Test
+  @Timeout(value = 60)
+  public void testFallsBackToActiveWhenProbingPoolSaturated() throws Exception {
+    proxyLog.clearOutput();
+    setupProxyProvider(1);
+    CountDownLatch release = new CountDownLatch(1);
+    ExecutorService pool = proxyProvider.getNnProbingThreadPool();
+    try {
+      fillProbingPool(pool, release);
+      @SuppressWarnings("unchecked")
+      NNProxyInfo<ClientProtocol> dummyNNProxyInfo =
+          (NNProxyInfo<ClientProtocol>) mock(NNProxyInfo.class);
+      AtomicReference<HAServiceState> state = new AtomicReference<>();
+      Throwable thrown = runWithDeadline(() -> {
+        state.set(proxyProvider.getHAServiceStateWithTimeout(dummyNNProxyInfo));
+        return null;
+      }, SATURATED_SUBMIT_DEADLINE_MS, "HA state probe on a saturated pool");
+      assertNull(thrown, "probe should not propagate " + thrown);
+      assertNull(state.get(),
+          "a saturated pool should yield no state, so the caller uses the active NN");
+      assertTrue(proxyLog.getOutput().contains(
+          "Run out of threads to submit the request to query HA state"),
+          "expected the fallback to be logged");
+    } finally {
+      release.countDown();
+      proxyLog.clearOutput();
+    }
+  }
+
+  /**
+   * Occupy every slot the probing pool has: PROBING_POOL_THREADS tasks parked
+   * on the latch plus PROBING_POOL_QUEUE_CAPACITY behind them. Tasks go
+   * straight to a worker while the pool is below its core size, so the split
+   * between running and queued is deterministic.
+   */
+  private static void fillProbingPool(ExecutorService pool,
+      CountDownLatch release) {
+    for (int i = 0; i < PROBING_POOL_CAPACITY; i++) {
+      pool.submit(() -> {
+        release.await();
+        return null;
+      });
+    }
+  }
+
+  /**
+   * Run {@code action} on another thread and return what it threw, failing if
+   * it has not finished within {@code timeoutMs}. The regression being guarded
+   * against is a submit() that never returns; a bare @Timeout would catch that
+   * too, but reports only "timed out after N seconds" without naming the call
+   * that hung.
+   */
+  private static Throwable runWithDeadline(Callable<?> action, long timeoutMs,
+      String what) throws InterruptedException {
+    AtomicReference<Throwable> thrown = new AtomicReference<>();
+    Thread runner = new Thread(() -> {
+      try {
+        action.call();
+      } catch (Throwable t) {
+        thrown.set(t);
+      }
+    }, "deadline-" + what);
+    runner.setDaemon(true);
+    runner.start();
+    runner.join(timeoutMs);
+    assertFalse(runner.isAlive(),
+        what + " did not return within " + timeoutMs
+            + "ms: it blocked instead of failing fast");
+    return thrown.get();
   }
 
   private void doRead() throws Exception {
