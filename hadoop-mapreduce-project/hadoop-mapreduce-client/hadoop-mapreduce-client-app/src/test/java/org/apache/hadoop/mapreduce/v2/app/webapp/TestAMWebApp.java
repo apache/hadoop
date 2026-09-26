@@ -417,6 +417,36 @@ public class TestAMWebApp {
     }
   }
 
+  @Test
+  public void testAttemptsPageRender() throws Exception {
+    MRApp app = new MRApp(2, 2, true, this.getClass().getName(), true) {
+      @Override
+      protected ClientService createClientService(AppContext context) {
+        return new MRClientService(context);
+      }
+    };
+    Configuration conf = new Configuration();
+
+    Job job = app.submit(conf);
+    String hostPort =
+        NetUtils.getHostPortString(((MRClientService) app.getClientService())
+          .getWebApp().getListenerAddress());
+    URL attemptsUrl = new URL("http://" + hostPort + "/mapreduce/attempts/"
+        + job.getID().toString() + "/m/SUCCESSFUL");
+    app.waitForState(job, JobState.SUCCEEDED);
+
+    HttpURLConnection conn = (HttpURLConnection) attemptsUrl.openConnection();
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode(),
+        attemptsUrl.toString());
+    InputStream in = conn.getInputStream();
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    IOUtils.copyBytes(in, out, 1024);
+
+    String content = out.toString();
+    assertTrue(content.contains("attempt_"), "Attempts Page should have the attepmts data");
+    app.verifyCompleted();
+  }
+
   public static void main(String[] args) {
     AppContext context = new MockAppContext(0, 8, 88, 4);
     WebApps.$for("yarn", AppContext.class, context).withResourceConfig(configure(context)).
