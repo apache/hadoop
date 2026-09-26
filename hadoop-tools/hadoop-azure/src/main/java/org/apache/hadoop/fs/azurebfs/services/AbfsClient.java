@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -1809,7 +1808,7 @@ public abstract class AbfsClient implements Closeable {
           entry.lastModified());
     }
 
-    Path entryPath = new Path(File.separator + entry.name());
+    Path entryPath = new Path(AbfsHttpConstants.FORWARD_SLASH + entry.name());
     if (uri != null) {
       entryPath = entryPath.makeQualified(uri, entryPath);
     }
