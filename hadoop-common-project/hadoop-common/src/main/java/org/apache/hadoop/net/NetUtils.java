@@ -241,6 +241,9 @@ public class NetUtils {
     URI uri = createURI(target, hasScheme, helpText, useCacheIfPresent);
 
     String host = uri.getHost();
+    if (host != null && host.startsWith("[") && host.endsWith("]")) {
+      host = host.substring(1, host.length() - 1);
+    }
     int port = uri.getPort();
     if (port == -1) {
       port = defaultPort;
@@ -763,21 +766,43 @@ public class NetUtils {
    * Compose a "host:port" string from the address.
    *
    * @param addr address.
-   * @return hort port string.
+   * @return host port string.
    */
   public static String getHostPortString(InetSocketAddress addr) {
-    return addr.getHostName() + ":" + addr.getPort();
+    return getHostPortString(addr.getHostName(), addr.getPort());
   }
 
   /**
-   * Get port as integer from host port string like host:port.
+   * Compose a "host:port" string, bracketing IPv6 literals.
    *
-   * @param addr host + port string like host:port.
+   * @param host host name or IP address.
+   * @param port port number.
+   * @return host port string.
+   */
+  public static String getHostPortString(String host, int port) {
+    String normalizedHost = host;
+    if (normalizedHost != null && normalizedHost.startsWith("[")
+        && normalizedHost.endsWith("]")) {
+      normalizedHost = normalizedHost.substring(1, normalizedHost.length() - 1);
+    }
+    if (normalizedHost != null && normalizedHost.contains(":")) {
+      return "[" + normalizedHost + "]:" + port;
+    }
+    return normalizedHost + ":" + port;
+  }
+
+  /**
+   * Get port as integer from a host:port or [IPv6]:port string.
+   *
+   * @param addr host and port string, with brackets around IPv6 literals.
    * @return an integer value representing the port.
    * @throws IllegalArgumentException if the input is not in the correct format.
    */
   public static int getPortFromHostPortString(String addr)
       throws IllegalArgumentException {
+    if (addr.startsWith("[")) {
+      return createSocketAddrUnresolved(addr).getPort();
+    }
     String[] hostport = addr.split(":");
     if (hostport.length != 2) {
       String errorMsg = "Address should be <host>:<port>, but it is " + addr;
