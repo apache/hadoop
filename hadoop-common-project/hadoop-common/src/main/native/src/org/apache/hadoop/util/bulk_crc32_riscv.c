@@ -33,6 +33,7 @@
 typedef void (*crc_pipelined_func_t)(uint32_t *, uint32_t *, uint32_t *,
                                      const uint8_t *, size_t, int);
 extern crc_pipelined_func_t pipelined_crc32_zlib_func;
+extern crc_pipelined_func_t pipelined_crc32c_func;
 
 #if defined(__riscv) && (__riscv_xlen == 64)
 
@@ -93,6 +94,23 @@ static inline uint32_t rv_crc32_zlib_bitwise(uint32_t crc, const uint8_t *buf,
     for (int k = 0; k < 8; ++k) {
       uint32_t mask = -(int32_t)(c & 1);
       c = (c >> 1) ^ (0xEDB88320U & mask);  // reflected polynomial
+    }
+  }
+  return c;
+}
+
+/**
+ * Fallback bitwise implementation of CRC32C
+ * for small data chunks or misaligned buffer edges.
+ */
+static inline uint32_t rv_crc32c_bitwise(uint32_t crc, const uint8_t* buf,
+                                         size_t len) {
+  uint32_t c = crc;
+  for (size_t i = 0; i < len; ++i) {
+    c ^= buf[i];
+    for (int k = 0; k < 8; ++k) {
+      uint32_t mask = -(int32_t)(c & 1);
+      c = (c >> 1) ^ (0x82F63B78U & mask);
     }
   }
   return c;
@@ -178,6 +196,129 @@ static uint32_t rv_crc32_zlib_clmul(uint32_t crc, const uint8_t *buf,
   return c;
 }
 
+// Folding constants for CRC32C
+// [0..1]: fold 512->256 bits (k1, k2 for folding 4x128-bit blocks by stride 64)
+// [2..3]: fold 256->128 bits (k3, k4 for folding 2x128-bit blocks)
+static const uint64_t crc32c_fold_const[4] __attribute__((aligned(16))) = {
+    0x00000000740eef02ULL, 0x000000009e4addf8ULL, 0x00000000f20c0dfeULL,
+    0x00000000493c7d27ULL};
+
+#define RV_CRC32C_CONST_0 0x00000000dd45aab8ULL
+#define RV_CRC32C_CONST_1 0x00000000493c7d27ULL
+#define RV_CRC32C_CONST_QUO 0x0000000dea713f1ULL
+#define RV_CRC32C_CONST_POLY_TRUE_LE_FULL 0x0000000105ec76f1ULL
+
+/**
+ * Fold a 128-bit CRC state with a pair of fold constants and xor new data.
+ */
+static inline void rv_fold_pair_xor_data(uint64_t* lo, uint64_t* hi,
+                                         uint64_t k0, uint64_t k1, uint64_t d0,
+                                         uint64_t d1) {
+  uint64_t l = rv_clmul(*lo, k0) ^ rv_clmul(*hi, k1);
+  uint64_t h = rv_clmulh(*lo, k0) ^ rv_clmulh(*hi, k1);
+  *lo = l ^ d0;
+  *hi = h ^ d1;
+}
+
+/**
+ * Fold a 128-bit CRC state with a pair of fold constants and xor another
+ * folded state.
+ */
+static inline void rv_fold_pair_xor_state(uint64_t* lo, uint64_t* hi,
+                                          uint64_t k0, uint64_t k1, uint64_t s0,
+                                          uint64_t s1) {
+  uint64_t l = rv_clmul(*lo, k0) ^ rv_clmul(*hi, k1);
+  uint64_t h = rv_clmulh(*lo, k0) ^ rv_clmulh(*hi, k1);
+  *lo = l ^ s0;
+  *hi = h ^ s1;
+}
+
+/**
+ * Hardware-accelerated CRC32C (Castagnoli polynomial) calculation using
+ * RISC-V Zbc carry-less multiplication instructions.
+ */
+static uint32_t rv_crc32c_clmul(uint32_t crc, const uint8_t* buf, size_t len) {
+  const uint8_t* p = buf;
+  size_t n = len;
+
+  if (n < 64) {
+    return rv_crc32c_bitwise(crc, p, n);
+  }
+
+  uintptr_t mis = (uintptr_t)p & 0xF;
+  if (unlikely(mis)) {
+    size_t pre = 16 - mis;
+    if (pre > n) {
+      pre = n;
+    }
+    crc = rv_crc32c_bitwise(crc, p, pre);
+    p += pre;
+    n -= pre;
+    if (n < 64) {
+      return rv_crc32c_bitwise(crc, p, n);
+    }
+  }
+
+  uint64_t x0 = *(const uint64_t*)(const void*)(p + 0);
+  uint64_t x1 = *(const uint64_t*)(const void*)(p + 8);
+  uint64_t y0 = *(const uint64_t*)(const void*)(p + 16);
+  uint64_t y1 = *(const uint64_t*)(const void*)(p + 24);
+  uint64_t z0 = *(const uint64_t*)(const void*)(p + 32);
+  uint64_t z1 = *(const uint64_t*)(const void*)(p + 40);
+  uint64_t w0 = *(const uint64_t*)(const void*)(p + 48);
+  uint64_t w1 = *(const uint64_t*)(const void*)(p + 56);
+
+  x0 ^= (uint64_t)crc;
+  p += 64;
+  n -= 64;
+
+  const uint64_t k1 = crc32c_fold_const[0];
+  const uint64_t k2 = crc32c_fold_const[1];
+  const uint64_t k3 = crc32c_fold_const[2];
+  const uint64_t k4 = crc32c_fold_const[3];
+
+  while (likely(n >= 64)) {
+    rv_fold_pair_xor_data(&x0, &x1, k1, k2,
+                          *(const uint64_t*)(const void*)(p + 0),
+                          *(const uint64_t*)(const void*)(p + 8));
+    rv_fold_pair_xor_data(&y0, &y1, k1, k2,
+                          *(const uint64_t*)(const void*)(p + 16),
+                          *(const uint64_t*)(const void*)(p + 24));
+    rv_fold_pair_xor_data(&z0, &z1, k1, k2,
+                          *(const uint64_t*)(const void*)(p + 32),
+                          *(const uint64_t*)(const void*)(p + 40));
+    rv_fold_pair_xor_data(&w0, &w1, k1, k2,
+                          *(const uint64_t*)(const void*)(p + 48),
+                          *(const uint64_t*)(const void*)(p + 56));
+    p += 64;
+    n -= 64;
+  }
+
+  rv_fold_pair_xor_state(&x0, &x1, k3, k4, y0, y1);
+  rv_fold_pair_xor_state(&x0, &x1, k3, k4, z0, z1);
+  rv_fold_pair_xor_state(&x0, &x1, k3, k4, w0, w1);
+
+  uint64_t t4 = rv_clmul(x0, RV_CRC32C_CONST_1);
+  uint64_t t3 = rv_clmulh(x0, RV_CRC32C_CONST_1);
+  uint64_t t1 = x1 ^ t4;
+  t4 = t1 & RV_CRC32_MASK32;
+  t1 >>= 32;
+  uint64_t t0 = rv_clmul(t4, RV_CRC32C_CONST_0);
+  t3 = (t3 << 32) ^ t1 ^ t0;
+
+  t4 = t3 & RV_CRC32_MASK32;
+  t4 = rv_clmul(t4, RV_CRC32C_CONST_QUO);
+  t4 &= RV_CRC32_MASK32;
+  t4 = rv_clmul(t4, RV_CRC32C_CONST_POLY_TRUE_LE_FULL);
+  t4 ^= t3;
+
+  uint32_t c = (uint32_t)((t4 >> 32) & RV_CRC32_MASK32);
+  if (n) {
+    c = rv_crc32c_bitwise(c, p, n);
+  }
+  return c;
+}
+
 /**
  * Pipelined version of hardware-accelerated CRC32 calculation using
  * RISC-V Zbc carry-less multiply instructions.
@@ -215,6 +356,34 @@ static void pipelined_crc32_zlib(uint32_t *crc1, uint32_t *crc2, uint32_t *crc3,
   }
 }
 
+/**
+ * Pipelined version of hardware-accelerated CRC32C calculation using
+ * RISC-V Zbc carry-less multiply instructions.
+ */
+static void pipelined_crc32c(uint32_t* crc1, uint32_t* crc2, uint32_t* crc3,
+                             const uint8_t* p_buf, size_t block_size,
+                             int num_blocks) {
+  const uint8_t* p1 = p_buf;
+  const uint8_t* p2 = p_buf + block_size;
+  const uint8_t* p3 = p_buf + 2 * block_size;
+
+  switch (num_blocks) {
+    case 3:
+      *crc3 = rv_crc32c_clmul(*crc3, p3, block_size);
+      // fall through
+    case 2:
+      *crc2 = rv_crc32c_clmul(*crc2, p2, block_size);
+      // fall through
+    case 1:
+      *crc1 = rv_crc32c_clmul(*crc1, p1, block_size);
+      break;
+    case 0:
+      return;
+    default:
+      assert(0 && "BUG: Invalid number of checksum blocks");
+  }
+}
+
 #endif  // __riscv && __riscv_xlen==64
 
 /**
@@ -239,6 +408,7 @@ void __attribute__((constructor)) init_cpu_support_flag(void) {
     fclose(f);
     if (has_zbc) {
       pipelined_crc32_zlib_func = pipelined_crc32_zlib;
+      pipelined_crc32c_func = pipelined_crc32c;
     }
   }
 #endif
