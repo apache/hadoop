@@ -297,32 +297,31 @@ public class TestHadoopArchiveLogs {
     assertEquals("if [ \"$YARN_SHELL_ID\" == \"1\" ]; then", lines[3]);
     boolean oneBefore = true;
     if (lines[4].contains(app1.toString())) {
-      assertEquals("\tappId=\"" + app1.toString() + "\"", lines[4]);
-      assertEquals("\tappId=\"" + app2.toString() + "\"", lines[10]);
+      assertEquals("\tappId=" + Shell.bashQuote(app1.toString()), lines[4]);
+      assertEquals("\tappId=" + Shell.bashQuote(app2.toString()), lines[10]);
     } else {
       oneBefore = false;
-      assertEquals("\tappId=\"" + app2.toString() + "\"", lines[4]);
-      assertEquals("\tappId=\"" + app1.toString() + "\"", lines[10]);
+      assertEquals("\tappId=" + Shell.bashQuote(app2.toString()), lines[4]);
+      assertEquals("\tappId=" + Shell.bashQuote(app1.toString()), lines[10]);
     }
-    assertEquals("\tuser=\"" + USER + "\"", lines[5]);
-    assertEquals("\tworkingDir=\"" + (oneBefore ? workingDir.toString()
-        : workingDir2.toString()) + "\"", lines[6]);
-    assertEquals("\tremoteRootLogDir=\"" + (oneBefore
-        ? remoteRootLogDir.toString() : remoteRootLogDir2.toString())
-        + "\"", lines[7]);
-    assertEquals("\tsuffix=\"" + (oneBefore ? suffix : suffix2)
-        + "\"", lines[8]);
+    assertEquals("\tuser=" + Shell.bashQuote(USER), lines[5]);
+    assertEquals("\tworkingDir=" + Shell.bashQuote(oneBefore
+        ? workingDir.toString() : workingDir2.toString()), lines[6]);
+    assertEquals("\tremoteRootLogDir=" + Shell.bashQuote(oneBefore
+        ? remoteRootLogDir.toString() : remoteRootLogDir2.toString()),
+        lines[7]);
+    assertEquals("\tsuffix=" + Shell.bashQuote(oneBefore ? suffix : suffix2),
+        lines[8]);
     assertEquals("elif [ \"$YARN_SHELL_ID\" == \"2\" ]; then",
         lines[9]);
-    assertEquals("\tuser=\"" + USER + "\"", lines[11]);
-    assertEquals("\tworkingDir=\"" + (oneBefore
-        ? workingDir2.toString() : workingDir.toString()) + "\"",
-        lines[12]);
-    assertEquals("\tremoteRootLogDir=\"" + (oneBefore
-        ? remoteRootLogDir2.toString() : remoteRootLogDir.toString())
-        + "\"", lines[13]);
-    assertEquals("\tsuffix=\"" + (oneBefore ? suffix2 : suffix)
-        + "\"", lines[14]);
+    assertEquals("\tuser=" + Shell.bashQuote(USER), lines[11]);
+    assertEquals("\tworkingDir=" + Shell.bashQuote(oneBefore
+        ? workingDir2.toString() : workingDir.toString()), lines[12]);
+    assertEquals("\tremoteRootLogDir=" + Shell.bashQuote(oneBefore
+        ? remoteRootLogDir2.toString() : remoteRootLogDir.toString()),
+        lines[13]);
+    assertEquals("\tsuffix=" + Shell.bashQuote(oneBefore ? suffix2 : suffix),
+        lines[14]);
     assertEquals("else", lines[15]);
     assertEquals("\techo \"Unknown Mapping!\"", lines[16]);
     assertEquals("\texit 1", lines[17]);
