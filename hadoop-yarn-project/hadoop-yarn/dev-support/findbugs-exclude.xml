@@ -790,12 +790,6 @@
   </Match>
 
   <Match>
-    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService$PublicLocalizer" />
-    <Method name="work" />
-    <Bug pattern="NP_NULL_ON_SOME_PATH_EXCEPTION" />
-  </Match>
-
-  <Match>
     <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.NvidiaDockerV2CommandPlugin" />
     <Method name="updateDockerRunCommand" />
     <Bug pattern="SBSC_USE_STRINGBUFFER_CONCATENATION" />

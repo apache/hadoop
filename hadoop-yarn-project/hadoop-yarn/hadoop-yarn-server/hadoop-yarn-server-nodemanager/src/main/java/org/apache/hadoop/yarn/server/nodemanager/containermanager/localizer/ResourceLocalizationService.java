@@ -982,12 +982,12 @@ public class ResourceLocalizationService extends CompositeService
           try {
             Future<Path> completed = queue.take();
             LocalizerResourceRequestEvent assoc = pending.remove(completed);
+            if (null == assoc) {
+              LOG.error("Localized unknown resource to " + completed);
+              // TODO delete
+              continue;
+            }
             try {
-              if (null == assoc) {
-                LOG.error("Localized unknown resource to " + completed);
-                // TODO delete
-                return;
-              }
               Path local = completed.get();
               LocalResourceRequest key = assoc.getResource().getRequest();
               publicRsrc.handle(new ResourceLocalizedEvent(key, local, FileUtil
