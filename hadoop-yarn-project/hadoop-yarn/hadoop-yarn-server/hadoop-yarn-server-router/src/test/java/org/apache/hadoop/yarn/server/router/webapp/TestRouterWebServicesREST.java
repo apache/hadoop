@@ -70,6 +70,7 @@ import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getNMWebAppURLWitho
 import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getRMWebAppURLWithScheme;
 import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getRouterWebAppURLWithScheme;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -89,6 +90,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -160,6 +162,9 @@ public class TestRouterWebServicesREST {
 
   /** The number of concurrent submissions for multi-thread test. */
   private static final int NUM_THREADS_TESTS = 100;
+
+  /** How long to wait for the RM's asynchronous application lifecycle. */
+  private static final int APP_STATE_TIMEOUT_MS = 10 * 1000;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRouterWebServicesREST.class);
@@ -1321,7 +1326,7 @@ public class TestRouterWebServicesREST {
    * inside Router.
    */
   @Test
-  @Timeout(value = 2)
+  @Timeout(value = 30)
   public void testGetAppAttemptXML() throws Exception {
 
     String appId = submitApplication();
@@ -1346,25 +1351,32 @@ public class TestRouterWebServicesREST {
    * inside Router.
    */
   @Test
-  @Timeout(value = 2)
+  @Timeout(value = 30)
   public void testGetContainersXML() throws Exception {
 
     String appId = submitApplication();
     String pathAttempts = RM_WEB_SERVICE_PATH + format(
         APPS_APPID_APPATTEMPTS_APPATTEMPTID_CONTAINERS,
         appId, getAppAttempt(appId));
-    List<ContainersInfo> responses = performGetCalls(
-        pathAttempts, ContainersInfo.class, null, null);
 
-    ContainersInfo routerResponse = responses.get(0);
-    ContainersInfo rmResponse = responses.get(1);
+    // The attempt's AM container is being allocated, launched and completed
+    // while we query, and the Router and the RM are read one after the other,
+    // so a single pair of reads can straddle a change. Retry until they agree;
+    // a Router that never matches the RM still fails the assertion.
+    LambdaTestUtils.eventually(APP_STATE_TIMEOUT_MS, 100, () -> {
+      List<ContainersInfo> responses = performGetCalls(
+          pathAttempts, ContainersInfo.class, null, null);
 
-    assertNotNull(routerResponse);
-    assertNotNull(rmResponse);
+      ContainersInfo routerResponse = responses.get(0);
+      ContainersInfo rmResponse = responses.get(1);
 
-    assertEquals(
-        rmResponse.getContainers().size(),
-        routerResponse.getContainers().size());
+      assertNotNull(routerResponse);
+      assertNotNull(rmResponse);
+
+      assertEquals(
+          rmResponse.getContainers().size(),
+          routerResponse.getContainers().size());
+    });
   }
 
   @Test
@@ -1483,17 +1495,23 @@ public class TestRouterWebServicesREST {
     return response.readEntity(String.class);
   }
 
-  private String getAppAttempt(String appId) {
+  private String getAppAttempt(String appId) throws Exception {
     Client clientToRM = ClientBuilder.newClient();
     String pathAppAttempt = RM_WEB_SERVICE_PATH + format(APPS_APPID_APPATTEMPTS, appId);
     WebTarget toRM = clientToRM.
         target(rmAddress).
         path(pathAppAttempt);
-    Response response = toRM.
-        request(APPLICATION_XML).
-        get(Response.class);
-    AppAttemptsInfo ci = response.readEntity(AppAttemptsInfo.class);
-    return ci.getAttempts().get(0).getAppAttemptId();
+    // The RM creates the first attempt asynchronously after the submission
+    // returns, so wait for it to appear.
+    return LambdaTestUtils.eventually(APP_STATE_TIMEOUT_MS, 50, () -> {
+      Response response = toRM.
+          request(APPLICATION_XML).
+          get(Response.class);
+      AppAttemptsInfo ci = response.readEntity(AppAttemptsInfo.class);
+      assertFalse(ci.getAttempts().isEmpty(),
+          "No attempt yet for application " + appId);
+      return ci.getAttempts().get(0).getAppAttemptId();
+    });
   }
 
   /**
