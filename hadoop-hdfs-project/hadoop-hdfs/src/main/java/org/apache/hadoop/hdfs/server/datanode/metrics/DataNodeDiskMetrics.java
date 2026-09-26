@@ -122,7 +122,8 @@ public class DataNodeDiskMetrics {
               while (volumeIterator.hasNext()) {
                 FsVolumeSpi volume = volumeIterator.next();
                 DataNodeVolumeMetrics metrics = volume.getMetrics();
-                String volumeName = volume.getBaseURI().getPath();
+                String storageID = volume.getStorageID();
+                String volumeName = volume.getBaseURI().getPath()+ "|" + storageID;
 
                 metadataOpStats.put(volumeName,
                     metrics.getMetadataOperationMean());
@@ -159,7 +160,13 @@ public class DataNodeDiskMetrics {
                   -> Double.compare(o2.getMaxLatency(), o1.getMaxLatency()));
 
               slowDisksToExclude = diskLatencies.stream().limit(maxSlowDisksToExclude)
-                  .map(DiskLatency::getSlowDisk).collect(Collectors.toList());
+                  .map(dl -> {
+                    // Extract pure volume path for FsVolumeList comparison.
+                    // diskKey format: "volumePath|storageID"
+                    String disk = dl.getSlowDisk();
+                    int pipeIdx = disk.indexOf('|');
+                    return pipeIdx >= 0 ? disk.substring(0, pipeIdx) : disk;
+                  }).collect(Collectors.toList());
             }
           }
 
