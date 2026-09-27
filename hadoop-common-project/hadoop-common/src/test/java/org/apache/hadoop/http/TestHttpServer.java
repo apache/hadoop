@@ -206,6 +206,21 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }
   }
 
+  /**
+   * Redirects with a context-absolute path, the way WebServlet, the webapp
+   * Dispatcher and the YARN proxy redirect.
+   */
+  @SuppressWarnings("serial")
+  public static class RedirectingServlet extends HttpServlet {
+    static final String TARGET = "/echo?redirected=true";
+
+    @Override
+    protected void doGet(HttpServletRequest request,
+        HttpServletResponse response) throws IOException {
+      response.sendRedirect(TARGET);
+    }
+  }
+
   @BeforeAll
   public static void setup() throws Exception {
     Configuration conf = new Configuration();
@@ -221,6 +236,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     server.addServlet("owncontenttype", "/owncontenttype",
         OwnContentTypeServlet.class);
     server.addServlet("refusing", "/refusing", RefusingServlet.class);
+    server.addServlet("redirecting", "/redirecting",
+        RedirectingServlet.class);
     server.addJerseyResourcePackage(
         JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
@@ -393,6 +410,32 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode());
     assertThat(errorBody(conn)).contains(RefusingServlet.DETAIL);
     conn.disconnect();
+  }
+
+  /**
+   * A redirect carries an absolute URI in Location, as it did on Jetty 9.4.
+   * Jetty 12 defaults HttpConfiguration#relativeRedirectAllowed to true, which
+   * leaves the bare path the servlet passed to sendRedirect in the header;
+   * Hadoop reads that header back with new URL(...) - WebHdfsFileSystem does -
+   * and a relative value does not parse.
+   */
+  @Test
+  public void testRedirectLocationIsAbsolute() throws Exception {
+    URL url = new URL(baseUrl, "/redirecting");
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setInstanceFollowRedirects(false);
+    try {
+      assertEquals(HttpURLConnection.HTTP_MOVED_TEMP, conn.getResponseCode());
+      String location = conn.getHeaderField("Location");
+      assertThat(location)
+          .as("Location on a redirect")
+          .isNotNull()
+          .startsWith(baseUrl.toString());
+      // What a Hadoop client does with the header it is handed.
+      assertEquals("/echo", new URL(location).getPath());
+    } finally {
+      conn.disconnect();
+    }
   }
 
   private static HttpURLConnection refusal(String method, boolean mark)

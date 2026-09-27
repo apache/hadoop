@@ -576,6 +576,16 @@ public final class HttpServer2 implements FilterContainer {
       httpConfig.setRequestHeaderSize(requestHeaderSize);
       httpConfig.setResponseHeaderSize(responseHeaderSize);
       httpConfig.setSendServerVersion(false);
+      // Set it either way: Jetty 9.4 defaults this to false and Jetty 12 to
+      // true. At Jetty 12's default, sendRedirect stops resolving the location
+      // against the request and Location carries the bare path the servlet
+      // passed - "/target" rather than "http://host:port/target". Hadoop
+      // redirects through sendRedirect in the YARN proxy (ProxyUtils,
+      // WebAppProxyServlet), AmIpFilter, the webapp Dispatcher, WebServlet and
+      // the JWT login handler, and reads a Location header back with
+      // new URL(...) - WebHdfsFileSystem does - which a relative value does
+      // not parse. Nothing in Jetty 12 forces the change, so keep trunk's.
+      httpConfig.setRelativeRedirectAllowed(false);
       // Jetty 12 rejects three kinds of path at the connector that 9.4 handed to
       // the servlet, with a bare 400 and no body, so the request never reaches
       // the code that knows what a Hadoop path is:
