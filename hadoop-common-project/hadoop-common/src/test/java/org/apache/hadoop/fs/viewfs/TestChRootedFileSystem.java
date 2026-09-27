@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -81,17 +80,19 @@ public class TestChRootedFileSystem {
   @Test
   public void testURI() {
     URI uri = fSys.getUri();
-    assertThat(uri).isEqualTo(chrootedTo.toUri());
+    assertEquals(chrootedTo.toUri(), uri);
   }
   
   @Test
   public void testBasicPaths() {
     URI uri = fSys.getUri();
-    assertThat(uri).isEqualTo(chrootedTo.toUri());
-    assertThat(fSys.getWorkingDirectory()).isEqualTo(
-        fSys.makeQualified(new Path(System.getProperty("user.home"))));
-    assertThat(fSys.getHomeDirectory()).isEqualTo(
-        fSys.makeQualified(new Path(System.getProperty("user.home"))));
+    assertEquals(chrootedTo.toUri(), uri);
+    assertEquals(fSys.makeQualified(
+        new Path(System.getProperty("user.home"))),
+        fSys.getWorkingDirectory());
+    assertEquals(fSys.makeQualified(
+        new Path(System.getProperty("user.home"))),
+        fSys.getHomeDirectory());
     /*
      * ChRootedFs as its uri like file:///chrootRoot.
      * This is questionable since path.makequalified(uri, path) ignores
@@ -259,31 +260,31 @@ public class TestChRootedFileSystem {
     fSys.mkdirs(new Path("/testWd"));
     Path workDir = new Path("/testWd");
     fSys.setWorkingDirectory(workDir);
-    assertThat(fSys.getWorkingDirectory()).isEqualTo(workDir);
+    assertEquals(workDir, fSys.getWorkingDirectory());
 
     fSys.setWorkingDirectory(new Path("."));
-    assertThat(fSys.getWorkingDirectory()).isEqualTo(workDir);
+    assertEquals(workDir, fSys.getWorkingDirectory());
 
     fSys.setWorkingDirectory(new Path(".."));
-    assertThat(fSys.getWorkingDirectory()).isEqualTo(workDir.getParent());
+    assertEquals(workDir.getParent(), fSys.getWorkingDirectory());
     
     // cd using a relative path
 
     // Go back to our test root
     workDir = new Path("/testWd");
     fSys.setWorkingDirectory(workDir);
-    assertThat(fSys.getWorkingDirectory()).isEqualTo(workDir);
+    assertEquals(workDir, fSys.getWorkingDirectory());
     
     Path relativeDir = new Path("existingDir1");
     Path absoluteDir = new Path(workDir,"existingDir1");
     fSys.mkdirs(absoluteDir);
     fSys.setWorkingDirectory(relativeDir);
-    assertThat(fSys.getWorkingDirectory()).isEqualTo(absoluteDir);
+    assertEquals(absoluteDir, fSys.getWorkingDirectory());
     // cd using a absolute path
     absoluteDir = new Path("/test/existingDir2");
     fSys.mkdirs(absoluteDir);
     fSys.setWorkingDirectory(absoluteDir);
-    assertThat(fSys.getWorkingDirectory()).isEqualTo(absoluteDir);
+    assertEquals(absoluteDir, fSys.getWorkingDirectory());
     
     // Now open a file relative to the wd we just set above.
     Path absoluteFooPath = new Path(absoluteDir, "foo");
@@ -310,7 +311,7 @@ public class TestChRootedFileSystem {
     absoluteDir = new Path(LOCAL_FS_ROOT_URI + "/existingDir");
     fSys.mkdirs(absoluteDir);
     fSys.setWorkingDirectory(absoluteDir);
-    assertThat(fSys.getWorkingDirectory()).isEqualTo(absoluteDir);
+    assertEquals(absoluteDir, fSys.getWorkingDirectory());
 
   }
   
