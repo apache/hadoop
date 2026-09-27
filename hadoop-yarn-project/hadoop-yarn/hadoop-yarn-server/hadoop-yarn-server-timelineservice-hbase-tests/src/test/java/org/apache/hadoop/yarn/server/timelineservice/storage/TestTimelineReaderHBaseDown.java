@@ -277,7 +277,7 @@ public class TestTimelineReaderHBaseDown {
   }
 
   /** Replaces HBase's abort timeout task, which halts the JVM. */
-  private static class NoOpAbortTimeoutTask extends TimerTask {
+  private static final class NoOpAbortTimeoutTask extends TimerTask {
     @Override
     public void run() {
     }
