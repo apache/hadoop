@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.TimerTask;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_SERVICE_READER_STORAGE_MONITOR_INTERVAL_MS;
@@ -208,6 +209,11 @@ public class TestTimelineReaderHBaseDown {
           return false;
         }
       }, 1000, 150000);
+      // The restarted region server is still reopening the regions of the
+      // other timeline tables; storage is reported up after one read of the
+      // flow activity table.  Shutting down now fails those opens and makes
+      // the region server abort.
+      util.waitUntilNoRegionsInTransition(150000);
     } catch (Exception e) {
       // TODO catch InaccessibleObjectException directly once Java 8 support is dropped
       if (e.getClass().getSimpleName().equals("InaccessibleObjectException")) {
@@ -262,6 +268,19 @@ public class TestTimelineReaderHBaseDown {
     config.setLong(TIMELINE_SERVICE_READER_STORAGE_MONITOR_INTERVAL_MS, 5000);
     Path tmpDir = new Path(config.get("hadoop.tmp.dir", "target/build/test"), "httpfs");
     config.set(HttpServer2.HTTP_TEMP_DIR_KEY, tmpDir.toString());
+    // A region server abort schedules a timer that halts the JVM once
+    // hbase.regionserver.abort.timeout passes, and never cancels it.  The
+    // module runs with forkCount 0, so that JVM is Maven's own.  Keep the
+    // abort logged but make the timer do nothing.
+    config.set("hbase.regionserver.abort.timeout.task",
+        NoOpAbortTimeoutTask.class.getName());
+  }
+
+  /** Replaces HBase's abort timeout task, which halts the JVM. */
+  private static class NoOpAbortTimeoutTask extends TimerTask {
+    @Override
+    public void run() {
+    }
   }
 
   private static TimelineReaderServer getTimelineReaderServer() {
