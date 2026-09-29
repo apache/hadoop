@@ -93,9 +93,8 @@ public class StandbyState extends HAState {
         (op == OperationCategory.READ && context.allowStaleReads())) {
       return;
     }
-    String faq = ". Visit https://s.apache.org/sbnn-error";
     String msg = "Operation category " + op + " is not supported in state "
-        + context.getState() + faq;
+        + context.getState() + ".";
     if (op == OperationCategory.WRITE && isObserver) {
       // If observer receives a write call, return active retry
       // exception to inform client to retry on active.

@@ -44,9 +44,9 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,8 +59,9 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestRouterWebAppProxy {
 
@@ -79,7 +80,7 @@ public class TestRouterWebAppProxy {
   /**
    * Simple http server. Server should send answer with status 200
    */
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     mockServer = new Server(0);
     ((QueuedThreadPool) mockServer.getThreadPool()).setMaxThreads(20);
@@ -96,7 +97,8 @@ public class TestRouterWebAppProxy {
     LOG.info("Running embedded servlet container at: http://localhost:" + mockServerPort);
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testRouterWebAppProxyFed() throws Exception {
 
     Configuration conf = new Configuration();
@@ -132,22 +134,22 @@ public class TestRouterWebAppProxy {
 
     // Mock for application
     ApplicationClientProtocol appManager1 = mock(ApplicationClientProtocol.class);
-    Mockito.when(appManager1.getApplicationReport(GetApplicationReportRequest.newInstance(appId1)))
+    when(appManager1.getApplicationReport(GetApplicationReportRequest.newInstance(appId1)))
         .thenReturn(GetApplicationReportResponse.newInstance(
             newApplicationReport(appId1, YarnApplicationState.RUNNING, proxyAppUrl1, appUrl1)));
-    Mockito.when(appManager1.getApplicationReport(GetApplicationReportRequest.newInstance(appId3)))
+    when(appManager1.getApplicationReport(GetApplicationReportRequest.newInstance(appId3)))
         .thenReturn(GetApplicationReportResponse.newInstance(
             newApplicationReport(appId3, YarnApplicationState.ACCEPTED, proxyAppUrl2, null)));
 
     ApplicationClientProtocol appManager2 = mock(ApplicationClientProtocol.class);
-    Mockito.when(appManager2.getApplicationReport(GetApplicationReportRequest.newInstance(appId2)))
+    when(appManager2.getApplicationReport(GetApplicationReportRequest.newInstance(appId2)))
         .thenReturn(GetApplicationReportResponse.newInstance(
             newApplicationReport(appId2, YarnApplicationState.RUNNING, proxyAppUrl3, appUrl2)));
-    Mockito.when(appManager2.getApplicationReport(GetApplicationReportRequest.newInstance(appId4)))
+    when(appManager2.getApplicationReport(GetApplicationReportRequest.newInstance(appId4)))
         .thenThrow(new ApplicationNotFoundException("APP NOT FOUND"));
 
     ApplicationHistoryProtocol historyManager = mock(ApplicationHistoryProtocol.class);
-    Mockito.when(
+    when(
             historyManager.getApplicationReport(GetApplicationReportRequest.newInstance(appId4)))
         .thenReturn(GetApplicationReportResponse.newInstance(
             newApplicationReport(appId4, YarnApplicationState.FINISHED, proxyAppUrl4, null)));
@@ -174,19 +176,19 @@ public class TestRouterWebAppProxy {
     String user = UserGroupInformation.getCurrentUser().getUserName();
     RequestInterceptorChainWrapper wrapper = mock(RequestInterceptorChainWrapper.class);
     FederationClientInterceptor interceptor = mock(FederationClientInterceptor.class);
-    Mockito.when(interceptor.getApplicationReport(GetApplicationReportRequest.newInstance(appId1)))
+    when(interceptor.getApplicationReport(GetApplicationReportRequest.newInstance(appId1)))
         .thenReturn(GetApplicationReportResponse.newInstance(
             newApplicationReport(appId1, YarnApplicationState.RUNNING, proxyAppUrl1, appUrl1)));
-    Mockito.when(interceptor.getApplicationReport(GetApplicationReportRequest.newInstance(appId2)))
+    when(interceptor.getApplicationReport(GetApplicationReportRequest.newInstance(appId2)))
         .thenReturn(GetApplicationReportResponse.newInstance(
             newApplicationReport(appId2, YarnApplicationState.RUNNING, proxyAppUrl2, appUrl2)));
-    Mockito.when(interceptor.getApplicationReport(GetApplicationReportRequest.newInstance(appId3)))
+    when(interceptor.getApplicationReport(GetApplicationReportRequest.newInstance(appId3)))
         .thenReturn(GetApplicationReportResponse.newInstance(
             newApplicationReport(appId3, YarnApplicationState.ACCEPTED, proxyAppUrl3, null)));
-    Mockito.when(interceptor.getApplicationReport(GetApplicationReportRequest.newInstance(appId4)))
+    when(interceptor.getApplicationReport(GetApplicationReportRequest.newInstance(appId4)))
         .thenReturn(GetApplicationReportResponse.newInstance(
             newApplicationReport(appId4, YarnApplicationState.FINISHED, proxyAppUrl4, null)));
-    Mockito.when(wrapper.getRootInterceptor()).thenReturn(interceptor);
+    when(wrapper.getRootInterceptor()).thenReturn(interceptor);
     router.getClientRMProxyService().getUserPipelineMap().put(user, wrapper);
     try {
       // set Mocked rm and timeline

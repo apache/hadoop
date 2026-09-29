@@ -213,6 +213,31 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
+    public void getRequestInitiated() {
+
+    }
+
+    @Override
+    public void headRequestInitiated() {
+
+    }
+
+    @Override
+    public void bytesPrefetched(long size) {
+
+    }
+
+    @Override
+    public void footerParsingFailed() {
+
+    }
+
+    @Override
+    public void streamReadCacheHit() {
+
+    }
+
+    @Override
     public void close() {
 
     }

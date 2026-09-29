@@ -72,6 +72,7 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.VectoredReadUtils.LOG_BYTE_BUFFER_RELEASED;
+import static org.apache.hadoop.fs.VectoredReadUtils.hasVectorIOCapability;
 import static org.apache.hadoop.fs.VectoredReadUtils.sortRangeList;
 import static org.apache.hadoop.fs.VectoredReadUtils.validateRangeRequest;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
@@ -80,6 +81,7 @@ import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_E
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_SKIP_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_SKIP_OPERATIONS;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_EXCEPTIONS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
@@ -157,7 +159,8 @@ public class RawLocalFileSystem extends FileSystem {
             STREAM_READ_EXCEPTIONS,
             STREAM_READ_SEEK_OPERATIONS,
             STREAM_READ_SKIP_OPERATIONS,
-            STREAM_READ_SKIP_BYTES)
+            STREAM_READ_SKIP_BYTES,
+            STREAM_READ_VECTORED_OPERATIONS)
         .build();
 
     /** Reference to the bytes read counter for slightly faster counting. */
@@ -224,8 +227,7 @@ public class RawLocalFileSystem extends FileSystem {
         int value = fis.read();
         if (value >= 0) {
           this.position++;
-          statistics.incrementBytesRead(1);
-          bytesRead.addAndGet(1);
+          recordBytesRead(1);
         }
         return value;
       } catch (IOException e) {                 // unexpected exception
@@ -242,8 +244,7 @@ public class RawLocalFileSystem extends FileSystem {
         int value = fis.read(b, off, len);
         if (value > 0) {
           this.position += value;
-          statistics.incrementBytesRead(value);
-          bytesRead.addAndGet(value);
+          recordBytesRead(value);
         }
         return value;
       } catch (IOException e) {                 // unexpected exception
@@ -251,7 +252,18 @@ public class RawLocalFileSystem extends FileSystem {
         throw new FSError(e);                   // assume native fs error
       }
     }
-    
+
+    /**
+     * Count the number of bytes read in fs and io statistics.
+     * @param count
+     */
+    private void recordBytesRead(final int count) {
+      if (count > 0) {
+        statistics.incrementBytesRead(count);
+        bytesRead.addAndGet(count);
+      }
+    }
+
     @Override
     public int read(long position, byte[] b, int off, int len)
       throws IOException {
@@ -265,8 +277,7 @@ public class RawLocalFileSystem extends FileSystem {
       try {
         int value = fis.getChannel().read(bb, position);
         if (value > 0) {
-          statistics.incrementBytesRead(value);
-          ioStatistics.incrementCounter(STREAM_READ_BYTES, value);
+          recordBytesRead(value);
         }
         return value;
       } catch (IOException e) {
@@ -293,15 +304,12 @@ public class RawLocalFileSystem extends FileSystem {
 
     @Override
     public boolean hasCapability(String capability) {
-      // a bit inefficient, but intended to make it easier to add
-      // new capabilities.
       switch (capability.toLowerCase(Locale.ENGLISH)) {
       case StreamCapabilities.IOSTATISTICS:
       case StreamCapabilities.IOSTATISTICS_CONTEXT:
-      case StreamCapabilities.VECTOREDIO:
         return true;
       default:
-        return false;
+        return hasVectorIOCapability(capability);
       }
     }
 
@@ -330,6 +338,7 @@ public class RawLocalFileSystem extends FileSystem {
     public void readVectored(final List<? extends FileRange> ranges,
         final IntFunction<ByteBuffer> allocate,
         final Consumer<ByteBuffer> release) throws IOException {
+      ioStatistics.incrementCounter(STREAM_READ_VECTORED_OPERATIONS);
 
       // Validate, but do not pass in a file length as it may change.
       List<? extends FileRange> sortedRanges = sortRangeList(ranges);
@@ -343,7 +352,8 @@ public class RawLocalFileSystem extends FileSystem {
       // Initiate the asynchronous reads.
       new AsyncHandler(getAsyncChannel(),
           sortedRanges,
-          pool)
+          pool,
+          this::recordBytesRead)
           .initiateRead();
     }
   }
@@ -374,20 +384,25 @@ public class RawLocalFileSystem extends FileSystem {
     /** Buffers being read. */
     private final ByteBuffer[] buffers;
 
+    /* Callback to update statistics. */
+    private final Consumer<Integer> statisticsUpdater;
+
     /**
      * Instantiate.
      * @param channel open channel.
      * @param ranges ranges to read.
      * @param allocateRelease pool for allocating buffers, and releasing on failure
+     * @param statisticsUpdater callback to update statistics.
      */
     AsyncHandler(
         final AsynchronousFileChannel channel,
         final List<? extends FileRange> ranges,
-        final ByteBufferPool allocateRelease) {
+        final ByteBufferPool allocateRelease, final Consumer<Integer> statisticsUpdater) {
       this.channel = channel;
       this.ranges = ranges;
       this.buffers = new ByteBuffer[ranges.size()];
       this.allocateRelease = allocateRelease;
+      this.statisticsUpdater = statisticsUpdater;
     }
 
     /**
@@ -400,7 +415,9 @@ public class RawLocalFileSystem extends FileSystem {
       for(int i = 0; i < ranges.size(); ++i) {
         FileRange range = ranges.get(i);
         buffers[i] = allocateRelease.getBuffer(false, range.getLength());
-        channel.read(buffers[i], range.getOffset(), i, this);
+        final ByteBuffer buffer = buffers[i];
+        LOG.debug("Reading file range {} into buffer {}", range, System.identityHashCode(buffer));
+        channel.read(buffer, range.getOffset(), i, this);
       }
     }
 
@@ -416,6 +433,8 @@ public class RawLocalFileSystem extends FileSystem {
     public void completed(Integer result, Integer rangeIndex) {
       FileRange range = ranges.get(rangeIndex);
       ByteBuffer buffer = buffers[rangeIndex];
+      LOG.debug("Completed read range {} into buffer {} outcome={} remaining={}",
+          range, System.identityHashCode(buffer), result, buffer.remaining());
       if (result == -1) {
         // no data was read back.
         failed(new EOFException("Read past End of File"), rangeIndex);
@@ -424,6 +443,8 @@ public class RawLocalFileSystem extends FileSystem {
           // issue a read for the rest of the buffer
           channel.read(buffer, range.getOffset() + buffer.position(), rangeIndex, this);
         } else {
+          // read finished
+          statisticsUpdater.accept(range.getLength());
           // Flip the buffer and declare success.
           buffer.flip();
           range.getData().complete(buffer);

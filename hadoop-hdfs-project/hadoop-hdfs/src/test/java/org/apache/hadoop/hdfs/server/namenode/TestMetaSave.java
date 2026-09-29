@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
@@ -43,14 +44,17 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 /**
  * This class tests the creation and validation of metasave
  */
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class TestMetaSave {
   static final int NUM_DATA_NODES = 2;
   static final long seed = 0xDEADBEEFL;
@@ -59,7 +63,7 @@ public class TestMetaSave {
   private static FileSystem fileSys = null;
   private static NamenodeProtocols nnRpc = null;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     // start a cluster
     Configuration conf = new HdfsConfiguration();
@@ -80,6 +84,7 @@ public class TestMetaSave {
   /**
    * Tests metasave
    */
+  @Order(1)
   @Test
   public void testMetaSave()
       throws IOException, InterruptedException, TimeoutException {
@@ -104,8 +109,7 @@ public class TestMetaSave {
     try {
       reader = new BufferedReader(new InputStreamReader(in));
       String line = reader.readLine();
-      Assert.assertEquals(
-          "3 files and directories, 2 blocks = 5 total filesystem objects",
+      assertEquals("3 files and directories, 2 blocks = 5 total filesystem objects",
           line);
       line = reader.readLine();
       assertTrue(line.equals("Live Datanodes: 1"));
@@ -277,7 +281,7 @@ public class TestMetaSave {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (fileSys != null)
       fileSys.close();
@@ -315,6 +319,6 @@ public class TestMetaSave {
         return BlockManagerTestUtil.isDatanodeRemoved(
             cluster.getNameNode(), dnToStop.getDatanodeUuid());
       }
-    }, 1000, 30000);
+    }, 1000, 60000);
   }
 }

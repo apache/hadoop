@@ -119,6 +119,32 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
    */
   void readVectoredBytesDiscarded(int discarded);
 
+  /**
+   * Number of S3 GET requests initiated by the stream.
+   */
+  void getRequestInitiated();
+
+  /**
+   * Number of S3 HEAD requests initiated by the stream.
+   */
+  void headRequestInitiated();
+
+  /**
+   * Number of bytes prefetched.
+   * @param size number of bytes prefetched.
+   */
+  void bytesPrefetched(long size);
+
+  /**
+   * Number of failures in footer parsing.
+   */
+  void footerParsingFailed();
+
+  /**
+   * If the request data is already in the data cache.
+   */
+  void streamReadCacheHit();
+
   @Override
   void close();
 

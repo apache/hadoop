@@ -27,9 +27,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -48,6 +47,7 @@ import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.FunctionalIO.toUncheckedIOExceptionSupplier;
 import static org.mockito.Mockito.mock;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test the client manager.
@@ -83,7 +83,7 @@ public class TestClientManager extends AbstractHadoopTestBase {
 
   private URI uri;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     asyncClient = mock(S3AsyncClient.class);
     transferManager = mock(S3TransferManager.class);
@@ -134,20 +134,20 @@ public class TestClientManager extends AbstractHadoopTestBase {
     final StubS3ClientFactory factory = factory(Duration.ZERO);
     final ClientManager manager = manager(factory);
 
-    Assertions.assertThat(manager.getOrCreateS3Client())
+    assertThat(manager.getOrCreateS3Client())
         .describedAs("manager %s", manager)
         .isSameAs(s3Client);
-    Assertions.assertThat(factory.clientCreationCount())
+    assertThat(factory.clientCreationCount())
         .describedAs("client creation count")
         .isEqualTo(1);
 
     // second attempt returns same instance
-    Assertions.assertThat(manager.getOrCreateS3Client())
+    assertThat(manager.getOrCreateS3Client())
         .describedAs("manager %s", manager)
         .isSameAs(s3Client);
 
     // and the factory counter is not incremented.
-    Assertions.assertThat(factory.clientCreationCount())
+    assertThat(factory.clientCreationCount())
         .describedAs("client creation count")
         .isEqualTo(1);
 
@@ -179,13 +179,13 @@ public class TestClientManager extends AbstractHadoopTestBase {
     final StubS3ClientFactory factory = factory(Duration.ofMillis(100));
     final ClientManager manager = manager(factory);
 
-    Assertions.assertThat(manager.getOrCreateAsyncClient())
+    assertThat(manager.getOrCreateAsyncClient())
         .describedAs("manager %s", manager)
         .isSameAs(asyncClient);
 
     manager.getOrCreateAsyncClient();
     // and the factory counter is not incremented.
-    Assertions.assertThat(factory.asyncClientCreationCount())
+    assertThat(factory.asyncClientCreationCount())
         .describedAs("client creation count")
         .isEqualTo(1);
 
@@ -207,15 +207,15 @@ public class TestClientManager extends AbstractHadoopTestBase {
     final StubS3ClientFactory factory = factory(Duration.ZERO);
     final ClientManager manager = manager(factory);
 
-    Assertions.assertThat(manager.getOrCreateTransferManager())
+    assertThat(manager.getOrCreateTransferManager())
         .describedAs("manager %s", manager)
         .isSameAs(transferManager);
 
     // and we created an async client
-    Assertions.assertThat(factory.asyncClientCreationCount())
+    assertThat(factory.asyncClientCreationCount())
         .describedAs("client creation count")
         .isEqualTo(1);
-    Assertions.assertThat(factory.transferManagerCreationCount())
+    assertThat(factory.transferManagerCreationCount())
         .describedAs("client creation count")
         .isEqualTo(1);
 
@@ -235,12 +235,12 @@ public class TestClientManager extends AbstractHadoopTestBase {
     final ClientManager manager = manager(factory);
 
     manager.getOrCreateAsyncClient();
-    Assertions.assertThat(manager.getOrCreateTransferManager())
+    assertThat(manager.getOrCreateTransferManager())
         .describedAs("manager %s", manager)
         .isSameAs(transferManager);
 
     // no new async client was created.
-    Assertions.assertThat(factory.asyncClientCreationCount())
+    assertThat(factory.asyncClientCreationCount())
         .describedAs("client creation count")
         .isEqualTo(1);
   }
@@ -289,12 +289,12 @@ public class TestClientManager extends AbstractHadoopTestBase {
 
     // now assert that the #1 client has succeeded, without
     // even calling futureClient.get() to evaluate the result.
-    Assertions.assertThat(threadRef.get())
+    assertThat(threadRef.get())
         .describedAs("Thread in which client #1 was created")
         .isNotSameAs(Thread.currentThread());
 
     final S3Client orig = futureClient.get();
-    Assertions.assertThat(orig)
+    assertThat(orig)
         .describedAs("second getOrCreate() call to %s", manager)
         .isSameAs(client2);
   }
@@ -340,7 +340,7 @@ public class TestClientManager extends AbstractHadoopTestBase {
 
     // now assert that the #1 client has succeeded, without
     // even calling futureClient.get() to evaluate the result.
-    Assertions.assertThat(threadRef.get())
+    assertThat(threadRef.get())
         .describedAs("Thread in which client #1 was created")
         .isNotSameAs(Thread.currentThread());
 

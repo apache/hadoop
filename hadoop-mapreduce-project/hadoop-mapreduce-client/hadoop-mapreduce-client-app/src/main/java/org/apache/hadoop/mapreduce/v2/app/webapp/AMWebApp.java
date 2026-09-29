@@ -41,6 +41,7 @@ public class AMWebApp extends WebApp implements AMParams {
     bind(AppContext.class).toInstance(appContext);
     route("/", AppController.class);
     route("/app", AppController.class);
+    route("/mapreduce", AppController.class);
     route(pajoin("/job", JOB_ID), AppController.class, "job");
     route(pajoin("/conf", JOB_ID), AppController.class, "conf");
     route(pajoin("/jobcounters", JOB_ID), AppController.class, "jobCounters");

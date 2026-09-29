@@ -21,7 +21,9 @@ package org.apache.hadoop.fs.contract.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractUnbufferTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
+@IntegrationTest
 public class ITestS3AContractUnbuffer extends AbstractContractUnbufferTest {
 
   @Override

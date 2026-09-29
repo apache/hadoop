@@ -29,9 +29,11 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +74,9 @@ import static org.apache.hadoop.test.LambdaTestUtils.eval;
  * Test partial failures of delete and rename operations,.
  *
  * All these test have a unique path for each run, with a roleFS having
- * full RW access to part of it, and R/O access to a restricted subdirectory
+ * full RW access to part of it, and R/O access to a restricted subdirectory.
+ * <p>
+ * Tests are skipped on S3Express buckets or if no assumed role is provided.
  *
  * <ol>
  *   <li>
@@ -90,8 +94,9 @@ import static org.apache.hadoop.test.LambdaTestUtils.eval;
  * </ol>
  *
  */
+@ParameterizedClass(name="bulk-delete-{0}")
+@MethodSource("params")
 @SuppressWarnings("ThrowableNotThrown")
-@RunWith(Parameterized.class)
 public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
   private static final Logger LOG =
@@ -190,7 +195,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    *
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters(name = "bulk-delete={0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {false},
@@ -215,9 +219,11 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * @throws Exception failure
    */
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     assumeRoleTests();
+    skipIfS3ExpressBucket(getConfiguration());
     basePath = uniquePath();
     readOnlyDir = new Path(basePath, "readonlyDir");
     writableDir = new Path(basePath, "writableDir");
@@ -256,6 +262,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     dirDepth = scaleTest ? DEPTH_SCALED : DEPTH;
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     cleanupWithLogger(LOG, roleFS);
@@ -599,8 +606,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     // as a safety check, verify that one of the deletable files can be deleted
     Path head = deletableFiles.remove(0);
-    assertTrue("delete " + head + " failed",
-        roleFS.delete(head, false));
+    assertTrue(roleFS.delete(head, false),
+        "delete " + head + " failed");
 
     // this set can be deleted by the role FS
     MetricDiff rejectionCount = new MetricDiff(roleFS, FILES_DELETE_REJECTED);

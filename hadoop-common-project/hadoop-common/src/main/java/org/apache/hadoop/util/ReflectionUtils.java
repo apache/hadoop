@@ -302,6 +302,60 @@ public class ReflectionUtils {
   static int getCacheSize() {
     return CONSTRUCTOR_CACHE.size();
   }
+
+  /**
+   * Find and load the class with given name <code>className</code> using the
+   * classloader of the specified <code>conf</code> (or this class's classloader
+   * when <code>conf</code> is null) and, when <code>requiredSuperType</code> is
+   * non-null, verify the loaded class is assignable to it before returning.
+   * <p>The class is not initialized.
+   *
+   * @param conf configuration supplying the classloader; may be null.
+   * @param className the name of the class to load.
+   * @param requiredSuperType required supertype of the class, or null to skip
+   *        the check.
+   * @param <T> type of the interface.
+   * @return the loaded class.
+   * @throws ClassNotFoundException if the class cannot be found.
+   * @throws ClassCastException if <code>requiredSuperType</code> is
+   *         non-null and the class is not assignable to it.
+   */
+  public static<T> Class<? extends T> loadUninitedClass(Configuration conf, String className,
+      Class<T> requiredSuperType) throws ClassNotFoundException {
+    ClassLoader cl = (conf != null)
+        ? conf.getClassLoader()
+        : ReflectionUtils.class.getClassLoader();
+    return loadUninitedClass(cl, className, requiredSuperType);
+  }
+
+  /**
+   * Find and load the class with given name <code>className</code> using the
+   * specified classloader <code>cl</code> and, when
+   * <code>requiredSuperType</code> is non-null, verify the loaded class is
+   * assignable to it before returning.
+   * <p>The class is not initialized.
+   *
+   * @param cl the classloader to use.
+   * @param className the name of the class to load.
+   * @param requiredSuperType required supertype of the class, or null to skip
+   *        the check.
+   * @param <T> type of the interface.
+   * @return the loaded class.
+   * @throws ClassNotFoundException if the class cannot be found.
+   * @throws ClassCastException if <code>requiredSuperType</code> is
+   *         non-null and the class is not assignable to it.
+   */
+  @SuppressWarnings("unchecked")
+  public static<T> Class<? extends T> loadUninitedClass(ClassLoader cl, String className,
+      Class<T> requiredSuperType) throws ClassNotFoundException, ClassCastException {
+    Class<?> clazz = Class.forName(className, false, cl);
+    if (requiredSuperType != null && !requiredSuperType.isAssignableFrom(clazz)) {
+      throw new ClassCastException(
+          className + " is not a subtype of " + requiredSuperType.getName());
+    }
+    return (Class<? extends T>) clazz;
+  }
+
   /**
    * A pair of input/output buffers that we use to clone writables.
    */
@@ -413,4 +467,5 @@ public class ReflectionUtils {
     
     return methods;
   }
+
 }

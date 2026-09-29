@@ -29,17 +29,15 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.util.DataChecksum;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.Is.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -54,9 +52,8 @@ import static org.mockito.Mockito.when;
  * Mock-based unit test to verify that the DataXceiver correctly handles the
  * LazyPersist hint from clients.
  */
+@Timeout(300)
 public class TestDataXceiverLazyPersistHint {
-  @Rule
-  public Timeout timeout = new Timeout(300000);
 
   private enum PeerLocality {
     LOCAL,
@@ -80,7 +77,7 @@ public class TestDataXceiverLazyPersistHint {
 
     for (Boolean lazyPersistSetting : Arrays.asList(true, false)) {
       issueWriteBlockCall(xceiver, lazyPersistSetting);
-      assertThat(captor.getValue(), is(lazyPersistSetting));
+      assertThat(captor.getValue()).isEqualTo(lazyPersistSetting);
     }
   }
 
@@ -95,7 +92,7 @@ public class TestDataXceiverLazyPersistHint {
 
     for (Boolean lazyPersistSetting : Arrays.asList(true, false)) {
       issueWriteBlockCall(xceiver, lazyPersistSetting);
-      assertThat(captor.getValue(), is(false));
+      assertThat(captor.getValue()).isEqualTo(false);
     }
   }
 
@@ -112,7 +109,7 @@ public class TestDataXceiverLazyPersistHint {
 
     for (Boolean lazyPersistSetting : Arrays.asList(true, false)) {
       issueWriteBlockCall(xceiver, lazyPersistSetting);
-      assertThat(captor.getValue(), is(lazyPersistSetting));
+      assertThat(captor.getValue()).isEqualTo(lazyPersistSetting);
     }
   }
 

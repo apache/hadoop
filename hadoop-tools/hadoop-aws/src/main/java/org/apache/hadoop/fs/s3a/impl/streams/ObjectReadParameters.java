@@ -23,7 +23,9 @@ import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import static java.util.Objects.requireNonNull;
 
@@ -68,6 +70,34 @@ public final class ObjectReadParameters {
    * Allocator of local FS storage.
    */
   private LocalDirAllocator directoryAllocator;
+
+  /**
+   * Encryption secrets for this stream.
+   */
+  private EncryptionSecrets encryptionSecrets;
+
+  /**
+   * Span for which this stream is being created.
+   */
+  private AuditSpan auditSpan;
+
+  /**
+   * Getter.
+   * @return Encryption secrets.
+   */
+  public EncryptionSecrets getEncryptionSecrets() {
+    return encryptionSecrets;
+  }
+
+  /**
+   * Set encryption secrets.
+   * @param value new value
+   * @return the builder
+   */
+  public ObjectReadParameters withEncryptionSecrets(final EncryptionSecrets value) {
+    encryptionSecrets = value;
+    return this;
+  }
 
   /**
    * @return Read operation context.
@@ -173,6 +203,24 @@ public final class ObjectReadParameters {
   }
 
   /**
+   * Getter.
+   * @return Audit span.
+   */
+  public AuditSpan getAuditSpan() {
+    return auditSpan;
+  }
+
+  /**
+   * Set audit span.
+   * @param value new value
+   * @return the builder
+   */
+  public ObjectReadParameters withAuditSpan(final AuditSpan value) {
+    auditSpan = value;
+    return this;
+  }
+
+  /**
    * Validate that all attributes are as expected.
    * Mock tests can skip this if required.
    * @return the object.
@@ -185,6 +233,8 @@ public final class ObjectReadParameters {
     requireNonNull(directoryAllocator, "directoryAllocator");
     requireNonNull(objectAttributes, "objectAttributes");
     requireNonNull(streamStatistics, "streamStatistics");
+    requireNonNull(encryptionSecrets, "encryptionSecrets");
+    requireNonNull(auditSpan, "auditSpan");
     return this;
   }
 }

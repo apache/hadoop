@@ -26,14 +26,14 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.tools.GetGroups;
 import org.apache.hadoop.tools.GetGroupsTestBase;
 import org.apache.hadoop.util.Tool;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestGetGroupsWithHA extends GetGroupsTestBase {
   
   private MiniDFSCluster cluster;
   
-  @Before
+  @BeforeEach
   public void setUpNameNode() throws IOException {
     conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf)
@@ -42,7 +42,7 @@ public class TestGetGroupsWithHA extends GetGroupsTestBase {
     HATestUtil.setFailoverConfigurations(cluster, conf);
   }
   
-  @After
+  @AfterEach
   public void tearDownNameNode() {
     if (cluster != null) {
       cluster.shutdown();

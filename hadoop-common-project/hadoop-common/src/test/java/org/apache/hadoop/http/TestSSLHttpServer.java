@@ -136,8 +136,10 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
   private static void setupServer(Configuration conf, Configuration sslConf)
       throws IOException, URISyntaxException {
-    conf.set(SSLFactory.SSL_ENABLED_PROTOCOLS_KEY, INCLUDED_PROTOCOLS);
-    sslConf.set(SSLFactory.SSL_ENABLED_PROTOCOLS_KEY, INCLUDED_PROTOCOLS);
+    String protocols = Shell.isJavaVersionAtLeast(11)
+        ? INCLUDED_PROTOCOLS_JDK11 : INCLUDED_PROTOCOLS;
+    conf.set(SSLFactory.SSL_ENABLED_PROTOCOLS_KEY, protocols);
+    sslConf.set(SSLFactory.SSL_ENABLED_PROTOCOLS_KEY, protocols);
     server = new HttpServer2.Builder().setName("test")
         .addEndpoint(new URI("https://localhost")).setConf(conf)
         .keyPassword(

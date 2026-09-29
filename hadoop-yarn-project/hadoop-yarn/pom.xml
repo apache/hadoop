@@ -17,11 +17,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.5.0-SNAPSHOT</version>
+    <version>3.6.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-yarn</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache Hadoop YARN</name>
 
@@ -44,7 +44,11 @@
         <artifactId>spotbugs-maven-plugin</artifactId>
          <configuration>
           <xmlOutput>true</xmlOutput>
-          <excludeFilterFile>${yarn.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+           <excludeFilterFiles>
+             <excludeFilterFile>${yarn.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+             <excludeFilterFile>${maven.multiModuleProjectDirectory}/dev-support/findbugs-exclude-global.xml
+             </excludeFilterFile>
+           </excludeFilterFiles>
           <effort>Max</effort>
         </configuration>
       </plugin>
@@ -147,7 +151,7 @@
                 <configuration>
                   <artifactItems>
                     <artifactItem>
-                      <groupId>jdiff</groupId>
+                      <groupId>io.github.zhtttylz</groupId>
                       <artifactId>jdiff</artifactId>
                       <version>${jdiff.version}</version>
                       <overWrite>false</overWrite>
@@ -202,6 +206,7 @@
                       <classpath>
                         <path refid="maven.compile.classpath"/>
                       </classpath>
+                      <arg value="-J--add-opens=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED"/>
                     </javadoc>
                     <javadoc sourcepath="${basedir}/src/main/java"
                       destdir="${project.build.directory}/site/jdiff/xml"
@@ -223,6 +228,7 @@
                       <classpath>
                         <path refid="maven.compile.classpath"/>
                       </classpath>
+                      <arg value="-J--add-opens=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED"/>
                     </javadoc>
 
                   </target>
@@ -244,6 +250,7 @@
     <module>hadoop-yarn-client</module>
     <module>hadoop-yarn-registry</module>
     <module>hadoop-yarn-ui</module>
+    <module>hadoop-yarn-capacity-scheduler-ui</module>
     <module>hadoop-yarn-csi</module>
   </modules>
   <!--  -->

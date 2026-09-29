@@ -32,6 +32,7 @@ import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +46,6 @@ public class TestUberAM extends TestMRJobs {
 
   @BeforeAll
   public static void setup() throws IOException {
-    TestMRJobs.setup();
     if (mrCluster != null) {
     	mrCluster.getConfig().setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, true);
     	mrCluster.getConfig().setInt(MRJobConfig.JOB_UBERTASK_MAXREDUCES, 3);
@@ -54,6 +54,7 @@ public class TestUberAM extends TestMRJobs {
 
   @Override
   @Test
+  @Timeout(value = 300)
   public void testSleepJob()
   throws Exception {
     numSleepReducers = 1;
@@ -61,6 +62,7 @@ public class TestUberAM extends TestMRJobs {
   }
   
   @Test
+  @Timeout(value = 300)
   public void testSleepJobWithMultipleReducers()
   throws Exception {
     numSleepReducers = 3;
@@ -82,6 +84,7 @@ public class TestUberAM extends TestMRJobs {
 
   @Override
   @Test
+  @Timeout(value = 300)
   public void testRandomWriter()
   throws IOException, InterruptedException, ClassNotFoundException {
     super.testRandomWriter();
@@ -100,6 +103,7 @@ public class TestUberAM extends TestMRJobs {
 
   @Override
   @Test
+  @Timeout(value = 300)
   public void testFailingMapper()
   throws IOException, InterruptedException, ClassNotFoundException {
     LOG.info("\n\n\nStarting uberized testFailingMapper().");

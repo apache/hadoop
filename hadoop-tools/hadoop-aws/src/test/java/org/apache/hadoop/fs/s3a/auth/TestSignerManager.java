@@ -25,16 +25,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.assertj.core.api.Assertions;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.signer.Signer;
 import software.amazon.awssdk.http.SdkHttpFullRequest;
 import software.amazon.awssdk.http.SdkHttpMethod;
-import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.auth.TestSignerManager.SignerInitializerForTest.StoreValue;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
@@ -47,6 +49,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
 import static org.apache.hadoop.fs.s3a.auth.SignerFactory.S3_V2_SIGNER;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for the SignerManager.
@@ -61,7 +64,7 @@ public class TestSignerManager extends AbstractHadoopTestBase {
   private static final String TESTUSER1 = "testuser1";
   private static final String TESTUSER2 = "testuser2";
 
-  @Before
+  @BeforeEach
   public void beforeTest() {
     SignerForTest1.reset();
     SignerForTest2.reset();
@@ -93,7 +96,7 @@ public class TestSignerManager extends AbstractHadoopTestBase {
     signerManager.initCustomSigners();
     // Simulate a call from the AWS SDK to create the signer.
     intercept(InstantiationIOException.class,
-        () -> SignerFactory.createSigner("testsignerUnregistered", null));
+        () -> SignerFactory.createSigner("testsignerUnregistered", config, null));
   }
 
   @Test
@@ -103,9 +106,13 @@ public class TestSignerManager extends AbstractHadoopTestBase {
     SignerManager signerManager = new SignerManager("dontcare", null, config,
         UserGroupInformation.getCurrentUser());
     signerManager.initCustomSigners();
-    Signer s1 = SignerFactory.createSigner("testsigner1", null);
+    Signer s1 = SignerFactory.createSigner("testsigner1", config, null);
+    Configurable cs1 = (Configurable) s1;
+    Assertions.assertThat(cs1.getConf())
+        .describedAs("Configuration of %s", s1)
+        .isSameAs(config);
     s1.sign(null, null);
-    Assertions.assertThat(SignerForTest1.initialized)
+    assertThat(SignerForTest1.initialized)
         .as(SignerForTest1.class.getName() + " not initialized")
         .isEqualTo(true);
   }
@@ -119,15 +126,15 @@ public class TestSignerManager extends AbstractHadoopTestBase {
     SignerManager signerManager = new SignerManager("dontcare", null, config,
         UserGroupInformation.getCurrentUser());
     signerManager.initCustomSigners();
-    Signer s1 = SignerFactory.createSigner("testsigner1", null);
+    Signer s1 = SignerFactory.createSigner("testsigner1", config, null);
     s1.sign(null, null);
-    Assertions.assertThat(SignerForTest1.initialized)
+    assertThat(SignerForTest1.initialized)
         .as(SignerForTest1.class.getName() + " not initialized")
         .isEqualTo(true);
 
-    Signer s2 = SignerFactory.createSigner("testsigner2", null);
+    Signer s2 = SignerFactory.createSigner("testsigner2", config, null);
     s2.sign(null, null);
-    Assertions.assertThat(SignerForTest2.initialized)
+    assertThat(SignerForTest2.initialized)
         .as(SignerForTest2.class.getName() + " not initialized")
         .isEqualTo(true);
   }
@@ -149,18 +156,18 @@ public class TestSignerManager extends AbstractHadoopTestBase {
     SignerManager signerManager = new SignerManager("bucket1", dtProvider,
         config, ugi);
     signerManager.initCustomSigners();
-    Assertions.assertThat(SignerInitializerForTest.instanceCount)
+    assertThat(SignerInitializerForTest.instanceCount)
         .as(SignerInitializerForTest.class.getName()
             + " creation count mismatch").isEqualTo(1);
-    Assertions.assertThat(SignerInitializerForTest.registerCount)
+    assertThat(SignerInitializerForTest.registerCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(1);
-    Assertions.assertThat(SignerInitializerForTest.unregisterCount)
+    assertThat(SignerInitializerForTest.unregisterCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(0);
 
     signerManager.close();
-    Assertions.assertThat(SignerInitializerForTest.unregisterCount)
+    assertThat(SignerInitializerForTest.unregisterCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(1);
   }
@@ -187,31 +194,31 @@ public class TestSignerManager extends AbstractHadoopTestBase {
         config, ugi);
     signerManager.initCustomSigners();
 
-    Assertions.assertThat(SignerInitializerForTest.instanceCount)
+    assertThat(SignerInitializerForTest.instanceCount)
         .as(SignerInitializerForTest.class.getName()
             + " creation count mismatch").isEqualTo(1);
-    Assertions.assertThat(SignerInitializerForTest.registerCount)
+    assertThat(SignerInitializerForTest.registerCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(1);
-    Assertions.assertThat(SignerInitializerForTest.unregisterCount)
+    assertThat(SignerInitializerForTest.unregisterCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(0);
 
-    Assertions.assertThat(SignerInitializer2ForTest.instanceCount)
+    assertThat(SignerInitializer2ForTest.instanceCount)
         .as(SignerInitializer2ForTest.class.getName()
             + " creation count mismatch").isEqualTo(1);
-    Assertions.assertThat(SignerInitializer2ForTest.registerCount)
+    assertThat(SignerInitializer2ForTest.registerCount)
         .as(SignerInitializer2ForTest.class.getName()
             + " registration count mismatch").isEqualTo(1);
-    Assertions.assertThat(SignerInitializer2ForTest.unregisterCount)
+    assertThat(SignerInitializer2ForTest.unregisterCount)
         .as(SignerInitializer2ForTest.class.getName()
             + " registration count mismatch").isEqualTo(0);
 
     signerManager.close();
-    Assertions.assertThat(SignerInitializerForTest.unregisterCount)
+    assertThat(SignerInitializerForTest.unregisterCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(1);
-    Assertions.assertThat(SignerInitializer2ForTest.unregisterCount)
+    assertThat(SignerInitializer2ForTest.unregisterCount)
         .as(SignerInitializer2ForTest.class.getName()
             + " registration count mismatch").isEqualTo(1);
   }
@@ -238,13 +245,13 @@ public class TestSignerManager extends AbstractHadoopTestBase {
         SignerForInitializerTest.class, SignerInitializerForTest.class, BUCKET2,
         ugiU2);
 
-    Assertions.assertThat(SignerInitializerForTest.instanceCount)
+    assertThat(SignerInitializerForTest.instanceCount)
         .as(SignerInitializerForTest.class.getName()
             + " creation count mismatch").isEqualTo(3);
-    Assertions.assertThat(SignerInitializerForTest.registerCount)
+    assertThat(SignerInitializerForTest.registerCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(3);
-    Assertions.assertThat(SignerInitializerForTest.unregisterCount)
+    assertThat(SignerInitializerForTest.unregisterCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(0);
 
@@ -264,7 +271,7 @@ public class TestSignerManager extends AbstractHadoopTestBase {
     closeAndVerifyNull(signerManagerU2B2, BUCKET2, ugiU2, 1);
     closeAndVerifyNull(signerManagerU2B1, BUCKET1, ugiU2, 0);
 
-    Assertions.assertThat(SignerInitializerForTest.unregisterCount)
+    assertThat(SignerInitializerForTest.unregisterCount)
         .as(SignerInitializerForTest.class.getName()
             + " registration count mismatch").isEqualTo(3);
   }
@@ -284,24 +291,24 @@ public class TestSignerManager extends AbstractHadoopTestBase {
   private void verifyStoreValueInSigner(boolean expectNull, String bucketName,
       String identifier) throws IOException {
     if (expectNull) {
-      Assertions.assertThat(SignerForInitializerTest.retrievedStoreValue)
+      assertThat(SignerForInitializerTest.retrievedStoreValue)
           .as("Retrieved store value expected to be null").isNull();
     } else {
       StoreValue storeValue = SignerForInitializerTest.retrievedStoreValue;
-      Assertions.assertThat(storeValue).as("StoreValue should not be null")
+      assertThat(storeValue).as("StoreValue should not be null")
           .isNotNull();
-      Assertions.assertThat(storeValue.getBucketName())
+      assertThat(storeValue.getBucketName())
           .as("Bucket Name mismatch").isEqualTo(bucketName);
       Configuration conf = storeValue.getStoreConf();
-      Assertions.assertThat(conf).as("Configuration should not be null")
+      assertThat(conf).as("Configuration should not be null")
           .isNotNull();
-      Assertions.assertThat(conf.get(TEST_KEY_IDENTIFIER))
+      assertThat(conf.get(TEST_KEY_IDENTIFIER))
           .as("Identifier mistmatch").isEqualTo(identifier);
       Token<? extends TokenIdentifier> token = storeValue.getDtProvider()
           .getFsDelegationToken();
       String tokenId = new String(token.getIdentifier(),
           StandardCharsets.UTF_8);
-      Assertions.assertThat(tokenId)
+      assertThat(tokenId)
           .as("Mismatch in delegation token identifier").isEqualTo(
           createTokenIdentifierString(identifier, bucketName,
               UserGroupInformation.getCurrentUser().getShortUserName()));
@@ -313,7 +320,7 @@ public class TestSignerManager extends AbstractHadoopTestBase {
       throws IOException, InterruptedException {
     closeable.close();
     attemptSignAndVerify("dontcare", bucketName, ugi, true);
-    Assertions.assertThat(SignerInitializerForTest.storeCache.size())
+    assertThat(SignerInitializerForTest.storeCache.size())
         .as("StoreCache size mismatch").isEqualTo(expectedCount);
   }
 
@@ -321,7 +328,7 @@ public class TestSignerManager extends AbstractHadoopTestBase {
    * SignerForTest1.
    */
   @Private
-  public static class SignerForTest1 implements Signer {
+  public static final class SignerForTest1 extends Configured implements Signer {
 
     private static boolean initialized = false;
 
@@ -586,13 +593,13 @@ public class TestSignerManager extends AbstractHadoopTestBase {
   @Test
   public void testV2SignerRejected() throws Throwable {
     intercept(InstantiationIOException.class, "no longer supported",
-        () -> SignerFactory.createSigner(S3_V2_SIGNER, "key"));
+        () -> SignerFactory.createSigner(S3_V2_SIGNER, new Configuration(), "key"));
   }
 
   @Test
   public void testUnknownSignerRejected() throws Throwable {
     intercept(InstantiationIOException.class, "unknownSigner",
-        () -> SignerFactory.createSigner("unknownSigner", "key"));
+        () -> SignerFactory.createSigner("unknownSigner", new Configuration(), "key"));
   }
 
 }

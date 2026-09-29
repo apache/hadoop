@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.contract;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractBulkDeleteTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.junit.jupiter.api.BeforeEach;
 
 public class ITestAbfsContractBulkDelete extends AbstractContractBulkDeleteTest {
 
@@ -32,6 +33,7 @@ public class ITestAbfsContractBulkDelete extends AbstractContractBulkDeleteTest 
     this.isSecure = binding.isSecureMode();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();

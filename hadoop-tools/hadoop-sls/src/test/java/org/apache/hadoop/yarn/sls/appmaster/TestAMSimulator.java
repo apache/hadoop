@@ -65,6 +65,7 @@ public class TestAMSimulator {
   private ResourceManager rm;
   private YarnConfiguration conf;
   private Path metricOutputDir;
+  private Path nodeLabelsStoreDir;
 
   private Class<?> slsScheduler;
   private Class<?> scheduler;
@@ -76,14 +77,16 @@ public class TestAMSimulator {
     });
   }
 
-  public void initTestAMSimulator(Class<?> pSlsScheduler, Class<?> pScheduler) {
+  public void initTestAMSimulator(Class<?> pSlsScheduler, Class<?> pScheduler)
+      throws IOException {
     this.slsScheduler = pSlsScheduler;
     this.scheduler = pScheduler;
     setup();
   }
 
-  public void setup() {
+  public void setup() throws IOException {
     createMetricOutputDir();
+    createNodeLabelsStoreDir();
 
     conf = new YarnConfiguration();
     conf.set(SLSConfiguration.METRICS_OUTPUT_DIR, metricOutputDir.toString());
@@ -91,6 +94,8 @@ public class TestAMSimulator {
     conf.set(SLSConfiguration.RM_SCHEDULER, scheduler.getName());
     conf.set(YarnConfiguration.NODE_LABELS_ENABLED, "true");
     conf.setBoolean(SLSConfiguration.METRICS_SWITCH, true);
+    conf.set(YarnConfiguration.FS_NODE_LABELS_STORE_ROOT_DIR,
+        nodeLabelsStoreDir.toUri().toString());
     rm = new ResourceManager();
     rm.init(conf);
     rm.start();
@@ -141,12 +146,22 @@ public class TestAMSimulator {
     }
   }
 
+  private void createNodeLabelsStoreDir() throws IOException {
+    Path testDir =
+        Paths.get(System.getProperty("test.build.data", "target/test-dir"));
+    nodeLabelsStoreDir = Files.createTempDirectory(testDir, "node-labels");
+  }
+
   private void deleteMetricOutputDir() {
     try {
       FileUtils.deleteDirectory(metricOutputDir.toFile());
     } catch (IOException e) {
       Assertions.fail(e.toString());
     }
+  }
+
+  private void deleteNodeLabelsStoreDir() throws IOException {
+    FileUtils.deleteDirectory(nodeLabelsStoreDir.toFile());
   }
 
   @ParameterizedTest
@@ -231,7 +246,7 @@ public class TestAMSimulator {
   @ParameterizedTest
   @MethodSource("params")
   public void testPackageRequests(Class<?> pSlsScheduler, Class<?> pScheduler)
-      throws YarnException {
+      throws YarnException, IOException {
     initTestAMSimulator(pSlsScheduler, pScheduler);
     MockAMSimulator app = new MockAMSimulator();
     List<ContainerSimulator> containerSimulators = new ArrayList<>();
@@ -383,11 +398,12 @@ public class TestAMSimulator {
   }
 
   @AfterEach
-  public void tearDown() {
+  public void tearDown() throws IOException {
     if (rm != null) {
       rm.stop();
     }
 
     deleteMetricOutputDir();
+    deleteNodeLabelsStoreDir();
   }
 }

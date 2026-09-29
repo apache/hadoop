@@ -201,8 +201,7 @@ release as the original build target.
 For MapReduce applications in particular, i.e. applications using the
 org.apache.hadoop.mapred and/or org.apache.hadoop.mapreduce APIs, the developer
 community SHALL support binary compatibility across major releases. The
-MapReduce APIs SHALL be supported compatibly across major releases. See
-[Compatibility for MapReduce applications between hadoop-1.x and hadoop-2.x](../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduce_Compatibility_Hadoop1_Hadoop2.html) for more details.
+MapReduce APIs SHALL be supported compatibly across major releases.
 
 Some applications may be affected by changes to disk layouts or other internal
 changes. See the sections that follow for policies on how incompatible
@@ -765,7 +764,6 @@ References
 Here are some relevant JIRAs and pages related to the topic:
 
 * The evolution of this document - [HADOOP-9517](https://issues.apache.org/jira/browse/HADOOP-9517)
-* Binary compatibility for MapReduce end-user applications between hadoop-1.x and hadoop-2.x - [MapReduce Compatibility between hadoop-1.x and hadoop-2.x](../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduce_Compatibility_Hadoop1_Hadoop2.html)
 * Annotations for interfaces as per interface classification schedule - [HADOOP-7391](https://issues.apache.org/jira/browse/HADOOP-7391) [Hadoop Interface Classification](./InterfaceClassification.html)
 * Compatibility for Hadoop 1.x releases - [HADOOP-5071](https://issues.apache.org/jira/browse/HADOOP-5071)
 * The [Hadoop Roadmap](http://wiki.apache.org/hadoop/Roadmap) page that captures other release policies

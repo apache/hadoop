@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -38,10 +38,11 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -77,13 +78,13 @@ public class TestFileConcurrentReader {
   private FileSystem fileSystem;
 
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = new Configuration();
     init(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -124,9 +125,8 @@ public class TestFileConcurrentReader {
     IOUtils.readFully(inputStream, buffer, 0, numBytes);
     inputStream.close();
 
-    assertTrue(
-      "unable to validate bytes",
-      validateSequentialBytes(buffer, 0, numBytes)
+    assertTrue(validateSequentialBytes(buffer, 0, numBytes),
+        "unable to validate bytes"
     );
   }
 
@@ -153,7 +153,8 @@ public class TestFileConcurrentReader {
   /**
    * Test that that writes to an incomplete block are available to a reader
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testUnfinishedBlockRead()
     throws IOException {
     // create a new file in the root, write data, do no close
@@ -176,7 +177,8 @@ public class TestFileConcurrentReader {
    * would result in too small a buffer to do the buffer-copy needed
    * for partial chunks.
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testUnfinishedBlockPacketBufferOverrun() throws IOException {
     // check that / exists
     Path path = new Path("/");
@@ -202,7 +204,8 @@ public class TestFileConcurrentReader {
   // use a small block size and a large write so that DN is busy creating
   // new blocks.  This makes it almost 100% sure we can reproduce
   // case of client getting a DN that hasn't yet created the blocks
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testImmediateReadOfNewFile()
     throws IOException {
     final int blockSize = 64 * 1024;
@@ -279,37 +282,41 @@ public class TestFileConcurrentReader {
 
   // for some reason, using tranferTo evokes the race condition more often
   // so test separately
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testUnfinishedBlockCRCErrorTransferTo() throws IOException {
     runTestUnfinishedBlockCRCError(true, SyncType.SYNC, DEFAULT_WRITE_SIZE);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testUnfinishedBlockCRCErrorTransferToVerySmallWrite()
     throws IOException {
     runTestUnfinishedBlockCRCError(true, SyncType.SYNC, SMALL_WRITE_SIZE);
   }
 
   // fails due to issue w/append, disable 
-  @Ignore
+  @Disabled
   public void _testUnfinishedBlockCRCErrorTransferToAppend()
     throws IOException {
     runTestUnfinishedBlockCRCError(true, SyncType.APPEND, DEFAULT_WRITE_SIZE);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testUnfinishedBlockCRCErrorNormalTransfer() throws IOException {
     runTestUnfinishedBlockCRCError(false, SyncType.SYNC, DEFAULT_WRITE_SIZE);
   }
 
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testUnfinishedBlockCRCErrorNormalTransferVerySmallWrite()
     throws IOException {
     runTestUnfinishedBlockCRCError(false, SyncType.SYNC, SMALL_WRITE_SIZE);
   }
 
   // fails due to issue w/append, disable 
-  @Ignore
+  @Disabled
   public void _testUnfinishedBlockCRCErrorNormalTransferAppend()
     throws IOException {
     runTestUnfinishedBlockCRCError(false, SyncType.APPEND, DEFAULT_WRITE_SIZE);
@@ -407,9 +414,7 @@ public class TestFileConcurrentReader {
       writer.join();
       tailer.join();
 
-      assertFalse(
-        "error occurred, see log above", error.get()
-      );
+      assertFalse(error.get(), "error occurred, see log above");
     } catch (InterruptedException e) {
       LOG.info("interrupted waiting for writer or tailer to complete");
 

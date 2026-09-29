@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 
@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBlockResult;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests that methods in DatanodeDescriptor
@@ -80,6 +80,6 @@ public class TestDatanodeDescriptor {
     assertEquals(1, dd.numBlocks());
     // remove second block
     assertTrue(BlocksMap.removeBlock(dd, blk1));
-    assertEquals(0, dd.numBlocks());    
+    assertEquals(0, dd.numBlocks());
   }
 }

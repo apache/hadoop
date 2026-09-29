@@ -493,4 +493,9 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   public long getPendingAsyncDeletions() {
     return 0;
   }
+
+  @Override
+  public long getNumBlocks() throws IOException {
+    return 0;
+  }
 }

@@ -20,8 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Hashtable;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -31,6 +30,8 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * Test FileSystemProperties.
@@ -99,32 +100,34 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
     assertEquals(properties, fetchedProperties);
   }
 
-  @Test (expected = Exception.class)
+  @Test
   public void testBase64InvalidFileSystemProperties() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final Hashtable<String, String> properties = new Hashtable<>();
-    properties.put("key", "{ value: value歲 }");
-    TracingContext tracingContext = getTestTracingContext(fs, true);
-    fs.getAbfsStore().setFilesystemProperties(properties, tracingContext);
-    Hashtable<String, String> fetchedProperties = fs.getAbfsStore()
+      Assertions.assertThrows(Exception.class, () -> {
+          final AzureBlobFileSystem fs = getFileSystem();
+          final Hashtable<String, String> properties = new Hashtable<>();
+          properties.put("key", "{ value: value歲 }");
+          TracingContext tracingContext = getTestTracingContext(fs, true);
+          fs.getAbfsStore().setFilesystemProperties(properties, tracingContext);
+          Hashtable<String, String> fetchedProperties = fs.getAbfsStore()
         .getFilesystemProperties(tracingContext);
-
-    assertEquals(properties, fetchedProperties);
+          assertEquals(properties, fetchedProperties);
+      });
   }
 
-  @Test (expected = Exception.class)
+  @Test
   public void testBase64InvalidPathProperties() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final Hashtable<String, String> properties = new Hashtable<>();
-    properties.put("key", "{ value: valueTest兩 }");
-    Path testPath = path(TEST_PATH);
-    touch(testPath);
-    TracingContext tracingContext = getTestTracingContext(fs, true);
-    fs.getAbfsStore().setPathProperties(testPath, properties, tracingContext);
-    Hashtable<String, String> fetchedProperties = fs.getAbfsStore()
+      Assertions.assertThrows(Exception.class, () -> {
+          final AzureBlobFileSystem fs = getFileSystem();
+          final Hashtable<String, String> properties = new Hashtable<>();
+          properties.put("key", "{ value: valueTest兩 }");
+          Path testPath = path(TEST_PATH);
+          touch(testPath);
+          TracingContext tracingContext = getTestTracingContext(fs, true);
+          fs.getAbfsStore().setPathProperties(testPath, properties, tracingContext);
+          Hashtable<String, String> fetchedProperties = fs.getAbfsStore()
         .getPathStatus(testPath, tracingContext);
-
-    assertEquals(properties, fetchedProperties);
+          assertEquals(properties, fetchedProperties);
+      });
   }
 
   @Test
@@ -157,10 +160,10 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
         = (AbfsInputStream) inputStream.getWrappedStream();
     int actualBufferSize = abfsInputStream.getBufferSize();
 
-    Assertions.assertThat(actualBufferSize)
+    assertThat(actualBufferSize)
         .describedAs("Buffer size should be set to the value in the configuration")
         .isEqualTo(bufferSizeConfig);
-    Assertions.assertThat(actualBufferSize)
+    assertThat(actualBufferSize)
         .describedAs("Buffer size should not be set to the value passed as argument")
         .isNotEqualTo(bufferSizeArg);
   }

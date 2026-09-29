@@ -138,4 +138,12 @@ public interface RouterRpcMonitor {
    * If a path is in a read only mount point.
    */
   void routerFailureReadOnly();
+
+  /**
+   * Record the async handler queue size for a nameservice.
+   *
+   * @param nsId nameservice id.
+   * @param queueSize current async handler queue size.
+   */
+  void recordAsyncHandlerQueueSize(String nsId, int queueSize);
 }

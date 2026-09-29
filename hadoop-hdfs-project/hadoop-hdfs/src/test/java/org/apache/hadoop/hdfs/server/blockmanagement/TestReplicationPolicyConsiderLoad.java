@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,11 +32,12 @@ import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.util.RwLockMode;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
+@MethodSource("data")
+@ParameterizedClass
 public class TestReplicationPolicyConsiderLoad
     extends BaseReplicationPolicyTest {
 
@@ -44,7 +45,6 @@ public class TestReplicationPolicyConsiderLoad
     this.blockPlacementPolicy = blockPlacementPolicy;
   }
 
-  @Parameterized.Parameters
   public static Iterable<Object[]> data() {
     return Arrays.asList(new Object[][] {
         { BlockPlacementPolicyDefault.class.getName() },
@@ -94,8 +94,8 @@ public class TestReplicationPolicyConsiderLoad
       // value in the above heartbeats
       final int load = 2 + 4 + 4;
       
-      assertEquals((double)load/6, dnManager.getFSClusterStats()
-        .getInServiceXceiverAverage(), EPSILON);
+      assertEquals((double) load / 6, dnManager.getFSClusterStats().getInServiceXceiverAverage(),
+          EPSILON);
       
       // Decommission DNs so BlockPlacementPolicyDefault.isGoodTarget()
       // returns false
@@ -104,8 +104,8 @@ public class TestReplicationPolicyConsiderLoad
         dnManager.getDatanodeAdminManager().startDecommission(d);
         d.setDecommissioned();
       }
-      assertEquals((double)load/3, dnManager.getFSClusterStats()
-        .getInServiceXceiverAverage(), EPSILON);
+      assertEquals((double) load / 3, dnManager.getFSClusterStats().getInServiceXceiverAverage(),
+          EPSILON);
 
       DatanodeDescriptor writerDn = dataNodes[0];
 
@@ -175,9 +175,9 @@ public class TestReplicationPolicyConsiderLoad
               new ArrayList<DatanodeStorageInfo>(), false, null,
               1024, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
       for(DatanodeStorageInfo info : targets) {
-        assertTrue("The node "+info.getDatanodeDescriptor().getName()+
-                " has higher load and should not have been picked!",
-            info.getDatanodeDescriptor().getXceiverCount() <= (load/6)*1.2);
+        assertTrue(info.getDatanodeDescriptor().getXceiverCount() <= (load / 6) * 1.2,
+            "The node " + info.getDatanodeDescriptor().getName()
+                + " has higher load and should not have been picked!");
       }
     } finally {
       namenode.getNamesystem().writeUnlock(RwLockMode.BM, "testConsiderLoadFactor");

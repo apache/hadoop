@@ -35,11 +35,15 @@ public final class FSUtils {
 
   public static void checkReadParameters(byte[] buffer, int offset, int length) {
     Preconditions.checkArgument(buffer != null, "Null buffer");
-    Preconditions.checkArgument(offset >= 0 && offset <= buffer.length,
-        "offset: %s is out of range [%s, %s]", offset, 0, buffer.length);
+    if (offset < 0 || offset > buffer.length) {
+      throw new IndexOutOfBoundsException(
+          String.format("offset: %s is out of range [%s, %s]", offset, 0, buffer.length));
+    }
     Preconditions.checkArgument(length >= 0, "length: %s is negative", length);
-    Preconditions.checkArgument(buffer.length >= offset + length,
-        OVERFLOW_ERROR_HINT, length, offset, (buffer.length - offset));
+    if (buffer.length < offset + length) {
+      throw new IndexOutOfBoundsException(
+          String.format(OVERFLOW_ERROR_HINT, length, offset, (buffer.length - offset)));
+    }
   }
 
   public static URI normalizeURI(URI fsUri, Configuration hadoopConfig) {

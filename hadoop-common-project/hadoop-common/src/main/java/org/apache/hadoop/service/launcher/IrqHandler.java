@@ -21,10 +21,9 @@ package org.apache.hadoop.service.launcher;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.SignalUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.misc.Signal;
-import sun.misc.SignalHandler;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -38,8 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-@SuppressWarnings("UseOfSunClasses")
-public final class IrqHandler implements SignalHandler {
+public final class IrqHandler implements SignalUtil.Handler {
   private static final Logger LOG = LoggerFactory.getLogger(IrqHandler.class);
   
   /**
@@ -68,7 +66,7 @@ public final class IrqHandler implements SignalHandler {
   /**
    * Stored signal.
    */
-  private Signal signal;
+  private SignalUtil.Signal signal;
 
   /**
    * Create an IRQ handler bound to the specific interrupt.
@@ -89,8 +87,8 @@ public final class IrqHandler implements SignalHandler {
   public void bind() {
     Preconditions.checkState(signal == null, "Handler already bound");
     try {
-      signal = new Signal(name);
-      Signal.handle(signal, this);
+      signal = new SignalUtil.Signal(name);
+      SignalUtil.handle(signal, this);
     } catch (IllegalArgumentException e) {
       throw new IllegalArgumentException(
           "Could not set handler for signal \"" + name + "\"."
@@ -110,7 +108,7 @@ public final class IrqHandler implements SignalHandler {
    * Raise the signal.
    */
   public void raise() {
-    Signal.raise(signal);
+    SignalUtil.raise(signal);
   }
 
   @Override
@@ -123,7 +121,7 @@ public final class IrqHandler implements SignalHandler {
    * @param s signal raised
    */
   @Override
-  public void handle(Signal s) {
+  public void handle(SignalUtil.Signal s) {
     signalCount.incrementAndGet();
     InterruptData data = new InterruptData(s.getName(), s.getNumber());
     LOG.info("Interrupted: {}", data);

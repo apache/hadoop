@@ -18,8 +18,8 @@
 package org.apache.hadoop.nfs;
 
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestNfsExports {
 
@@ -37,14 +37,14 @@ public class TestNfsExports {
   @Test
   public void testWildcardRW() {
     NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod, "* rw");
-    Assert.assertEquals(AccessPrivilege.READ_WRITE,
+    Assertions.assertEquals(AccessPrivilege.READ_WRITE,
         matcher.getAccessPrivilege(address1, hostname1));
   }
 
   @Test
   public void testWildcardRO() {
     NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod, "* ro");
-    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+    Assertions.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege(address1, hostname1));
   }
 
@@ -52,33 +52,32 @@ public class TestNfsExports {
   public void testExactAddressRW() {
     NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod, address1
         + " rw");
-    Assert.assertEquals(AccessPrivilege.READ_WRITE,
+    Assertions.assertEquals(AccessPrivilege.READ_WRITE,
         matcher.getAccessPrivilege(address1, hostname1));
-    Assert.assertFalse(AccessPrivilege.READ_WRITE == matcher
+    Assertions.assertFalse(AccessPrivilege.READ_WRITE == matcher
         .getAccessPrivilege(address2, hostname1));
   }
 
   @Test
   public void testExactAddressRO() {
     NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod, address1);
-    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+    Assertions.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege(address1, hostname1));
-    Assert.assertEquals(AccessPrivilege.NONE,
-        matcher.getAccessPrivilege(address2, hostname1));
+    Assertions.assertEquals(AccessPrivilege.NONE, matcher.getAccessPrivilege(address2, hostname1));
   }
 
   @Test
   public void testExactHostRW() {
     NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod, hostname1
         + " rw");
-    Assert.assertEquals(AccessPrivilege.READ_WRITE,
+    Assertions.assertEquals(AccessPrivilege.READ_WRITE,
         matcher.getAccessPrivilege(address1, hostname1));
   }
 
   @Test
   public void testExactHostRO() {
     NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod, hostname1);
-    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+    Assertions.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege(address1, hostname1));
   }
 
@@ -86,70 +85,64 @@ public class TestNfsExports {
   public void testCidrShortRW() {
     NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
         "192.168.0.0/22 rw");
-    Assert.assertEquals(AccessPrivilege.READ_WRITE,
+    Assertions.assertEquals(AccessPrivilege.READ_WRITE,
         matcher.getAccessPrivilege(address1, hostname1));
-    Assert.assertEquals(AccessPrivilege.NONE,
-        matcher.getAccessPrivilege(address2, hostname1));
+    Assertions.assertEquals(AccessPrivilege.NONE, matcher.getAccessPrivilege(address2, hostname1));
   }
 
   @Test
   public void testCidrShortRO() {
     NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
         "192.168.0.0/22");
-    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+    Assertions.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege(address1, hostname1));
-    Assert.assertEquals(AccessPrivilege.NONE,
-        matcher.getAccessPrivilege(address2, hostname1));
+    Assertions.assertEquals(AccessPrivilege.NONE, matcher.getAccessPrivilege(address2, hostname1));
   }
 
   @Test
   public void testCidrLongRW() {
     NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod, 
         "192.168.0.0/255.255.252.0 rw");
-    Assert.assertEquals(AccessPrivilege.READ_WRITE,
+    Assertions.assertEquals(AccessPrivilege.READ_WRITE,
         matcher.getAccessPrivilege(address1, hostname1));
-    Assert.assertEquals(AccessPrivilege.NONE,
-        matcher.getAccessPrivilege(address2, hostname1));
+    Assertions.assertEquals(AccessPrivilege.NONE, matcher.getAccessPrivilege(address2, hostname1));
   }
 
   @Test
   public void testCidrLongRO() {
     NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod, 
         "192.168.0.0/255.255.252.0");
-    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+    Assertions.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege(address1, hostname1));
-    Assert.assertEquals(AccessPrivilege.NONE,
-        matcher.getAccessPrivilege(address2, hostname1));
+    Assertions.assertEquals(AccessPrivilege.NONE, matcher.getAccessPrivilege(address2, hostname1));
   }
 
   @Test
   public void testRegexIPRW() {
     NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
         "192.168.0.[0-9]+ rw");
-    Assert.assertEquals(AccessPrivilege.READ_WRITE,
+    Assertions.assertEquals(AccessPrivilege.READ_WRITE,
         matcher.getAccessPrivilege(address1, hostname1));
-    Assert.assertEquals(AccessPrivilege.NONE,
-        matcher.getAccessPrivilege(address2, hostname1));
+    Assertions.assertEquals(AccessPrivilege.NONE, matcher.getAccessPrivilege(address2, hostname1));
   }
 
   @Test
   public void testRegexIPRO() {
     NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
         "192.168.0.[0-9]+");
-    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+    Assertions.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege(address1, hostname1));
-    Assert.assertEquals(AccessPrivilege.NONE,
-        matcher.getAccessPrivilege(address2, hostname1));
+    Assertions.assertEquals(AccessPrivilege.NONE, matcher.getAccessPrivilege(address2, hostname1));
   }
 
   @Test
   public void testRegexHostRW() {
     NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
         "[a-z]+.b.com rw");
-    Assert.assertEquals(AccessPrivilege.READ_WRITE,
+    Assertions.assertEquals(AccessPrivilege.READ_WRITE,
         matcher.getAccessPrivilege(address1, hostname1));
     // address1 will hit the cache
-    Assert.assertEquals(AccessPrivilege.READ_WRITE,
+    Assertions.assertEquals(AccessPrivilege.READ_WRITE,
         matcher.getAccessPrivilege(address1, hostname2));
   }
 
@@ -157,10 +150,10 @@ public class TestNfsExports {
   public void testRegexHostRO() {
     NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
         "[a-z]+.b.com");
-    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+    Assertions.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege(address1, hostname1));
     // address1 will hit the cache
-    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+    Assertions.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege(address1, hostname2));
   }
   
@@ -168,17 +161,17 @@ public class TestNfsExports {
   public void testRegexGrouping() {
     NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
         "192.168.0.(12|34)");
-    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+    Assertions.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege(address1, hostname1));
     // address1 will hit the cache
-    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+    Assertions.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege(address1, hostname2));
 
     matcher = new NfsExports(CacheSize, ExpirationPeriod, "\\w*.a.b.com");
-    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+    Assertions.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege("1.2.3.4", "web.a.b.com"));
     // address "1.2.3.4" will hit the cache
-    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+    Assertions.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege("1.2.3.4", "email.a.b.org"));
   }
   
@@ -187,16 +180,16 @@ public class TestNfsExports {
     long shortExpirationPeriod = 1 * 1000 * 1000 * 1000; // 1s
     NfsExports matcher = new NfsExports(CacheSize, shortExpirationPeriod, 
         "192.168.0.[0-9]+;[a-z]+.b.com rw");
-    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+    Assertions.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege(address1, hostname2));
-    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+    Assertions.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege(address1, address1));
-    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+    Assertions.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege(address1, hostname1));
-    Assert.assertEquals(AccessPrivilege.READ_WRITE,
+    Assertions.assertEquals(AccessPrivilege.READ_WRITE,
         matcher.getAccessPrivilege(address2, hostname1));
     // address2 will hit the cache
-    Assert.assertEquals(AccessPrivilege.READ_WRITE,
+    Assertions.assertEquals(AccessPrivilege.READ_WRITE,
         matcher.getAccessPrivilege(address2, hostname2));
     
     Thread.sleep(1000);
@@ -210,18 +203,20 @@ public class TestNfsExports {
       }
       Thread.sleep(500);
     } while ((System.nanoTime() - startNanos) / NanosPerMillis < 5000);
-    Assert.assertEquals(AccessPrivilege.NONE, ap);
+    Assertions.assertEquals(AccessPrivilege.NONE, ap);
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test
   public void testInvalidHost() {
-      NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
-        "foo#bar");
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod, "foo#bar");
+    });
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test
   public void testInvalidSeparator() {
-      NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
-        "foo ro : bar rw");
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod, "foo ro : bar rw");
+    });
   }
 }

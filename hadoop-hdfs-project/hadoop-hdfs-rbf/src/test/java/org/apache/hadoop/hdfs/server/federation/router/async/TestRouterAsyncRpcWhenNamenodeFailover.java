@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -56,6 +57,14 @@ public class TestRouterAsyncRpcWhenNamenodeFailover {
     cluster.startCluster();
     cluster.startRouters();
     cluster.waitClusterUp();
+  }
+
+  @AfterEach
+  public void tearDown() {
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   @Test

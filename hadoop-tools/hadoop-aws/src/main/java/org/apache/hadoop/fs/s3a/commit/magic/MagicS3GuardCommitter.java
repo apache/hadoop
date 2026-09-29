@@ -50,6 +50,7 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.TASK_ATTEMPT_ID;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.TEMP_DATA;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.impl.CommitUtilsWithMR.*;
+import static org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTrackerUtils.isCleanupMagicCommitterEnabled;
 import static org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTrackerUtils.isTrackMagicCommitsInMemoryEnabled;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
 
@@ -131,16 +132,18 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    * Delete the magic directory.
    */
   public void cleanupStagingDirs() {
-    final Path out = getOutputPath();
-    Path path = getMagicJobPath(getUUID(), out);
-    try(DurationInfo ignored = new DurationInfo(LOG, true,
-        "Deleting magic directory %s", path)) {
-      Invoker.ignoreIOExceptions(LOG, "cleanup magic directory", path.toString(),
-          () -> deleteWithWarning(getDestFS(), path, true));
-      // and the job temp directory with manifests
-      Invoker.ignoreIOExceptions(LOG, "cleanup job directory", path.toString(),
-          () -> deleteWithWarning(getDestFS(),
-              new Path(out, TEMP_DATA), true));
+    if (isCleanupMagicCommitterEnabled(getConf())) {
+      final Path out = getOutputPath();
+      Path path = getMagicJobPath(getUUID(), out);
+      try(DurationInfo ignored = new DurationInfo(LOG, true,
+              "Deleting magic directory %s", path)) {
+        Invoker.ignoreIOExceptions(LOG, "cleanup magic directory", path.toString(),
+                () -> deleteWithWarning(getDestFS(), path, true));
+        // and the job temp directory with manifests
+        Invoker.ignoreIOExceptions(LOG, "cleanup job directory", path.toString(),
+                () -> deleteWithWarning(getDestFS(),
+                        new Path(out, TEMP_DATA), true));
+      }
     }
   }
 

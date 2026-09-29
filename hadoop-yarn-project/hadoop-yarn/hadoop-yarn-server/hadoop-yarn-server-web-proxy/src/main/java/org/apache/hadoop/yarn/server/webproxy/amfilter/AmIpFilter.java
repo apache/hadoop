@@ -138,6 +138,13 @@ public class AmIpFilter implements Filter {
     HttpServletRequest httpReq = (HttpServletRequest)req;
     HttpServletResponse httpResp = (HttpServletResponse)resp;
 
+    String method = httpReq.getMethod();
+    if (method != null && (method.equalsIgnoreCase("TRACE") ||
+        method.equalsIgnoreCase("TRACK"))) {
+      httpResp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+      return;
+    }
+
     LOG.debug("Remote address for request is: {}", httpReq.getRemoteAddr());
 
     if (!getProxyAddresses().contains(httpReq.getRemoteAddr())) {

@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 import java.util.EnumSet;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +57,7 @@ public class ITestRoleDelegationTokens extends ITestSessionDelegationTokens {
     return ROLE_TOKEN_KIND;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -117,7 +119,7 @@ public class ITestRoleDelegationTokens extends ITestSessionDelegationTokens {
     S3AFileSystem fs = getFileSystem();
     List<RoleModel.Statement> rules = fs.listAWSPolicyRules(
         access);
-    assertTrue("No AWS policy rules from FS", !rules.isEmpty());
+    assertTrue(!rules.isEmpty(), "No AWS policy rules from FS");
     String ruleset = new RoleModel().toJson(new RoleModel.Policy(rules));
     LOG.info("Access policy for {}\n{}", fs.getUri(), ruleset);
   }

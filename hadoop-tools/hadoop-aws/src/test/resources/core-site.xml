@@ -59,13 +59,6 @@
   </property>
 
   <property>
-    <name>fs.s3a.bucket.noaa-isd-pds.multipart.purge</name>
-    <value>false</value>
-    <description>Don't try to purge uploads in the read-only bucket, as
-    it will only create log noise.</description>
-  </property>
-
-  <property>
     <name>fs.s3a.bucket.noaa-isd-pds.probe</name>
     <value>0</value>
     <description>Let's postpone existence checks to the first IO operation </description>
@@ -99,13 +92,6 @@
     <name>fs.s3a.bucket.usgs-landsat.requester.pays.enabled</name>
     <value>true</value>
     <description>usgs-landsat requires requester pays enabled</description>
-  </property>
-
-  <property>
-    <name>fs.s3a.bucket.usgs-landsat.multipart.purge</name>
-    <value>false</value>
-    <description>Don't try to purge uploads in the read-only bucket, as
-      it will only create log noise.</description>
   </property>
 
   <property>

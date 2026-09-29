@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -32,7 +32,8 @@ import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestSetrepIncreasing {
   static void setrep(int fromREP, int toREP, boolean simulatedStorage) throws IOException {
@@ -45,7 +46,7 @@ public class TestSetrepIncreasing {
     conf.set(DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, Integer.toString(2));
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(10).build();
     FileSystem fs = cluster.getFileSystem();
-    assertTrue("Not a HDFS: "+fs.getUri(), fs instanceof DistributedFileSystem);
+    assertTrue(fs instanceof DistributedFileSystem, "Not a HDFS: " + fs.getUri());
 
     try {
       Path root = TestDFSShell.mkdir(fs, 
@@ -60,7 +61,7 @@ public class TestSetrepIncreasing {
         try {
           assertEquals(0, shell.run(args));
         } catch (Exception e) {
-          assertTrue("-setrep " + e, false);
+          assertTrue(false, "-setrep " + e);
         }
       }
 
@@ -78,11 +79,14 @@ public class TestSetrepIncreasing {
     }
   }
 
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testSetrepIncreasing() throws IOException {
     setrep(3, 7, false);
   }
-  @Test(timeout=120000)
+
+  @Test
+  @Timeout(value = 120)
   public void testSetrepIncreasingSimulatedStorage() throws IOException {
     setrep(3, 7, true);
   }

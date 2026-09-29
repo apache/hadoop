@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.ConnectionTi
 import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.ReadTimeoutRetryReason;
 import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.RetryReasonCategory;
 import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.ServerErrorRetryReason;
+import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.TailLatencyRequestTimeoutRetryReason;
 import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.UnknownHostRetryReason;
 import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.UnknownIOExceptionRetryReason;
 import org.apache.hadoop.fs.azurebfs.services.retryReasonCategories.UnknownSocketExceptionRetryReason;
@@ -67,6 +68,7 @@ final class RetryReason {
     add(new UnknownSocketExceptionRetryReason());
     add(new ConnectionTimeoutRetryReason());
     add(new ReadTimeoutRetryReason());
+    add(new TailLatencyRequestTimeoutRetryReason());
     add(new UnknownHostRetryReason());
     add(new ConnectionResetRetryReason());
   }};

@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.aliyun.oss.AliyunOSSTestUtils;
 import org.apache.hadoop.fs.aliyun.oss.Constants;
 import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.junit.jupiter.api.AfterEach;
 
 /**
  * Test getFileStatus and related listing operations,
@@ -35,6 +36,7 @@ public class TestAliyunOSSContractGetFileStatusV1List
     return new AliyunOSSContract(conf);
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     getLogger().info("FS details {}", getFileSystem());

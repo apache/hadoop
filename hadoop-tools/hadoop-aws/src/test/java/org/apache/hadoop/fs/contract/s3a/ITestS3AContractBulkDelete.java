@@ -23,9 +23,9 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
@@ -54,7 +55,9 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Contract tests for bulk delete operation for S3A Implementation.
  */
-@RunWith(Parameterized.class)
+@IntegrationTest
+@ParameterizedClass(name = "enableMultiObjectDelete={0}")
+@MethodSource("enableMultiObjectDelete")
 public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(ITestS3AContractBulkDelete.class);
@@ -69,7 +72,6 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
 
   private final boolean enableMultiObjectDelete;
 
-  @Parameterized.Parameters(name = "enableMultiObjectDelete = {0}")
   public static Iterable<Object[]> enableMultiObjectDelete() {
     return Arrays.asList(new Object[][]{
             {true},
@@ -149,6 +151,7 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
   }
 
   @Override
+  @Test
   public void testDeletePathsDirectory() throws Exception {
     List<Path> paths = new ArrayList<>();
     Path dirPath = new Path(basePath, "dir");
@@ -180,6 +183,7 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
     assertIsDirectory(subDir);
   }
 
+  @Test
   public void testBulkDeleteParentDirectoryWithFiles() throws Exception {
     List<Path> paths = new ArrayList<>();
     Path dirPath = new Path(basePath, "dir");

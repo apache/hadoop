@@ -25,10 +25,8 @@ import java.io.PrintStream;
 import java.net.URI;
 import java.util.Random;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
-import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,8 +38,12 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 /**
  * Test Concat.
@@ -54,7 +56,7 @@ public class TestFsShellConcat extends AbstractHadoopTestBase {
   private static Path testRootDir;
   private static Path dstPath;
 
-  @Before
+  @BeforeEach
   public void before() throws IOException {
     conf = new Configuration();
     shell = new FsShell(conf);
@@ -90,8 +92,8 @@ public class TestFsShellConcat extends AbstractHadoopTestBase {
     byte[] expectContent = out.toByteArray();
 
     // Do concat.
-    FileSystem mockFs = Mockito.mock(FileSystem.class);
-    Mockito.doAnswer(invocation -> {
+    FileSystem mockFs = mock(FileSystem.class);
+    doAnswer(invocation -> {
       Object[] args = invocation.getArguments();
       Path target = (Path)args[0];
       Path[] src = (Path[]) args[1];
@@ -104,7 +106,7 @@ public class TestFsShellConcat extends AbstractHadoopTestBase {
     // Verify concat result.
     ContractTestUtils
         .assertPathExists(lfs, "The target file doesn't exist.", dstPath);
-    Assertions.assertThat(lfs.listStatus(testRootDir).length).isEqualTo(1);
+    assertThat(lfs.listStatus(testRootDir).length).isEqualTo(1);
     assertEquals(expectContent.length, lfs.getFileStatus(dstPath).getLen());
     out = new ByteArrayOutputStream();
     try (InputStream in = lfs.open(dstPath)) {
@@ -119,11 +121,11 @@ public class TestFsShellConcat extends AbstractHadoopTestBase {
 
   @Test
   public void testUnsupportedFs() throws Exception {
-    FileSystem mockFs = Mockito.mock(FileSystem.class);
-    Mockito.doThrow(
+    FileSystem mockFs = mock(FileSystem.class);
+    doThrow(
         new UnsupportedOperationException("Mock unsupported exception."))
         .when(mockFs).concat(any(Path.class), any(Path[].class));
-    Mockito.doAnswer(invocationOnMock -> new URI("mockfs:///")).when(mockFs)
+    doAnswer(invocationOnMock -> new URI("mockfs:///")).when(mockFs)
         .getUri();
     Concat.setTestFs(mockFs);
     final ByteArrayOutputStream err = new ByteArrayOutputStream();
@@ -136,7 +138,7 @@ public class TestFsShellConcat extends AbstractHadoopTestBase {
     }
     System.err.print(err.toString());
     String expectedErrMsg = "Dest filesystem 'mockfs' doesn't support concat";
-    Assertions.assertThat(err.toString().contains(expectedErrMsg))
+    assertThat(err.toString().contains(expectedErrMsg))
         .withFailMessage("The err message should contain \"" + expectedErrMsg
             + "\" message.").isTrue();
   }

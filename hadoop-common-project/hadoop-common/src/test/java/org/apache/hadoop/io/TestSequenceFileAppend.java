@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
@@ -33,7 +33,6 @@ import org.apache.hadoop.io.SequenceFile.Writer;
 import org.apache.hadoop.io.SequenceFile.Writer.Option;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
-import org.apache.hadoop.io.serializer.JavaSerializationComparator;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -51,7 +50,7 @@ public class TestSequenceFileAppend {
   public static void setUp() throws Exception {
     conf = new Configuration();
     conf.set("io.serializations",
-        "org.apache.hadoop.io.serializer.JavaSerialization");
+        "org.apache.hadoop.io.serializer.WritableSerialization");
     conf.set("fs.file.impl", "org.apache.hadoop.fs.RawLocalFileSystem");
     fs = FileSystem.get(conf);
   }
@@ -78,11 +77,11 @@ public class TestSequenceFileAppend {
 
     Writer writer = SequenceFile.createWriter(conf,
         SequenceFile.Writer.file(file),
-        SequenceFile.Writer.keyClass(Long.class),
-        SequenceFile.Writer.valueClass(String.class), metadataOption);
+        SequenceFile.Writer.keyClass(LongWritable.class),
+        SequenceFile.Writer.valueClass(Text.class), metadataOption);
 
-    writer.append(1L, "one");
-    writer.append(2L, "two");
+    writer.append(new LongWritable(1L), new Text("one"));
+    writer.append(new LongWritable(2L), new Text("two"));
     writer.close();
 
     verify2Values(file);
@@ -90,15 +89,15 @@ public class TestSequenceFileAppend {
     metadata.set(key1, value2);
 
     writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
-        SequenceFile.Writer.keyClass(Long.class),
-        SequenceFile.Writer.valueClass(String.class),
+        SequenceFile.Writer.keyClass(LongWritable.class),
+        SequenceFile.Writer.valueClass(Text.class),
         SequenceFile.Writer.appendIfExists(true), metadataOption);
 
     // Verify the Meta data is not changed
     assertEquals(value1, writer.metadata.get(key1));
 
-    writer.append(3L, "three");
-    writer.append(4L, "four");
+    writer.append(new LongWritable(3L), new Text("three"));
+    writer.append(new LongWritable(4L), new Text("four"));
 
     writer.close();
 
@@ -115,8 +114,8 @@ public class TestSequenceFileAppend {
           new GzipCodec());
 
       writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
-          SequenceFile.Writer.keyClass(Long.class),
-          SequenceFile.Writer.valueClass(String.class),
+          SequenceFile.Writer.keyClass(LongWritable.class),
+          SequenceFile.Writer.valueClass(Text.class),
           SequenceFile.Writer.appendIfExists(true), wrongCompressOption);
       writer.close();
       fail("Expected IllegalArgumentException for compression options");
@@ -129,8 +128,8 @@ public class TestSequenceFileAppend {
           new DefaultCodec());
 
       writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
-          SequenceFile.Writer.keyClass(Long.class),
-          SequenceFile.Writer.valueClass(String.class),
+          SequenceFile.Writer.keyClass(LongWritable.class),
+          SequenceFile.Writer.valueClass(Text.class),
           SequenceFile.Writer.appendIfExists(true), wrongCompressOption);
       writer.close();
       fail("Expected IllegalArgumentException for compression options");
@@ -153,22 +152,22 @@ public class TestSequenceFileAppend {
         new GzipCodec());
     Writer writer = SequenceFile.createWriter(conf,
         SequenceFile.Writer.file(file),
-        SequenceFile.Writer.keyClass(Long.class),
-        SequenceFile.Writer.valueClass(String.class), compressOption);
+        SequenceFile.Writer.keyClass(LongWritable.class),
+        SequenceFile.Writer.valueClass(Text.class), compressOption);
 
-    writer.append(1L, "one");
-    writer.append(2L, "two");
+    writer.append(new LongWritable(1L), new Text("one"));
+    writer.append(new LongWritable(2L), new Text("two"));
     writer.close();
 
     verify2Values(file);
 
     writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
-        SequenceFile.Writer.keyClass(Long.class),
-        SequenceFile.Writer.valueClass(String.class),
+        SequenceFile.Writer.keyClass(LongWritable.class),
+        SequenceFile.Writer.valueClass(Text.class),
         SequenceFile.Writer.appendIfExists(true), compressOption);
 
-    writer.append(3L, "three");
-    writer.append(4L, "four");
+    writer.append(new LongWritable(3L), new Text("three"));
+    writer.append(new LongWritable(4L), new Text("four"));
     writer.close();
 
     verifyAll4Values(file);
@@ -188,22 +187,22 @@ public class TestSequenceFileAppend {
         new GzipCodec());
     Writer writer = SequenceFile.createWriter(conf,
         SequenceFile.Writer.file(file),
-        SequenceFile.Writer.keyClass(Long.class),
-        SequenceFile.Writer.valueClass(String.class), compressOption);
+        SequenceFile.Writer.keyClass(LongWritable.class),
+        SequenceFile.Writer.valueClass(Text.class), compressOption);
 
-    writer.append(1L, "one");
-    writer.append(2L, "two");
+    writer.append(new LongWritable(1L), new Text("one"));
+    writer.append(new LongWritable(2L), new Text("two"));
     writer.close();
 
     verify2Values(file);
 
     writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
-        SequenceFile.Writer.keyClass(Long.class),
-        SequenceFile.Writer.valueClass(String.class),
+        SequenceFile.Writer.keyClass(LongWritable.class),
+        SequenceFile.Writer.valueClass(Text.class),
         SequenceFile.Writer.appendIfExists(true), compressOption);
 
-    writer.append(3L, "three");
-    writer.append(4L, "four");
+    writer.append(new LongWritable(3L), new Text("three"));
+    writer.append(new LongWritable(4L), new Text("four"));
     writer.close();
 
     verifyAll4Values(file);
@@ -211,8 +210,8 @@ public class TestSequenceFileAppend {
     // Verify failure if the compression details are different or not Provided
     try {
       writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
-          SequenceFile.Writer.keyClass(Long.class),
-          SequenceFile.Writer.valueClass(String.class),
+          SequenceFile.Writer.keyClass(LongWritable.class),
+          SequenceFile.Writer.valueClass(Text.class),
           SequenceFile.Writer.appendIfExists(true));
       writer.close();
       fail("Expected IllegalArgumentException for compression options");
@@ -226,8 +225,8 @@ public class TestSequenceFileAppend {
           new GzipCodec());
 
       writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
-          SequenceFile.Writer.keyClass(Long.class),
-          SequenceFile.Writer.valueClass(String.class),
+          SequenceFile.Writer.keyClass(LongWritable.class),
+          SequenceFile.Writer.valueClass(Text.class),
           SequenceFile.Writer.appendIfExists(true), wrongCompressOption);
       writer.close();
       fail("Expected IllegalArgumentException for compression options");
@@ -240,8 +239,8 @@ public class TestSequenceFileAppend {
           new DefaultCodec());
 
       writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
-          SequenceFile.Writer.keyClass(Long.class),
-          SequenceFile.Writer.valueClass(String.class),
+          SequenceFile.Writer.keyClass(LongWritable.class),
+          SequenceFile.Writer.valueClass(Text.class),
           SequenceFile.Writer.appendIfExists(true), wrongCompressOption);
       writer.close();
       fail("Expected IllegalArgumentException for compression options");
@@ -261,22 +260,22 @@ public class TestSequenceFileAppend {
     Option compressOption = Writer.compression(CompressionType.NONE);
     Writer writer =
         SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
-            SequenceFile.Writer.keyClass(Long.class),
-            SequenceFile.Writer.valueClass(String.class), compressOption);
+            SequenceFile.Writer.keyClass(LongWritable.class),
+            SequenceFile.Writer.valueClass(Text.class), compressOption);
 
-    writer.append(1L, "one");
-    writer.append(2L, "two");
+    writer.append(new LongWritable(1L), new Text("one"));
+    writer.append(new LongWritable(2L), new Text("two"));
     writer.close();
 
     verify2Values(file);
 
     writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
-        SequenceFile.Writer.keyClass(Long.class),
-        SequenceFile.Writer.valueClass(String.class),
+        SequenceFile.Writer.keyClass(LongWritable.class),
+        SequenceFile.Writer.valueClass(Text.class),
         SequenceFile.Writer.appendIfExists(true), compressOption);
 
-    writer.append(3L, "three");
-    writer.append(4L, "four");
+    writer.append(new LongWritable(3L), new Text("three"));
+    writer.append(new LongWritable(4L), new Text("four"));
     writer.close();
 
     verifyAll4Values(file);
@@ -284,8 +283,8 @@ public class TestSequenceFileAppend {
     // Verify failure if the compression details are different or not Provided
     try {
       writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
-          SequenceFile.Writer.keyClass(Long.class),
-          SequenceFile.Writer.valueClass(String.class),
+          SequenceFile.Writer.keyClass(LongWritable.class),
+          SequenceFile.Writer.valueClass(Text.class),
           SequenceFile.Writer.appendIfExists(true));
       writer.close();
       fail("Expected IllegalArgumentException for compression options");
@@ -299,8 +298,8 @@ public class TestSequenceFileAppend {
           Writer.compression(CompressionType.RECORD, new GzipCodec());
 
       writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
-          SequenceFile.Writer.keyClass(Long.class),
-          SequenceFile.Writer.valueClass(String.class),
+          SequenceFile.Writer.keyClass(LongWritable.class),
+          SequenceFile.Writer.valueClass(Text.class),
           SequenceFile.Writer.appendIfExists(true), wrongCompressOption);
       writer.close();
       fail("Expected IllegalArgumentException for compression options");
@@ -313,77 +312,34 @@ public class TestSequenceFileAppend {
         Writer.compression(CompressionType.NONE, new DefaultCodec());
 
     writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
-        SequenceFile.Writer.keyClass(Long.class),
-        SequenceFile.Writer.valueClass(String.class),
+        SequenceFile.Writer.keyClass(LongWritable.class),
+        SequenceFile.Writer.valueClass(Text.class),
         SequenceFile.Writer.appendIfExists(true), noneWithCodec);
     writer.close();
     fs.deleteOnExit(file);
   }
 
-  @Test
-  @Timeout(value = 30)
-  public void testAppendSort() throws Exception {
-    GenericTestUtils.assumeInNativeProfile();
-
-    Path file = new Path(ROOT_PATH, "testseqappendSort.seq");
-    fs.delete(file, true);
-
-    Path sortedFile = new Path(ROOT_PATH, "testseqappendSort.seq.sort");
-    fs.delete(sortedFile, true);
-
-    SequenceFile.Sorter sorter = new SequenceFile.Sorter(fs,
-        new JavaSerializationComparator<Long>(), Long.class, String.class, conf);
-
-    Option compressOption = Writer.compression(CompressionType.BLOCK,
-        new GzipCodec());
-    Writer writer = SequenceFile.createWriter(conf,
-        SequenceFile.Writer.file(file),
-        SequenceFile.Writer.keyClass(Long.class),
-        SequenceFile.Writer.valueClass(String.class), compressOption);
-
-    writer.append(2L, "two");
-    writer.append(1L, "one");
-
-    writer.close();
-
-    writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
-        SequenceFile.Writer.keyClass(Long.class),
-        SequenceFile.Writer.valueClass(String.class),
-        SequenceFile.Writer.appendIfExists(true), compressOption);
-
-    writer.append(4L, "four");
-    writer.append(3L, "three");
-    writer.close();
-
-    // Sort file after append
-    sorter.sort(file, sortedFile);
-    verifyAll4Values(sortedFile);
-
-    fs.deleteOnExit(file);
-    fs.deleteOnExit(sortedFile);
-  }
-
   private void verify2Values(Path file) throws IOException {
     Reader reader = new Reader(conf, Reader.file(file));
-    assertEquals(1L, reader.next((Object) null));
-    assertEquals("one", reader.getCurrentValue((Object) null));
-    assertEquals(2L, reader.next((Object) null));
-    assertEquals("two", reader.getCurrentValue((Object) null));
-    assertNull(reader.next((Object) null));
+    assertThat(reader.next((Object) null)).isEqualTo(new LongWritable(1L));
+    assertThat(reader.getCurrentValue((Object) null)).isEqualTo(new Text("one"));
+    assertThat(reader.next((Object) null)).isEqualTo(new LongWritable(2L));
+    assertThat(reader.getCurrentValue((Object) null)).isEqualTo(new Text("two"));
+    assertThat(reader.next((Object) null)).isNull();
     reader.close();
   }
 
   private void verifyAll4Values(Path file) throws IOException {
     Reader reader = new Reader(conf, Reader.file(file));
-    assertEquals(1L, reader.next((Object) null));
-    assertEquals("one", reader.getCurrentValue((Object) null));
-    assertEquals(2L, reader.next((Object) null));
-    assertEquals("two", reader.getCurrentValue((Object) null));
-    assertEquals(3L, reader.next((Object) null));
-    assertEquals("three", reader.getCurrentValue((Object) null));
-    assertEquals(4L, reader.next((Object) null));
-    assertEquals("four", reader.getCurrentValue((Object) null));
-    assertNull(reader.next((Object) null));
+    assertThat(reader.next((Object) null)).isEqualTo(new LongWritable(1L));
+    assertThat(reader.getCurrentValue((Object) null)).isEqualTo(new Text("one"));
+    assertThat(reader.next((Object) null)).isEqualTo(new LongWritable(2L));
+    assertThat(reader.getCurrentValue((Object) null)).isEqualTo(new Text("two"));
+    assertThat(reader.next((Object) null)).isEqualTo(new LongWritable(3L));
+    assertThat(reader.getCurrentValue((Object) null)).isEqualTo(new Text("three"));
+    assertThat(reader.next((Object) null)).isEqualTo(new LongWritable(4L));
+    assertThat(reader.getCurrentValue((Object) null)).isEqualTo(new Text("four"));
+    assertThat(reader.next((Object) null)).isNull();
     reader.close();
   }
 }

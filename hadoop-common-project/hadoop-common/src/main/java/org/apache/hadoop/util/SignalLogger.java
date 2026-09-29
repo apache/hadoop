@@ -19,8 +19,6 @@
 package org.apache.hadoop.util;
 
 import org.slf4j.Logger;
-import sun.misc.Signal;
-import sun.misc.SignalHandler;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -41,13 +39,13 @@ public enum SignalLogger {
   /**
    * Our signal handler.
    */
-  private static class Handler implements SignalHandler {
+  private static class Handler implements SignalUtil.Handler {
     final private Logger log;
-    final private SignalHandler prevHandler;
+    final private SignalUtil.Handler prevHandler;
 
     Handler(String name, Logger log) {
       this.log = log;
-      prevHandler = Signal.handle(new Signal(name), this);
+      prevHandler = SignalUtil.handle(new SignalUtil.Signal(name), this);
     }
 
     /**
@@ -56,9 +54,8 @@ public enum SignalLogger {
      * @param signal    The incoming signal
      */
     @Override
-    public void handle(Signal signal) {
-      log.error("RECEIVED SIGNAL " + signal.getNumber() +
-          ": SIG" + signal.getName());
+    public void handle(SignalUtil.Signal signal) {
+      log.error("RECEIVED SIGNAL {}: SIG{}", signal.getNumber(), signal.getName());
       prevHandler.handle(signal);
     }
   }
@@ -75,7 +72,7 @@ public enum SignalLogger {
     registered = true;
     StringBuilder bld = new StringBuilder();
     bld.append("registered UNIX signal handlers for [");
-    final String SIGNALS[] = { "TERM", "HUP", "INT" };
+    final String[] SIGNALS = {"TERM", "HUP", "INT"};
     String separator = "";
     for (String signalName : SIGNALS) {
       try {

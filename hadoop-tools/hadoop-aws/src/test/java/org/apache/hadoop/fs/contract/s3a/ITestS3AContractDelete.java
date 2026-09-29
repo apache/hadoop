@@ -21,10 +21,12 @@ package org.apache.hadoop.fs.contract.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractDeleteTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 /**
  * S3A contract tests covering deletes.
  */
+@IntegrationTest
 public class ITestS3AContractDelete extends AbstractContractDeleteTest {
 
   @Override

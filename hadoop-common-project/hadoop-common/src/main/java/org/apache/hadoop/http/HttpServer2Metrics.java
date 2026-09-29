@@ -18,6 +18,7 @@
 package org.apache.hadoop.http;
 
 import org.eclipse.jetty.server.handler.StatisticsHandler;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -37,6 +38,9 @@ public class HttpServer2Metrics {
 
   private final StatisticsHandler handler;
   private final int port;
+  private final QueuedThreadPool threadPool;
+  private final int acceptorThreads;
+  private final int selectorThreads;
 
   @Metric("number of requested that have been asynchronously dispatched")
   public int asyncDispatches() {
@@ -142,15 +146,65 @@ public class HttpServer2Metrics {
   public long statsOnMs() {
     return handler.getStatsOnMs();
   }
-
-  HttpServer2Metrics(StatisticsHandler handler, int port) {
-    this.handler = handler;
-    this.port = port;
+  @Metric("maximum number of threads in the pool")
+  public int maxThreads() {
+    return threadPool.getMaxThreads();
+  }
+  @Metric("number of idle threads in the pool")
+  public int idleThreads() {
+    return threadPool.getIdleThreads();
+  }
+  @Metric("number of busy threads in the pool")
+  public int busyThreads() {
+    return threadPool.getBusyThreads();
+  }
+  @Metric("number of threads in the pool")
+  public int threads() {
+    return threadPool.getThreads();
+  }
+  @Metric("minimum number of threads in the pool")
+  public int minThreads() {
+    return threadPool.getMinThreads();
+  }
+  @Metric("size of the job queue")
+  public int queueSize() {
+    return threadPool.getQueueSize();
+  }
+  @Metric("number of acceptor threads across all connectors")
+  public int acceptorThreads() {
+    return acceptorThreads;
+  }
+  @Metric("number of selector threads across all connectors")
+  public int selectorThreads() {
+    return selectorThreads;
+  }
+  @Metric("maximum number of worker threads in the pool")
+  public int maxWorkerThreads() {
+    return threadPool.getMaxThreads() - acceptorThreads - selectorThreads;
+  }
+  @Metric("number of busy worker threads in the pool")
+  public int busyWorkerThreads() {
+    return threadPool.getBusyThreads() - acceptorThreads - selectorThreads;
+  }
+  @Metric("number of worker threads in the pool")
+  public int workerThreads() {
+    return threadPool.getThreads() - acceptorThreads - selectorThreads;
   }
 
-  static HttpServer2Metrics create(StatisticsHandler handler, int port) {
+  HttpServer2Metrics(StatisticsHandler handler, int port,
+      QueuedThreadPool threadPool, int acceptorThreads, int selectorThreads) {
+    this.handler = handler;
+    this.port = port;
+    this.threadPool = threadPool;
+    this.acceptorThreads = acceptorThreads;
+    this.selectorThreads = selectorThreads;
+  }
+
+  static HttpServer2Metrics create(StatisticsHandler handler, int port,
+      QueuedThreadPool threadPool, int acceptorThreads, int selectorThreads) {
     final MetricsSystem ms = DefaultMetricsSystem.instance();
-    final HttpServer2Metrics metrics = new HttpServer2Metrics(handler, port);
+    final HttpServer2Metrics metrics = new HttpServer2Metrics(handler, port,
+        threadPool, acceptorThreads, selectorThreads);
     // Remove the old metrics from metrics system to avoid duplicate error
     // when HttpServer2 is started twice.
     metrics.remove();

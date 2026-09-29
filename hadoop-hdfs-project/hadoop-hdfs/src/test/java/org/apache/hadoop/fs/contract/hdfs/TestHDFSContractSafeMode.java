@@ -20,8 +20,8 @@ package org.apache.hadoop.fs.contract.hdfs;
 
 import java.io.IOException;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractSafeModeTest;
@@ -32,12 +32,12 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
  */
 public class TestHDFSContractSafeMode extends AbstractContractSafeModeTest {
 
-  @BeforeClass
+  @BeforeAll
   public static void createCluster() throws IOException {
     HDFSContract.createCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() throws IOException {
     HDFSContract.destroyCluster();
   }

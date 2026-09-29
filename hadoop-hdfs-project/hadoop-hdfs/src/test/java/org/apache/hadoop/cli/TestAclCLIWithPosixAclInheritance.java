@@ -19,7 +19,7 @@ package org.apache.hadoop.cli;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_POSIX_ACL_INHERITANCE_ENABLED_KEY;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test ACL CLI with POSIX ACL inheritance enabled.

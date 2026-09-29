@@ -24,9 +24,9 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -38,10 +38,10 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests append on erasure coded file.
@@ -68,7 +68,7 @@ public class TestStripedFileAppend {
   private Path dir = new Path("/TestFileAppendStriped");
   private HdfsConfiguration conf = new HdfsConfiguration();
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DN).build();
@@ -78,7 +78,7 @@ public class TestStripedFileAppend {
     dfs.setErasureCodingPolicy(dir, null);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -143,7 +143,6 @@ public class TestStripedFileAppend {
 
     RemoteIterator<OpenFileEntry> listOpenFiles = dfs
         .listOpenFiles(EnumSet.copyOf(types), file.toString());
-    assertFalse("No file should be open after append failure",
-        listOpenFiles.hasNext());
+    assertFalse(listOpenFiles.hasNext(), "No file should be open after append failure");
   }
 }

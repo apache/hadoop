@@ -21,9 +21,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_EN
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -55,11 +56,12 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,7 +80,7 @@ public class TestConsistentReadsObserver {
 
   private final Path testPath= new Path("/TestConsistentReadsObserver");
 
-  @BeforeClass
+  @BeforeAll
   public static void startUpCluster() throws Exception {
     conf = new Configuration();
     conf.setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, true);
@@ -90,17 +92,17 @@ public class TestConsistentReadsObserver {
     dfsCluster = qjmhaCluster.getDfsCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     dfs = setObserverRead(true);
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws IOException {
     dfs.delete(testPath, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutDownCluster() throws IOException {
     if (qjmhaCluster != null) {
       qjmhaCluster.shutdown();
@@ -248,10 +250,12 @@ public class TestConsistentReadsObserver {
     testMsync(true, 5);
   }
 
-  @Test(expected = TimeoutException.class)
+  @Test
   public void testAutoMsyncLongPeriod() throws Exception {
+    assertThrows(TimeoutException.class, () -> {
+      testMsync(true, Long.MAX_VALUE);
+    });
     // This should fail since the auto-msync is never activated
-    testMsync(true, Long.MAX_VALUE);
   }
 
   // A new client should first contact the active, before using an observer,
@@ -389,20 +393,20 @@ public class TestConsistentReadsObserver {
       fail("listStatus should have thrown exception");
     } catch (RemoteException re) {
       IOException e = re.unwrapRemoteException();
-      assertTrue("should have thrown StandbyException but got "
-              + e.getClass().getSimpleName(),
-          e instanceof StandbyException);
+      assertTrue(e instanceof StandbyException,
+          "should have thrown StandbyException but got " + e.getClass().getSimpleName());
     }
   }
 
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testMsyncFileContext() throws Exception {
     NameNode nn0 = dfsCluster.getNameNode(0);
     NameNode nn2 = dfsCluster.getNameNode(2);
     HAServiceStatus st = nn0.getRpcServer().getServiceStatus();
-    assertEquals("nn0 is not active", HAServiceState.ACTIVE, st.getState());
+    assertEquals(HAServiceState.ACTIVE, st.getState(), "nn0 is not active");
     st = nn2.getRpcServer().getServiceStatus();
-    assertEquals("nn2 is not observer", HAServiceState.OBSERVER, st.getState());
+    assertEquals(HAServiceState.OBSERVER, st.getState(), "nn2 is not observer");
 
     FileContext fc = FileContext.getFileContext(conf);
     // initialize observer proxy for FileContext
@@ -475,8 +479,8 @@ public class TestConsistentReadsObserver {
   }
 
   private void assertSentTo(int nnIdx) throws IOException {
-    assertTrue("Request was not sent to the expected namenode " + nnIdx,
-        HATestUtil.isSentToAnyOfNameNodes(dfs, dfsCluster, nnIdx));
+    assertTrue(HATestUtil.isSentToAnyOfNameNodes(dfs, dfsCluster, nnIdx),
+        "Request was not sent to the expected namenode " + nnIdx);
   }
 
   private DistributedFileSystem setObserverRead(boolean flag) throws Exception {

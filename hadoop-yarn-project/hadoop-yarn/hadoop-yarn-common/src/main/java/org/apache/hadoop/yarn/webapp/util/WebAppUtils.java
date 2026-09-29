@@ -48,6 +48,8 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.container.ContainerRequestContext;
@@ -55,6 +57,7 @@ import javax.ws.rs.container.ContainerRequestContext;
 @Private
 @Evolving
 public class WebAppUtils {
+  private static final Logger LOG = LoggerFactory.getLogger(WebAppUtils.class);
   public static final String WEB_APP_TRUSTSTORE_PASSWORD_KEY =
       "ssl.server.truststore.password";
   public static final String WEB_APP_KEYSTORE_PASSWORD_KEY =
@@ -107,17 +110,34 @@ public class WebAppUtils {
    */
   public static <T, R> R execOnActiveRM(Configuration conf,
       ThrowingBiFunction<String, T, R> func, T arg) throws Exception {
-    int haIndex = 0;
-    if (HAUtil.isHAEnabled(conf)) {
-      String activeRMId = RMHAUtils.findActiveRMHAId(conf);
-      if (activeRMId != null) {
-        haIndex = new ArrayList<>(HAUtil.getRMHAIds(conf)).indexOf(activeRMId);
-      } else {
-        throw new ConnectException("No Active RM available");
+    // If HA is not enabled we are running the function on the only RM that is available.
+    if (!HAUtil.isHAEnabled(conf)) {
+      String rmAddress = getRMWebAppURLWithScheme(conf, 0);
+      return func.apply(rmAddress, arg);
+    }
+
+    // In HA mode we can find the active RM if user has admin permissions to check service states.
+    // Otherwise, activeRMId will be null.
+    List<String> rmIds = (List<String>) HAUtil.getRMHAIds(conf);
+    String activeRMId = RMHAUtils.findActiveRMHAId(conf);
+    if (activeRMId != null) {
+      int activeRMIndex = rmIds.indexOf(activeRMId);
+      String rmAddress = getRMWebAppURLWithScheme(conf, activeRMIndex);
+      return func.apply(rmAddress, arg);
+    }
+
+    // If user does not have the necessary permissions we have to iterate through the RMs
+    // to find the active one.
+    for (int i = 0; i < rmIds.size(); i++) {
+      try {
+        String rmAddress = getRMWebAppURLWithScheme(conf, i);
+        return func.apply(rmAddress, arg);
+      } catch (Exception e) {
+        // Log exception and try next RM if there are any.
+        LOG.trace("Exception while connecting to RM", e);
       }
     }
-    String rm1Address = getRMWebAppURLWithScheme(conf, haIndex);
-    return func.apply(rm1Address, arg);
+    throw new ConnectException("No active RM available to execute this command");
   }
 
   /** A BiFunction which throws on Exception. */

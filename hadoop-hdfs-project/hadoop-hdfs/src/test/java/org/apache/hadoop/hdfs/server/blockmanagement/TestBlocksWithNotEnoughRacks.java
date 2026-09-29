@@ -42,11 +42,17 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
 import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
+@Tag("slow")
 public class TestBlocksWithNotEnoughRacks {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestBlocksWithNotEnoughRacks.class);
@@ -299,7 +305,7 @@ public class TestBlocksWithNotEnoughRacks {
       for (int i = 0; i < racks.length; i++) {
         byte[] blockContent = cluster.readBlockOnDataNodeAsBytes(i, b);
         if (blockContent != null && i != dnToCorrupt) {
-          assertArrayEquals("Corrupt replica", fileContent, blockContent);
+          assertArrayEquals(fileContent, blockContent, "Corrupt replica");
         }
       }
     } finally {

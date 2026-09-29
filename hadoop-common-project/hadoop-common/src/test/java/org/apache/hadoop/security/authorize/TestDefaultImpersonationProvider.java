@@ -24,16 +24,14 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * Test class for @DefaultImpersonationProvider
  */
+@Timeout(10)
 public class TestDefaultImpersonationProvider {
 
   private String proxyUser;
@@ -44,8 +42,6 @@ public class TestDefaultImpersonationProvider {
   private UserGroupInformation realUserUGI = Mockito
       .mock(UserGroupInformation.class);
   private Configuration conf;
-  @Rule
-  public Timeout globalTimeout = new Timeout(10000, TimeUnit.MILLISECONDS);
 
   @BeforeEach
   public void setup() {

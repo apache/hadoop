@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessPolicyController;
+import org.apache.hadoop.hdfs.server.federation.metrics.JSON;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
@@ -89,7 +90,6 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -380,7 +380,7 @@ public class RouterRpcClient {
       info.put("total", executorService.getPoolSize());
       info.put("max", executorService.getMaximumPoolSize());
     }
-    return JSON.toString(info);
+    return JSON.getDefault().toJSON(info);
   }
 
   /**
@@ -389,7 +389,7 @@ public class RouterRpcClient {
    * @return String representation of the rejected permits for each nameservice.
    */
   public String getRejectedPermitsPerNsJSON() {
-    return JSON.toString(rejectedPermitsPerNs);
+    return JSON.getDefault().toJSON(rejectedPermitsPerNs);
   }
 
   /**
@@ -398,7 +398,7 @@ public class RouterRpcClient {
    * @return String representation of the accepted permits for each nameservice.
    */
   public String getAcceptedPermitsPerNsJSON() {
-    return JSON.toString(acceptedPermitsPerNs);
+    return JSON.getDefault().toJSON(acceptedPermitsPerNs);
   }
   /**
    * Get ClientProtocol proxy client for a NameNode. Each combination of user +
@@ -1599,48 +1599,54 @@ public class RouterRpcClient {
     // transfer originCall & callerContext to worker threads of executor.
     final Call originCall = Server.getCurCall().get();
     final CallerContext originContext = CallerContext.getCurrent();
-    for (final T location : locations) {
-      String nsId = location.getNameserviceId();
-      boolean isObserverRead = isObserverReadEligible(nsId, m);
-      final List<? extends FederationNamenodeContext> namenodes =
-          getOrderedNamenodes(nsId, isObserverRead);
-      final Class<?> proto = method.getProtocol();
-      final Object[] paramList = method.getParams(location);
-      if (standby) {
-        // Call the objectGetter to all NNs (including standby)
-        for (final FederationNamenodeContext nn : namenodes) {
-          String nnId = nn.getNamenodeId();
-          final List<FederationNamenodeContext> nnList =
-              Collections.singletonList(nn);
-          T nnLocation = location;
-          if (location instanceof RemoteLocation) {
-            nnLocation = (T)new RemoteLocation(nsId, nnId, location.getDest());
+    try{
+      for (final T location : locations) {
+        String nsId = location.getNameserviceId();
+        boolean isObserverRead = isObserverReadEligible(nsId, m);
+        final List<? extends FederationNamenodeContext> namenodes =
+            getOrderedNamenodes(nsId, isObserverRead);
+        final Class<?> proto = method.getProtocol();
+        final Object[] paramList = method.getParams(location);
+        if (standby) {
+          // Call the objectGetter to all NNs (including standby)
+          for (final FederationNamenodeContext nn : namenodes) {
+            String nnId = nn.getNamenodeId();
+            final List<FederationNamenodeContext> nnList =
+                Collections.singletonList(nn);
+            T nnLocation = location;
+            if (location instanceof RemoteLocation) {
+              nnLocation = (T)new RemoteLocation(nsId, nnId, location.getDest());
+            }
+            orderedLocations.add(nnLocation);
+            callables.add(
+                () -> {
+                  transferThreadLocalContext(originCall, originContext);
+                  return invokeMethod(
+                      ugi, nnList, isObserverRead, proto, m, paramList);
+                });
           }
-          orderedLocations.add(nnLocation);
+        } else {
+          // Call the objectGetter in order of nameservices in the NS list
+          orderedLocations.add(location);
           callables.add(
               () -> {
                 transferThreadLocalContext(originCall, originContext);
                 return invokeMethod(
-                    ugi, nnList, isObserverRead, proto, m, paramList);
+                    ugi, namenodes, isObserverRead, proto, m, paramList);
               });
         }
-      } else {
-        // Call the objectGetter in order of nameservices in the NS list
-        orderedLocations.add(location);
-        callables.add(
-            () -> {
-              transferThreadLocalContext(originCall, originContext);
-              return invokeMethod(
-                  ugi, namenodes, isObserverRead, proto, m, paramList);
-            });
       }
-    }
 
-    if (rpcMonitor != null) {
-      rpcMonitor.proxyOp();
-    }
-    if (this.router.getRouterClientMetrics() != null) {
-      this.router.getRouterClientMetrics().incInvokedConcurrent(m);
+      if (rpcMonitor != null) {
+        rpcMonitor.proxyOp();
+      }
+      if (this.router.getRouterClientMetrics() != null) {
+        this.router.getRouterClientMetrics().incInvokedConcurrent(m);
+      }
+
+    } catch (IOException e) {
+      releasePermit(CONCURRENT_NS, ugi, method, controller);
+      throw e;
     }
 
     return getRemoteResults(method, timeOutMs, controller, orderedLocations, callables);

@@ -22,7 +22,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +80,8 @@ import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_STS;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_HEADERS_S3;
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_HEADERS_STS;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.enforceMinimumDuration;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.getDuration;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
@@ -120,11 +126,13 @@ public final class AWSClientConfig {
 
     initUserAgent(conf, overrideConfigBuilder);
 
+    initRequestHeaders(conf, overrideConfigBuilder, awsServiceIdentifier);
+
     String signer = conf.getTrimmed(SIGNING_ALGORITHM, "");
     if (!signer.isEmpty()) {
       LOG.debug("Signer override = {}", signer);
       overrideConfigBuilder.putAdvancedOption(SdkAdvancedClientOption.SIGNER,
-          SignerFactory.createSigner(signer, SIGNING_ALGORITHM));
+          SignerFactory.createSigner(signer, conf, SIGNING_ALGORITHM));
     }
 
     initSigner(conf, overrideConfigBuilder, awsServiceIdentifier);
@@ -407,8 +415,46 @@ public final class AWSClientConfig {
       if (!signerOverride.isEmpty()) {
         LOG.debug("Signer override for {} = {}", awsServiceIdentifier, signerOverride);
         clientConfig.putAdvancedOption(SdkAdvancedClientOption.SIGNER,
-            SignerFactory.createSigner(signerOverride, configKey));
+            SignerFactory.createSigner(signerOverride, conf, configKey));
       }
+    }
+  }
+
+  /**
+   * Initialize custom request headers for AWS clients.
+   * @param conf hadoop configuration
+   * @param clientConfig client configuration to update
+   * @param awsServiceIdentifier service name
+   */
+  private static void initRequestHeaders(Configuration conf,
+      ClientOverrideConfiguration.Builder clientConfig, String awsServiceIdentifier) {
+    String configKey = null;
+    switch (awsServiceIdentifier) {
+    case AWS_SERVICE_IDENTIFIER_S3:
+      configKey = CUSTOM_HEADERS_S3;
+      break;
+    case AWS_SERVICE_IDENTIFIER_STS:
+      configKey = CUSTOM_HEADERS_STS;
+      break;
+    default:
+      // No known service.
+    }
+    if (configKey != null) {
+      Map<String, String> awsClientCustomHeadersMap =
+              S3AUtils.getTrimmedStringCollectionSplitByEquals(conf, configKey);
+      awsClientCustomHeadersMap.forEach((header, valueString) -> {
+        List<String> headerValues = Arrays.stream(valueString.split(";"))
+                        .map(String::trim)
+                        .filter(v -> !v.isEmpty())
+                        .collect(Collectors.toList());
+        if (!headerValues.isEmpty()) {
+          clientConfig.putHeader(header, headerValues);
+        } else {
+          LOG.warn("Ignoring header '{}' for {} client because no values were provided",
+                  header, awsServiceIdentifier);
+        }
+      });
+      LOG.debug("headers for {} client = {}", awsServiceIdentifier, clientConfig.headers());
     }
   }
 

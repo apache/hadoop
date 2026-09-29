@@ -481,16 +481,22 @@ public class WebApps {
     }
 
     public WebApp start(WebApp webapp) {
-      return start(webapp, null);
+      return start(webapp, (WebAppContext[]) null);
     }
 
-    public WebApp start(WebApp webapp, WebAppContext ui2Context) {
+    public WebApp start(WebApp webapp, WebAppContext... additionalContexts) {
       WebApp webApp = build(webapp);
       HttpServer2 httpServer = webApp.httpServer();
-      if (ui2Context != null) {
-        addFiltersForNewContext(ui2Context);
-        httpServer.addHandlerAtFront(ui2Context);
+
+      if (additionalContexts != null) {
+        for (WebAppContext context : additionalContexts) {
+          if (context != null) {
+            addFiltersForNewContext(context);
+            httpServer.addHandlerAtFront(context);
+          }
+        }
       }
+
       try {
         httpServer.start();
         LOG.info("Web app {} started at {}.", name, httpServer.getConnectorAddress(0).getPort());
@@ -500,7 +506,7 @@ public class WebApps {
       return webApp;
     }
 
-    private void addFiltersForNewContext(WebAppContext ui2Context) {
+    private void addFiltersForNewContext(WebAppContext uiContext) {
       Map<String, String> params = getConfigParameters(csrfConfigPrefix);
 
       if (hasCSRFEnabled(params)) {
@@ -508,7 +514,7 @@ public class WebApps {
             + "Please ensure that there is an authentication mechanism "
             + "enabled (kerberos, custom, etc).", name);
         String restCsrfClassName = RestCsrfPreventionFilter.class.getName();
-        HttpServer2.defineFilter(ui2Context, restCsrfClassName,
+        HttpServer2.defineFilter(uiContext, restCsrfClassName,
             restCsrfClassName, params, new String[]{"/*"});
       }
     }

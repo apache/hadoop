@@ -40,7 +40,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.HostFileManager;
 import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HostsFileWriter {
   private FileSystem localFileSys;

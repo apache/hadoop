@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.azurebfs.contracts.services;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -66,6 +68,8 @@ public enum AzureServiceErrorCode {
   INVALID_APPEND_OPERATION("InvalidAppendOperation", HttpURLConnection.HTTP_CONFLICT, null),
   UNAUTHORIZED_BLOB_OVERWRITE("UnauthorizedBlobOverwrite", HttpURLConnection.HTTP_FORBIDDEN,
           "This request is not authorized to perform blob overwrites."),
+  INVALID_RANGE("InvalidRange", AbfsHttpConstants.HTTP_INVALID_RANGE,
+          "The range specified is invalid for the current size of the resource."),
   UNKNOWN(null, -1, null);
 
   private final String errorCode;

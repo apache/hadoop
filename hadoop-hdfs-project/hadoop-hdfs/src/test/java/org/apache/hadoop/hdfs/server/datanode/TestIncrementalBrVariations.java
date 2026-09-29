@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -46,9 +46,10 @@ import org.apache.hadoop.hdfs.server.protocol.*;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * This test verifies that incremental block reports from a single DataNode are
@@ -89,7 +90,7 @@ public class TestIncrementalBrVariations {
     GenericTestUtils.setLogLevel(TestIncrementalBrVariations.LOG, Level.TRACE);
   }
 
-  @Before
+  @BeforeEach
   public void startUpCluster() throws IOException {
     conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
@@ -101,7 +102,7 @@ public class TestIncrementalBrVariations {
     dn0Reg = dn0.getDNRegistrationForBP(poolId);
   }
 
-  @After
+  @AfterEach
   public void shutDownCluster() throws IOException {
     if (cluster != null) {
       client.close();
@@ -138,7 +139,7 @@ public class TestIncrementalBrVariations {
     // Get the block list for the file with the block locations.
     LocatedBlocks blocks = client.getLocatedBlocks(
         filePath.toString(), 0, BLOCK_SIZE * NUM_BLOCKS);
-    assertThat(cluster.getNamesystem().getUnderReplicatedBlocks(), is(0L));
+    assertThat(cluster.getNamesystem().getUnderReplicatedBlocks()).isEqualTo(0L);
     return blocks;
   }
 
@@ -195,8 +196,7 @@ public class TestIncrementalBrVariations {
       // by the NameNode.  IBRs are async, make sure the NN processes
       // all of them.
       cluster.getNamesystem().getBlockManager().flushBlockOps();
-      assertThat(cluster.getNamesystem().getMissingBlocksCount(),
-          is((long) reports.length));
+      assertThat(cluster.getNamesystem().getMissingBlocksCount()).isEqualTo((long) reports.length);
     }
   }
 
@@ -206,11 +206,12 @@ public class TestIncrementalBrVariations {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testDataNodeDoesNotSplitReports()
       throws IOException, InterruptedException {
     LocatedBlocks blocks = createFileGetBlocks(GenericTestUtils.getMethodName());
-    assertThat(cluster.getDataNodes().size(), is(1));
+    assertThat(cluster.getDataNodes().size()).isEqualTo(1);
 
     // Remove all blocks from the DataNode.
     for (LocatedBlock block : blocks.getLocatedBlocks()) {
@@ -242,7 +243,8 @@ public class TestIncrementalBrVariations {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test (timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testNnLearnsNewStorages()
       throws IOException, InterruptedException {
 

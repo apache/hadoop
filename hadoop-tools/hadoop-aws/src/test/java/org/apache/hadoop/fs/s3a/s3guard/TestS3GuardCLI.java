@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -30,7 +30,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.*;
 /**
  * Test the S3Guard CLI entry point.
  */
-public class TestS3GuardCLI extends Assert {
+public class TestS3GuardCLI extends Assertions {
 
   /**
    * Run a S3GuardTool command from a varags list.

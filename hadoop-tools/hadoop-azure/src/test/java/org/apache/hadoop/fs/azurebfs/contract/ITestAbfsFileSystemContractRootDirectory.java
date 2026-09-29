@@ -20,7 +20,8 @@ package org.apache.hadoop.fs.azurebfs.contract;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractRootDirectoryTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Contract test for root directory operation.
@@ -34,6 +35,7 @@ public class ITestAbfsFileSystemContractRootDirectory extends AbstractContractRo
     this.isSecure = binding.isSecureMode();
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();
@@ -51,7 +53,7 @@ public class ITestAbfsFileSystemContractRootDirectory extends AbstractContractRo
   }
 
   @Override
-  @Ignore("ABFS always return false when non-recursively remove root dir")
+  @Disabled("ABFS always return false when non-recursively remove root dir")
   public void testRmNonEmptyRootDirNonRecursive() throws Throwable {
   }
 }

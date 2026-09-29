@@ -26,10 +26,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.test.tags.ScaleTest;
 import org.apache.hadoop.util.DurationInfo;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +48,7 @@ import static org.apache.hadoop.test.GenericTestUtils.filenameOfIndex;
  * issue multiple delete requests during a delete sequence -so test that
  * operation more efficiently.
  */
+@ScaleTest
 public class ITestS3ADeleteManyFiles extends S3AScaleTestBase {
 
   private static final Logger LOG =
@@ -102,7 +104,7 @@ public class ITestS3ADeleteManyFiles extends S3AScaleTestBase {
     long sourceSize = Arrays.stream(statuses)
         .mapToLong(FileStatus::getLen)
         .sum();
-    assertEquals("Source file Count", count, nSrcFiles);
+    assertEquals(count, nSrcFiles, "Source file Count");
     ContractTestUtils.NanoTimer renameTimer = new ContractTestUtils.NanoTimer();
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Rename %s to %s", srcDir, finalDir)) {

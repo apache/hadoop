@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.util.Optional;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import org.apache.hadoop.conf.Configuration;
@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.EncryptionTestUtils.validateEncryptionFileAttributes;
-import static org.hamcrest.CoreMatchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Concrete class that extends {@link AbstractTestS3AEncryption}
@@ -58,9 +58,9 @@ public class ITestS3AEncryptionSSEKMSDefaultKey
   @Override
   protected void assertEncrypted(Path path) throws IOException {
     HeadObjectResponse md = getS3AInternals().getObjectMetadata(path);
-    assertEquals("SSE Algorithm", EncryptionTestUtils.AWS_KMS_SSE_ALGORITHM,
-            md.serverSideEncryptionAsString());
-    assertThat(md.ssekmsKeyId(), containsString("arn:aws:kms:"));
+    assertEquals(EncryptionTestUtils.AWS_KMS_SSE_ALGORITHM,
+        md.serverSideEncryptionAsString(), "SSE Algorithm");
+    assertThat(md.ssekmsKeyId()).contains("arn:aws:kms:");
   }
 
   @Test

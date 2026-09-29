@@ -48,7 +48,7 @@ public class NodeLabelsInfo {
       this.nodeLabelsInfo.add(new NodeLabelInfo(label));
     }
   }
-  
+
   public NodeLabelsInfo(Set<String> nodeLabelsName) {
     this.nodeLabelsInfo = new ArrayList<>();
     for (String labelName : nodeLabelsName) {
@@ -75,7 +75,7 @@ public class NodeLabelsInfo {
     }
     return nodeLabels;
   }
-  
+
   public List<String> getNodeLabelsName() {
     ArrayList<String> nodeLabelsName = new ArrayList<>();
     for (NodeLabelInfo label : nodeLabelsInfo) {

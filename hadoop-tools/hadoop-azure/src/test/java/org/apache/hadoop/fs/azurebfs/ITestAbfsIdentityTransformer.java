@@ -25,7 +25,7 @@ import java.util.UUID;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformer;
 import org.apache.hadoop.fs.permission.AclEntry;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -48,7 +48,6 @@ import static org.apache.hadoop.fs.permission.FsAction.ALL;
 /**
  * Test IdentityTransformer.
  */
-//@RunWith(Parameterized.class)
 public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
   private final UserGroupInformation userGroupInfo;
   private final String localUser;
@@ -73,8 +72,8 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
     resetIdentityConfig(config);
     // Default config
     IdentityTransformer identityTransformer = getTransformerWithDefaultIdentityConfig(config);
-    assertEquals("Identity should not change for default config",
-            DAEMON, identityTransformer.transformUserOrGroupForSetRequest(DAEMON));
+    assertEquals(DAEMON, identityTransformer.transformUserOrGroupForSetRequest(DAEMON),
+        "Identity should not change for default config");
 
     // Add service principal id
     config.set(FS_AZURE_OVERRIDE_OWNER_SP, SERVICE_PRINCIPAL_ID);
@@ -82,20 +81,20 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
     // case 1: substitution list doesn't contain daemon
     config.set(FS_AZURE_OVERRIDE_OWNER_SP_LIST, "a,b,c,d");
     identityTransformer = getTransformerWithCustomizedIdentityConfig(config);
-    assertEquals("Identity should not change when substitution list doesn't contain daemon",
-            DAEMON, identityTransformer.transformUserOrGroupForSetRequest(DAEMON));
+    assertEquals(DAEMON, identityTransformer.transformUserOrGroupForSetRequest(DAEMON),
+        "Identity should not change when substitution list doesn't contain daemon");
 
     // case 2: substitution list contains daemon name
     config.set(FS_AZURE_OVERRIDE_OWNER_SP_LIST, DAEMON + ",a,b,c,d");
     identityTransformer = getTransformerWithCustomizedIdentityConfig(config);
-    assertEquals("Identity should be replaced to servicePrincipalId",
-            SERVICE_PRINCIPAL_ID, identityTransformer.transformUserOrGroupForSetRequest(DAEMON));
+    assertEquals(SERVICE_PRINCIPAL_ID, identityTransformer.transformUserOrGroupForSetRequest(DAEMON),
+        "Identity should be replaced to servicePrincipalId");
 
     // case 3: substitution list is *
     config.set(FS_AZURE_OVERRIDE_OWNER_SP_LIST, ASTERISK);
     identityTransformer = getTransformerWithCustomizedIdentityConfig(config);
-    assertEquals("Identity should be replaced to servicePrincipalId",
-            SERVICE_PRINCIPAL_ID, identityTransformer.transformUserOrGroupForSetRequest(DAEMON));
+    assertEquals(SERVICE_PRINCIPAL_ID, identityTransformer.transformUserOrGroupForSetRequest(DAEMON),
+        "Identity should be replaced to servicePrincipalId");
   }
 
   @Test
@@ -103,8 +102,8 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
     Configuration config = this.getRawConfiguration();
     // Default config
     IdentityTransformer identityTransformer = getTransformerWithDefaultIdentityConfig(config);
-    assertEquals("short name should not be converted to full name by default",
-            SHORT_NAME, identityTransformer.transformUserOrGroupForSetRequest(SHORT_NAME));
+    assertEquals(SHORT_NAME, identityTransformer.transformUserOrGroupForSetRequest(SHORT_NAME),
+        "short name should not be converted to full name by default");
 
     resetIdentityConfig(config);
 
@@ -112,8 +111,9 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
     config.setBoolean(FS_AZURE_FILE_OWNER_ENABLE_SHORTNAME, true);
     config.set(FS_AZURE_FILE_OWNER_DOMAINNAME, DOMAIN);
     identityTransformer = getTransformerWithCustomizedIdentityConfig(config);
-    assertEquals("short name should be converted to full name",
-            FULLY_QUALIFIED_NAME, identityTransformer.transformUserOrGroupForSetRequest(SHORT_NAME));
+    assertEquals(FULLY_QUALIFIED_NAME,
+        identityTransformer.transformUserOrGroupForSetRequest(SHORT_NAME),
+        "short name should be converted to full name");
   }
 
   @Test
@@ -128,8 +128,8 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
 
     IdentityTransformer identityTransformer = getTransformerWithCustomizedIdentityConfig(config);
     final String principalId = UUID.randomUUID().toString();
-    assertEquals("Identity should not be changed when owner is already a principal id ",
-            principalId, identityTransformer.transformUserOrGroupForSetRequest(principalId));
+    assertEquals(principalId, identityTransformer.transformUserOrGroupForSetRequest(principalId),
+        "Identity should not be changed when owner is already a principal id ");
   }
 
   @Test
@@ -141,8 +141,8 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
     config.set(FS_AZURE_FILE_OWNER_DOMAINNAME, DOMAIN);
     // Default config
     IdentityTransformer identityTransformer = getTransformerWithDefaultIdentityConfig(config);
-    assertEquals("Identity should not be changed because it is not in substitution list",
-            SUPER_USER, identityTransformer.transformUserOrGroupForSetRequest(SUPER_USER));
+    assertEquals(SUPER_USER, identityTransformer.transformUserOrGroupForSetRequest(SUPER_USER),
+        "Identity should not be changed because it is not in substitution list");
   }
 
   @Test
@@ -152,14 +152,16 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
 
     // with default config, identityTransformer should do $superUser replacement
     IdentityTransformer identityTransformer = getTransformerWithDefaultIdentityConfig(config);
-    assertEquals("$superuser should be replaced with local user by default",
-            localUser, identityTransformer.transformIdentityForGetRequest(SUPER_USER, true, localUser));
+    assertEquals(localUser,
+        identityTransformer.transformIdentityForGetRequest(SUPER_USER, true, localUser),
+        "$superuser should be replaced with local user by default");
 
     // Disable $supeuser replacement
     config.setBoolean(FS_AZURE_SKIP_SUPER_USER_REPLACEMENT, true);
     identityTransformer = getTransformerWithCustomizedIdentityConfig(config);
-    assertEquals("$superuser should not be replaced",
-            SUPER_USER, identityTransformer.transformIdentityForGetRequest(SUPER_USER, true, localUser));
+    assertEquals(SUPER_USER,
+        identityTransformer.transformIdentityForGetRequest(SUPER_USER, true, localUser),
+        "$superuser should not be replaced");
   }
 
   @Test
@@ -169,47 +171,53 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
 
     // Default config
     IdentityTransformer identityTransformer = getTransformerWithDefaultIdentityConfig(config);
-    assertEquals("By default servicePrincipalId should not be converted for GetFileStatus(), listFileStatus(), getAcl()",
-            SERVICE_PRINCIPAL_ID, identityTransformer.transformIdentityForGetRequest(SERVICE_PRINCIPAL_ID, true, localUser));
+    assertEquals(SERVICE_PRINCIPAL_ID,
+        identityTransformer.transformIdentityForGetRequest(SERVICE_PRINCIPAL_ID, true, localUser),
+        "By default servicePrincipalId should not be converted for GetFileStatus(), listFileStatus(), getAcl()");
 
     resetIdentityConfig(config);
     // 1. substitution list doesn't contain currentUser
     config.set(FS_AZURE_OVERRIDE_OWNER_SP_LIST, "a,b,c,d");
     identityTransformer = getTransformerWithCustomizedIdentityConfig(config);
-    assertEquals("servicePrincipalId should not be replaced if local daemon user is not in substitution list",
-            SERVICE_PRINCIPAL_ID, identityTransformer.transformIdentityForGetRequest(SERVICE_PRINCIPAL_ID, true, localUser));
+    assertEquals(SERVICE_PRINCIPAL_ID,
+        identityTransformer.transformIdentityForGetRequest(SERVICE_PRINCIPAL_ID, true, localUser),
+        "servicePrincipalId should not be replaced if local daemon user is not in substitution list");
 
     resetIdentityConfig(config);
     // 2. substitution list contains currentUser(daemon name) but the service principal id in config doesn't match
     config.set(FS_AZURE_OVERRIDE_OWNER_SP_LIST, localUser + ",a,b,c,d");
     config.set(FS_AZURE_OVERRIDE_OWNER_SP, UUID.randomUUID().toString());
     identityTransformer = getTransformerWithCustomizedIdentityConfig(config);
-    assertEquals("servicePrincipalId should not be replaced if it is not equal to the SPN set in config",
-            SERVICE_PRINCIPAL_ID, identityTransformer.transformIdentityForGetRequest(SERVICE_PRINCIPAL_ID, true, localUser));
+    assertEquals(SERVICE_PRINCIPAL_ID,
+        identityTransformer.transformIdentityForGetRequest(SERVICE_PRINCIPAL_ID, true, localUser),
+        "servicePrincipalId should not be replaced if it is not equal to the SPN set in config");
 
     resetIdentityConfig(config);
     // 3. substitution list contains currentUser(daemon name) and the service principal id in config matches
     config.set(FS_AZURE_OVERRIDE_OWNER_SP_LIST, localUser + ",a,b,c,d");
     config.set(FS_AZURE_OVERRIDE_OWNER_SP, SERVICE_PRINCIPAL_ID);
     identityTransformer = getTransformerWithCustomizedIdentityConfig(config);
-    assertEquals("servicePrincipalId should be transformed to local use",
-            localUser, identityTransformer.transformIdentityForGetRequest(SERVICE_PRINCIPAL_ID, true, localUser));
+    assertEquals(localUser,
+        identityTransformer.transformIdentityForGetRequest(SERVICE_PRINCIPAL_ID, true, localUser),
+        "servicePrincipalId should be transformed to local use");
 
     resetIdentityConfig(config);
     // 4. substitution is "*" but the service principal id in config doesn't match the input
     config.set(FS_AZURE_OVERRIDE_OWNER_SP_LIST, ASTERISK);
     config.set(FS_AZURE_OVERRIDE_OWNER_SP, UUID.randomUUID().toString());
     identityTransformer = getTransformerWithCustomizedIdentityConfig(config);
-    assertEquals("servicePrincipalId should not be replaced if it is not equal to the SPN set in config",
-            SERVICE_PRINCIPAL_ID, identityTransformer.transformIdentityForGetRequest(SERVICE_PRINCIPAL_ID, true, localUser));
+    assertEquals(SERVICE_PRINCIPAL_ID,
+        identityTransformer.transformIdentityForGetRequest(SERVICE_PRINCIPAL_ID, true, localUser),
+        "servicePrincipalId should not be replaced if it is not equal to the SPN set in config");
 
     resetIdentityConfig(config);
     // 5. substitution is "*" and the service principal id in config match the input
     config.set(FS_AZURE_OVERRIDE_OWNER_SP_LIST, ASTERISK);
     config.set(FS_AZURE_OVERRIDE_OWNER_SP, SERVICE_PRINCIPAL_ID);
     identityTransformer = getTransformerWithCustomizedIdentityConfig(config);
-    assertEquals("servicePrincipalId should be transformed to local user",
-            localUser, identityTransformer.transformIdentityForGetRequest(SERVICE_PRINCIPAL_ID, true, localUser));
+    assertEquals(localUser,
+        identityTransformer.transformIdentityForGetRequest(SERVICE_PRINCIPAL_ID, true, localUser),
+        "servicePrincipalId should be transformed to local user");
   }
 
   @Test
@@ -219,17 +227,20 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
 
     // Default config
     IdentityTransformer identityTransformer = getTransformerWithDefaultIdentityConfig(config);
-    assertEquals("full name should not be transformed if shortname is not enabled",
-            FULLY_QUALIFIED_NAME, identityTransformer.transformIdentityForGetRequest(FULLY_QUALIFIED_NAME, true, localUser));
+    assertEquals(FULLY_QUALIFIED_NAME,
+        identityTransformer.transformIdentityForGetRequest(FULLY_QUALIFIED_NAME, true, localUser),
+        "full name should not be transformed if shortname is not enabled");
 
     // add config to get short name
     config.setBoolean(FS_AZURE_FILE_OWNER_ENABLE_SHORTNAME, true);
     identityTransformer = getTransformerWithCustomizedIdentityConfig(config);
-    assertEquals("should convert the full owner name to shortname ",
-            SHORT_NAME, identityTransformer.transformIdentityForGetRequest(FULLY_QUALIFIED_NAME, true, localUser));
+    assertEquals(SHORT_NAME,
+        identityTransformer.transformIdentityForGetRequest(FULLY_QUALIFIED_NAME, true, localUser),
+        "should convert the full owner name to shortname ");
 
-    assertEquals("group name should not be converted to shortname ",
-            FULLY_QUALIFIED_NAME, identityTransformer.transformIdentityForGetRequest(FULLY_QUALIFIED_NAME, false, localGroup));
+    assertEquals(FULLY_QUALIFIED_NAME,
+        identityTransformer.transformIdentityForGetRequest(FULLY_QUALIFIED_NAME, false, localGroup),
+        "group name should not be converted to shortname ");
   }
 
   @Test
@@ -350,9 +361,9 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
   }
 
   private void checkAclEntriesList(List<AclEntry> aclEntries, List<AclEntry> expected) {
-    assertTrue("list size not equals", aclEntries.size() == expected.size());
+    assertTrue(aclEntries.size() == expected.size(), "list size not equals");
     for (int i = 0; i < aclEntries.size(); i++) {
-      assertEquals("Identity doesn't match", expected.get(i).getName(), aclEntries.get(i).getName());
+      assertEquals(expected.get(i).getName(), aclEntries.get(i).getName(), "Identity doesn't match");
     }
   }
 }

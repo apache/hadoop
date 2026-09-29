@@ -29,16 +29,19 @@ import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+
+import org.apache.hadoop.test.tags.LoadTest;
+import org.apache.hadoop.test.tags.ScaleTest;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.MethodSorters;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.MethodOrderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,6 +62,7 @@ import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.MAX_ENTRIES_TO_DELETE;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test some scalable operations related to file renaming and deletion.
@@ -69,8 +73,11 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.MAX_ENTRIES_TO_DEL
  * Note: UA field includes the configuration tested for the benefit
  * of anyone looking through the server logs.
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@RunWith(Parameterized.class)
+@LoadTest
+@ScaleTest
+@ParameterizedClass(name="bulk-delete-aws-retry={0}-requests={2}-size={1}")
+@MethodSource("params")
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
 
   private static final Logger LOG =
@@ -114,8 +121,6 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
    *
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters(
-      name = "bulk-delete-aws-retry={0}-requests={2}-size={1}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {false, SMALL, SMALL_REQS},
@@ -163,11 +168,12 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
   }
 
   @Override
+  @BeforeEach
   public void setup() throws Exception {
-    final Configuration conf = getConf();
     super.setup();
-    Assume.assumeTrue("multipart delete disabled",
-        conf.getBoolean(ENABLE_MULTI_DELETE, true));
+    final Configuration conf = getConf();
+    assumeTrue(conf.getBoolean(ENABLE_MULTI_DELETE, true),
+        "multipart delete disabled");
     dataDir = GenericTestUtils.getTestDir("throttling");
     dataDir.mkdirs();
     final String size = getFileSystem().getConf().get(BULK_DELETE_PAGE_SIZE);

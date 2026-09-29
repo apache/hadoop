@@ -61,10 +61,12 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests job end notification
@@ -169,6 +171,27 @@ public class TestJobEndNotifier extends JobEndNotifier {
     testWaitInterval(conf);
     testTimeout(conf);
     testProxyConfiguration(conf);
+  }
+
+  /**
+   * Test that an unparseable proxy port is logged through the SLF4J logger.
+   */
+  @Test
+  public void testUnparseableProxyPortIsLogged() {
+    LogCapturer logs = LogCapturer.captureLogs(
+        LoggerFactory.getLogger(JobEndNotifier.class));
+    try {
+      Configuration conf = new Configuration();
+      conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "somehost:someport");
+      setConf(conf);
+      assertTrue(proxyToUse.type() == Proxy.Type.DIRECT,
+          "Proxy shouldn't be set because port wasn't numeric");
+      assertTrue(logs.getOutput().contains("Job end notification couldn't"
+          + " parse configured proxy's port someport. Not going to use a proxy"),
+          "Expected unparseable port warning but got: " + logs.getOutput());
+    } finally {
+      logs.stopCapturing();
+    }
   }
 
   protected int notificationCount = 0;

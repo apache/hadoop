@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Abstract base class for MapWritable and SortedMapWritable
@@ -208,7 +209,9 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
       byte id = in.readByte();
       String className = in.readUTF();
       try {
-        addToMap(classLoader.loadClass(className), id);
+        addToMap(
+            ReflectionUtils.loadUninitedClass(classLoader, className, Writable.class),
+            id);
       } catch (ClassNotFoundException e) {
         throw new IOException(e);
       }

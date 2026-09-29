@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
+import org.apache.hadoop.test.TestName;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 
@@ -29,12 +30,10 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.VolumeCheckC
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.FakeTimer;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,21 +50,20 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_G
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY;
 import static org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult.*;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for {@link DatasetVolumeChecker} when the {@link FsVolumeSpi#check}
  * method returns different values of {@link VolumeCheckResult}.
  */
-@RunWith(Parameterized.class)
 public class TestDatasetVolumeChecker {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestDatasetVolumeChecker.class);
 
-  @Rule
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  @RegisterExtension
   public TestName testName = new TestName();
 
   /**
@@ -73,7 +71,6 @@ public class TestDatasetVolumeChecker {
    * Including "null" for 'throw exception'.
    * @return
    */
-  @Parameters(name="{0}")
   public static Collection<Object[]> data() {
     List<Object[]> values = new ArrayList<>();
     for (VolumeCheckResult result : VolumeCheckResult.values()) {
@@ -86,12 +83,12 @@ public class TestDatasetVolumeChecker {
   /**
    * When null, the check call should throw an exception.
    */
-  private final VolumeCheckResult expectedVolumeHealth;
+  private VolumeCheckResult expectedVolumeHealth;
   private static final int NUM_VOLUMES = 2;
 
 
-  public TestDatasetVolumeChecker(VolumeCheckResult expectedVolumeHealth) {
-    this.expectedVolumeHealth = expectedVolumeHealth;
+  public void initTestDatasetVolumeChecker(VolumeCheckResult pExpectedVolumeHealth) {
+    this.expectedVolumeHealth = pExpectedVolumeHealth;
   }
 
   /**
@@ -100,8 +97,11 @@ public class TestDatasetVolumeChecker {
    *
    * @throws Exception
    */
-  @Test(timeout = 10000)
-  public void testCheckOneVolume() throws Exception {
+  @ParameterizedTest(name="{0}")
+  @MethodSource("data")
+  @Timeout(value = 10)
+  public void testCheckOneVolume(VolumeCheckResult pExpectedVolumeHealth) throws Exception {
+    initTestDatasetVolumeChecker(pExpectedVolumeHealth);
     LOG.info("Executing {}", testName.getMethodName());
     final FsVolumeSpi volume = makeVolumes(1, expectedVolumeHealth).get(0);
     final DatasetVolumeChecker checker =
@@ -120,11 +120,11 @@ public class TestDatasetVolumeChecker {
             numCallbackInvocations.incrementAndGet();
             if (expectedVolumeHealth != null &&
                 expectedVolumeHealth != FAILED) {
-              assertThat(healthyVolumes.size(), is(1));
-              assertThat(failedVolumes.size(), is(0));
+              assertThat(healthyVolumes.size()).isEqualTo(1);
+              assertThat(failedVolumes.size()).isEqualTo(0);
             } else {
-              assertThat(healthyVolumes.size(), is(0));
-              assertThat(failedVolumes.size(), is(1));
+              assertThat(healthyVolumes.size()).isEqualTo(0);
+              assertThat(failedVolumes.size()).isEqualTo(1);
             }
           }
         });
@@ -134,7 +134,7 @@ public class TestDatasetVolumeChecker {
     // Ensure that the check was invoked at least once.
     verify(volume, times(1)).check(any());
     if (result) {
-      assertThat(numCallbackInvocations.get(), is(1L));
+      assertThat(numCallbackInvocations.get()).isEqualTo(1L);
     }
   }
 
@@ -144,8 +144,11 @@ public class TestDatasetVolumeChecker {
    *
    * @throws Exception
    */
-  @Test(timeout = 10000)
-  public void testCheckAllVolumes() throws Exception {
+  @ParameterizedTest(name="{0}")
+  @MethodSource("data")
+  @Timeout(value = 10)
+  public void testCheckAllVolumes(VolumeCheckResult pExpectedVolumeHealth) throws Exception {
+    initTestDatasetVolumeChecker(pExpectedVolumeHealth);
     LOG.info("Executing {}", testName.getMethodName());
 
     final List<FsVolumeSpi> volumes = makeVolumes(
@@ -159,7 +162,7 @@ public class TestDatasetVolumeChecker {
     LOG.info("Got back {} failed volumes", failedVolumes.size());
 
     if (expectedVolumeHealth == null || expectedVolumeHealth == FAILED) {
-      assertThat(failedVolumes.size(), is(NUM_VOLUMES));
+      assertThat(failedVolumes.size()).isEqualTo(NUM_VOLUMES);
     } else {
       assertTrue(failedVolumes.isEmpty());
     }
@@ -233,8 +236,11 @@ public class TestDatasetVolumeChecker {
     return volumes;
   }
 
-  @Test
-  public void testInvalidConfigurationValues() throws Exception {
+  @ParameterizedTest(name="{0}")
+  @MethodSource("data")
+  public void testInvalidConfigurationValues(VolumeCheckResult pExpectedVolumeHealth)
+      throws Exception {
+    initTestDatasetVolumeChecker(pExpectedVolumeHealth);
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.setInt(DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY, 0);
     intercept(HadoopIllegalArgumentException.class,

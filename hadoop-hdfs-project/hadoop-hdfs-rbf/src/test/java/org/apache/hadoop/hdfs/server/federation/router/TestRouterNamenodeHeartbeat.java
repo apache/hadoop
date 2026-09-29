@@ -104,17 +104,21 @@ public class TestRouterNamenodeHeartbeat {
   public void testNamenodeHeartbeatService() throws IOException {
 
     MiniRouterDFSCluster testCluster = new MiniRouterDFSCluster(true, 1);
-    Configuration heartbeatConfig = testCluster.generateNamenodeConfiguration(
-        NAMESERVICES[0]);
-    NamenodeHeartbeatService server = new NamenodeHeartbeatService(
-        namenodeResolver, NAMESERVICES[0], NAMENODES[0]);
-    server.init(heartbeatConfig);
-    assertEquals(STATE.INITED, server.getServiceState());
-    server.start();
-    assertEquals(STATE.STARTED, server.getServiceState());
-    server.stop();
-    assertEquals(STATE.STOPPED, server.getServiceState());
-    server.close();
+    try {
+      Configuration heartbeatConfig = testCluster.generateNamenodeConfiguration(
+          NAMESERVICES[0]);
+      NamenodeHeartbeatService server = new NamenodeHeartbeatService(
+          namenodeResolver, NAMESERVICES[0], NAMENODES[0]);
+      server.init(heartbeatConfig);
+      assertEquals(STATE.INITED, server.getServiceState());
+      server.start();
+      assertEquals(STATE.STARTED, server.getServiceState());
+      server.stop();
+      assertEquals(STATE.STOPPED, server.getServiceState());
+      server.close();
+    } finally {
+      testCluster.shutdown();
+    }
   }
 
   @Test

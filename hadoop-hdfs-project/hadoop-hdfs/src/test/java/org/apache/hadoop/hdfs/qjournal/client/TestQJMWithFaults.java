@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.qjournal.client;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.FAKE_NSINFO;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.JID;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeSegment;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.Closeable;
@@ -257,9 +257,8 @@ public class TestQJMWithFaults {
             checkException(t);
             continue;
           }
-          assertTrue("Recovered only up to txnid " + recovered +
-              " but had gotten an ack for " + lastAcked,
-              recovered >= lastAcked);
+          assertTrue(recovered >= lastAcked, "Recovered only up to txnid " + recovered
+              + " but had gotten an ack for " + lastAcked);
           
           txid = recovered + 1;
           

@@ -22,6 +22,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.security.token.delegation.SQLDelegationTokenSecretManager;
 
 import java.sql.Connection;
@@ -40,7 +41,7 @@ class HikariDataSourceConnectionFactory implements SQLConnectionFactory {
     Properties properties = new Properties();
     properties.setProperty("jdbcUrl", conf.get(CONNECTION_URL));
     properties.setProperty("username", conf.get(CONNECTION_USERNAME));
-    properties.setProperty("password", conf.get(CONNECTION_PASSWORD));
+    properties.setProperty("password", DFSUtil.getPassword(conf, CONNECTION_PASSWORD));
     properties.setProperty("driverClassName", conf.get(CONNECTION_DRIVER));
 
     // Include hikari connection properties

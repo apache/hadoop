@@ -26,11 +26,10 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.*;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.*;
-
+import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test to verify that the DFSClient passes the expected block length to
@@ -101,7 +100,7 @@ public class TestWriteBlockGetsBlockLengthHint {
     public synchronized ReplicaHandler createRbw(StorageType storageType,
         String storageId, ExtendedBlock b, boolean allowLazyPersist)
         throws IOException {
-      assertThat(b.getLocalBlock().getNumBytes(), is(EXPECTED_BLOCK_LENGTH));
+      assertThat(b.getLocalBlock().getNumBytes()).isEqualTo(EXPECTED_BLOCK_LENGTH);
       return super.createRbw(storageType, storageId, b, allowLazyPersist);
     }
   }

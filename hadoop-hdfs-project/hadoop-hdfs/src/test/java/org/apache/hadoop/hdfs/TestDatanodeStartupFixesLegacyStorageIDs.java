@@ -22,16 +22,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.TestDFSUpgradeFromImage.ClusterVerifier;
 
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 
 /**
@@ -74,12 +74,12 @@ public class TestDatanodeStartupFixesLegacyStorageIDs {
         final String bpid = cluster.getNamesystem().getBlockPoolId();
         StorageReport[] reports =
             cluster.getDataNodes().get(0).getFSDataset().getStorageReports(bpid);
-        assertThat(reports.length, is(1));
+        assertThat(reports.length).isEqualTo(1);
         final String storageID = reports[0].getStorage().getStorageID();
         assertTrue(DatanodeStorage.isValidStorageId(storageID));
 
         if (expectedStorageId != null) {
-          assertThat(storageID, is(expectedStorageId));
+          assertThat(storageID).isEqualTo(expectedStorageId);
         }
       }
     });
@@ -110,7 +110,8 @@ public class TestDatanodeStartupFixesLegacyStorageIDs {
    * Upgrade from 2.2 (no storage IDs per volume) correctly generates
    * GUID-based storage IDs. Test case for HDFS-7575.
    */
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testUpgradeFrom22FixesStorageIDs() throws IOException {
     runLayoutUpgradeTest(GenericTestUtils.getMethodName(), null);
   }
@@ -120,7 +121,8 @@ public class TestDatanodeStartupFixesLegacyStorageIDs {
    * generates new storage IDs.
    * Test case for HDFS-7575.
    */
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testUpgradeFrom22via26FixesStorageIDs() throws IOException {
     runLayoutUpgradeTest(GenericTestUtils.getMethodName(), null);
   }
@@ -130,7 +132,8 @@ public class TestDatanodeStartupFixesLegacyStorageIDs {
    * not regenerate the storage IDs.
    * Test case for HDFS-7575.
    */
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testUpgradeFrom26PreservesStorageIDs() throws IOException {
     // StorageId present in the image testUpgradeFrom26PreservesStorageId.tgz
     runLayoutUpgradeTest(GenericTestUtils.getMethodName(),

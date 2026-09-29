@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -59,6 +60,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ApiVersion;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
@@ -72,7 +74,11 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultSchema;
-import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListXmlParser;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListBlobResponseParser;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ResponseParserFactory;
+import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ContainerListResponseData;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ContainerListXmlParser;
 import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
@@ -87,12 +93,18 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_FALLBACK_COUNT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_LISTING_LATENCY;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_PARSE_FAILURE_COUNT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_REQUEST_COUNT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_RESPONSE_COUNT;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ACQUIRE_LEASE_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.AND_MARK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_BLOB_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_BLOCK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_JSON;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_APACHE_ARROW_STREAM;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_OCTET_STREAM;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_XML;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCK;
@@ -129,6 +141,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_BLOCK_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_COMMITTED_BLOCKS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_HDI_ISFOLDER;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_HDI_PERMISSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_TAG_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XMS_PROPERTIES_ENCODING_ASCII;
@@ -184,23 +197,11 @@ public class AbfsBlobClient extends AbfsClient {
       final SharedKeyCredentials sharedKeyCredentials,
       final AbfsConfiguration abfsConfiguration,
       final AccessTokenProvider tokenProvider,
-      final EncryptionContextProvider encryptionContextProvider,
-      final AbfsClientContext abfsClientContext) throws IOException {
-    super(baseUrl, sharedKeyCredentials, abfsConfiguration, tokenProvider,
-        encryptionContextProvider, abfsClientContext);
-    this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
-        abfsConfiguration.getAzureAtomicRenameDirs()
-            .split(AbfsHttpConstants.COMMA)));
-  }
-
-  public AbfsBlobClient(final URL baseUrl,
-      final SharedKeyCredentials sharedKeyCredentials,
-      final AbfsConfiguration abfsConfiguration,
       final SASTokenProvider sasTokenProvider,
       final EncryptionContextProvider encryptionContextProvider,
       final AbfsClientContext abfsClientContext) throws IOException {
-    super(baseUrl, sharedKeyCredentials, abfsConfiguration, sasTokenProvider,
-        encryptionContextProvider, abfsClientContext);
+    super(baseUrl, sharedKeyCredentials, abfsConfiguration, tokenProvider, sasTokenProvider,
+        encryptionContextProvider, abfsClientContext, AbfsServiceType.BLOB);
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs()
             .split(AbfsHttpConstants.COMMA)));
@@ -228,6 +229,42 @@ public class AbfsBlobClient extends AbfsClient {
         + COMMA + SINGLE_WHITE_SPACE + APPLICATION_OCTET_STREAM
         + COMMA + SINGLE_WHITE_SPACE + APPLICATION_XML));
     return requestHeaders;
+  }
+
+  /**
+   * When Photon is enabled, request Apache Arrow responses for ListBlobs by
+   * overriding the Accept header to advertise the Arrow media type with XML as
+   * the fallback format. The service may still return XML (for example when
+   * Photon is not available for the account, namespace or API version), so XML
+   * remains part of the accepted media types and response parsing is driven by
+   * the returned Content-Type. The change is scoped to the ListBlobs path only.
+   *
+   * <p>Photon is only requested on non-HNS (flat namespace) accounts. The Blob
+   * endpoint rejects an Arrow ListBlobs request on a hierarchical-namespace
+   * (HNS) account with {@code 409 Conflict}; that status short-circuits before
+   * {@link ResponseParserFactory} runs, so the Content-Type driven XML fallback
+   * cannot recover it and every listing would fail hard. Gating on the account
+   * type keeps HNS accounts on the XML path.
+   *
+   * @param requestHeaders the request headers to update in place.
+   * @return {@code true} if Arrow (Photon) was requested, {@code false} when
+   * Photon is disabled or the account is HNS and the headers were left
+   * unchanged.
+   * @throws AzureBlobFileSystemException if the account namespace type cannot be
+   * determined.
+   */
+  @VisibleForTesting
+  boolean applyPhotonRequestHeadersIfEnabled(
+      final List<AbfsHttpHeader> requestHeaders)
+      throws AzureBlobFileSystemException {
+    if (!getAbfsConfiguration().isPhotonEnabled() || getIsNamespaceEnabled()) {
+      return false;
+    }
+    requestHeaders.removeIf(header -> ACCEPT.equalsIgnoreCase(header.getName()));
+    requestHeaders.add(new AbfsHttpHeader(ACCEPT,
+        APPLICATION_APACHE_ARROW_STREAM + COMMA + SINGLE_WHITE_SPACE
+            + APPLICATION_XML));
+    return true;
   }
 
   /**
@@ -354,6 +391,8 @@ public class AbfsBlobClient extends AbfsClient {
       throws AzureBlobFileSystemException {
 
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    final boolean photonRequested =
+        applyPhotonRequestHeadersIfEnabled(requestHeaders);
 
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESTYPE, CONTAINER);
@@ -374,31 +413,71 @@ public class AbfsBlobClient extends AbfsClient {
         url,
         requestHeaders);
 
-    op.execute(tracingContext);
-    ListResponseData listResponseData = parseListPathResults(op.getResult(), uri);
-    listResponseData.setOp(op);
+    updatePhotonRequestMetric(photonRequested);
+    final DurationTracker listingLatencyTracker =
+        maybeStartPhotonListingLatencyTracker(photonRequested);
+    try {
+      op.execute(tracingContext);
+      ListResponseData listResponseData =
+          parseListPathResultsWithMetrics(op, uri, photonRequested);
 
-    // Perform Pending Rename Redo Operation on Atomic Rename Paths.
-    // Crashed HBase log rename recovery can be done by Filesystem.listStatus.
-    if (tracingContext.getOpType() == FSOperationType.LISTSTATUS
-        && op.getResult() != null
-        && op.getResult().getStatusCode() == HTTP_OK) {
-      boolean isRenameRecovered = retryRenameOnAtomicEntriesInListResults(tracingContext,
-          listResponseData.getRenamePendingJsonPaths());
-      if (isRenameRecovered) {
-        LOG.debug("Retrying list operation after rename recovery.");
-        // Retry the list operation to get the updated list of paths after rename recovery.
-        AbfsRestOperation retryListOp = getAbfsRestOperation(
-            AbfsRestOperationType.ListBlobs,
-            HTTP_METHOD_GET,
-            url,
-            requestHeaders);
-        retryListOp.execute(tracingContext);
-        listResponseData = parseListPathResults(retryListOp.getResult(), uri);
-        listResponseData.setOp(retryListOp);
+      // Perform Pending Rename Redo Operation on Atomic Rename Paths.
+      // Crashed HBase log rename recovery can be done by Filesystem.listStatus.
+      if (tracingContext.getOpType() == FSOperationType.LISTSTATUS
+          && op.getResult() != null
+          && op.getResult().getStatusCode() == HTTP_OK) {
+        boolean isRenameRecovered = retryRenameOnAtomicEntriesInListResults(tracingContext,
+            listResponseData.getRenamePendingJsonPaths());
+        if (isRenameRecovered) {
+          LOG.debug("Retrying list operation after rename recovery.");
+          // Retry the list operation to get the updated list of paths after rename recovery.
+          AbfsRestOperation retryListOp = getAbfsRestOperation(
+              AbfsRestOperationType.ListBlobs,
+              HTTP_METHOD_GET,
+              url,
+              requestHeaders);
+          // The retry issues a second ListBlobs request whose response is also
+          // classified below, so count it as a request too; otherwise
+          // PHOTON_RESPONSE_COUNT + PHOTON_FALLBACK_COUNT could exceed
+          // PHOTON_REQUEST_COUNT and break the metric invariant.
+          updatePhotonRequestMetric(photonRequested);
+          retryListOp.execute(tracingContext);
+          listResponseData =
+              parseListPathResultsWithMetrics(retryListOp, uri, photonRequested);
+        }
+      }
+      return listResponseData;
+    } finally {
+      if (listingLatencyTracker != null) {
+        listingLatencyTracker.close();
       }
     }
-    return listResponseData;
+  }
+
+  /**
+   * Parse a ListBlobs response, emitting the Photon (Apache Arrow) response,
+   * fallback and parse-failure metrics along the way. Shared by the primary and
+   * the rename-recovery retry list calls.
+   *
+   * @param op the executed ListBlobs REST operation.
+   * @param uri to be used for path conversion.
+   * @param photonRequested whether Arrow was requested for this listing.
+   * @return the parsed {@link ListResponseData}.
+   * @throws AzureBlobFileSystemException if parsing fails.
+   */
+  private ListResponseData parseListPathResultsWithMetrics(
+      final AbfsRestOperation op, final URI uri, final boolean photonRequested)
+      throws AzureBlobFileSystemException {
+    final AbfsHttpOperation result = op.getResult();
+    updatePhotonResponseMetrics(photonRequested, result);
+    try {
+      ListResponseData listResponseData = parseListPathResults(result, uri);
+      listResponseData.setOp(op);
+      return listResponseData;
+    } catch (AzureBlobFileSystemException parseFailure) {
+      updatePhotonParseFailureMetric(photonRequested, result);
+      throw parseFailure;
+    }
   }
 
   /**
@@ -508,9 +587,34 @@ public class AbfsBlobClient extends AbfsClient {
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsRestOperation op;
     if (isFileCreation) {
-      // Create a file with the specified parameters
-      op = createFile(path, overwrite, permissions, isAppendBlob, eTag,
-          contextEncryptionAdapter, tracingContext);
+      if (getAbfsConfiguration().getIsCreateIdempotencyEnabled()) {
+        AbfsRestOperation statusOp = null;
+        try {
+          // Check if the file already exists by calling GetPathStatus
+          statusOp = getPathStatus(path, tracingContext, null, false);
+        } catch (AbfsRestOperationException ex) {
+          // If the path does not exist, continue with file creation
+          // For other errors, rethrow the exception
+          if (ex.getStatusCode() != HTTP_NOT_FOUND) {
+            throw ex;
+          }
+        }
+        // If the file exists and overwrite is not allowed, throw conflict
+        if (statusOp != null && statusOp.hasResult() && !overwrite) {
+          throw new AbfsRestOperationException(
+              HTTP_CONFLICT,
+              AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
+              PATH_EXISTS,
+              null);
+        } else {
+          // Proceed with file creation (force overwrite = true)
+          op = createFile(path, true, permissions, isAppendBlob, eTag,
+              contextEncryptionAdapter, tracingContext);
+        }
+      } else {
+        op = createFile(path, overwrite, permissions, isAppendBlob, eTag,
+            contextEncryptionAdapter, tracingContext);
+      }
     } else {
       // Create a directory with the specified parameters
       op = createDirectory(path, permissions, isAppendBlob, eTag,
@@ -531,7 +635,7 @@ public class AbfsBlobClient extends AbfsClient {
    *
    * @throws AzureBlobFileSystemException if an error occurs during the operation.
    */
-  protected AbfsRestOperation createMarkerAtPath(final String path,
+  public AbfsRestOperation createMarkerAtPath(final String path,
       final String eTag,
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
@@ -583,7 +687,6 @@ public class AbfsBlobClient extends AbfsClient {
     if (eTag != null && !eTag.isEmpty()) {
       requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.IF_MATCH, eTag));
     }
-
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
         AbfsRestOperationType.PutBlob,
@@ -898,7 +1001,7 @@ public class AbfsBlobClient extends AbfsClient {
       requestHeaders.add(new AbfsHttpHeader(EXPECT, HUNDRED_CONTINUE));
     }
     if (isChecksumValidationEnabled()) {
-      addCheckSumHeaderForWrite(requestHeaders, reqParams, buffer);
+      addCheckSumHeaderForWrite(requestHeaders, reqParams);
     }
     if (reqParams.isRetryDueToExpect()) {
       String userAgentRetry = getUserAgent();
@@ -982,6 +1085,9 @@ public class AbfsBlobClient extends AbfsClient {
     if (requestParameters.getLeaseId() != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, requestParameters.getLeaseId()));
     }
+    if (isChecksumValidationEnabled()) {
+      addCheckSumHeaderForWrite(requestHeaders, requestParameters);
+    }
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, APPEND_BLOCK);
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION, abfsUriQueryBuilder);
@@ -1021,6 +1127,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param leaseId if there is an active lease on the path.
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the server calls.
+   * @param blobMd5 the MD5 hash of the blob for integrity verification.
    * @return exception as this operation is not supported on Blob Endpoint.
    * @throws UnsupportedOperationException always.
    */
@@ -1032,7 +1139,7 @@ public class AbfsBlobClient extends AbfsClient {
       final String cachedSasToken,
       final String leaseId,
       final ContextEncryptionAdapter contextEncryptionAdapter,
-      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+      final TracingContext tracingContext, String blobMd5) throws AzureBlobFileSystemException {
     throw new UnsupportedOperationException(
         "Flush without blockIds not supported on Blob Endpoint");
   }
@@ -1049,6 +1156,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param eTag The etag of the blob.
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the service call.
+   * @param blobMd5 the MD5 hash of the blob for integrity verification.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -1060,7 +1168,7 @@ public class AbfsBlobClient extends AbfsClient {
       final String leaseId,
       final String eTag,
       ContextEncryptionAdapter contextEncryptionAdapter,
-      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+      final TracingContext tracingContext, String blobMd5) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
         contextEncryptionAdapter, tracingContext);
@@ -1070,9 +1178,10 @@ public class AbfsBlobClient extends AbfsClient {
     if (leaseId != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
     }
-    String md5Hash = computeMD5Hash(buffer, 0, buffer.length);
-    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, md5Hash));
-
+    String md5Value = (isFullBlobChecksumValidationEnabled() && blobMd5 != null)
+        ? blobMd5
+        : computeMD5Hash(buffer, 0, buffer.length);
+    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, md5Value));
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCKLIST);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
@@ -1097,7 +1206,12 @@ public class AbfsBlobClient extends AbfsClient {
         AbfsRestOperation op1 = getPathStatus(path, true, tracingContext,
             contextEncryptionAdapter);
         String metadataMd5 = op1.getResult().getResponseHeader(CONTENT_MD5);
-        if (!md5Hash.equals(metadataMd5)) {
+        /*
+         * Validate the response by comparing the server's MD5 metadata against either:
+         * 1. The full blob content MD5 (if full blob checksum validation is enabled), or
+         * 2. The full block ID list buffer MD5 (fallback if blob checksum validation is disabled)
+         */
+        if (md5Value != null && !md5Value.equals(metadataMd5)) {
           throw ex;
         }
         return op;
@@ -1235,8 +1349,16 @@ public class AbfsBlobClient extends AbfsClient {
       if (op.getResult().getStatusCode() == HTTP_NOT_FOUND
           && isImplicitCheckRequired && isNonEmptyDirectory(path, tracingContext)) {
         // Implicit path found.
-        // Create a marker blob at this path.
-        this.createMarkerAtPath(path, null, contextEncryptionAdapter, tracingContext);
+        // Create a marker blob at this path. Marker creation might fail due to permission issues, so we swallow exception in case of failure.
+        try {
+          this.createMarkerAtPath(path, null, contextEncryptionAdapter,
+              tracingContext);
+        } catch (AbfsRestOperationException exception) {
+          LOG.debug("Marker creation failed for path {} during getPathStatus. StatusCode: {}, ErrorCode: {}",
+              path,
+              exception.getStatusCode(),
+              exception.getErrorCode());
+        }
         AbfsRestOperation successOp = getSuccessOp(
             AbfsRestOperationType.GetPathStatus, HTTP_METHOD_HEAD,
             url, requestHeaders);
@@ -1290,6 +1412,9 @@ public class AbfsBlobClient extends AbfsClient {
     requestHeaders.add(rangeHeader);
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
 
+    // Add request priority header for prefetch reads
+    addRequestPriorityForPrefetch(requestHeaders, tracingContext);
+
     // Add request header to fetch MD5 Hash of data returned by server.
     if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_RANGE_GET_CONTENT_MD5, TRUE));
@@ -1298,7 +1423,16 @@ public class AbfsBlobClient extends AbfsClient {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.READ_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
-
+    // Retrieve the read thread pool metrics from the ABFS counters.
+    AbfsReadResourceUtilizationMetrics readResourceUtilizationMetrics = retrieveReadResourceUtilizationMetrics();
+    // If metrics are available, record them in the tracing context for diagnostics or logging.
+    if (readResourceUtilizationMetrics != null) {
+      String readMetrics = readResourceUtilizationMetrics.toString();
+      tracingContext.setResourceUtilizationMetricResults(readMetrics);
+      if (!readMetrics.isEmpty()) {
+        readResourceUtilizationMetrics.markPushed();
+      }
+    }
     URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
         AbfsRestOperationType.GetBlob,
@@ -1616,7 +1750,14 @@ public class AbfsBlobClient extends AbfsClient {
   }
 
   /**
-   * Parse the XML response body returned by ListBlob API on Blob Endpoint.
+   * Parse the response body returned by the ListBlob API on the Blob Endpoint.
+   * The parser is selected by {@link ResponseParserFactory} based on the
+   * response Content-Type: an Apache Arrow (Photon) response is parsed by
+   * {@code ArrowListBlobParser}, while any other (or missing) Content-Type is
+   * parsed by {@code XmlListBlobResponseParser}. Both parsers produce a
+   * {@link BlobListResultSchema} so downstream processing is unchanged, and a
+   * parse failure surfaces the format-specific error reported by the selected
+   * parser (a malformed Arrow response is not silently re-parsed as XML).
    * @param result InputStream contains the response from server.
    * @param uri to be used for path conversion.
    * @return {@link ListResponseData}. containing listing response.
@@ -1625,21 +1766,21 @@ public class AbfsBlobClient extends AbfsClient {
   @Override
   public ListResponseData parseListPathResults(AbfsHttpOperation result, URI uri)
       throws AzureBlobFileSystemException {
+    final ListBlobResponseParser parser = ResponseParserFactory.getParser(
+        result.getResponseHeaderIgnoreCase(CONTENT_TYPE),
+        getBaseUrl().toString(),
+        () -> saxParserThreadLocal.get(),
+        getAbfsConfiguration().getPhotonArrowMemoryLimit());
     try (InputStream stream = result.getListResultStream()) {
       try {
-        BlobListResultSchema listResultSchema;
-        final SAXParser saxParser = saxParserThreadLocal.get();
-        saxParser.reset();
-        listResultSchema = new BlobListResultSchema();
-        saxParser.parse(stream,
-            new BlobListXmlParser(listResultSchema, getBaseUrl().toString()));
+        BlobListResultSchema listResultSchema = parser.parse(stream);
         result.setListResultSchema(listResultSchema);
         LOG.debug("ListBlobs listed {} blobs with {} as continuation token",
             listResultSchema.paths().size(),
             listResultSchema.getNextMarker());
         return filterRenamePendingFiles(listResultSchema, uri);
-      } catch (SAXException | IOException ex) {
-        throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
+      } catch (IOException ex) {
+        throw new AbfsDriverException(parser.getParsingErrorMessage(), ex);
       }
     } catch (AbfsDriverException ex) {
       // Throw as it is to avoid multiple wrapping.
@@ -1647,8 +1788,86 @@ public class AbfsBlobClient extends AbfsClient {
       throw ex;
     } catch (Exception ex) {
       LOG.error("Unable to get stream for list results for uri {}", uri != null ? uri.toString(): "NULL", ex);
-      throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
+      throw new AbfsDriverException(parser.getParsingErrorMessage(), ex);
     }
+  }
+
+  /**
+   * Whether the ListBlobs response was returned in the Apache Arrow (Photon)
+   * format, based on the response Content-Type.
+   * @param result the executed HTTP operation.
+   * @return {@code true} if the response body is Arrow encoded.
+   */
+  private boolean isArrowListResponse(final AbfsHttpOperation result) {
+    return result != null && ResponseParserFactory.isArrowResponse(
+        result.getResponseHeaderIgnoreCase(CONTENT_TYPE));
+  }
+
+  /**
+   * Increment the Photon request counter when Arrow was requested for a
+   * ListBlobs call.
+   * @param photonRequested whether Arrow was requested.
+   */
+  private void updatePhotonRequestMetric(final boolean photonRequested) {
+    if (photonRequested && getAbfsCounters() != null) {
+      getAbfsCounters().incrementCounter(PHOTON_REQUEST_COUNT, 1);
+    }
+  }
+
+  /**
+   * Increment the Photon response or fallback counter for a ListBlobs response
+   * depending on whether the service honoured the Arrow request or fell back to
+   * XML.
+   * @param photonRequested whether Arrow was requested.
+   * @param result the executed HTTP operation.
+   */
+  private void updatePhotonResponseMetrics(final boolean photonRequested,
+      final AbfsHttpOperation result) {
+    if (!photonRequested || getAbfsCounters() == null || result == null) {
+      return;
+    }
+    // Only classify successful (HTTP 200) listings. A non-200 response carries
+    // an XML error body rather than a genuine XML fallback, so counting it as a
+    // fallback would make the "service fell back to XML" signal unusable for
+    // rollout decisions.
+    if (result.getStatusCode() != HTTP_OK) {
+      return;
+    }
+    if (isArrowListResponse(result)) {
+      getAbfsCounters().incrementCounter(PHOTON_RESPONSE_COUNT, 1);
+    } else {
+      getAbfsCounters().incrementCounter(PHOTON_FALLBACK_COUNT, 1);
+    }
+  }
+
+  /**
+   * Increment the Photon parse-failure counter when parsing an Arrow ListBlobs
+   * response fails.
+   * @param photonRequested whether Arrow was requested.
+   * @param result the executed HTTP operation.
+   */
+  private void updatePhotonParseFailureMetric(final boolean photonRequested,
+      final AbfsHttpOperation result) {
+    if (photonRequested && getAbfsCounters() != null
+        && isArrowListResponse(result)) {
+      getAbfsCounters().incrementCounter(PHOTON_PARSE_FAILURE_COUNT, 1);
+    }
+  }
+
+  /**
+   * Start the Photon end-to-end listing latency duration tracker when Arrow was
+   * requested for a ListBlobs call.
+   * @param photonRequested whether Arrow was requested.
+   * @return the started {@link DurationTracker}, or {@code null} when Photon was
+   * not requested or counters are unavailable.
+   */
+  private DurationTracker maybeStartPhotonListingLatencyTracker(
+      final boolean photonRequested) {
+    if (photonRequested && getAbfsCounters() != null) {
+      return getAbfsCounters().trackDuration(
+          PHOTON_LISTING_LATENCY.getStatName());
+    }
+    return null;
   }
 
   /**
@@ -1914,7 +2133,11 @@ public class AbfsBlobClient extends AbfsClient {
       // AzureBlobFileSystem supports only ASCII Characters in property values.
       if (isPureASCII(value)) {
         try {
-          value = encodeMetadataAttribute(value);
+          // URL encoding this JSON metadata, set by the WASB Client during file creation, causes compatibility issues.
+          // Therefore, we need to avoid encoding this metadata.
+          if (!XML_TAG_HDI_PERMISSION.equalsIgnoreCase(entry.getKey())) {
+            value = encodeMetadataAttribute(value);
+          }
         } catch (UnsupportedEncodingException e) {
           throw new InvalidAbfsRestOperationException(e);
         }
@@ -2057,7 +2280,7 @@ public class AbfsBlobClient extends AbfsClient {
 
     // Split the block ID string by commas and generate XML for each block ID
     if (!blockIdString.isEmpty()) {
-      String[] blockIds = blockIdString.split(",");
+      String[] blockIds = blockIdString.split(COMMA);
       for (String blockId : blockIds) {
         stringBuilder.append(String.format(LATEST_BLOCK_FORMAT, blockId));
       }
@@ -2309,5 +2532,107 @@ public class AbfsBlobClient extends AbfsClient {
             null);
       }
     } while (current != null && !current.isRoot());
+  }
+
+  /**
+   * Lists containers in the storage account using the Blob service endpoint.
+   *
+   * @param prefix optional prefix to filter container names
+   * @param continuation optional continuation token for paginated results
+   * @param tracingContext tracing context for the REST call
+   * @return response containing listed containers and continuation token
+   * @throws IOException if the operation fails or the response cannot be parsed
+   */
+  public ContainerListResponseData listContainers(
+      final String prefix,
+      final String continuation,
+      final TracingContext tracingContext) throws IOException {
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    final AbfsUriQueryBuilder queryBuilder = createDefaultUriQueryBuilder();
+    queryBuilder.addQuery(QUERY_PARAM_COMP, LIST);
+    if (!StringUtils.isEmpty(prefix)) {
+      queryBuilder.addQuery(QUERY_PARAM_PREFIX, prefix);
+    }
+    queryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_MARKER, continuation);
+    appendSASTokenToQuery(EMPTY_STRING, SASTokenProvider.LIST_CONTAINERS_OPERATION, queryBuilder);
+    URL accountUrl = new URL(getBaseUrl().getProtocol(), getBaseUrl().getHost(), ROOT_PATH);
+    final URL url = createRequestUrl(accountUrl, EMPTY_STRING, queryBuilder.toString());
+    final AbfsRestOperation op = getAbfsRestOperation(
+        AbfsRestOperationType.ListContainers,
+        HTTP_METHOD_GET,
+        url,
+        requestHeaders);
+    op.execute(tracingContext);
+    return parseListContainersResponse(op.getResult());
+  }
+
+  /**
+   * Parses the List Containers response returned by the Blob service.
+   *
+   * @param result HTTP operation containing the list containers response
+   * @return parsed container listing with continuation token
+   * @throws AzureBlobFileSystemException if response parsing fails
+   */
+  private ContainerListResponseData parseListContainersResponse(
+      final AbfsHttpOperation result)
+      throws AzureBlobFileSystemException {
+    try (InputStream stream = result.getListResultStream()) {
+      final SAXParser saxParser = saxParserThreadLocal.get();
+      saxParser.reset();
+      final ContainerListResponseData responseData =
+          new ContainerListResponseData();
+      saxParser.parse(stream, new ContainerListXmlParser(responseData));
+      LOG.debug("ListContainers listed {} containers with {} as continuation token",
+          responseData.getContainers().size(),
+          responseData.getContinuationToken());
+      return responseData;
+    } catch (AbfsDriverException ex) {
+      // Avoid multiple wrapping
+      LOG.error("Unable to deserialize list containers response", ex);
+      throw ex;
+    } catch (SAXException | IOException ex) {
+      LOG.error("Unable to deserialize list containers response", ex);
+      throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
+    } catch (Exception ex) {
+      LOG.error("Unable to get stream for list containers response", ex);
+      throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
+    }
+  }
+
+  /**
+   * Deletes a container from the storage account using the Blob service endpoint.
+   *
+   * @param container name of the container to delete (must be a single path segment)
+   * @param tracingContext tracing context for the REST call
+   * @return REST operation representing the delete request
+   * @throws AzureBlobFileSystemException if the delete operation fails
+   */
+  public AbfsRestOperation deleteContainer(
+      final String container,
+      final TracingContext tracingContext)
+      throws AzureBlobFileSystemException, MalformedURLException {
+    if (StringUtils.isEmpty(container)) {
+      throw new AbfsDriverException(
+          "Container name must not be null or empty",
+          new IllegalArgumentException("container"));
+    }
+    if (container.contains(FORWARD_SLASH)) {
+      throw new AbfsDriverException(
+          "Invalid container name (must not contain '/'): " + container,
+          new IllegalArgumentException(container));
+    }
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    final AbfsUriQueryBuilder queryBuilder = createDefaultUriQueryBuilder();
+    queryBuilder.addQuery(QUERY_PARAM_RESTYPE, CONTAINER);
+    appendSASTokenToQuery(container, SASTokenProvider.DELETE_CONTAINERS_OPERATION, queryBuilder);
+    final URL accountUrl = new URL(getBaseUrl().getProtocol(), getBaseUrl().getHost(), ROOT_PATH);
+    final URL url = createRequestUrl(accountUrl, container, queryBuilder.toString());
+    final AbfsRestOperation op = getAbfsRestOperation(
+        AbfsRestOperationType.DeleteContainer,
+        HTTP_METHOD_DELETE,
+        url,
+        requestHeaders);
+    op.execute(tracingContext);
+    return op;
   }
 }

@@ -81,6 +81,9 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_EXECUTO
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_FAILURES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_UNBUFFERED;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_PREFETCHED_BYTES;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_PARQUET_FOOTER_PARSING_FAILED;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_CACHE_HIT;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 
@@ -891,7 +894,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_VECTORED_READ_BYTES_DISCARDED,
               StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES,
               StreamStatisticNames.STREAM_EVICT_BLOCKS_FROM_FILE_CACHE,
-              StreamStatisticNames.STREAM_READ_ANALYTICS_OPENED)
+              StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST,
+              StreamStatisticNames.STREAM_READ_ANALYTICS_OPENED,
+              StreamStatisticNames.STREAM_READ_CACHE_HIT,
+              StreamStatisticNames.STREAM_READ_PREFETCHED_BYTES,
+              StreamStatisticNames.STREAM_READ_PARQUET_FOOTER_PARSING_FAILED
+                  )
           .withGauges(STREAM_READ_GAUGE_INPUT_POLICY,
               STREAM_READ_BLOCKS_IN_FILE_CACHE.getSymbol(),
               STREAM_READ_ACTIVE_PREFETCH_OPERATIONS.getSymbol(),
@@ -1127,6 +1135,32 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     public void readVectoredBytesDiscarded(int discarded) {
       bytesDiscardedInVectoredIO.addAndGet(discarded);
     }
+
+    @Override
+    public void getRequestInitiated() {
+      increment(ACTION_HTTP_GET_REQUEST);
+    }
+
+    @Override
+    public void headRequestInitiated() {
+      increment(StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST);
+    }
+
+    @Override
+    public void bytesPrefetched(long size) {
+      increment(STREAM_READ_PREFETCHED_BYTES, size);
+    }
+
+    @Override
+    public void footerParsingFailed() {
+      increment(STREAM_READ_PARQUET_FOOTER_PARSING_FAILED);
+    }
+
+    @Override
+    public void streamReadCacheHit() {
+      increment(STREAM_READ_CACHE_HIT);
+    }
+
 
     @Override
     public void executorAcquired(Duration timeInQueue) {

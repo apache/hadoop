@@ -2218,6 +2218,20 @@ public class MiniDFSCluster implements AutoCloseable {
    * is left running so that new DataNodes may be started.
    */
   public void shutdownDataNodes() {
+    // Signal every DataNode before joining any of them. Shutting them down one
+    // at a time -- stop, join, next -- lets the DataNodes not yet reached keep
+    // hammering a NameNode the test has already killed. Because DataNodes in
+    // one JVM share an ipc.Client, and so its Connection objects, a surviving
+    // DataNode's BPServiceActor can hold a Connection monitor across its
+    // connect-retry sleeps while an actor of the DataNode being joined sits
+    // BLOCKED on it. Interrupts do not reach a BLOCKED thread, so the join
+    // waits on scheduling luck: it has been measured at 165s, overrunning the
+    // test's timeout. See DataNode#signalBlockPoolShutdown.
+    for (DataNodeProperties dnProp : dataNodes) {
+      if (dnProp.datanode != null) {
+        dnProp.datanode.signalBlockPoolShutdown();
+      }
+    }
     for (int i = dataNodes.size()-1; i >= 0; i--) {
       shutdownDataNode(i);
     }

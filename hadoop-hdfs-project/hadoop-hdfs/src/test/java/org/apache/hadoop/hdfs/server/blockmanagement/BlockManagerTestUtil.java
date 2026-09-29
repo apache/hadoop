@@ -35,9 +35,10 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.Assert;
 
 import org.apache.hadoop.util.Preconditions;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class BlockManagerTestUtil {
 
@@ -259,7 +260,7 @@ public class BlockManagerTestUtil {
           theDND = dnd;
         }
       }
-      Assert.assertNotNull("Could not find DN with name: " + dnName, theDND);
+      assertNotNull(theDND, "Could not find DN with name: " + dnName);
       
       synchronized (hbm) {
         DFSTestUtil.setDatanodeDead(theDND);

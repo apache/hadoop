@@ -192,6 +192,7 @@ import org.apache.hadoop.hdfs.protocol.ReconfigurationProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
@@ -261,9 +262,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.JsonUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.tracing.Tracer;
-import org.eclipse.jetty.util.ajax.JSON;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
@@ -1561,7 +1562,10 @@ public class DataNode extends ReconfigurableBase
     DFSUtil.addInternalPBProtocol(getConf(), InterDatanodeProtocolPB.class, service,
         ipcServer);
 
-    LOG.info("Opened IPC server at {}", ipcServer.getListenerAddress());
+    InetSocketAddress listenerAddress = ipcServer.getListenerAddress();
+    LOG.info("Opened IPC server at {}", listenerAddress);
+    dnConf.getConf().set(DFS_DATANODE_IPC_ADDRESS_KEY,
+        listenerAddress.getHostName() + ":" + listenerAddress.getPort());
 
     // set service-level authorization security policy
     if (getConf().getBoolean(
@@ -2232,6 +2236,31 @@ public class DataNode extends ReconfigurableBase
     return blockPoolManager.getAllNamenodeThreads();
   }
 
+  /**
+   * Signal every block pool service to stop, without waiting for its threads
+   * to exit, so that a caller shutting down several DataNodes in one JVM can
+   * signal them all before joining any of them. A later {@code shutdown()} on
+   * this DataNode still does the joining; {@code stop()} is idempotent.
+   *
+   * <p>Joining one DataNode while the others still run can hang: DataNodes in
+   * a single JVM share an {@link org.apache.hadoop.ipc.Client} through
+   * ClientCache, so they share its per-address Connection objects too. A
+   * BPServiceActor that is still retrying a dead NameNode holds that
+   * Connection's monitor across its connect-retry sleeps, and an actor of the
+   * DataNode being shut down can sit BLOCKED on that monitor. A BLOCKED thread
+   * cannot observe the interrupt that {@code stop()} sends, so the join waits
+   * for as long as the surviving DataNodes keep re-acquiring the monitor.
+   * Signalling everyone first lets the holder abort its sleep and release it.
+   */
+  @VisibleForTesting
+  public void signalBlockPoolShutdown() {
+    if (blockPoolManager == null) {
+      return;
+    }
+    blockPoolManager.signalShutDownAll(
+        blockPoolManager.getAllNamenodeThreads());
+  }
+
   BPOfferService getBPOfferService(String bpid){
     return blockPoolManager.get(bpid);
   }
@@ -2496,6 +2525,9 @@ public class DataNode extends ReconfigurableBase
       LOG.debug("requestShortCircuitFdsForRead failed", e);
       throw new ShortCircuitFdsUnsupportedException("This DataNode's " +
           "FsDatasetSpi does not support short-circuit local reads");
+    } catch (IOException e) {
+      IOUtils.cleanupWithLogger(LOG, fis);
+      throw e;
     }
     return fis;
   }
@@ -3059,10 +3091,6 @@ public class DataNode extends ReconfigurableBase
         final String dnAddr = targets[0].getXferAddr(connectToDnViaHostname);
         InetSocketAddress curTarget = NetUtils.createSocketAddr(dnAddr);
         LOG.debug("Connecting to datanode {}", dnAddr);
-        sock = newSocket();
-        NetUtils.connect(sock, curTarget, dnConf.socketTimeout);
-        sock.setTcpNoDelay(dnConf.getDataTransferServerTcpNoDelay());
-        sock.setSoTimeout(targets.length * dnConf.socketTimeout);
 
         //
         // Header info
@@ -3073,15 +3101,38 @@ public class DataNode extends ReconfigurableBase
 
         long writeTimeout = dnConf.socketWriteTimeout + 
                             HdfsConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
-        OutputStream unbufOut = NetUtils.getOutputStream(sock, writeTimeout);
-        InputStream unbufIn = NetUtils.getInputStream(sock);
         DataEncryptionKeyFactory keyFactory =
           getDataEncryptionKeyFactoryForBlock(b);
-        IOStreamPair saslStreams = saslClient.socketSend(sock, unbufOut,
-          unbufIn, keyFactory, accessToken, bpReg);
-        unbufOut = saslStreams.out;
-        unbufIn = saslStreams.in;
-        
+        OutputStream unbufOut;
+        InputStream unbufIn;
+        int encryptionKeyRetryCount = 0;
+        while (true) {
+          try {
+            sock = newSocket();
+            NetUtils.connect(sock, curTarget, dnConf.socketTimeout);
+            sock.setTcpNoDelay(dnConf.getDataTransferServerTcpNoDelay());
+            sock.setSoTimeout(targets.length * dnConf.socketTimeout);
+
+            unbufOut = NetUtils.getOutputStream(sock, writeTimeout);
+            unbufIn = NetUtils.getInputStream(sock);
+            IOStreamPair saslStreams = saslClient.socketSend(sock, unbufOut,
+                unbufIn, keyFactory, accessToken, bpReg);
+            unbufOut = saslStreams.out;
+            unbufIn = saslStreams.in;
+            break;
+          } catch (InvalidEncryptionKeyException e) {
+            IOUtils.closeSocket(sock);
+            sock = null;
+            if (!prepareRetryAfterInvalidEncryptionKey(keyFactory,
+                ++encryptionKeyRetryCount)) {
+              throw e;
+            }
+            LOG.info("Retrying connection to {} for block {} after "
+                + "InvalidEncryptionKeyException",
+                curTarget, b, e);
+          }
+        }
+
         out = new DataOutputStream(new BufferedOutputStream(unbufOut,
             DFSUtilClient.getSmallBufferSize(getConf())));
         in = new DataInputStream(unbufIn);
@@ -3143,6 +3194,15 @@ public class DataNode extends ReconfigurableBase
     public String toString() {
       return "DataTransfer " + b + " to " + Arrays.asList(targets);
     }
+  }
+
+  private static boolean prepareRetryAfterInvalidEncryptionKey(
+      DataEncryptionKeyFactory keyFactory, int retryCount) {
+    if (retryCount > 1) {
+      return false;
+    }
+    keyFactory.clearDataEncryptionKey();
+    return true;
   }
 
   /***
@@ -3731,7 +3791,7 @@ public class DataNode extends ReconfigurableBase
         }
       }
     }
-    return JSON.toString(info);
+    return JsonUtils.toString(info);
   }
 
  /**
@@ -3749,7 +3809,7 @@ public class DataNode extends ReconfigurableBase
    */
   @Override // DataNodeMXBean
   public String getBPServiceActorInfo() {
-    return JSON.toString(getBPServiceActorInfoMap());
+    return JsonUtils.toString(getBPServiceActorInfoMap());
   }
 
   @VisibleForTesting
@@ -3776,7 +3836,7 @@ public class DataNode extends ReconfigurableBase
       LOG.debug("Storage not yet initialized.");
       return "";
     }
-    return JSON.toString(data.getVolumeInfoMap());
+    return JsonUtils.toString(data.getVolumeInfoMap());
   }
   
   @Override // DataNodeMXBean
@@ -4307,7 +4367,7 @@ public class DataNode extends ReconfigurableBase
       return null;
     }
     Set<String> slowDisks = diskMetrics.getDiskOutliersStats().keySet();
-    return JSON.toString(slowDisks);
+    return JsonUtils.toString(slowDisks);
   }
 
 

@@ -713,6 +713,7 @@ final class BlockChecksumHelper {
           new StripedBlockChecksumMd5CrcReconstructor(
               getDatanode().getErasureCodingWorker(), stripedReconInfo,
               blockChecksumBuf, blockLength)) {
+        checksumRecon.init();
         checksumRecon.reconstruct();
 
         DataChecksum checksum = checksumRecon.getChecksum();

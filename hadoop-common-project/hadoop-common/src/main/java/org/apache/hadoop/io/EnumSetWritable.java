@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /** A Writable wrapper for EnumSet. */
 @InterfaceAudience.Public
@@ -121,8 +122,13 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
     if (length == -1)
       this.value = null;
     else if (length == 0) {
-      this.elementType = (Class<E>) ObjectWritable.loadClass(conf,
-          WritableUtils.readString(in));
+      try {
+        this.elementType = (Class<E>) ReflectionUtils.loadUninitedClass(conf,
+            WritableUtils.readString(in),
+            Enum.class);
+      } catch (ClassNotFoundException e) {
+        throw new RuntimeException(e);
+      }
       this.value = EnumSet.noneOf(this.elementType);
     } else {
       E first = (E) ObjectWritable.readObject(in, conf);

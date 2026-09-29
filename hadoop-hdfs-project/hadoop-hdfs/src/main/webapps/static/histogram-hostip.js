@@ -26,7 +26,14 @@ function open_hostip_list(x0, x1) {
     }
     //More than 100% do not care,so not record in 95%-100% bar
     if (index > x0 && index <= x1) {
-      ips.push(dn.infoAddr.split(":")[0]);
+      var infoAddrParts = dn.infoAddr.split("]:");
+      if (infoAddrParts.length > 1) {
+        // IPv6 url [xxxx:xxxx:...]:port — strip leading '['
+        ips.push(infoAddrParts[0].substring(1));
+      } else {
+        // IPv4 url host:port
+        ips.push(dn.infoAddr.split(":")[0]);
+      }
     }
   }
   var ipsText = '';

@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -29,7 +28,6 @@ import java.util.Collection;
 /**
  * Unit test of the input policy logic, without making any S3 calls.
  */
-@RunWith(Parameterized.class)
 public class TestS3AInputPolicies {
 
   private S3AInputPolicy policy;
@@ -45,21 +43,20 @@ public class TestS3AInputPolicies {
   public static final long _1MB = 1024L * 1024;
   public static final long _10MB = _1MB * 10;
 
-  public TestS3AInputPolicies(S3AInputPolicy policy,
-      long targetPos,
-      long length,
-      long contentLength,
-      long readahead,
-      long expectedLimit) {
-    this.policy = policy;
-    this.targetPos = targetPos;
-    this.length = length;
-    this.contentLength = contentLength;
-    this.readahead = readahead;
-    this.expectedLimit = expectedLimit;
+  public void initTestS3AInputPolicies(S3AInputPolicy pPolicy,
+      long pTargetPos,
+      long pLength,
+      long pContentLength,
+      long pReadahead,
+      long pExpectedLimit) {
+    this.policy = pPolicy;
+    this.targetPos = pTargetPos;
+    this.length = pLength;
+    this.contentLength = pContentLength;
+    this.readahead = pReadahead;
+    this.expectedLimit = pExpectedLimit;
   }
 
-  @Parameterized.Parameters
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][]{
         {S3AInputPolicy.Normal, 0, -1, 0, _64K, 0},
@@ -79,13 +76,18 @@ public class TestS3AInputPolicies {
     });
   }
 
-  @Test
-  public void testInputPolicies() throws Throwable {
-    Assert.assertEquals(
-        String.format("calculateRequestLimit(%s, %d, %d, %d, %d)",
-            policy, targetPos, length, contentLength, readahead),
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testInputPolicies(S3AInputPolicy pPolicy,
+      long pTargetPos, long pLength, long pContentLength,
+      long pReadahead, long pExpectedLimit) throws Throwable {
+    initTestS3AInputPolicies(pPolicy, pTargetPos, pLength, pContentLength,
+        pReadahead, pExpectedLimit);
+    Assertions.assertEquals(
         expectedLimit,
         S3AInputStream.calculateRequestLimit(policy, targetPos,
-            length, contentLength, readahead));
+            length, contentLength, readahead),
+        String.format("calculateRequestLimit(%s, %d, %d, %d, %d)",
+            policy, targetPos, length, contentLength, readahead));
   }
 }

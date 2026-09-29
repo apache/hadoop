@@ -58,8 +58,7 @@ using ::testing::Return;
 using std::make_pair;
 using std::string;
 
-namespace pb = ::google::protobuf;
-namespace pbio = pb::io;
+namespace pbio = ::google::protobuf::io;
 
 namespace hdfs {
 
@@ -114,7 +113,7 @@ public:
 
 }
 
-static inline string ToDelimitedString(const pb::MessageLite *msg) {
+static inline string ToDelimitedString(const google::protobuf::MessageLite *msg) {
   string res;
   res.reserve(hdfs::DelimitedPBMessageSize(msg));
   pbio::StringOutputStream os(&res);

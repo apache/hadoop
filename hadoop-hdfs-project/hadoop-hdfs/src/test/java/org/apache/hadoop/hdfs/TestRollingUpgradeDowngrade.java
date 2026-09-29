@@ -30,8 +30,9 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestRollingUpgradeDowngrade {
 
@@ -39,78 +40,82 @@ public class TestRollingUpgradeDowngrade {
    * Downgrade option is already obsolete. It should throw exception.
    * @throws Exception
    */
-  @Test(timeout = 300000, expected = IllegalArgumentException.class)
+  @Test
+  @Timeout(value = 300)
   public void testDowngrade() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
-    MiniQJMHACluster cluster = null;
-    final Path foo = new Path("/foo");
-    final Path bar = new Path("/bar");
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      final Configuration conf = new HdfsConfiguration();
+      MiniQJMHACluster cluster = null;
+      final Path foo = new Path("/foo");
+      final Path bar = new Path("/bar");
+      try {
+        cluster = new MiniQJMHACluster.Builder(conf).build();
+        MiniDFSCluster dfsCluster = cluster.getDfsCluster();
+        dfsCluster.waitActive();
 
-    try {
-      cluster = new MiniQJMHACluster.Builder(conf).build();
-      MiniDFSCluster dfsCluster = cluster.getDfsCluster();
-      dfsCluster.waitActive();
+        // let NN1 tail editlog every 1s
+        dfsCluster.getConfiguration(1).setInt(
+            DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+        dfsCluster.restartNameNode(1);
 
-      // let NN1 tail editlog every 1s
-      dfsCluster.getConfiguration(1).setInt(
-          DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
-      dfsCluster.restartNameNode(1);
+        dfsCluster.transitionToActive(0);
+        DistributedFileSystem dfs = dfsCluster.getFileSystem(0);
+        dfs.mkdirs(foo);
 
-      dfsCluster.transitionToActive(0);
-      DistributedFileSystem dfs = dfsCluster.getFileSystem(0);
-      dfs.mkdirs(foo);
+        // start rolling upgrade
+        RollingUpgradeInfo info = dfs
+            .rollingUpgrade(RollingUpgradeAction.PREPARE);
+        Assertions.assertTrue(info.isStarted());
+        dfs.mkdirs(bar);
 
-      // start rolling upgrade
-      RollingUpgradeInfo info = dfs
-          .rollingUpgrade(RollingUpgradeAction.PREPARE);
-      Assert.assertTrue(info.isStarted());
-      dfs.mkdirs(bar);
+        TestRollingUpgrade.queryForPreparation(dfs);
+        dfs.close();
 
-      TestRollingUpgrade.queryForPreparation(dfs);
-      dfs.close();
+        dfsCluster.restartNameNode(0, true, "-rollingUpgrade", "downgrade");
+        // Once downgraded, there should be no more fsimage for rollbacks.
+        Assertions.assertFalse(dfsCluster.getNamesystem(0).getFSImage()
+            .hasRollbackFSImage());
+        // shutdown NN1
+        dfsCluster.shutdownNameNode(1);
+        dfsCluster.transitionToActive(0);
 
-      dfsCluster.restartNameNode(0, true, "-rollingUpgrade", "downgrade");
-      // Once downgraded, there should be no more fsimage for rollbacks.
-      Assert.assertFalse(dfsCluster.getNamesystem(0).getFSImage()
-          .hasRollbackFSImage());
-      // shutdown NN1
-      dfsCluster.shutdownNameNode(1);
-      dfsCluster.transitionToActive(0);
-
-      dfs = dfsCluster.getFileSystem(0);
-      Assert.assertTrue(dfs.exists(foo));
-      Assert.assertTrue(dfs.exists(bar));
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
+        dfs = dfsCluster.getFileSystem(0);
+        Assertions.assertTrue(dfs.exists(foo));
+        Assertions.assertTrue(dfs.exists(bar));
+      } finally {
+        if (cluster != null) {
+          cluster.shutdown();
+        }
       }
-    }
+    });
   }
 
   /**
    * Ensure that restart namenode with downgrade option should throw exception
    * because it has been obsolete.
    */
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testRejectNewFsImage() throws IOException {
-    final Configuration conf = new Configuration();
-    MiniDFSCluster cluster = null;
-    try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
-      cluster.waitActive();
-      DistributedFileSystem fs = cluster.getFileSystem();
-      fs.setSafeMode(SafeModeAction.ENTER);
-      fs.saveNamespace();
-      fs.setSafeMode(SafeModeAction.LEAVE);
-      NNStorage storage = spy(cluster.getNameNode().getFSImage().getStorage());
-      int futureVersion = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1;
-      doReturn(futureVersion).when(storage).getServiceLayoutVersion();
-      storage.writeAll();
-      cluster.restartNameNode(0, true, "-rollingUpgrade", "downgrade");
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      final Configuration conf = new Configuration();
+      MiniDFSCluster cluster = null;
+      try {
+        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+        cluster.waitActive();
+        DistributedFileSystem fs = cluster.getFileSystem();
+        fs.setSafeMode(SafeModeAction.ENTER);
+        fs.saveNamespace();
+        fs.setSafeMode(SafeModeAction.LEAVE);
+        NNStorage storage = spy(cluster.getNameNode().getFSImage().getStorage());
+        int futureVersion = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1;
+        doReturn(futureVersion).when(storage).getServiceLayoutVersion();
+        storage.writeAll();
+        cluster.restartNameNode(0, true, "-rollingUpgrade", "downgrade");
+      } finally {
+        if (cluster != null) {
+          cluster.shutdown();
+        }
       }
-    }
+    });
   }
 }

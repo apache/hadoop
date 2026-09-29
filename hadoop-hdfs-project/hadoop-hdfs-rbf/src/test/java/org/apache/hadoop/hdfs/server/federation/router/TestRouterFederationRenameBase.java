@@ -35,6 +35,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.federation.fairness.RouterAsyncRpcFairnessPolicyController;
+import org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessPolicyController;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
@@ -64,6 +66,10 @@ public class TestRouterFederationRenameBase {
   private static MiniRouterDFSCluster cluster;
 
   public static void globalSetUp() throws Exception {
+    globalSetUp(false);
+  }
+
+  public static void globalSetUp(boolean enableAsyncRpc) throws Exception {
     Configuration namenodeConf = new Configuration();
     namenodeConf.setBoolean(DFSConfigKeys.HADOOP_CALLER_CONTEXT_ENABLED_KEY,
         true);
@@ -98,6 +104,14 @@ public class TestRouterFederationRenameBase {
     routerConf.setBoolean(DFS_PERMISSIONS_ENABLED_KEY, true);
     routerConf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         TestRouterFederationRename.MockGroupsMapping.class.getName());
+    if (enableAsyncRpc) {
+      routerConf.setBoolean(RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY, true);
+      routerConf.setClass(
+          RBFConfigKeys.DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS,
+          RouterAsyncRpcFairnessPolicyController.class,
+          RouterRpcFairnessPolicyController.class);
+      routerConf.setInt(RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY, 2);
+    }
     cluster.addRouterOverrides(routerConf);
     cluster.startRouters();
 

@@ -132,4 +132,9 @@ public interface FSDatasetMBean extends MetricsSource {
    * Returns the count of pending and running asynchronous disk operations.
    */
   long getPendingAsyncDeletions();
+
+  /**
+   * Returns the number of blocks that the datanode
+   */
+  long getNumBlocks() throws IOException;
 }

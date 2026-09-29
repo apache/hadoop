@@ -42,6 +42,14 @@ public class MsiTokenProvider extends AccessTokenProvider {
 
   private static final Logger LOG = LoggerFactory.getLogger(AccessTokenProvider.class);
 
+  /**
+   * Constructs an MsiTokenProvider.
+   *
+   * @param authEndpoint the authentication endpoint for MSI
+   * @param tenantGuid   the tenant GUID
+   * @param clientId     the client ID for MSI
+   * @param authority    the authority URL
+   */
   public MsiTokenProvider(final String authEndpoint, final String tenantGuid,
       final String clientId, final String authority) {
     this.authEndpoint = authEndpoint;

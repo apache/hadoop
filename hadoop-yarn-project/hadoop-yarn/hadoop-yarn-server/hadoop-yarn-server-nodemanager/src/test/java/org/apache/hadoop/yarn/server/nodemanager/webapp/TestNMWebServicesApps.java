@@ -60,6 +60,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer.NMWebApp;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.jsonprovider.NMJsonProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -79,7 +80,6 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.TestProperties;
 
@@ -99,11 +99,14 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
   @Override
   protected javax.ws.rs.core.Application configure() {
+    NMJsonProvider nmJsonProvider = new NMJsonProvider();
+
     ResourceConfig config = new ResourceConfig();
     config.register(new JerseyBinder());
     config.register(NMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(nmJsonProvider);
+    config.register(JAXBContextResolver.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }
@@ -127,18 +130,18 @@ public class TestNMWebServicesApps extends JerseyTestBase {
         @Override
         public long getVmemAllocatedForContainers() {
           // 15.5G in bytes
-          return new Long("16642998272");
+          return Long.parseLong("16642998272");
         }
 
         @Override
         public long getPmemAllocatedForContainers() {
           // 16G in bytes
-          return new Long("17179869184");
+          return Long.parseLong("17179869184");
         }
 
         @Override
         public long getVCoresAllocatedForContainers() {
-          return new Long("4000");
+          return Long.parseLong("4000");
         }
 
 
@@ -190,7 +193,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals(new JSONObject("{apps:\"\"}"), json, "apps is not empty");
+    assertEquals("{}", json.getString("apps"), "apps is not null");
   }
 
   private HashMap<String, String> addAppContainers(Application app) 
@@ -306,7 +309,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
-    assertEquals(new JSONObject("{apps:\"\"}"), json, "apps is not empty");
+    assertEquals("{}", json.getString("apps"), "apps is not null");
   }
 
   @Test
@@ -387,7 +390,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
         response.getMediaType().toString());
     JSONObject json = response.readEntity(JSONObject.class);
 
-    assertEquals(new JSONObject("{apps:\"\"}"), json, "apps is not empty");
+    assertEquals("{}", json.getString("apps"), "apps is not null");
   }
 
   @Test

@@ -19,12 +19,14 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static junit.framework.TestCase.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -45,7 +47,7 @@ public class TestAuthorizationContext {
   private String path = "";
   private int ancestorIndex = inodes.length - 2;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     when(iip.getPathSnapshotId()).thenReturn(snapshotId);
     when(iip.getINodesArray()).thenReturn(inodes);
@@ -77,7 +79,8 @@ public class TestAuthorizationContext {
         subAccess(null).
         ignoreEmptyDir(true).
         operationName(opType).
-        callerContext(CallerContext.getCurrent());
+        callerContext(CallerContext.getCurrent()).
+        renameToTrash(true);
 
     INodeAttributeProvider.AuthorizationContext authzContext = builder.build();
     assertEquals(authzContext.getFsOwner(), fsOwner);
@@ -91,6 +94,7 @@ public class TestAuthorizationContext {
     assertEquals(authzContext.getAncestorIndex(), ancestorIndex);
     assertEquals(authzContext.getOperationName(), opType);
     assertEquals(authzContext.getCallerContext(), CallerContext.getCurrent());
+    assertTrue(authzContext.isRenameToTrash());
   }
 
   @Test
@@ -132,6 +136,7 @@ public class TestAuthorizationContext {
 
     String operationName = "abc";
     FSPermissionChecker.setOperationType(operationName);
+    FSPermissionChecker.setRenameToTrash(false);
 
     checker.checkPermission(iip, true,
         null, null, null,
@@ -155,10 +160,58 @@ public class TestAuthorizationContext {
         subAccess(null).
         ignoreEmptyDir(true).
         operationName(operationName).
-        callerContext(CallerContext.getCurrent());
+        callerContext(CallerContext.getCurrent()).
+        renameToTrash(false);
     INodeAttributeProvider.AuthorizationContext context = builder.build();
     // the AuthorizationContext.equals() method is override to always return
     // true as long as it is compared with another AuthorizationContext object.
     verify(mockEnforcer).checkPermissionWithContext(context);
+    assertFalse(context.isRenameToTrash());
+    FSPermissionChecker.setRenameToTrash(false);
+  }
+
+  @Test
+  public void testCheckPermissionWithContextAPIForRenameToTrash()
+      throws IOException {
+    INodeAttributeProvider.AccessControlEnforcer
+        mockEnforcer = mock(INodeAttributeProvider.AccessControlEnforcer.class);
+    INodeAttributeProvider mockINodeAttributeProvider =
+        mock(INodeAttributeProvider.class);
+    when(mockINodeAttributeProvider.getExternalAccessControlEnforcer(any())).
+        thenReturn(mockEnforcer);
+
+    FSPermissionChecker checker = new FSPermissionChecker(
+        fsOwner, superGroup, ugi, mockINodeAttributeProvider, true, 0);
+
+    String operationName = "rename";
+    FSPermissionChecker.setOperationType(operationName);
+    FSPermissionChecker.setRenameToTrash(true);
+
+    checker.checkPermission(iip, true, null, null, null, null, true);
+
+    INodeAttributeProvider.AuthorizationContext.Builder builder =
+        new INodeAttributeProvider.AuthorizationContext.Builder();
+    builder.fsOwner(fsOwner).
+        supergroup(superGroup).
+        callerUgi(ugi).
+        inodeAttrs(emptyINodeAttributes).
+        inodes(inodes).
+        pathByNameArr(components).
+        snapshotId(snapshotId).
+        path(path).
+        ancestorIndex(ancestorIndex).
+        doCheckOwner(true).
+        ancestorAccess(null).
+        parentAccess(null).
+        access(null).
+        subAccess(null).
+        ignoreEmptyDir(true).
+        operationName(operationName).
+        callerContext(CallerContext.getCurrent()).
+        renameToTrash(true);
+    INodeAttributeProvider.AuthorizationContext context = builder.build();
+    verify(mockEnforcer).checkPermissionWithContext(context);
+    assertTrue(context.isRenameToTrash());
+    FSPermissionChecker.setRenameToTrash(false);
   }
 }

@@ -54,6 +54,7 @@ public class AHSWebApp extends WebApp implements YarnWebParams {
     bind(TimelineDataManager.class).toInstance(timelineDataManager);
     route("/", AHSController.class);
     route("/about", AHSController.class, "about");
+    route("/applicationhistory", AHSController.class);
     route(pajoin("/apps", APP_STATE), AHSController.class);
     route(pajoin("/app", APPLICATION_ID), AHSController.class, "app");
     route(pajoin("/appattempt", APPLICATION_ATTEMPT_ID), AHSController.class,

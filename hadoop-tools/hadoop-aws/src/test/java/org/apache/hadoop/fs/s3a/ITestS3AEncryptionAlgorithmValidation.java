@@ -27,14 +27,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test whether or not encryption settings propagate by choosing an invalid
  * one. We expect the S3AFileSystem to fail to initialize.
  */
-@Ignore
+@Disabled
 public class ITestS3AEncryptionAlgorithmValidation
     extends AbstractS3ATestBase {
 
@@ -51,11 +51,11 @@ public class ITestS3AEncryptionAlgorithmValidation
       contract.init();
       //extract the test FS
       FileSystem fileSystem = contract.getTestFileSystem();
-      assertNotNull("null filesystem", fileSystem);
+      assertNotNull(fileSystem, "null filesystem");
       URI fsURI = fileSystem.getUri();
       LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
-      assertEquals("wrong filesystem of " + fsURI,
-          contract.getScheme(), fsURI.getScheme());
+      assertEquals(contract.getScheme(), fsURI.getScheme(),
+          "wrong filesystem of " + fsURI);
       fileSystem.initialize(fsURI, conf);
       return fileSystem;
     });
@@ -69,22 +69,22 @@ public class ITestS3AEncryptionAlgorithmValidation
     intercept(IllegalArgumentException.class, "The value of property " +
         Constants.S3_ENCRYPTION_KEY + " must not be null", () -> {
 
-      Configuration conf = super.createConfiguration();
-      //SSE-C must be configured with an encryption key
-      conf.set(Constants.S3_ENCRYPTION_ALGORITHM,
-          S3AEncryptionMethods.SSE_C.getMethod());
-      conf.set(Constants.S3_ENCRYPTION_KEY, null);
-      S3AContract contract = (S3AContract) createContract(conf);
-      contract.init();
-      //extract the test FS
-      FileSystem fileSystem = contract.getTestFileSystem();
-      assertNotNull("null filesystem", fileSystem);
-      URI fsURI = fileSystem.getUri();
-      LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
-      assertEquals("wrong filesystem of " + fsURI,
-          contract.getScheme(), fsURI.getScheme());
-      fileSystem.initialize(fsURI, conf);
-      return fileSystem;
+        Configuration conf = super.createConfiguration();
+        //SSE-C must be configured with an encryption key
+        conf.set(Constants.S3_ENCRYPTION_ALGORITHM,
+            S3AEncryptionMethods.SSE_C.getMethod());
+        conf.set(Constants.S3_ENCRYPTION_KEY, null);
+        S3AContract contract = (S3AContract) createContract(conf);
+        contract.init();
+        //extract the test FS
+        FileSystem fileSystem = contract.getTestFileSystem();
+        assertNotNull(fileSystem, "null filesystem");
+        URI fsURI = fileSystem.getUri();
+        LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
+        assertEquals(contract.getScheme(), fsURI.getScheme(),
+            "wrong filesystem of " + fsURI);
+        fileSystem.initialize(fsURI, conf);
+        return fileSystem;
     });
   }
 
@@ -102,11 +102,11 @@ public class ITestS3AEncryptionAlgorithmValidation
       contract.init();
       //extract the test FS
       FileSystem fileSystem = contract.getTestFileSystem();
-      assertNotNull("null filesystem", fileSystem);
+      assertNotNull(fileSystem, "null filesystem");
       URI fsURI = fileSystem.getUri();
       LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
-      assertEquals("wrong filesystem of " + fsURI,
-          contract.getScheme(), fsURI.getScheme());
+      assertEquals(contract.getScheme(), fsURI.getScheme(),
+          "wrong filesystem of " + fsURI);
       fileSystem.initialize(fsURI, conf);
       return fileSystem;
     });
@@ -129,11 +129,11 @@ public class ITestS3AEncryptionAlgorithmValidation
       contract.init();
       //extract the test FS
       FileSystem fileSystem = contract.getTestFileSystem();
-      assertNotNull("null filesystem", fileSystem);
+      assertNotNull(fileSystem, "null filesystem");
       URI fsURI = fileSystem.getUri();
       LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
-      assertEquals("wrong filesystem of " + fsURI,
-          contract.getScheme(), fsURI.getScheme());
+      assertEquals(contract.getScheme(), fsURI.getScheme(),
+          "wrong filesystem of " + fsURI);
       fileSystem.initialize(fsURI, conf);
       return fileSystem;
     });

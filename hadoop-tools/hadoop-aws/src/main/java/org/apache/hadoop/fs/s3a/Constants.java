@@ -21,10 +21,12 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.s3a.impl.ChecksumSupport;
 import org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import java.time.Duration;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.io.Sizes.S_128K;
@@ -702,6 +704,7 @@ public final class Constants {
   public static final String STORAGE_CLASS_GLACIER_INSTANT_RETRIEVAL = "glacier_ir";
 
   // should we try to purge old multipart uploads when starting up
+  @Deprecated
   public static final String PURGE_EXISTING_MULTIPART =
       "fs.s3a.multipart.purge";
   public static final boolean DEFAULT_PURGE_EXISTING_MULTIPART = false;
@@ -709,6 +712,7 @@ public final class Constants {
   /**
    * purge any multipart uploads older than this number of seconds.
    */
+  @Deprecated
   public static final String PURGE_EXISTING_MULTIPART_AGE =
       "fs.s3a.multipart.purge.age";
 
@@ -783,6 +787,13 @@ public final class Constants {
    */
   public static final String S3_ENCRYPTION_CONTEXT =
       "fs.s3a.encryption.context";
+
+  /**
+   * Default S3-SSE encryption context.
+   * value:{@value}
+   */
+  public static final String DEFAULT_S3_ENCRYPTION_CONTEXT =
+      "";
 
   /**
    * Client side encryption (CSE-CUSTOM) with custom cryptographic material manager class name.
@@ -1339,6 +1350,37 @@ public final class Constants {
   public static final String AWS_SERVICE_IDENTIFIER_DDB = "DDB";
   public static final String AWS_SERVICE_IDENTIFIER_STS = "STS";
 
+  /** Prefix for S3A client-specific properties.
+   * value: {@value}
+   */
+  public static final String FS_S3A_CLIENT_PREFIX = "fs.s3a.client.";
+
+  /** Custom headers postfix.
+   * value: {@value}
+   */
+  public static final String CUSTOM_HEADERS_POSTFIX = ".custom.headers";
+
+  /**
+   * List of custom headers to be set on the service client.
+   * Multiple parameters can be used to specify custom headers.
+   * <pre>
+   * Usage:
+   * fs.s3a.client.s3.custom.headers - Headers to add on all the S3 requests.
+   * fs.s3a.client.sts.custom.headers - Headers to add on all the STS requests.
+   *
+   * Examples:
+   * CustomHeader {@literal ->} 'Header1:Value1'
+   * CustomHeaders {@literal ->} 'Header1=Value1;Value2,Header2=Value1'
+   * </pre>
+   */
+  public static final String CUSTOM_HEADERS_STS =
+      FS_S3A_CLIENT_PREFIX + AWS_SERVICE_IDENTIFIER_STS.toLowerCase(Locale.ROOT)
+          + CUSTOM_HEADERS_POSTFIX;
+
+  public static final String CUSTOM_HEADERS_S3 =
+      FS_S3A_CLIENT_PREFIX + AWS_SERVICE_IDENTIFIER_S3.toLowerCase(Locale.ROOT)
+          + CUSTOM_HEADERS_POSTFIX;
+
   /**
    * How long to wait for the thread pool to terminate when cleaning up.
    * Value: {@value} seconds.
@@ -1805,13 +1847,51 @@ public final class Constants {
   public static final boolean CHECKSUM_VALIDATION_DEFAULT = false;
 
   /**
+   * Should checksums always be generated?
+   * Not all third-party stores like this being enabled for every request.
+   * Value: {@value}.
+   */
+  public static final String CHECKSUM_GENERATION =
+      "fs.s3a.checksum.generation";
+
+  /**
+   * Default value of {@link #CHECKSUM_GENERATION}.
+   * Value: {@value}.
+   */
+  public static final boolean DEFAULT_CHECKSUM_GENERATION = false;
+
+  /**
    * Indicates the algorithm used to create the checksum for the object
    * to be uploaded to S3. Unset by default. It supports the following values:
-   * 'CRC32', 'CRC32C', 'SHA1', and 'SHA256'
+   * 'CRC32', 'CRC32C', 'SHA1', 'SHA256', 'CRC64_NVME 'NONE', ''.
+   * When checksum calculation is enabled this MUST be set to a valid algorithm.
    * value:{@value}
    */
   public static final String CHECKSUM_ALGORITHM =
       "fs.s3a.create.checksum.algorithm";
+
+  /**
+   * Default checksum algorithm: {@code "NONE"}.
+   */
+  public static final String DEFAULT_CHECKSUM_ALGORITHM =
+      ChecksumSupport.NONE;
+
+  /**
+   * Send a {@code Content-MD5 header} with every request.
+   * This is required when performing some operations with third party stores
+   * For example: bulk delete).
+   * It is supported by AWS S3, though has unexpected behavior with AWS S3 Express storage.
+   * See https://github.com/aws/aws-sdk-java-v2/issues/6459  for details.
+   */
+  public static final String REQUEST_MD5_HEADER =
+      "fs.s3a.request.md5.header";
+
+  /**
+   * Default value of {@link #REQUEST_MD5_HEADER}.
+   * Value: {@value}.
+   */
+  public static final boolean DEFAULT_REQUEST_MD5_HEADER = true;
+
 
   /**
    * Are extensions classes, such as {@code fs.s3a.aws.credentials.provider},
@@ -1875,4 +1955,91 @@ public final class Constants {
    *      AWS S3 PutObject API Documentation</a>
    */
   public static final String IF_NONE_MATCH_STAR = "*";
+
+  // ==================== AWS Client Shared Thread Pool Configuration ===========
+  // These settings control whether AWS SDK clients share a thread pool
+  // instead of each client creating its own. This prevents thread leaks
+  // when many S3A filesystem instances are created.
+
+  /**
+   * Default thread pool size for AWS client shared thread pools: {@value}.
+   */
+  public static final int AWS_CLIENT_SHARED_THREADPOOL_SIZE_DEFAULT = 5;
+
+  /**
+   * Default keepalive in seconds for AWS client shared thread pool: {@value}.
+   */
+  public static final int AWS_CLIENT_SHARED_THREADPOOL_KEEPALIVE_DEFAULT = 60;
+
+  /**
+   * Enable shared thread pool for AWS S3 sync client: {@value}.
+   */
+  public static final String AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED =
+      "fs.s3a.aws.s3.client.shared.threadpool.enabled";
+
+  /**
+   * Thread pool size for AWS S3 sync client shared thread pool: {@value}.
+   */
+  public static final String AWS_S3_CLIENT_SHARED_THREADPOOL_SIZE =
+      "fs.s3a.aws.s3.client.shared.threadpool.size";
+
+  /**
+   * Keepalive in seconds for AWS S3 sync client shared thread pool: {@value}.
+   */
+  public static final String AWS_S3_CLIENT_SHARED_THREADPOOL_KEEPALIVE =
+      "fs.s3a.aws.s3.client.shared.threadpool.keepalive.seconds";
+
+  /**
+   * Enable shared thread pool for AWS S3 async client: {@value}.
+   */
+  public static final String AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_ENABLED =
+      "fs.s3a.aws.s3.async.client.shared.threadpool.enabled";
+
+  /**
+   * Thread pool size for AWS S3 async client shared thread pool: {@value}.
+   */
+  public static final String AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_SIZE =
+      "fs.s3a.aws.s3.async.client.shared.threadpool.size";
+
+  /**
+   * Keepalive in seconds for AWS S3 async client shared thread pool: {@value}.
+   */
+  public static final String AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_KEEPALIVE =
+      "fs.s3a.aws.s3.async.client.shared.threadpool.keepalive.seconds";
+
+  /**
+   * Enable shared thread pool for AWS STS client: {@value}.
+   */
+  public static final String AWS_STS_CLIENT_SHARED_THREADPOOL_ENABLED =
+      "fs.s3a.aws.sts.client.shared.threadpool.enabled";
+
+  /**
+   * Thread pool size for AWS STS client shared thread pool: {@value}.
+   */
+  public static final String AWS_STS_CLIENT_SHARED_THREADPOOL_SIZE =
+      "fs.s3a.aws.sts.client.shared.threadpool.size";
+
+  /**
+   * Keepalive in seconds for AWS STS client shared thread pool: {@value}.
+   */
+  public static final String AWS_STS_CLIENT_SHARED_THREADPOOL_KEEPALIVE =
+      "fs.s3a.aws.sts.client.shared.threadpool.keepalive.seconds";
+
+  /**
+   * Enable shared thread pool for AWS KMS client: {@value}.
+   */
+  public static final String AWS_KMS_CLIENT_SHARED_THREADPOOL_ENABLED =
+      "fs.s3a.aws.kms.client.shared.threadpool.enabled";
+
+  /**
+   * Thread pool size for AWS KMS client shared thread pool: {@value}.
+   */
+  public static final String AWS_KMS_CLIENT_SHARED_THREADPOOL_SIZE =
+      "fs.s3a.aws.kms.client.shared.threadpool.size";
+
+  /**
+   * Keepalive in seconds for AWS KMS client shared thread pool: {@value}.
+   */
+  public static final String AWS_KMS_CLIENT_SHARED_THREADPOOL_KEEPALIVE =
+      "fs.s3a.aws.kms.client.shared.threadpool.keepalive.seconds";
 }

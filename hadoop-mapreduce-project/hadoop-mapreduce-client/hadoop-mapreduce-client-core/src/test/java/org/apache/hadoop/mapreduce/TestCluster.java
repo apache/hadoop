@@ -38,16 +38,16 @@ import java.util.ServiceConfigurationError;
  * Testing the Cluster initialization.
  */
 public class TestCluster {
-  @Test
+
   @SuppressWarnings("unchecked")
-  public void testProtocolProviderCreation() throws Exception {
-    Iterator iterator = mock(Iterator.class);
+  public void testProtocolProviderCreation(Throwable error) throws Exception {
+    Iterator<ClientProtocolProvider> iterator = mock(Iterator.class);
     when(iterator.hasNext()).thenReturn(true, true, true, true);
     when(iterator.next()).thenReturn(getClientProtocolProvider())
-        .thenThrow(new ServiceConfigurationError("Test error"))
+        .thenThrow(error)
         .thenReturn(getClientProtocolProvider());
 
-    Iterable frameworkLoader = mock(Iterable.class);
+    Iterable<ClientProtocolProvider> frameworkLoader = mock(Iterable.class);
     when(frameworkLoader.iterator()).thenReturn(iterator);
 
     Cluster.frameworkLoader = frameworkLoader;
@@ -58,6 +58,16 @@ public class TestCluster {
     assertNotNull(testCluster.getClient(), "ClientProtocol is expected");
     // Check if we do not try to load the providers after a failure.
     verify(iterator, times(2)).next();
+  }
+
+  @Test
+  public void testThrowServiceConfigurationError() throws Exception {
+    testProtocolProviderCreation(new ServiceConfigurationError("Test error"));
+  }
+
+  @Test
+  public void testThrowNoClassDefFoundError() throws Exception {
+    testProtocolProviderCreation(new NoClassDefFoundError("Test error"));
   }
 
   public ClientProtocolProvider getClientProtocolProvider() {

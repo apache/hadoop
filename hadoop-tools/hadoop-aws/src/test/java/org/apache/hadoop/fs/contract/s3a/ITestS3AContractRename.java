@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
@@ -40,6 +41,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestConstants.S3A_TEST_TIMEOUT;
 /**
  * S3A contract tests covering rename.
  */
+@IntegrationTest
 public class ITestS3AContractRename extends AbstractContractRenameTest {
 
   public static final Logger LOG = LoggerFactory.getLogger(
@@ -55,6 +57,7 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
     return new S3AContract(conf);
   }
 
+  @Test
   @Override
   public void testRenameDirIntoExistingDir() throws Throwable {
     describe("S3A rename into an existing directory returns false");
@@ -73,7 +76,7 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
     assertIsFile(destFilePath);
 
     boolean rename = fs.rename(srcDir, destDir);
-    assertFalse("s3a doesn't support rename to non-empty directory", rename);
+    assertFalse(rename, "s3a doesn't support rename to non-empty directory");
   }
 
   /**

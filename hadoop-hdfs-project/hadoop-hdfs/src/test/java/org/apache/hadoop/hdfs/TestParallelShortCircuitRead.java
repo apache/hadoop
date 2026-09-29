@@ -17,22 +17,22 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.hamcrest.CoreMatchers.equalTo;
 
 import java.io.File;
 
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
-import org.junit.AfterClass;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 public class TestParallelShortCircuitRead extends TestParallelReadUtil {
   private static TemporarySocketDirectory sockDir;
 
-  @BeforeClass
+  @BeforeAll
   static public void setupCluster() throws Exception {
     if (DomainSocket.getLoadingFailureReason() != null) return;
     DFSInputStream.tcpReadsDisabledForTesting = true;
@@ -47,12 +47,12 @@ public class TestParallelShortCircuitRead extends TestParallelReadUtil {
     setupCluster(1, conf);
   }
 
-  @Before
+  @BeforeEach
   public void before() {
-    Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
+    assumeThat(DomainSocket.getLoadingFailureReason()).isNull();
   }
 
-  @AfterClass
+  @AfterAll
   static public void teardownCluster() throws Exception {
     if (DomainSocket.getLoadingFailureReason() != null) return;
     sockDir.close();

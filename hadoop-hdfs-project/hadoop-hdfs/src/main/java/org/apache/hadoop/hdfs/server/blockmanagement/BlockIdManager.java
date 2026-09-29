@@ -122,7 +122,7 @@ public class BlockIdManager {
   }
 
   @VisibleForTesting
-  SequentialBlockIdGenerator getBlockIdGenerator() {
+  public SequentialBlockIdGenerator getBlockIdGenerator() {
     return blockIdGenerator;
   }
 

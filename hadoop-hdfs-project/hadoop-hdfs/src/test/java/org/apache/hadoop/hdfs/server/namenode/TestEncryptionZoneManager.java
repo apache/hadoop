@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -30,8 +30,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for EncryptionZoneManager methods. Added tests for
@@ -48,7 +48,7 @@ public class TestEncryptionZoneManager {
   private PermissionStatus defaultPermission;
   private EncryptionZoneManager ezManager;
 
-  @Before
+  @BeforeEach
   public void setup() {
     this.mockedDir = mock(FSDirectory.class);
     this.mockedINodesInPath = mock(INodesInPath.class);

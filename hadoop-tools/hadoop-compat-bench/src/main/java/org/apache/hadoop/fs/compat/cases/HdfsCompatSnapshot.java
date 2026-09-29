@@ -19,13 +19,16 @@ package org.apache.hadoop.fs.compat.cases;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.compat.common.*;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @HdfsCompatCaseGroup(name = "Snapshot")
 public class HdfsCompatSnapshot extends AbstractHdfsCompatCase {
@@ -114,24 +117,24 @@ public class HdfsCompatSnapshot extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void createSnapshot() throws IOException {
-    Assert.assertNotEquals(snapshot.toString(), dir.toString());
-    Assert.assertTrue(fs().exists(snapshot));
-    Assert.assertTrue(fs().exists(new Path(snapshot, fileName)));
+    assertNotEquals(snapshot.toString(), dir.toString());
+    assertTrue(fs().exists(snapshot));
+    assertTrue(fs().exists(new Path(snapshot, fileName)));
   }
 
   @HdfsCompatCase
   public void renameSnapshot() throws IOException {
     fs().renameSnapshot(dir, snapshotName, "s-name2");
-    Assert.assertFalse(fs().exists(new Path(snapshot, fileName)));
+    assertFalse(fs().exists(new Path(snapshot, fileName)));
     snapshot = getSnapshotPath(dir, "s-name2");
-    Assert.assertTrue(fs().exists(new Path(snapshot, fileName)));
+    assertTrue(fs().exists(new Path(snapshot, fileName)));
     fs().renameSnapshot(dir, "s-name2", snapshotName);
   }
 
   @HdfsCompatCase
   public void deleteSnapshot() throws IOException {
     fs().deleteSnapshot(dir, snapshotName);
-    Assert.assertFalse(fs().exists(snapshot));
-    Assert.assertFalse(fs().exists(new Path(snapshot, fileName)));
+    assertFalse(fs().exists(snapshot));
+    assertFalse(fs().exists(new Path(snapshot, fileName)));
   }
 }

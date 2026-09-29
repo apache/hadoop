@@ -20,10 +20,10 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-main</artifactId>
-    <version>3.5.0-SNAPSHOT</version>
+    <version>3.6.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-project</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -31,13 +31,12 @@
 
   <properties>
     <!-- Set the Release year during release -->
-    <release-year>2025</release-year>
+    <release-year>2026</release-year>
 
-    <failIfNoTests>false</failIfNoTests>
     <!--Whether to proceed to next module if any test failures exist-->
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.4.57.v20241219</jetty.version>
+    <jetty.version>9.4.58.v20250814</jetty.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -46,11 +45,11 @@
 
     <!-- These 2 versions are defined here because they are used -->
     <!-- JDIFF generation from embedded ant in the antrun plugin -->
-    <jdiff.version>1.0.9</jdiff.version>
+    <jdiff.version>1.1.2-hadoop</jdiff.version>
     <!-- Version number for xerces used by JDiff -->
     <xerces.jdiff.version>2.12.2</xerces.jdiff.version>
 
-    <kafka.version>3.9.0</kafka.version>
+    <kafka.version>3.9.2</kafka.version>
 
     <commons-daemon.version>1.0.13</commons-daemon.version>
 
@@ -63,23 +62,33 @@
     <java.security.egd>file:///dev/urandom</java.security.egd>
 
     <!-- avro version -->
-    <avro.version>1.11.4</avro.version>
+    <avro.version>1.12.1</avro.version>
 
     <!-- jersey version -->
     <jersey2.version>2.46</jersey2.version>
 
+    <!-- moxy version -->
+    <eclipse-persistence.version>2.7.14</eclipse-persistence.version>
+    <jsonapi.version>1.1.6</jsonapi.version>
+    <json.version>1.1.4</json.version>
+
+    <!-- jaxb version -->
+    <jaxb.version>2.3.9</jaxb.version>
+
     <!-- jackson versions -->
-    <jackson2.version>2.14.3</jackson2.version>
-    <jackson2.databind.version>2.14.3</jackson2.databind.version>
+    <jackson2.version>2.18.10</jackson2.version>
+    <jackson2.databind.version>${jackson2.version}</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
     <httpcore.version>4.4.13</httpcore.version>
+    <httpclient5.version>5.6.3</httpclient5.version>
+    <httpcore5.version>5.4.3</httpcore5.version>
 
     <!-- SLF4J/LOG4J version -->
     <slf4j.version>1.7.36</slf4j.version>
     <reload4j.version>1.2.22</reload4j.version>
-    <log4j2.version>2.17.1</log4j2.version>
+    <log4j2.version>2.26.1</log4j2.version>
 
     <!-- com.google.re2j version -->
     <re2j.version>1.1</re2j.version>
@@ -96,22 +105,22 @@
     <hadoop.protobuf.version>3.25.5</hadoop.protobuf.version>
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
 
-    <hadoop-thirdparty.version>1.4.0</hadoop-thirdparty.version>
+    <hadoop-thirdparty.version>1.5.0</hadoop-thirdparty.version>
     <hadoop-thirdparty-protobuf.version>${hadoop-thirdparty.version}</hadoop-thirdparty-protobuf.version>
     <hadoop-thirdparty-guava.version>${hadoop-thirdparty.version}</hadoop-thirdparty-guava.version>
     <hadoop-thirdparty-shaded-prefix>org.apache.hadoop.thirdparty</hadoop-thirdparty-shaded-prefix>
     <hadoop-thirdparty-shaded-protobuf-prefix>${hadoop-thirdparty-shaded-prefix}.protobuf</hadoop-thirdparty-shaded-protobuf-prefix>
     <hadoop-thirdparty-shaded-guava-prefix>${hadoop-thirdparty-shaded-prefix}.com.google.common</hadoop-thirdparty-shaded-guava-prefix>
 
-    <zookeeper.version>3.8.4</zookeeper.version>
+    <zookeeper.version>3.8.6</zookeeper.version>
     <curator.version>5.2.0</curator.version>
     <findbugs.version>3.0.5</findbugs.version>
     <dnsjava.version>3.6.1</dnsjava.version>
 
-    <guava.version>27.0-jre</guava.version>
+    <guava.version>33.4.8-jre</guava.version>
     <guice.version>5.1.0</guice.version>
 
-    <bouncycastle.version>1.78.1</bouncycastle.version>
+    <bouncycastle.version>1.85</bouncycastle.version>
 
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0.AM27</apacheds.version>
@@ -123,12 +132,12 @@
     <commons-collections4.version>4.4</commons-collections4.version>
     <commons-compress.version>1.26.1</commons-compress.version>
     <commons-csv.version>1.9.0</commons-csv.version>
-    <commons-io.version>2.16.1</commons-io.version>
-    <commons-lang3.version>3.17.0</commons-lang3.version>
+    <commons-io.version>2.22.0</commons-io.version>
+    <commons-lang3.version>3.20.0</commons-lang3.version>
     <commons-logging.version>1.3.0</commons-logging.version>
     <commons-math3.version>3.6.1</commons-math3.version>
     <commons-net.version>3.9.0</commons-net.version>
-    <commons-text.version>1.10.0</commons-text.version>
+    <commons-text.version>1.14.0</commons-text.version>
 
     <kerby.version>2.0.3</kerby.version>
     <ehcache.version>3.8.2</ehcache.version>
@@ -137,35 +146,26 @@
     <hikari.version>4.0.3</hikari.version>
     <derby.version>10.14.2.0</derby.version>
     <mssql.version>6.2.1.jre7</mssql.version>
-    <okhttp3.version>4.11.0</okhttp3.version>
+    <okhttp3.version>5.1.0</okhttp3.version>
     <kotlin-stdlib.version>1.6.20</kotlin-stdlib.version>
     <jdom2.version>2.0.6.1</jdom2.version>
     <jna.version>5.2.0</jna.version>
     <gson.version>2.9.0</gson.version>
     <metrics.version>3.2.4</metrics.version>
-    <netty4.version>4.1.118.Final</netty4.version>
+    <netty4.version>4.1.137.Final</netty4.version>
     <snappy-java.version>1.1.10.4</snappy-java.version>
-    <lz4-java.version>1.7.1</lz4-java.version>
-    <byte-buddy.version>1.15.11</byte-buddy.version>
+    <lz4-java.version>1.11.2</lz4-java.version>
+    <zstd-jni.version>1.5.7-8</zstd-jni.version>
+    <byte-buddy.version>1.17.6</byte-buddy.version>
 
     <!-- Maven protoc compiler -->
     <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
+    <ascopes.protobuf-maven-plugin.version>4.1.3</ascopes.protobuf-maven-plugin.version>
     <maven-replacer-plugin.version>1.5.3</maven-replacer-plugin.version>
 
     <protobuf-compile.version>3.5.1</protobuf-compile.version>
     <grpc.version>1.10.0</grpc.version>
-    <os-maven-plugin.version>1.7.0</os-maven-plugin.version>
-
-    <!-- define the Java language version used by the compiler -->
-    <javac.version>1.8</javac.version>
-
-    <!-- The java version enforced by the maven enforcer -->
-    <!-- more complex patterns can be used here, such as
-       [${javac.version})
-    for an open-ended enforcement
-    -->
-    <enforced.java.version>[${javac.version},)</enforced.java.version>
-    <enforced.maven.version>[3.3.0,)</enforced.maven.version>
+    <os-maven-plugin.version>1.7.1</os-maven-plugin.version>
 
     <!-- keep this list sync with
          hadoop-common-project/hadoop-common/src/main/bin/hadoop-functions.sh#hadoop_finalize_jpms_opts
@@ -185,11 +185,14 @@
       --add-opens=java.base/sun.security.x509=ALL-UNNAMED
       --enable-native-access=ALL-UNNAMED
     </extraJavaTestArgs>
+
     <!-- Plugin versions and config -->
-    <maven-surefire-plugin.argLine>-Xmx2048m -Xss2m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs}</maven-surefire-plugin.argLine>
-    <maven-surefire-plugin.version>3.0.0-M4</maven-surefire-plugin.version>
+    <maven-surefire-plugin.argLine>-Xmx4096m -Xss4m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs}</maven-surefire-plugin.argLine>
+    <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
+    <!-- Flag to stop surefire from shortening test stacks  -->
+    <trimStackTrace>false</trimStackTrace>
 
     <maven-clean-plugin.version>3.1.0</maven-clean-plugin.version>
     <maven-install-plugin.version>2.5.1</maven-install-plugin.version>
@@ -204,10 +207,11 @@
     <exec-maven-plugin.version>1.3.1</exec-maven-plugin.version>
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
+    <surefire.fork.exitTimeout>60</surefire.fork.exitTimeout>
     <aws-java-sdk.version>1.12.720</aws-java-sdk.version>
-    <aws-java-sdk-v2.version>2.29.52</aws-java-sdk-v2.version>
-    <amazon-s3-encryption-client-java.version>3.1.1</amazon-s3-encryption-client-java.version>
-    <amazon-s3-analyticsaccelerator-s3.version>1.0.0</amazon-s3-analyticsaccelerator-s3.version>
+    <aws-java-sdk-v2.version>2.35.4</aws-java-sdk-v2.version>
+    <amazon-s3-encryption-client-java.version>4.0.0</amazon-s3-encryption-client-java.version>
+    <amazon-s3-analyticsaccelerator-s3.version>1.3.1</amazon-s3-analyticsaccelerator-s3.version>
     <aws.eventstream.version>1.0.1</aws.eventstream.version>
     <hsqldb.version>2.7.1</hsqldb.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
@@ -223,19 +227,18 @@
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
     <snakeyaml.version>2.0</snakeyaml.version>
     <sshd.version>2.11.0</sshd.version>
-    <hbase.version>2.6.1-hadoop3</hbase.version>
-    <junit.version>4.13.2</junit.version>
-    <junit.jupiter.version>5.8.2</junit.jupiter.version>
-    <junit.vintage.version>5.8.2</junit.vintage.version>
-    <junit.platform.version>1.8.2</junit.platform.version>
+    <hbase.version>2.6.3-hadoop3</hbase.version>
+    <junit.jupiter.version>5.13.3</junit.jupiter.version>
+    <junit.platform.version>1.13.3</junit.platform.version>
     <assertj.version>3.12.2</assertj.version>
     <jline.version>3.9.0</jline.version>
-    <powermock.version>2.0.9</powermock.version>
+    <mockito.version>4.11.0</mockito.version>
     <solr.version>8.11.2</solr.version>
-    <openssl-wildfly.version>2.1.4.Final</openssl-wildfly.version>
+    <openssl-wildfly.version>2.2.5.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.4.0</woodstox.version>
-    <nimbus-jose-jwt.version>9.37.2</nimbus-jose-jwt.version>
+    <nimbus-jose-jwt.version>10.4</nimbus-jose-jwt.version>
+    <jcip-annotations.version>1.0-1</jcip-annotations.version>
     <nodejs.version>v12.22.1</nodejs.version>
     <yarnpkg.version>v1.22.5</yarnpkg.version>
     <apache-ant.version>1.10.13</apache-ant.version>
@@ -246,7 +249,7 @@
     <dependencies>
       <dependency>
         <groupId>com.squareup.okhttp3</groupId>
-        <artifactId>mockwebserver</artifactId>
+        <artifactId>mockwebserver3-junit5</artifactId>
         <version>${okhttp3.version}</version>
         <scope>test</scope>
         <exclusions>
@@ -263,7 +266,7 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>jdiff</groupId>
+        <groupId>io.github.zhtttylz</groupId>
         <artifactId>jdiff</artifactId>
         <version>${jdiff.version}</version>
       </dependency>
@@ -774,6 +777,12 @@
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-bos</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-huaweicloud</artifactId>
         <version>${hadoop.version}</version>
       </dependency>
@@ -781,6 +790,12 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-tos</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-gcp</artifactId>
         <version>${hadoop.version}</version>
       </dependency>
 
@@ -849,6 +864,28 @@
         <version>${httpcore.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.httpcomponents.client5</groupId>
+        <artifactId>httpclient5</artifactId>
+        <version>${httpclient5.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents.core5</groupId>
+        <artifactId>httpcore5</artifactId>
+        <version>${httpcore5.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
         <groupId>commons-codec</groupId>
         <artifactId>commons-codec</artifactId>
         <version>${commons-codec.version}</version>
@@ -887,11 +924,6 @@
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-webapp</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-        <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-util-ajax</artifactId>
         <version>${jetty.version}</version>
       </dependency>
       <dependency>
@@ -1129,7 +1161,7 @@
       <dependency>
         <groupId>org.apache.mina</groupId>
         <artifactId>mina-core</artifactId>
-        <version>2.0.27</version>
+        <version>2.0.29</version>
       </dependency>
       <dependency>
         <groupId>org.apache.sshd</groupId>
@@ -1163,12 +1195,6 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>${junit.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>org.junit.jupiter</groupId>
         <artifactId>junit-jupiter-engine</artifactId>
         <version>${junit.jupiter.version}</version>
@@ -1178,12 +1204,6 @@
         <groupId>org.junit.jupiter</groupId>
         <artifactId>junit-jupiter-params</artifactId>
         <version>${junit.jupiter.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.vintage</groupId>
-        <artifactId>junit-vintage-engine</artifactId>
-        <version>${junit.vintage.version}</version>
         <scope>test</scope>
       </dependency>
       <!-- Only required to run tests in an IDE that bundles an older version -->
@@ -1216,7 +1236,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-configuration2</artifactId>
-        <version>2.10.1</version>
+        <version>2.15.0</version>
         <exclusions>
           <exclusion>
             <groupId>org.apache.commons</groupId>
@@ -1283,6 +1303,12 @@
         <groupId>com.fasterxml.jackson.module</groupId>
         <artifactId>jackson-module-jaxb-annotations</artifactId>
         <version>${jackson2.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.dataformat</groupId>
@@ -1301,24 +1327,24 @@
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
+        <artifactId>mockito-core</artifactId>
+        <version>${mockito.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-junit-jupiter</artifactId>
+        <version>${mockito.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
         <artifactId>mockito-inline</artifactId>
-        <version>4.11.0</version>
+        <version>${mockito.version}</version>
         <exclusions>
           <exclusion>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.mockito</groupId>
-        <artifactId>mockito-all</artifactId>
-        <version>1.10.19</version>
-      </dependency>
-      <dependency>
-        <groupId>org.mockito</groupId>
-        <artifactId>mockito-junit-jupiter</artifactId>
-        <version>3.12.4</version>
       </dependency>
       <dependency>
         <groupId>org.objenesis</groupId>
@@ -1343,11 +1369,6 @@
             <artifactId>hamcrest-core</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.mockito</groupId>
-        <artifactId>mockito-junit-jupiter</artifactId>
-        <version>4.11.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.avro</groupId>
@@ -1393,6 +1414,12 @@
         <groupId>com.googlecode.json-simple</groupId>
         <artifactId>json-simple</artifactId>
         <version>1.1.1</version>
+        <exclusions>
+          <exclusion>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
 
       <dependency>
@@ -1545,6 +1572,11 @@
         <groupId>com.google.code.findbugs</groupId>
         <artifactId>jsr305</artifactId>
         <version>3.0.2</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.stephenc.jcip</groupId>
+        <artifactId>jcip-annotations</artifactId>
+        <version>${jcip-annotations.version}</version>
       </dependency>
       <dependency>
         <groupId>jakarta.xml.bind</groupId>
@@ -1819,6 +1851,17 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
+        <version>${hbase.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.yetus</groupId>
+            <artifactId>audience-annotations</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-client</artifactId>
         <version>${hbase.version}</version>
         <exclusions>
@@ -2000,11 +2043,6 @@
           <version>${snakeyaml.version}</version>
         </dependency>
         <dependency>
-          <groupId>org.hamcrest</groupId>
-          <artifactId>hamcrest-library</artifactId>
-          <version>1.3</version>
-        </dependency>
-        <dependency>
           <groupId>org.assertj</groupId>
           <artifactId>assertj-core</artifactId>
           <version>${assertj.version}</version>
@@ -2057,9 +2095,14 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>org.lz4</groupId>
+        <groupId>at.yawk.lz4</groupId>
         <artifactId>lz4-java</artifactId>
         <version>${lz4-java.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.luben</groupId>
+        <artifactId>zstd-jni</artifactId>
+        <version>${zstd-jni.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.logging.log4j</groupId>
@@ -2149,10 +2192,35 @@
         <version>${jersey2.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.eclipse.persistence</groupId>
+        <artifactId>org.eclipse.persistence.moxy</artifactId>
+        <version>${eclipse-persistence.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>jakarta.json</groupId>
+        <artifactId>jakarta.json-api</artifactId>
+        <version>${jsonapi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.glassfish</groupId>
+        <artifactId>javax.json</artifactId>
+        <version>${json.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.glassfish.jaxb</groupId>
+        <artifactId>jaxb-runtime</artifactId>
+        <version>${jaxb.version}</version>
+      </dependency>
+      <dependency>
         <groupId>net.jodah</groupId>
         <artifactId>failsafe</artifactId>
         <version>2.4.4</version>
       </dependency>
+      <dependency>
+        <groupId>com.google.cloud</groupId>
+        <artifactId>google-cloud-storage</artifactId>
+        <version>2.52.0</version>
+    </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -2215,6 +2283,22 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
           <version>${maven-shade-plugin.version}</version>
+          <dependencies>
+            <!--
+              TODO: Remove ASM version management once upstream change released
+              https://github.com/apache/maven-shade-plugin/pull/744
+              -->
+            <dependency>
+              <groupId>org.ow2.asm</groupId>
+              <artifactId>asm</artifactId>
+              <version>9.8</version>
+            </dependency>
+            <dependency>
+              <groupId>org.ow2.asm</groupId>
+              <artifactId>asm-commons</artifactId>
+              <version>9.8</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -2225,6 +2309,11 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>${maven-failsafe-plugin.version}</version>
+          <configuration>
+            <!-- @{argLine} injects the JaCoCo agent when coverage is enabled;
+                 see the maven-surefire-plugin configuration below for details. -->
+            <argLine>${maven-surefire-plugin.argLine} @{argLine}</argLine>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -2242,8 +2331,15 @@
           <version>${maven-javadoc-plugin.version}</version>
           <configuration>
             <doclint>all</doclint>
+            <additionalJOptions>
+              <!-- To fix doclet runtime error -->
+              <additionalJOption>-J--add-exports=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalJOption>
+            </additionalJOptions>
             <additionalOptions>
-                <additionalOption>-Xmaxwarns 10000</additionalOption>
+              <!-- To fix doclet compile error -->
+              <additionalOption>--add-exports</additionalOption>
+              <additionalOption>jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalOption>
+              <additionalOption>-Xmaxwarns 10000</additionalOption>
             </additionalOptions>
           </configuration>
         </plugin>
@@ -2352,6 +2448,11 @@
               </configuration>
             </execution>
           </executions>
+        </plugin>
+        <plugin>
+          <groupId>io.github.ascopes</groupId>
+          <artifactId>protobuf-maven-plugin</artifactId>
+          <version>${ascopes.protobuf-maven-plugin.version}</version>
         </plugin>
         <!-- Modify the generated source to use our shaded protobuf -->
         <plugin>
@@ -2489,7 +2590,17 @@
         <configuration>
           <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>${surefire.fork.timeout}</forkedProcessTimeoutInSeconds>
-          <argLine>${maven-surefire-plugin.argLine}</argLine>
+          <forkedProcessExitTimeoutInSeconds>${surefire.fork.exitTimeout}</forkedProcessExitTimeoutInSeconds>
+          <!-- @{argLine} is Surefire's late (deferred) property substitution: it
+               is replaced at test-run time with the value of the "argLine"
+               property. jacoco:prepare-agent sets that property to the
+               -javaagent:...jacocoagent.jar=... option when coverage is enabled
+               (see jacoco-maven-plugin above), so the agent is injected into the
+               forked test JVM. When coverage is off (jacoco.skip=true, the
+               default) prepare-agent is skipped, argLine is unset, and @{argLine}
+               resolves to empty. ${maven-surefire-plugin.argLine} is our own
+               static JVM args, kept separate. -->
+          <argLine>${maven-surefire-plugin.argLine} @{argLine}</argLine>
           <environmentVariables>
             <HADOOP_COMMON_HOME>${hadoop.common.build.dir}</HADOOP_COMMON_HOME>
             <!-- HADOOP_HOME required for tests on Windows to find winutils -->
@@ -2498,7 +2609,6 @@
             <DYLD_LIBRARY_PATH>${env.DYLD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib</DYLD_LIBRARY_PATH>
             <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>
-          <trimStackTrace>false</trimStackTrace>
           <systemPropertyVariables>
 
             <hadoop.log.dir>${project.build.directory}/log</hadoop.log.dir>
@@ -2525,6 +2635,34 @@
             <exclude>**/Test*$*.java</exclude>
           </excludes>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+            <configuration>
+              <!-- skip is inherited from the jacoco.skip property (default true
+                   in the root pom); no explicit <skip> needed here. -->
+              <!-- Exclude generated/example classes from instrumentation so
+                   the agent does not spend time weaving them in every forked
+                   test JVM. These are also filtered from the coverage numbers
+                   in the report-aggregate configuration (hadoop-coverage/pom.xml);
+                   keep the two exclude lists in sync. -->
+              <excludes>
+                <exclude>**/generated/**/*.class</exclude>
+                <exclude>**/examples/**/*.class</exclude>
+                <exclude>**/hamlet/*.class</exclude>
+                <exclude>**/proto/*.class</exclude>
+                <exclude>**/protobuf/*.class</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -2580,30 +2718,6 @@
 
   <profiles>
     <profile>
-      <id>os.linux</id>
-      <activation>
-        <os>
-          <family>!Mac</family>
-        </os>
-      </activation>
-      <properties>
-        <build.platform>${os.name}-${os.arch}-${sun.arch.data.model}</build.platform>
-      </properties>
-    </profile>
-    <profile>
-      <id>os.mac</id>
-      <activation>
-        <os>
-          <family>Mac</family>
-        </os>
-      </activation>
-      <properties>
-        <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
-        <!-- To make protoc work on Apple Silicon via fallback -->
-        <os.detected.classifier>osx-x86_64</os.detected.classifier>
-      </properties>
-    </profile>
-    <profile>
       <id>native-win</id>
       <activation>
         <os>
@@ -2616,7 +2730,6 @@
         <!-- will use a native entropy provider.  This will not really -->
         <!-- attempt to open a file at this path. -->
         <java.security.egd>file:/dev/urandom</java.security.egd>
-        <bundle.zstd.in.bin>true</bundle.zstd.in.bin>
         <bundle.openssl.in.bin>true</bundle.openssl.in.bin>
       </properties>
       <build>
@@ -2627,7 +2740,6 @@
             <configuration>
               <environmentVariables>
                 <!-- Specify where to look for the native DLL on Windows -->
-                <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${zstd.lib}</PATH>
                 <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${openssl.lib}</PATH>
                 <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${isal.lib}</PATH>
               </environmentVariables>
@@ -2760,14 +2872,21 @@
       </dependencyManagement>
     </profile>
     <profile>
-      <id>jdk17+</id>
+      <id>quiet-surefire</id>
       <activation>
-        <jdk>[17,)</jdk>
+        <activeByDefault>false</activeByDefault>
       </activation>
-      <properties>
-        <javac.version>17</javac.version>
-        <maven.compiler.release>${javac.version}</maven.compiler.release>
-      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <enableOutErrElements>false</enableOutErrElements>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 

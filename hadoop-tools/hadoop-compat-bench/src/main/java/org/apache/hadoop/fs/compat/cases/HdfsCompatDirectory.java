@@ -19,11 +19,15 @@ package org.apache.hadoop.fs.compat.cases;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.compat.common.*;
-import org.junit.Assert;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @HdfsCompatCaseGroup(name = "Directory")
 public class HdfsCompatDirectory extends AbstractHdfsCompatCase {
@@ -45,101 +49,101 @@ public class HdfsCompatDirectory extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void isDirectory() throws IOException {
-    Assert.assertTrue(fs().isDirectory(dir));
+    assertTrue(fs().isDirectory(dir));
   }
 
   @HdfsCompatCase
   public void listStatus() throws IOException {
     FileStatus[] files = fs().listStatus(dir);
-    Assert.assertNotNull(files);
-    Assert.assertEquals(1, files.length);
-    Assert.assertEquals(file.getName(), files[0].getPath().getName());
+    assertNotNull(files);
+    assertEquals(1, files.length);
+    assertEquals(file.getName(), files[0].getPath().getName());
   }
 
   @HdfsCompatCase
   public void globStatus() throws IOException {
     FileStatus[] files = fs().globStatus(new Path(dir, "*ile"));
-    Assert.assertNotNull(files);
-    Assert.assertEquals(1, files.length);
-    Assert.assertEquals(file.getName(), files[0].getPath().getName());
+    assertNotNull(files);
+    assertEquals(1, files.length);
+    assertEquals(file.getName(), files[0].getPath().getName());
   }
 
   @HdfsCompatCase
   public void listLocatedStatus() throws IOException {
     RemoteIterator<LocatedFileStatus> locatedFileStatuses =
         fs().listLocatedStatus(dir);
-    Assert.assertNotNull(locatedFileStatuses);
+    assertNotNull(locatedFileStatuses);
     List<LocatedFileStatus> files = new ArrayList<>();
     while (locatedFileStatuses.hasNext()) {
       files.add(locatedFileStatuses.next());
     }
-    Assert.assertEquals(1, files.size());
+    assertEquals(1, files.size());
     LocatedFileStatus fileStatus = files.get(0);
-    Assert.assertEquals(file.getName(), fileStatus.getPath().getName());
+    assertEquals(file.getName(), fileStatus.getPath().getName());
   }
 
   @HdfsCompatCase
   public void listStatusIterator() throws IOException {
     RemoteIterator<FileStatus> fileStatuses = fs().listStatusIterator(dir);
-    Assert.assertNotNull(fileStatuses);
+    assertNotNull(fileStatuses);
     List<FileStatus> files = new ArrayList<>();
     while (fileStatuses.hasNext()) {
       files.add(fileStatuses.next());
     }
-    Assert.assertEquals(1, files.size());
+    assertEquals(1, files.size());
     FileStatus fileStatus = files.get(0);
-    Assert.assertEquals(file.getName(), fileStatus.getPath().getName());
+    assertEquals(file.getName(), fileStatus.getPath().getName());
   }
 
   @HdfsCompatCase
   public void listFiles() throws IOException {
     RemoteIterator<LocatedFileStatus> iter = fs().listFiles(dir, true);
-    Assert.assertNotNull(iter);
+    assertNotNull(iter);
     List<LocatedFileStatus> files = new ArrayList<>();
     while (iter.hasNext()) {
       files.add(iter.next());
     }
-    Assert.assertEquals(1, files.size());
+    assertEquals(1, files.size());
   }
 
   @HdfsCompatCase
   public void listCorruptFileBlocks() throws IOException {
     RemoteIterator<Path> iter = fs().listCorruptFileBlocks(dir);
-    Assert.assertNotNull(iter);
-    Assert.assertFalse(iter.hasNext());  // No corrupted file
+    assertNotNull(iter);
+    assertFalse(iter.hasNext());  // No corrupted file
   }
 
   @HdfsCompatCase
   public void getContentSummary() throws IOException {
     ContentSummary summary = fs().getContentSummary(dir);
-    Assert.assertEquals(1, summary.getFileCount());
-    Assert.assertEquals(1, summary.getDirectoryCount());
-    Assert.assertEquals(FILE_LEN, summary.getLength());
+    assertEquals(1, summary.getFileCount());
+    assertEquals(1, summary.getDirectoryCount());
+    assertEquals(FILE_LEN, summary.getLength());
   }
 
   @HdfsCompatCase
   public void getUsed() throws IOException {
     long used = fs().getUsed(dir);
-    Assert.assertTrue(used >= FILE_LEN);
+    assertTrue(used >= FILE_LEN);
   }
 
   @HdfsCompatCase
   public void getQuotaUsage() throws IOException {
     QuotaUsage usage = fs().getQuotaUsage(dir);
-    Assert.assertEquals(2, usage.getFileAndDirectoryCount());
+    assertEquals(2, usage.getFileAndDirectoryCount());
   }
 
   @HdfsCompatCase
   public void setQuota() throws IOException {
     fs().setQuota(dir, 1048576L, 1073741824L);
     QuotaUsage usage = fs().getQuotaUsage(dir);
-    Assert.assertEquals(1048576L, usage.getQuota());
+    assertEquals(1048576L, usage.getQuota());
   }
 
   @HdfsCompatCase
   public void setQuotaByStorageType() throws IOException {
     fs().setQuotaByStorageType(dir, StorageType.DISK, 1048576L);
     QuotaUsage usage = fs().getQuotaUsage(dir);
-    Assert.assertEquals(1048576L, usage.getTypeQuota(StorageType.DISK));
+    assertEquals(1048576L, usage.getTypeQuota(StorageType.DISK));
   }
 }

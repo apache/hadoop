@@ -31,19 +31,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public abstract class AbstractSecureRouterTest {
 
@@ -91,7 +90,7 @@ public abstract class AbstractSecureRouterTest {
   private static ConcurrentHashMap<SubClusterId, MockRM> mockRMs =
       new ConcurrentHashMap<>();
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeSecureRouterTestClass() throws Exception {
     // Sets up the KDC and Principals.
     setupKDCAndPrincipals();
@@ -111,6 +110,8 @@ public abstract class AbstractSecureRouterTest {
     // Router Kerberos KeyTab configuration
     conf.set(YarnConfiguration.ROUTER_PRINCIPAL, ROUTER_LOCALHOST_REALM);
     conf.set(YarnConfiguration.ROUTER_KEYTAB, routerKeytab.getAbsolutePath());
+
+    conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
 
     DefaultMetricsSystem.setMiniClusterMode(true);
   }
@@ -163,9 +164,9 @@ public abstract class AbstractSecureRouterTest {
    * @throws Exception an error occurred.
    */
   public static File createKeytab(String principal, String filename) throws Exception {
-    assertTrue("empty principal", StringUtils.isNotBlank(principal));
-    assertTrue("empty host", StringUtils.isNotBlank(filename));
-    assertNotNull("null KDC", kdc);
+    assertTrue(StringUtils.isNotBlank(principal), "empty principal");
+    assertTrue(StringUtils.isNotBlank(filename), "empty host");
+    assertNotNull(kdc, "null KDC");
     File keytab = new File(kdcWorkDir, filename);
     kdc.createPrincipal(keytab,
         principal,
@@ -180,7 +181,7 @@ public abstract class AbstractSecureRouterTest {
    * @throws Exception an error occurred.
    */
   public synchronized void startSecureRouter() {
-    assertNull("Router is already running", router);
+    assertNull(router, "Router is already running");
     MemoryFederationStateStore stateStore = new MemoryFederationStateStore();
     stateStore.init(getConf());
     FederationStateStoreFacade.getInstance(getConf()).reinitialize(stateStore, getConf());
@@ -219,7 +220,7 @@ public abstract class AbstractSecureRouterTest {
    *
    * @throws Exception an error occurred.
    */
-  @AfterClass
+  @AfterAll
   public static void afterSecureRouterTest() throws Exception {
     LOG.info("teardown of kdc instance.");
     teardownKDC();

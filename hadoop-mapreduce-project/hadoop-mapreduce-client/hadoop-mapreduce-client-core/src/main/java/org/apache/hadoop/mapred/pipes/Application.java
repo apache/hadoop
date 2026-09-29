@@ -110,7 +110,8 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     String localPasswordFile = new File(".") + Path.SEPARATOR
         + "jobTokenPassword";
     writePasswordToLocalFile(localPasswordFile, password, conf);
-    env.put("hadoop.pipes.shared.secret.location", localPasswordFile);
+    // FIXME This doesn't seem to be read anywhere
+    env.put("hadoop_pipes_shared_secret_location", localPasswordFile);
  
     List<String> cmd = new ArrayList<String>();
     String interpretor = conf.get(Submitter.INTERPRETOR);

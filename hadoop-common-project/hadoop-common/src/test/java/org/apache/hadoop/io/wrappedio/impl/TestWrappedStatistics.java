@@ -24,9 +24,8 @@ import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.Map;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +44,7 @@ import org.apache.hadoop.util.functional.Tuples;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for IOStatistics wrapping.
@@ -76,7 +76,7 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
    */
   private Path jsonPath;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     String testDataDir = new FileSystemTestHelper().getTestRootDir();
     File tempDir = new File(testDataDir);
@@ -91,17 +91,17 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
    */
   @Test
   public void testLoaded() throws Throwable {
-    Assertions.assertThat(statistics.ioStatisticsAvailable())
+    assertThat(statistics.ioStatisticsAvailable())
         .describedAs("IOStatistics class must be available")
         .isTrue();
-    Assertions.assertThat(statistics.ioStatisticsContextAvailable())
+    assertThat(statistics.ioStatisticsContextAvailable())
         .describedAs("IOStatisticsContext must be available")
         .isTrue();
   }
 
   @Test
   public void testCreateEmptySnapshot() throws Throwable {
-    Assertions.assertThat(statistics.iostatisticsSnapshot_create())
+    assertThat(statistics.iostatisticsSnapshot_create())
         .describedAs("iostatisticsSnapshot_create()")
         .isInstanceOf(IOStatisticsSnapshot.class)
         .satisfies(statistics::isIOStatisticsSnapshot)
@@ -110,14 +110,14 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testCreateNullSource() throws Throwable {
-    Assertions.assertThat(statistics.iostatisticsSnapshot_create(null))
+    assertThat(statistics.iostatisticsSnapshot_create(null))
         .describedAs("iostatisticsSnapshot_create(null)")
         .isInstanceOf(IOStatisticsSnapshot.class);
   }
 
   @Test
   public void testCreateOther() throws Throwable {
-    Assertions.assertThat(statistics.iostatisticsSnapshot_create(null))
+    assertThat(statistics.iostatisticsSnapshot_create(null))
         .describedAs("iostatisticsSnapshot_create(null)")
         .isInstanceOf(IOStatisticsSnapshot.class);
   }
@@ -130,14 +130,14 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testRetrieveNullSource() throws Throwable {
-    Assertions.assertThat(statistics.iostatisticsSnapshot_retrieve(null))
+    assertThat(statistics.iostatisticsSnapshot_retrieve(null))
         .describedAs("iostatisticsSnapshot_retrieve(null)")
         .isNull();
   }
 
   @Test
   public void testRetrieveNonIOStatsSource() throws Throwable {
-    Assertions.assertThat(statistics.iostatisticsSnapshot_retrieve(this))
+    assertThat(statistics.iostatisticsSnapshot_retrieve(this))
         .describedAs("iostatisticsSnapshot_retrieve(this)")
         .isNull();
   }
@@ -184,23 +184,23 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
   @Test
   public void testIOStatisticsContextMethods() {
 
-    Assertions.assertThat(statistics.ioStatisticsContextAvailable())
+    assertThat(statistics.ioStatisticsContextAvailable())
         .describedAs("ioStatisticsContextAvailable() of %s", statistics)
         .isTrue();
-    Assertions.assertThat(statistics.iostatisticsContext_enabled())
+    assertThat(statistics.iostatisticsContext_enabled())
         .describedAs("iostatisticsContext_enabled() of %s", statistics)
         .isTrue();
 
     // get the current context, validate it
     final Object current = statistics.iostatisticsContext_getCurrent();
-    Assertions.assertThat(current)
+    assertThat(current)
         .describedAs("IOStatisticsContext")
         .isInstanceOf(IOStatisticsContext.class)
         .satisfies(statistics::isIOStatisticsSource);
 
     // take a snapshot
     final Serializable snapshot = statistics.iostatisticsContext_snapshot();
-    Assertions.assertThat(snapshot)
+    assertThat(snapshot)
         .satisfies(statistics::isIOStatisticsSnapshot);
 
     // use the retrieve API to create a snapshot from the IOStatisticsSource interface
@@ -223,14 +223,14 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
     // set to null
     statistics.iostatisticsContext_setThreadIOStatisticsContext(null);
 
-    Assertions.assertThat(statistics.iostatisticsContext_getCurrent())
+    assertThat(statistics.iostatisticsContext_getCurrent())
         .describedAs("current IOStatisticsContext after resetting")
         .isNotSameAs(current);
 
     // then set to the "current"  value
     statistics.iostatisticsContext_setThreadIOStatisticsContext(current);
 
-    Assertions.assertThat(statistics.iostatisticsContext_getCurrent())
+    assertThat(statistics.iostatisticsContext_getCurrent())
         .describedAs("current IOStatisticsContext after resetting")
         .isSameAs(current);
 
@@ -238,7 +238,7 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
     statistics.iostatisticsContext_reset();
 
     // now aggregate the retrieved stats into it.
-    Assertions.assertThat(statistics.iostatisticsContext_aggregate(retrieved))
+    assertThat(statistics.iostatisticsContext_aggregate(retrieved))
         .describedAs("iostatisticsContext_aggregate of %s", retrieved)
         .isTrue();
   }
@@ -275,7 +275,7 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
    * @param expected expected value
    */
   private void assertJsonEqual(Serializable actual, Serializable expected) {
-    Assertions.assertThat(toJsonString(actual))
+    assertThat(toJsonString(actual))
         .describedAs("JSON format string of %s", actual)
         .isEqualTo(toJsonString(expected));
   }
@@ -346,26 +346,26 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
 
 
     // get the values
-    Assertions.assertThat(statistics.iostatistics_counters(loaded))
+    assertThat(statistics.iostatistics_counters(loaded))
         .containsOnlyKeys("c1", "c2",
             "d1", "d1.failures",
             "d2", "d2.failures")
         .containsEntry("c1", 1L)
         .containsEntry("d1", 2L)
         .containsEntry("d2", 1L);
-    Assertions.assertThat(statistics.iostatistics_gauges(loaded))
+    assertThat(statistics.iostatistics_gauges(loaded))
         .containsOnlyKeys("g1")
         .containsEntry("g1", 10L);
 
     final Map<String, Long> minimums = statistics.iostatistics_minimums(snapshot);
-    Assertions.assertThat(minimums)
+    assertThat(minimums)
         .containsEntry("d1.min", 0L);
     final long d2FailuresMin = minimums.get("d2.failures.min");
-    Assertions.assertThat(d2FailuresMin)
+    assertThat(d2FailuresMin)
         .describedAs("min d2.failures")
         .isGreaterThan(0);
     final Map<String, Long> maximums = statistics.iostatistics_maximums(snapshot);
-    Assertions.assertThat(maximums)
+    assertThat(maximums)
         .containsEntry("d2.failures.max", d2FailuresMin);
     final long d1Max = maximums.get("d1.max");
 
@@ -373,7 +373,7 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
     final Map<String, Map.Entry<Long, Long>> means =
         statistics.iostatistics_means(snapshot);
 
-    Assertions.assertThat(means)
+    assertThat(means)
         .containsEntry("d1.mean", Tuples.pair(2L, d1Max))
         .containsEntry("d2.failures.mean", Tuples.pair(1L, d2FailuresMin));
 
@@ -401,19 +401,19 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
         new DynamicWrappedStatistics(StubClass.class.getName());
 
     // probes which just return false
-    Assertions.assertThat(missing.ioStatisticsAvailable())
+    assertThat(missing.ioStatisticsAvailable())
         .describedAs("ioStatisticsAvailable() of %s", missing)
         .isFalse();
 
     // probes of type of argument which return false if the
     // methods are missing
-    Assertions.assertThat(missing.isIOStatistics(SERIALIZABLE))
+    assertThat(missing.isIOStatistics(SERIALIZABLE))
         .describedAs("isIOStatistics() of %s", missing)
         .isFalse();
-    Assertions.assertThat(missing.isIOStatisticsSource(SERIALIZABLE))
+    assertThat(missing.isIOStatisticsSource(SERIALIZABLE))
         .describedAs("isIOStatisticsSource() of %s", missing)
         .isFalse();
-    Assertions.assertThat(missing.isIOStatisticsSnapshot(SERIALIZABLE))
+    assertThat(missing.isIOStatisticsSnapshot(SERIALIZABLE))
         .describedAs("isIOStatisticsSnapshot() of %s", missing)
         .isFalse();
 
@@ -464,10 +464,10 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
         new DynamicWrappedStatistics(StubClass.class.getName());
 
     // probes which just return false
-    Assertions.assertThat(missing.ioStatisticsContextAvailable())
+    assertThat(missing.ioStatisticsContextAvailable())
         .describedAs("ioStatisticsContextAvailable() of %s", missing)
         .isFalse();
-    Assertions.assertThat(missing.iostatisticsContext_enabled())
+    assertThat(missing.iostatisticsContext_enabled())
         .describedAs("iostatisticsContext_enabled() of %s", missing)
         .isFalse();
 

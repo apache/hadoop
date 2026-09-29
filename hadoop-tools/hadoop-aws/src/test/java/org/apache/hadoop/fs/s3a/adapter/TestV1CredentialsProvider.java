@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -47,8 +47,8 @@ import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.EC2_CO
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.ENVIRONMENT_CREDENTIALS_V1;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.createAWSCredentialProviderList;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for v1 to v2 credential provider logic.
@@ -150,13 +150,12 @@ public class TestV1CredentialsProvider {
       Class<?> expectedClass =
           expectedClasses.get(i);
       AwsCredentialsProvider provider = providers.get(i);
-      assertNotNull(
+      assertNotNull(provider,
           String.format("At position %d, expected class is %s, but found null.",
-              i, expectedClass), provider);
-      assertTrue(
+          i, expectedClass));
+      assertTrue(expectedClass.isAssignableFrom(provider.getClass()),
           String.format("At position %d, expected class is %s, but found %s.",
-              i, expectedClass, provider.getClass()),
-          expectedClass.isAssignableFrom(provider.getClass()));
+          i, expectedClass, provider.getClass()));
     }
   }
 

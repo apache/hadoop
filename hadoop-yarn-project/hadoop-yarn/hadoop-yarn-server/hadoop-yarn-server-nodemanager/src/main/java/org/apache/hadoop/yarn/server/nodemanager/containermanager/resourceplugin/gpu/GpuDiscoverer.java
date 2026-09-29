@@ -45,7 +45,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
+import java.util.concurrent.TimeUnit;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -61,10 +61,10 @@ public class GpuDiscoverer extends Configured {
   private static final Set<String> DEFAULT_BINARY_SEARCH_DIRS = ImmutableSet.of(
       "/usr/bin", "/bin", "/usr/local/nvidia/bin");
 
-  private static final int MAX_REPEATED_ERROR_ALLOWED = 10;
-
   private NvidiaBinaryHelper nvidiaBinaryHelper;
   private String pathOfGpuBinary = null;
+  private long discoveryTimeoutMs;
+  private int discoveryMaxErrors;
   private Map<String, String> environment = new HashMap<>();
 
   private int numOfErrorExecutionSinceLastSucceed = 0;
@@ -86,7 +86,7 @@ public class GpuDiscoverer extends Configured {
 
   private String getErrorMessageOfScriptExecutionThresholdReached() {
     return getFailedToExecuteScriptMessage() + " for " +
-        MAX_REPEATED_ERROR_ALLOWED + " times, " +
+        discoveryMaxErrors + " times, " +
         "skipping following executions!";
   }
 
@@ -114,7 +114,8 @@ public class GpuDiscoverer extends Configured {
    */
   public synchronized GpuDeviceInformation getGpuDeviceInformation()
       throws YarnException {
-    if (numOfErrorExecutionSinceLastSucceed == MAX_REPEATED_ERROR_ALLOWED) {
+    if (discoveryMaxErrors >= 0 &&
+        numOfErrorExecutionSinceLastSucceed == discoveryMaxErrors) {
       String msg = getErrorMessageOfScriptExecutionThresholdReached();
       LOG.error(msg);
       throw new YarnException(msg);
@@ -122,7 +123,8 @@ public class GpuDiscoverer extends Configured {
 
     try {
       lastDiscoveredGpuInformation =
-          nvidiaBinaryHelper.getGpuDeviceInformation(pathOfGpuBinary);
+          nvidiaBinaryHelper.getGpuDeviceInformation(pathOfGpuBinary,
+              discoveryTimeoutMs);
     } catch (IOException e) {
       numOfErrorExecutionSinceLastSucceed++;
       String msg = getErrorMessageOfScriptExecution(e.getMessage());
@@ -298,6 +300,16 @@ public class GpuDiscoverer extends Configured {
     }
 
     pathOfGpuBinary = binaryPath.getAbsolutePath();
+
+    discoveryTimeoutMs = config.getTimeDuration(
+        YarnConfiguration.NM_GPU_DISCOVERY_TIMEOUT,
+        YarnConfiguration.NM_GPU_DISCOVERY_TIMEOUT_DEFAULT,
+        TimeUnit.MILLISECONDS);
+
+    discoveryMaxErrors = config.getInt(
+        YarnConfiguration.NM_GPU_DISCOVERY_MAX_ERRORS,
+        YarnConfiguration.NM_GPU_DISCOVERY_MAX_ERRORS_DEFAULT);
+
   }
 
   private File handleConfiguredBinaryPathIsDirectory(File configuredBinaryFile)

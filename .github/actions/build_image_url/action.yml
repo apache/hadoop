@@ -1,0 +1,44 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+name: Get Build Image URL
+description:
+
+inputs:
+  branch:
+    description: Git branch to use.
+    required: true
+  os:
+    description: Operating system to run the build on
+    required: true
+
+outputs:
+  build_image_url:
+    description: URL of build (infra) image.
+    value: ${{ steps.compute.outputs.image_url }}
+
+runs:
+  using: composite
+  steps:
+    - id: compute
+      shell: bash
+      run: |
+        # Convert to lowercase to meet Docker repo name requirement
+        REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+        OS=$(echo "${{ inputs.os }}" | tr '[:upper:]' '[:lower:]')
+        echo "image_url=ghcr.io/${REPO_OWNER}/gha-build-${OS}:${{ inputs.branch }}-${{ github.run_id }}" \
+        >> $GITHUB_OUTPUT
+

@@ -25,10 +25,9 @@ import java.util.Map;
 import java.io.IOException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
-import org.junit.runners.Parameterized;
-import org.junit.runner.RunWith;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -44,6 +43,7 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SEND_REQUESTS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_APPENDBLOB_ENABLED;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test combination for small writes with flush and close operations.
@@ -66,7 +66,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
  * 4. Execute test iterations with asserts on number of store requests made and
  * validating file content.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="{0}")
+@MethodSource("params")
 public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
   private static final int ONE_MB = 1024 * 1024;
   private static final int TWO_MB = 2 * ONE_MB;
@@ -75,45 +76,37 @@ public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
   private static final int QUARTER_TEST_BUFFER_SIZE = TWO_MB / 4;
   private static final int TEST_FLUSH_ITERATION = 2;
 
-  @Parameterized.Parameter
   public String testScenario;
 
-  @Parameterized.Parameter(1)
   public boolean enableSmallWriteOptimization;
 
   /**
    * If true, will initiate close after appends. (That is, no explicit hflush or
    * hsync calls will be made from client app.)
    */
-  @Parameterized.Parameter(2)
   public boolean directCloseTest;
 
   /**
    * If non-zero, test file should be created as pre-requisite with this size.
    */
-  @Parameterized.Parameter(3)
   public Integer startingFileSize;
 
   /**
    * Determines the write sizes to be issued by client app.
    */
-  @Parameterized.Parameter(4)
   public Integer recurringClientWriteSize;
 
   /**
    * Determines the number of Client writes to make.
    */
-  @Parameterized.Parameter(5)
   public Integer numOfClientWrites;
 
   /**
    * True, if the small write optimization is supposed to be effective in
    * the scenario.
    */
-  @Parameterized.Parameter(6)
   public boolean flushExpectedToBeMergedWithAppend;
 
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> params() {
     return Arrays.asList(
         // Parameter Order :
@@ -297,9 +290,18 @@ public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
             },
         });
   }
-  public ITestSmallWriteOptimization() throws Exception {
-    super();
-  }
+    public ITestSmallWriteOptimization(String pTestScenario,
+        boolean pEnableSmallWriteOptimization, boolean pDirectCloseTest,
+        Integer pStartingFileSize, Integer pRecurringClientWriteSize,
+        Integer pNumOfClientWrites, boolean pFlushExpectedToBeMergedWithAppend) throws Exception {
+        this.testScenario = pTestScenario;
+        this.enableSmallWriteOptimization = pEnableSmallWriteOptimization;
+        this.directCloseTest = pDirectCloseTest;
+        this.startingFileSize = pStartingFileSize;
+        this.recurringClientWriteSize = pRecurringClientWriteSize;
+        this.numOfClientWrites = pNumOfClientWrites;
+        this.flushExpectedToBeMergedWithAppend = pFlushExpectedToBeMergedWithAppend;
+    }
 
   @Test
   public void testSmallWriteOptimization()
@@ -309,7 +311,7 @@ public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
     // default. Default settings will be turned on when server support is
     // available on all store prod regions.
     if (enableSmallWriteOptimization) {
-      Assume.assumeTrue(serviceDefaultOptmSettings);
+      assumeThat(serviceDefaultOptmSettings).isTrue();
     }
 
     final AzureBlobFileSystem currentfs = this.getFileSystem();
@@ -317,7 +319,7 @@ public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
     boolean isAppendBlobTestSettingEnabled = (config.get(FS_AZURE_TEST_APPENDBLOB_ENABLED) == "true");
 
     // This optimization doesnt take effect when append blob is on.
-    Assume.assumeFalse(isAppendBlobTestSettingEnabled);
+    assumeThat(isAppendBlobTestSettingEnabled).isFalse();
 
     config.set(ConfigurationKeys.AZURE_WRITE_BUFFER_SIZE, Integer.toString(TEST_BUFFER_SIZE));
     config.set(ConfigurationKeys.AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION, Boolean.toString(enableSmallWriteOptimization));
@@ -503,8 +505,7 @@ public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
     byte[] fileReadFromStore = new byte[totalFileSize];
     fs.open(testPath).read(fileReadFromStore, 0, totalFileSize);
 
-    assertArrayEquals("Test file content incorrect", bufferWritten,
-        fileReadFromStore);
+    assertArrayEquals(bufferWritten, fileReadFromStore, "Test file content incorrect");
   }
 
   private void assertOpStats(Map<String, Long> metricMap,

@@ -19,16 +19,16 @@ package org.apache.hadoop.hdfs.web;
 
 import org.apache.hadoop.hdfs.server.namenode.FSAclBaseTest;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests ACL APIs via WebHDFS.
  */
 public class TestWebHDFSAcl extends FSAclBaseTest {
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     conf = WebHdfsTestUtil.createConf();
     startCluster();
@@ -40,7 +40,7 @@ public class TestWebHDFSAcl extends FSAclBaseTest {
    */
   @Override
   @Test
-  @Ignore
+  @Disabled
   public void testDefaultAclNewSymlinkIntermediate() {
   }
 

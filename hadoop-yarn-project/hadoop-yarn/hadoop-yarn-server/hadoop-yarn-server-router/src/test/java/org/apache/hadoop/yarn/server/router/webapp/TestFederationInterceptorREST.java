@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
@@ -139,12 +141,15 @@ import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
+import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY;
@@ -157,6 +162,12 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_TOKEN_
 
 import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.DURATION;
 import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.NUM_CONTAINERS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -181,6 +192,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   private List<SubClusterId> subClusters;
   private static final String TEST_RENEWER = "test-renewer";
 
+  @BeforeEach
   public void setUp() throws YarnException, IOException {
 
     super.setUpConfig();
@@ -240,6 +252,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
   }
 
+  @AfterEach
   @Override
   public void tearDown() {
     interceptor.shutdown();
@@ -285,12 +298,12 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     Response response = interceptor.createNewApplication(null);
 
-    Assert.assertNotNull(response);
+    assertNotNull(response);
     NewApplication ci = (NewApplication) response.getEntity();
-    Assert.assertNotNull(ci);
+    assertNotNull(ci);
     ApplicationId appId = ApplicationId.fromString(ci.getApplicationId());
-    Assert.assertTrue(appId.getClusterTimestamp() < NUM_SUBCLUSTER);
-    Assert.assertTrue(appId.getClusterTimestamp() >= 0);
+    assertTrue(appId.getClusterTimestamp() < NUM_SUBCLUSTER);
+    assertTrue(appId.getClusterTimestamp() >= 0);
   }
 
   /**
@@ -309,14 +322,14 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     context.setApplicationId(appId.toString());
 
     Response response = interceptor.submitApplication(context, null);
-    Assert.assertEquals(ACCEPTED, response.getStatus());
+    assertEquals(ACCEPTED, response.getStatus());
     SubClusterId ci = (SubClusterId) response.getEntity();
 
-    Assert.assertNotNull(response);
+    assertNotNull(response);
     SubClusterId scIdResult = stateStoreUtil.queryApplicationHomeSC(appId);
-    Assert.assertNotNull(scIdResult);
-    Assert.assertTrue(subClusters.contains(scIdResult));
-    Assert.assertEquals(ci, scIdResult);
+    assertNotNull(scIdResult);
+    assertTrue(subClusters.contains(scIdResult));
+    assertEquals(ci, scIdResult);
   }
 
   /**
@@ -336,20 +349,20 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     // First attempt
     Response response = interceptor.submitApplication(context, null);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(ACCEPTED, response.getStatus());
+    assertNotNull(response);
+    assertEquals(ACCEPTED, response.getStatus());
 
     SubClusterId scIdResult = stateStoreUtil.queryApplicationHomeSC(appId);
-    Assert.assertNotNull(scIdResult);
+    assertNotNull(scIdResult);
 
     // First retry
     response = interceptor.submitApplication(context, null);
 
-    Assert.assertNotNull(response);
-    Assert.assertEquals(ACCEPTED, response.getStatus());
+    assertNotNull(response);
+    assertEquals(ACCEPTED, response.getStatus());
     SubClusterId scIdResult2 = stateStoreUtil.queryApplicationHomeSC(appId);
-    Assert.assertNotNull(scIdResult2);
-    Assert.assertEquals(scIdResult, scIdResult2);
+    assertNotNull(scIdResult2);
+    assertEquals(scIdResult, scIdResult2);
   }
 
   /**
@@ -362,18 +375,18 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // ApplicationSubmissionContextInfo null
     Response response = interceptor.submitApplication(null, null);
 
-    Assert.assertEquals(BAD_REQUEST, response.getStatus());
+    assertEquals(BAD_REQUEST, response.getStatus());
 
     // ApplicationSubmissionContextInfo empty
     response = interceptor
         .submitApplication(new ApplicationSubmissionContextInfo(), null);
 
-    Assert.assertEquals(BAD_REQUEST, response.getStatus());
+    assertEquals(BAD_REQUEST, response.getStatus());
 
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
     response = interceptor.submitApplication(context, null);
-    Assert.assertEquals(BAD_REQUEST, response.getStatus());
+    assertEquals(BAD_REQUEST, response.getStatus());
   }
 
   /**
@@ -387,7 +400,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
         new ApplicationSubmissionContextInfo();
     context.setApplicationId("Application_wrong_id");
     Response response = interceptor.submitApplication(context, null);
-    Assert.assertEquals(BAD_REQUEST, response.getStatus());
+    assertEquals(BAD_REQUEST, response.getStatus());
   }
 
   /**
@@ -407,14 +420,14 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // Submit the application we are going to kill later
     Response response = interceptor.submitApplication(context, null);
 
-    Assert.assertNotNull(response);
-    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     AppState appState = new AppState("KILLED");
 
     Response responseKill =
         interceptor.updateAppState(appState, null, appId.toString());
-    Assert.assertNotNull(responseKill);
+    assertNotNull(responseKill);
   }
 
   /**
@@ -431,7 +444,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     Response response =
         interceptor.updateAppState(appState, null, appId.toString());
-    Assert.assertEquals(BAD_REQUEST, response.getStatus());
+    assertEquals(BAD_REQUEST, response.getStatus());
 
   }
 
@@ -446,7 +459,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     AppState appState = new AppState("KILLED");
     Response response =
         interceptor.updateAppState(appState, null, "Application_wrong_id");
-    Assert.assertEquals(BAD_REQUEST, response.getStatus());
+    assertEquals(BAD_REQUEST, response.getStatus());
   }
 
   /**
@@ -468,7 +481,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     Response response =
         interceptor.updateAppState(null, null, appId.toString());
-    Assert.assertEquals(BAD_REQUEST, response.getStatus());
+    assertEquals(BAD_REQUEST, response.getStatus());
 
   }
 
@@ -489,12 +502,12 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // Submit the application we want the report later
     Response response = interceptor.submitApplication(context, null);
 
-    Assert.assertNotNull(response);
-    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     AppInfo responseGet = interceptor.getApp(null, appId.toString(), null);
 
-    Assert.assertNotNull(responseGet);
+    assertNotNull(responseGet);
   }
 
   /**
@@ -509,7 +522,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     AppInfo response = interceptor.getApp(null, appId.toString(), null);
 
-    Assert.assertNull(response);
+    assertNull(response);
   }
 
   /**
@@ -519,9 +532,12 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   @Test
   public void testGetApplicationWrongFormat() {
 
-    AppInfo response = interceptor.getApp(null, "Application_wrong_id", null);
-
-    Assert.assertNull(response);
+    IllegalArgumentException illegalArgumentException =
+        assertThrows(IllegalArgumentException.class, () -> {
+          interceptor.getApp(null, "Application_wrong_id", null);
+        });
+    assertTrue(illegalArgumentException.getMessage().contains(
+        "Invalid ApplicationId prefix: Application_wrong_id."));
   }
 
   /**
@@ -534,8 +550,8 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     AppsInfo responseGet = interceptor.getApps(null, null, null, null, null,
         null, null, null, null, null, null, null, null, null, null);
 
-    Assert.assertNotNull(responseGet);
-    Assert.assertEquals(NUM_SUBCLUSTER, responseGet.getApps().size());
+    assertNotNull(responseGet);
+    assertEquals(NUM_SUBCLUSTER, responseGet.getApps().size());
     // The merged operations is tested in TestRouterWebServiceUtil
   }
 
@@ -550,8 +566,8 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     NodeInfo responseGet = interceptor.getNode("testGetNode");
 
-    Assert.assertNotNull(responseGet);
-    Assert.assertEquals(NUM_SUBCLUSTER - 1, responseGet.getLastHealthUpdate());
+    assertNotNull(responseGet);
+    assertEquals(NUM_SUBCLUSTER - 1, responseGet.getLastHealthUpdate());
   }
 
   /**
@@ -563,8 +579,8 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     NodesInfo responseGet = interceptor.getNodes(null);
 
-    Assert.assertNotNull(responseGet);
-    Assert.assertEquals(NUM_SUBCLUSTER, responseGet.getNodes().size());
+    assertNotNull(responseGet);
+    assertEquals(NUM_SUBCLUSTER, responseGet.getNodes().size());
     // The remove duplicate operations is tested in TestRouterWebServiceUtil
   }
 
@@ -574,16 +590,16 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   @Test
   public void testUpdateNodeResource() {
     List<NodeInfo> nodes = interceptor.getNodes(null).getNodes();
-    Assert.assertFalse(nodes.isEmpty());
+    assertFalse(nodes.isEmpty());
     final String nodeId = nodes.get(0).getNodeId();
     ResourceOptionInfo resourceOption = new ResourceOptionInfo(
         ResourceOption.newInstance(
             Resource.newInstance(2048, 3), 1000));
     ResourceInfo resource = interceptor.updateNodeResource(
         null, nodeId, resourceOption);
-    Assert.assertNotNull(resource);
-    Assert.assertEquals(2048, resource.getMemorySize());
-    Assert.assertEquals(3, resource.getvCores());
+    assertNotNull(resource);
+    assertEquals(2048, resource.getMemorySize());
+    assertEquals(3, resource.getvCores());
   }
 
   /**
@@ -597,12 +613,12 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     ClusterMetricsInfo responseGet = interceptor.getClusterMetricsInfo();
 
-    Assert.assertNotNull(responseGet);
+    assertNotNull(responseGet);
     int expectedAppSubmitted = 0;
     for (int i = 0; i < NUM_SUBCLUSTER; i++) {
       expectedAppSubmitted += i;
     }
-    Assert.assertEquals(expectedAppSubmitted, responseGet.getAppsSubmitted());
+    assertEquals(expectedAppSubmitted, responseGet.getAppsSubmitted());
     // The merge operations is tested in TestRouterWebServiceUtil
   }
 
@@ -623,13 +639,13 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // Submit the application we want the report later
     Response response = interceptor.submitApplication(context, null);
 
-    Assert.assertNotNull(response);
-    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     AppState responseGet = interceptor.getAppState(null, appId.toString());
 
-    Assert.assertNotNull(responseGet);
-    Assert.assertEquals(MockDefaultRequestInterceptorREST.APP_STATE_RUNNING,
+    assertNotNull(responseGet);
+    assertEquals(MockDefaultRequestInterceptorREST.APP_STATE_RUNNING,
         responseGet.getState());
   }
 
@@ -645,7 +661,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     AppState response = interceptor.getAppState(null, appId.toString());
 
-    Assert.assertNull(response);
+    assertNull(response);
   }
 
   /**
@@ -658,7 +674,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     AppState response = interceptor.getAppState(null, "Application_wrong_id");
 
-    Assert.assertNull(response);
+    assertNull(response);
   }
 
   /**
@@ -670,14 +686,14 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     SubClusterId subClusterId = SubClusterId.newInstance(Integer.toString(0));
 
     interceptor.getClusterMetricsInfo();
-    Assert.assertEquals("http://1.2.3.4:4", interceptor
+    assertEquals("http://1.2.3.4:4", interceptor
             .getInterceptorForSubCluster(subClusterId).getWebAppAddress());
 
     //Register the first subCluster with secondRM simulating RMSwitchover
     registerSubClusterWithSwitchoverRM(subClusterId);
 
     interceptor.getClusterMetricsInfo();
-    Assert.assertEquals("http://5.6.7.8:8", interceptor
+    assertEquals("http://5.6.7.8:8", interceptor
             .getInterceptorForSubCluster(subClusterId).getWebAppAddress());
   }
 
@@ -708,15 +724,15 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // Submit the application we want the report later
     Response response = interceptor.submitApplication(context, null);
 
-    Assert.assertNotNull(response);
-    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+    assertNotNull(response);
+    assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
     ApplicationAttemptId appAttempt = ApplicationAttemptId.newInstance(appId, 1);
 
     ContainersInfo responseGet = interceptor.getContainers(
         null, null, appId.toString(), appAttempt.toString());
 
-    Assert.assertEquals(4, responseGet.getContainers().size());
+    assertEquals(4, responseGet.getContainers().size());
   }
 
   @Test
@@ -748,86 +764,86 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   public void testGetNodeToLabels() throws IOException {
     NodeToLabelsInfo info = interceptor.getNodeToLabels(null);
     HashMap<String, NodeLabelsInfo> map = info.getNodeToLabels();
-    Assert.assertNotNull(map);
-    Assert.assertEquals(2, map.size());
+    assertNotNull(map);
+    assertEquals(2, map.size());
 
     NodeLabelsInfo node1Value = map.getOrDefault("node1", null);
-    Assert.assertNotNull(node1Value);
-    Assert.assertEquals(1, node1Value.getNodeLabelsName().size());
-    Assert.assertEquals("CPU", node1Value.getNodeLabelsName().get(0));
+    assertNotNull(node1Value);
+    assertEquals(1, node1Value.getNodeLabelsName().size());
+    assertEquals("CPU", node1Value.getNodeLabelsName().get(0));
 
     NodeLabelsInfo node2Value = map.getOrDefault("node2", null);
-    Assert.assertNotNull(node2Value);
-    Assert.assertEquals(1, node2Value.getNodeLabelsName().size());
-    Assert.assertEquals("GPU", node2Value.getNodeLabelsName().get(0));
+    assertNotNull(node2Value);
+    assertEquals(1, node2Value.getNodeLabelsName().size());
+    assertEquals("GPU", node2Value.getNodeLabelsName().get(0));
   }
 
   @Test
   public void testGetLabelsToNodes() throws Exception {
     LabelsToNodesInfo labelsToNodesInfo = interceptor.getLabelsToNodes(null);
     Map<NodeLabelInfo, NodeIDsInfo> map = labelsToNodesInfo.getLabelsToNodes();
-    Assert.assertNotNull(map);
-    Assert.assertEquals(3, map.size());
+    assertNotNull(map);
+    assertEquals(3, map.size());
 
     NodeLabel labelX = NodeLabel.newInstance("x", false);
     NodeLabelInfo nodeLabelInfoX = new NodeLabelInfo(labelX);
     NodeIDsInfo nodeIDsInfoX = map.get(nodeLabelInfoX);
-    Assert.assertNotNull(nodeIDsInfoX);
-    Assert.assertEquals(2, nodeIDsInfoX.getNodeIDs().size());
+    assertNotNull(nodeIDsInfoX);
+    assertEquals(2, nodeIDsInfoX.getNodeIDs().size());
     Resource resourceX =
         nodeIDsInfoX.getPartitionInfo().getResourceAvailable().getResource();
-    Assert.assertNotNull(resourceX);
-    Assert.assertEquals(4*10, resourceX.getVirtualCores());
-    Assert.assertEquals(4*20*1024, resourceX.getMemorySize());
+    assertNotNull(resourceX);
+    assertEquals(4*10, resourceX.getVirtualCores());
+    assertEquals(4*20*1024, resourceX.getMemorySize());
 
     NodeLabel labelY = NodeLabel.newInstance("y", false);
     NodeLabelInfo nodeLabelInfoY = new NodeLabelInfo(labelY);
     NodeIDsInfo nodeIDsInfoY = map.get(nodeLabelInfoY);
-    Assert.assertNotNull(nodeIDsInfoY);
-    Assert.assertEquals(2, nodeIDsInfoY.getNodeIDs().size());
+    assertNotNull(nodeIDsInfoY);
+    assertEquals(2, nodeIDsInfoY.getNodeIDs().size());
     Resource resourceY =
         nodeIDsInfoY.getPartitionInfo().getResourceAvailable().getResource();
-    Assert.assertNotNull(resourceY);
-    Assert.assertEquals(4*20, resourceY.getVirtualCores());
-    Assert.assertEquals(4*40*1024, resourceY.getMemorySize());
+    assertNotNull(resourceY);
+    assertEquals(4*20, resourceY.getVirtualCores());
+    assertEquals(4*40*1024, resourceY.getMemorySize());
   }
 
   @Test
   public void testGetClusterNodeLabels() throws Exception {
     NodeLabelsInfo nodeLabelsInfo = interceptor.getClusterNodeLabels(null);
-    Assert.assertNotNull(nodeLabelsInfo);
-    Assert.assertEquals(2, nodeLabelsInfo.getNodeLabelsName().size());
+    assertNotNull(nodeLabelsInfo);
+    assertEquals(2, nodeLabelsInfo.getNodeLabelsName().size());
 
     List<String> nodeLabelsName = nodeLabelsInfo.getNodeLabelsName();
-    Assert.assertNotNull(nodeLabelsName);
-    Assert.assertTrue(nodeLabelsName.contains("cpu"));
-    Assert.assertTrue(nodeLabelsName.contains("gpu"));
+    assertNotNull(nodeLabelsName);
+    assertTrue(nodeLabelsName.contains("cpu"));
+    assertTrue(nodeLabelsName.contains("gpu"));
 
     ArrayList<NodeLabelInfo> nodeLabelInfos = nodeLabelsInfo.getNodeLabelsInfo();
-    Assert.assertNotNull(nodeLabelInfos);
-    Assert.assertEquals(2, nodeLabelInfos.size());
+    assertNotNull(nodeLabelInfos);
+    assertEquals(2, nodeLabelInfos.size());
     NodeLabelInfo cpuNodeLabelInfo = new NodeLabelInfo("cpu", false);
-    Assert.assertTrue(nodeLabelInfos.contains(cpuNodeLabelInfo));
+    assertTrue(nodeLabelInfos.contains(cpuNodeLabelInfo));
     NodeLabelInfo gpuNodeLabelInfo = new NodeLabelInfo("gpu", false);
-    Assert.assertTrue(nodeLabelInfos.contains(gpuNodeLabelInfo));
+    assertTrue(nodeLabelInfos.contains(gpuNodeLabelInfo));
   }
 
   @Test
   public void testGetLabelsOnNode() throws Exception {
     NodeLabelsInfo nodeLabelsInfo = interceptor.getLabelsOnNode(null, "node1");
-    Assert.assertNotNull(nodeLabelsInfo);
-    Assert.assertEquals(2, nodeLabelsInfo.getNodeLabelsName().size());
+    assertNotNull(nodeLabelsInfo);
+    assertEquals(2, nodeLabelsInfo.getNodeLabelsName().size());
 
     List<String> nodeLabelsName = nodeLabelsInfo.getNodeLabelsName();
-    Assert.assertNotNull(nodeLabelsName);
-    Assert.assertTrue(nodeLabelsName.contains("x"));
-    Assert.assertTrue(nodeLabelsName.contains("y"));
+    assertNotNull(nodeLabelsName);
+    assertTrue(nodeLabelsName.contains("x"));
+    assertTrue(nodeLabelsName.contains("y"));
 
     // null request
     interceptor.setAllowPartialResult(false);
     NodeLabelsInfo nodeLabelsInfo2 = interceptor.getLabelsOnNode(null, "node2");
-    Assert.assertNotNull(nodeLabelsInfo2);
-    Assert.assertEquals(0, nodeLabelsInfo2.getNodeLabelsName().size());
+    assertNotNull(nodeLabelsInfo2);
+    assertEquals(0, nodeLabelsInfo2.getNodeLabelsName().size());
   }
 
   @Test
@@ -843,7 +859,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // Submit application to multiSubCluster
     ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
     context.setApplicationId(applicationId);
-    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    assertNotNull(interceptor.submitApplication(context, null));
 
     // Test Case1: Wrong ContainerId
     LambdaTestUtils.intercept(IllegalArgumentException.class, "Invalid ContainerId prefix: 0",
@@ -853,7 +869,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     ContainerInfo containerInfo = interceptor.getContainer(null, null, applicationId,
         attemptId, containerId);
-    Assert.assertNotNull(containerInfo);
+    assertNotNull(containerInfo);
   }
 
   @Test
@@ -863,28 +879,28 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
     context.setApplicationId(appId.toString());
 
-    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    assertNotNull(interceptor.submitApplication(context, null));
 
     AppAttemptsInfo appAttemptsInfo = interceptor.getAppAttempts(null, appId.toString());
-    Assert.assertNotNull(appAttemptsInfo);
+    assertNotNull(appAttemptsInfo);
 
     ArrayList<AppAttemptInfo> attemptLists = appAttemptsInfo.getAttempts();
-    Assert.assertNotNull(appAttemptsInfo);
-    Assert.assertEquals(2, attemptLists.size());
+    assertNotNull(appAttemptsInfo);
+    assertEquals(2, attemptLists.size());
 
     AppAttemptInfo attemptInfo1 = attemptLists.get(0);
-    Assert.assertNotNull(attemptInfo1);
-    Assert.assertEquals(0, attemptInfo1.getAttemptId());
-    Assert.assertEquals("AppAttemptId_0", attemptInfo1.getAppAttemptId());
-    Assert.assertEquals("LogLink_0", attemptInfo1.getLogsLink());
-    Assert.assertEquals(1659621705L, attemptInfo1.getFinishedTime());
+    assertNotNull(attemptInfo1);
+    assertEquals(0, attemptInfo1.getAttemptId());
+    assertEquals("AppAttemptId_0", attemptInfo1.getAppAttemptId());
+    assertEquals("LogLink_0", attemptInfo1.getLogsLink());
+    assertEquals(1659621705L, attemptInfo1.getFinishedTime());
 
     AppAttemptInfo attemptInfo2 = attemptLists.get(1);
-    Assert.assertNotNull(attemptInfo2);
-    Assert.assertEquals(0, attemptInfo2.getAttemptId());
-    Assert.assertEquals("AppAttemptId_1", attemptInfo2.getAppAttemptId());
-    Assert.assertEquals("LogLink_1", attemptInfo2.getLogsLink());
-    Assert.assertEquals(1659621705L, attemptInfo2.getFinishedTime());
+    assertNotNull(attemptInfo2);
+    assertEquals(0, attemptInfo2.getAttemptId());
+    assertEquals("AppAttemptId_1", attemptInfo2.getAppAttemptId());
+    assertEquals("LogLink_1", attemptInfo2.getLogsLink());
+    assertEquals(1659621705L, attemptInfo2.getFinishedTime());
   }
 
   @Test
@@ -896,19 +912,19 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     context.setApplicationId(appId.toString());
 
     // Generate ApplicationAttemptId information
-    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    assertNotNull(interceptor.submitApplication(context, null));
     ApplicationAttemptId expectAppAttemptId = ApplicationAttemptId.newInstance(appId, 1);
     String appAttemptId = expectAppAttemptId.toString();
 
     org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo
         appAttemptInfo = interceptor.getAppAttempt(null, null, appId.toString(), appAttemptId);
 
-    Assert.assertNotNull(appAttemptInfo);
-    Assert.assertEquals(expectAppAttemptId.toString(), appAttemptInfo.getAppAttemptId());
-    Assert.assertEquals("url", appAttemptInfo.getTrackingUrl());
-    Assert.assertEquals("oUrl", appAttemptInfo.getOriginalTrackingUrl());
-    Assert.assertEquals(124, appAttemptInfo.getRpcPort());
-    Assert.assertEquals("host", appAttemptInfo.getHost());
+    assertNotNull(appAttemptInfo);
+    assertEquals(expectAppAttemptId.toString(), appAttemptInfo.getAppAttemptId());
+    assertEquals("url", appAttemptInfo.getTrackingUrl());
+    assertEquals("oUrl", appAttemptInfo.getOriginalTrackingUrl());
+    assertEquals(124, appAttemptInfo.getRpcPort());
+    assertEquals("host", appAttemptInfo.getHost());
   }
 
   @Test
@@ -920,15 +936,15 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     context.setApplicationId(appId.toString());
 
     // Generate ApplicationAttemptId information
-    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    assertNotNull(interceptor.submitApplication(context, null));
 
     ApplicationTimeoutType appTimeoutType = ApplicationTimeoutType.LIFETIME;
     AppTimeoutInfo appTimeoutInfo =
         interceptor.getAppTimeout(null, appId.toString(), appTimeoutType.toString());
-    Assert.assertNotNull(appTimeoutInfo);
-    Assert.assertEquals(10, appTimeoutInfo.getRemainingTimeInSec());
-    Assert.assertEquals("UNLIMITED", appTimeoutInfo.getExpireTime());
-    Assert.assertEquals(appTimeoutType, appTimeoutInfo.getTimeoutType());
+    assertNotNull(appTimeoutInfo);
+    assertEquals(10, appTimeoutInfo.getRemainingTimeInSec());
+    assertEquals("UNLIMITED", appTimeoutInfo.getExpireTime());
+    assertEquals(appTimeoutType, appTimeoutInfo.getTimeoutType());
   }
 
   @Test
@@ -940,20 +956,20 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     context.setApplicationId(appId.toString());
 
     // Generate ApplicationAttemptId information
-    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    assertNotNull(interceptor.submitApplication(context, null));
 
     AppTimeoutsInfo appTimeoutsInfo = interceptor.getAppTimeouts(null, appId.toString());
-    Assert.assertNotNull(appTimeoutsInfo);
+    assertNotNull(appTimeoutsInfo);
 
     List<AppTimeoutInfo> timeouts = appTimeoutsInfo.getAppTimeouts();
-    Assert.assertNotNull(timeouts);
-    Assert.assertEquals(1, timeouts.size());
+    assertNotNull(timeouts);
+    assertEquals(1, timeouts.size());
 
     AppTimeoutInfo resultAppTimeout = timeouts.get(0);
-    Assert.assertNotNull(resultAppTimeout);
-    Assert.assertEquals(10, resultAppTimeout.getRemainingTimeInSec());
-    Assert.assertEquals("UNLIMITED", resultAppTimeout.getExpireTime());
-    Assert.assertEquals(ApplicationTimeoutType.LIFETIME, resultAppTimeout.getTimeoutType());
+    assertNotNull(resultAppTimeout);
+    assertEquals(10, resultAppTimeout.getRemainingTimeInSec());
+    assertEquals("UNLIMITED", resultAppTimeout.getExpireTime());
+    assertEquals(ApplicationTimeoutType.LIFETIME, resultAppTimeout.getTimeoutType());
   }
 
   @Test
@@ -966,7 +982,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     context.setApplicationId(appId.toString());
 
     // Generate ApplicationAttemptId information
-    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    assertNotNull(interceptor.submitApplication(context, null));
 
     long newLifetime = 10L;
     // update 10L seconds more to timeout
@@ -979,12 +995,12 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     Response response =
         interceptor.updateApplicationTimeout(paramAppTimeOut, null, appId.toString());
-    Assert.assertNotNull(response);
+    assertNotNull(response);
     AppTimeoutInfo entity = (AppTimeoutInfo) response.getEntity();
-    Assert.assertNotNull(entity);
-    Assert.assertEquals(paramAppTimeOut.getExpireTime(), entity.getExpireTime());
-    Assert.assertEquals(paramAppTimeOut.getTimeoutType(), entity.getTimeoutType());
-    Assert.assertEquals(paramAppTimeOut.getRemainingTimeInSec(), entity.getRemainingTimeInSec());
+    assertNotNull(entity);
+    assertEquals(paramAppTimeOut.getExpireTime(), entity.getExpireTime());
+    assertEquals(paramAppTimeOut.getTimeoutType(), entity.getTimeoutType());
+    assertEquals(paramAppTimeOut.getRemainingTimeInSec(), entity.getRemainingTimeInSec());
   }
 
   @Test
@@ -998,17 +1014,17 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     context.setPriority(20);
 
     // Submit the application we are going to kill later
-    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    assertNotNull(interceptor.submitApplication(context, null));
 
     int iPriority = 10;
     // Set Priority for application
     Response response = interceptor.updateApplicationPriority(
         new AppPriority(iPriority), null, appId.toString());
 
-    Assert.assertNotNull(response);
+    assertNotNull(response);
     AppPriority entity = (AppPriority) response.getEntity();
-    Assert.assertNotNull(entity);
-    Assert.assertEquals(iPriority, entity.getPriority());
+    assertNotNull(entity);
+    assertEquals(iPriority, entity.getPriority());
   }
 
   @Test
@@ -1022,12 +1038,12 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     context.setPriority(priority);
 
     // Submit the application we are going to kill later
-    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    assertNotNull(interceptor.submitApplication(context, null));
 
     // Set Priority for application
     AppPriority appPriority = interceptor.getAppPriority(null, appId.toString());
-    Assert.assertNotNull(appPriority);
-    Assert.assertEquals(priority, appPriority.getPriority());
+    assertNotNull(appPriority);
+    assertEquals(priority, appPriority.getPriority());
   }
 
   @Test
@@ -1044,20 +1060,20 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     context.setQueue(oldQueue);
 
     // Submit the application
-    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    assertNotNull(interceptor.submitApplication(context, null));
 
     // Set New Queue for application
     Response response = interceptor.updateAppQueue(new AppQueue(newQueue),
         null, appId.toString());
 
-    Assert.assertNotNull(response);
+    assertNotNull(response);
     AppQueue appQueue = (AppQueue) response.getEntity();
-    Assert.assertEquals(newQueue, appQueue.getQueue());
+    assertEquals(newQueue, appQueue.getQueue());
 
     // Get AppQueue by application
     AppQueue queue = interceptor.getAppQueue(null, appId.toString());
-    Assert.assertNotNull(queue);
-    Assert.assertEquals(newQueue, queue.getQueue());
+    assertNotNull(queue);
+    assertEquals(newQueue, queue.getQueue());
   }
 
   @Test
@@ -1070,12 +1086,12 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     context.setApplicationId(appId.toString());
     context.setQueue(queueName);
 
-    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    assertNotNull(interceptor.submitApplication(context, null));
 
     // Get Queue by application
     AppQueue queue = interceptor.getAppQueue(null, appId.toString());
-    Assert.assertNotNull(queue);
-    Assert.assertEquals(queueName, queue.getQueue());
+    assertNotNull(queue);
+    assertEquals(queueName, queue.getQueue());
   }
 
   @Test
@@ -1083,21 +1099,21 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     AppsInfo responseGet = interceptor.getApps(
         null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
-    Assert.assertNotNull(responseGet);
+    assertNotNull(responseGet);
 
     RouterAppInfoCacheKey cacheKey = RouterAppInfoCacheKey.newInstance(
         null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
     LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> appsInfoCache =
         interceptor.getAppInfosCaches();
-    Assert.assertNotNull(appsInfoCache);
-    Assert.assertFalse(appsInfoCache.isEmpty());
-    Assert.assertEquals(1, appsInfoCache.size());
-    Assert.assertTrue(appsInfoCache.containsKey(cacheKey));
+    assertNotNull(appsInfoCache);
+    assertFalse(appsInfoCache.isEmpty());
+    assertEquals(1, appsInfoCache.size());
+    assertTrue(appsInfoCache.containsKey(cacheKey));
 
     AppsInfo cacheResult = appsInfoCache.get(cacheKey);
-    Assert.assertNotNull(cacheResult);
-    Assert.assertEquals(responseGet, cacheResult);
+    assertNotNull(cacheResult);
+    assertEquals(responseGet, cacheResult);
   }
 
   @Test
@@ -1110,14 +1126,14 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     context.setApplicationType("MapReduce");
     context.setQueue("queue");
 
-    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    assertNotNull(interceptor.submitApplication(context, null));
 
     GetApplicationHomeSubClusterRequest request =
         GetApplicationHomeSubClusterRequest.newInstance(appId);
     GetApplicationHomeSubClusterResponse response =
         stateStore.getApplicationHomeSubCluster(request);
 
-    Assert.assertNotNull(response);
+    assertNotNull(response);
     ApplicationHomeSubCluster homeSubCluster = response.getApplicationHomeSubCluster();
 
     DefaultRequestInterceptorREST interceptorREST =
@@ -1137,13 +1153,13 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     ApplicationStatisticsInfo response2 =
         interceptor.getAppStatistics(null, stateQueries, typeQueries);
 
-    Assert.assertNotNull(response2);
-    Assert.assertFalse(response2.getStatItems().isEmpty());
+    assertNotNull(response2);
+    assertFalse(response2.getStatItems().isEmpty());
 
     StatisticsItemInfo result = response2.getStatItems().get(0);
-    Assert.assertEquals(1, result.getCount());
-    Assert.assertEquals(YarnApplicationState.RUNNING, result.getState());
-    Assert.assertEquals("MapReduce", result.getType());
+    assertEquals(1, result.getCount());
+    assertEquals(YarnApplicationState.RUNNING, result.getState());
+    assertEquals("MapReduce", result.getType());
   }
 
   @Test
@@ -1155,7 +1171,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     context.setApplicationType("MapReduce");
     context.setQueue("queue");
 
-    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    assertNotNull(interceptor.submitApplication(context, null));
     Set<String> prioritiesSet = Collections.singleton("0");
     Set<String> allocationRequestIdsSet = Collections.singleton("0");
 
@@ -1163,9 +1179,9 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
         interceptor.getAppActivities(null, appId.toString(), String.valueOf(Time.now()),
         prioritiesSet, allocationRequestIdsSet, null, "-1", null, false);
 
-    Assert.assertNotNull(appActivitiesInfo);
-    Assert.assertEquals(appId.toString(), appActivitiesInfo.getApplicationId());
-    Assert.assertEquals(10, appActivitiesInfo.getAllocations().size());
+    assertNotNull(appActivitiesInfo);
+    assertEquals(appId.toString(), appActivitiesInfo.getApplicationId());
+    assertEquals(10, appActivitiesInfo.getAllocations().size());
   }
 
   @Test
@@ -1179,63 +1195,63 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     String applyReservationId = reservationId.toString();
     Response listReservationResponse = interceptor.listReservation(
         QUEUE_DEDICATED_FULL, applyReservationId, -1, -1, false, null);
-    Assert.assertNotNull(listReservationResponse);
-    Assert.assertNotNull(listReservationResponse.getStatus());
+    assertNotNull(listReservationResponse);
+    assertNotNull(listReservationResponse.getStatus());
     Status status = Status.fromStatusCode(listReservationResponse.getStatus());
-    Assert.assertEquals(Status.OK, status);
+    assertEquals(Status.OK, status);
 
     Object entity = listReservationResponse.getEntity();
-    Assert.assertNotNull(entity);
-    Assert.assertNotNull(entity instanceof ReservationListInfo);
+    assertNotNull(entity);
+    assertNotNull(entity instanceof ReservationListInfo);
 
-    Assert.assertTrue(entity instanceof ReservationListInfo);
+    assertTrue(entity instanceof ReservationListInfo);
     ReservationListInfo listInfo = (ReservationListInfo) entity;
-    Assert.assertNotNull(listInfo);
+    assertNotNull(listInfo);
 
     List<ReservationInfo> reservationInfoList = listInfo.getReservations();
-    Assert.assertNotNull(reservationInfoList);
-    Assert.assertEquals(1, reservationInfoList.size());
+    assertNotNull(reservationInfoList);
+    assertEquals(1, reservationInfoList.size());
 
     ReservationInfo reservationInfo = reservationInfoList.get(0);
-    Assert.assertNotNull(reservationInfo);
-    Assert.assertEquals(applyReservationId, reservationInfo.getReservationId());
+    assertNotNull(reservationInfo);
+    assertEquals(applyReservationId, reservationInfo.getReservationId());
 
     ReservationDefinitionInfo definitionInfo = reservationInfo.getReservationDefinition();
-    Assert.assertNotNull(definitionInfo);
+    assertNotNull(definitionInfo);
 
     ReservationRequestsInfo reservationRequestsInfo = definitionInfo.getReservationRequests();
-    Assert.assertNotNull(reservationRequestsInfo);
+    assertNotNull(reservationRequestsInfo);
 
     ArrayList<ReservationRequestInfo> reservationRequestInfoList =
         reservationRequestsInfo.getReservationRequest();
-    Assert.assertNotNull(reservationRequestInfoList);
-    Assert.assertEquals(1, reservationRequestInfoList.size());
+    assertNotNull(reservationRequestInfoList);
+    assertEquals(1, reservationRequestInfoList.size());
 
     ReservationRequestInfo reservationRequestInfo = reservationRequestInfoList.get(0);
-    Assert.assertNotNull(reservationRequestInfo);
-    Assert.assertEquals(4, reservationRequestInfo.getNumContainers());
+    assertNotNull(reservationRequestInfo);
+    assertEquals(4, reservationRequestInfo.getNumContainers());
 
     ResourceInfo resourceInfo = reservationRequestInfo.getCapability();
-    Assert.assertNotNull(resourceInfo);
+    assertNotNull(resourceInfo);
 
     int vCore = resourceInfo.getvCores();
     long memory = resourceInfo.getMemorySize();
-    Assert.assertEquals(1, vCore);
-    Assert.assertEquals(1024, memory);
+    assertEquals(1, vCore);
+    assertEquals(1024, memory);
   }
 
   @Test
   public void testCreateNewReservation() throws Exception {
     Response response = interceptor.createNewReservation(null);
-    Assert.assertNotNull(response);
+    assertNotNull(response);
 
     Object entity = response.getEntity();
-    Assert.assertNotNull(entity);
-    Assert.assertTrue(entity instanceof NewReservation);
+    assertNotNull(entity);
+    assertTrue(entity instanceof NewReservation);
 
     NewReservation newReservation = (NewReservation) entity;
-    Assert.assertNotNull(newReservation);
-    Assert.assertTrue(newReservation.getReservationId().contains("reservation"));
+    assertNotNull(newReservation);
+    assertTrue(newReservation.getReservationId().contains("reservation"));
   }
 
   @Test
@@ -1244,29 +1260,29 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // submit reservation
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 2);
     Response response = submitReservation(reservationId);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
+    assertNotNull(response);
+    assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
 
     String applyReservationId = reservationId.toString();
     Response reservationResponse = interceptor.listReservation(
         QUEUE_DEDICATED_FULL, applyReservationId, -1, -1, false, null);
-    Assert.assertNotNull(reservationResponse);
+    assertNotNull(reservationResponse);
 
     Object entity = reservationResponse.getEntity();
-    Assert.assertNotNull(entity);
-    Assert.assertNotNull(entity instanceof ReservationListInfo);
+    assertNotNull(entity);
+    assertNotNull(entity instanceof ReservationListInfo);
 
-    Assert.assertTrue(entity instanceof ReservationListInfo);
+    assertTrue(entity instanceof ReservationListInfo);
     ReservationListInfo listInfo = (ReservationListInfo) entity;
-    Assert.assertNotNull(listInfo);
+    assertNotNull(listInfo);
 
     List<ReservationInfo> reservationInfos = listInfo.getReservations();
-    Assert.assertNotNull(reservationInfos);
-    Assert.assertEquals(1, reservationInfos.size());
+    assertNotNull(reservationInfos);
+    assertEquals(1, reservationInfos.size());
 
     ReservationInfo reservationInfo = reservationInfos.get(0);
-    Assert.assertNotNull(reservationInfo);
-    Assert.assertEquals(reservationInfo.getReservationId(), applyReservationId);
+    assertNotNull(reservationInfo);
+    assertEquals(reservationInfo.getReservationId(), applyReservationId);
   }
 
   @Test
@@ -1274,8 +1290,8 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // submit reservation
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 3);
     Response response = submitReservation(reservationId);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
+    assertNotNull(response);
+    assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
 
     // update reservation
     ReservationSubmissionRequest resSubRequest =
@@ -1288,52 +1304,52 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     updateRequestInfo.setReservationId(reservationId.toString());
     updateRequestInfo.setReservationDefinition(reservationDefinitionInfo);
     Response updateReservationResp = interceptor.updateReservation(updateRequestInfo, null);
-    Assert.assertNotNull(updateReservationResp);
-    Assert.assertEquals(Status.OK.getStatusCode(), updateReservationResp.getStatus());
+    assertNotNull(updateReservationResp);
+    assertEquals(Status.OK.getStatusCode(), updateReservationResp.getStatus());
 
     String applyReservationId = reservationId.toString();
     Response reservationResponse = interceptor.listReservation(
             QUEUE_DEDICATED_FULL, applyReservationId, -1, -1, false, null);
-    Assert.assertNotNull(reservationResponse);
+    assertNotNull(reservationResponse);
 
     Object entity = reservationResponse.getEntity();
-    Assert.assertNotNull(entity);
-    Assert.assertNotNull(entity instanceof ReservationListInfo);
+    assertNotNull(entity);
+    assertNotNull(entity instanceof ReservationListInfo);
 
-    Assert.assertTrue(entity instanceof ReservationListInfo);
+    assertTrue(entity instanceof ReservationListInfo);
     ReservationListInfo listInfo = (ReservationListInfo) entity;
-    Assert.assertNotNull(listInfo);
+    assertNotNull(listInfo);
 
     List<ReservationInfo> reservationInfos = listInfo.getReservations();
-    Assert.assertNotNull(reservationInfos);
-    Assert.assertEquals(1, reservationInfos.size());
+    assertNotNull(reservationInfos);
+    assertEquals(1, reservationInfos.size());
 
     ReservationInfo reservationInfo = reservationInfos.get(0);
-    Assert.assertNotNull(reservationInfo);
-    Assert.assertEquals(reservationInfo.getReservationId(), applyReservationId);
+    assertNotNull(reservationInfo);
+    assertEquals(reservationInfo.getReservationId(), applyReservationId);
 
     ReservationDefinitionInfo resDefinitionInfo = reservationInfo.getReservationDefinition();
-    Assert.assertNotNull(resDefinitionInfo);
+    assertNotNull(resDefinitionInfo);
 
     ReservationRequestsInfo reservationRequestsInfo = resDefinitionInfo.getReservationRequests();
-    Assert.assertNotNull(reservationRequestsInfo);
+    assertNotNull(reservationRequestsInfo);
 
     ArrayList<ReservationRequestInfo> reservationRequestInfoList =
             reservationRequestsInfo.getReservationRequest();
-    Assert.assertNotNull(reservationRequestInfoList);
-    Assert.assertEquals(1, reservationRequestInfoList.size());
+    assertNotNull(reservationRequestInfoList);
+    assertEquals(1, reservationRequestInfoList.size());
 
     ReservationRequestInfo reservationRequestInfo = reservationRequestInfoList.get(0);
-    Assert.assertNotNull(reservationRequestInfo);
-    Assert.assertEquals(6, reservationRequestInfo.getNumContainers());
+    assertNotNull(reservationRequestInfo);
+    assertEquals(6, reservationRequestInfo.getNumContainers());
 
     ResourceInfo resourceInfo = reservationRequestInfo.getCapability();
-    Assert.assertNotNull(resourceInfo);
+    assertNotNull(resourceInfo);
 
     int vCore = resourceInfo.getvCores();
     long memory = resourceInfo.getMemorySize();
-    Assert.assertEquals(2, vCore);
-    Assert.assertEquals(2048, memory);
+    assertEquals(2, vCore);
+    assertEquals(2048, memory);
   }
 
   @Test
@@ -1341,23 +1357,26 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // submit reservation
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 4);
     Response response = submitReservation(reservationId);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
+    assertNotNull(response);
+    assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
 
     String applyResId = reservationId.toString();
     Response reservationResponse = interceptor.listReservation(
         QUEUE_DEDICATED_FULL, applyResId, -1, -1, false, null);
-    Assert.assertNotNull(reservationResponse);
+    assertNotNull(reservationResponse);
 
     ReservationDeleteRequestInfo deleteRequestInfo =
         new ReservationDeleteRequestInfo();
     deleteRequestInfo.setReservationId(applyResId);
     Response delResponse = interceptor.deleteReservation(deleteRequestInfo, null);
-    Assert.assertNotNull(delResponse);
+    assertNotNull(delResponse);
 
-    LambdaTestUtils.intercept(Exception.class,
-        "reservationId with id: " + reservationId + " not found",
-        () -> interceptor.listReservation(QUEUE_DEDICATED_FULL, applyResId, -1, -1, false, null));
+    NotFoundException exception = assertThrows(NotFoundException.class, () -> {
+      interceptor.listReservation(QUEUE_DEDICATED_FULL, applyResId, -1, -1, false, null);
+    });
+    String stackTraceAsString = getStackTraceAsString(exception);
+    assertTrue(stackTraceAsString.contains("reservationId with id: " +
+        reservationId + " not found"));
   }
 
   private Response submitReservation(ReservationId reservationId)
@@ -1425,7 +1444,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     String expectedHttpWebAddress = "http://0.0.0.0:8000";
     String webAppAddressWithScheme =
         WebAppUtils.getHttpSchemePrefix(this.getConf()) + webAppAddress;
-    Assert.assertEquals(expectedHttpWebAddress, webAppAddressWithScheme);
+    assertEquals(expectedHttpWebAddress, webAppAddressWithScheme);
 
     // 2. We try to enable Https，at this point we should get the following link:
     // https://0.0.0.0:8000
@@ -1435,7 +1454,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     String expectedHttpsWebAddress = "https://0.0.0.0:8000";
     String webAppAddressWithScheme2 =
         WebAppUtils.getHttpSchemePrefix(this.getConf()) + webAppAddress;
-    Assert.assertEquals(expectedHttpsWebAddress, webAppAddressWithScheme2);
+    assertEquals(expectedHttpsWebAddress, webAppAddressWithScheme2);
   }
 
   @Test
@@ -1447,16 +1466,23 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     HttpServletRequest mockHsr = mockHttpServletRequestByUserName("non-admin");
     String errorMsg1 = "User=non-admin doesn't haven access to queue=queue " +
         "so it cannot check ACLs for other users.";
-    LambdaTestUtils.intercept(YarnRuntimeException.class, errorMsg1,
-        () -> interceptor.checkUserAccessToQueue("queue", "jack",
-        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr));
+    RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+      interceptor.checkUserAccessToQueue("queue", "jack",
+          QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr);
+    });
+    String stackTraceAsString = getStackTraceAsString(exception);
+    assertTrue(stackTraceAsString.contains(errorMsg1));
 
     // Case 2: request an unknown ACL causes BAD_REQUEST
     HttpServletRequest mockHsr1 = mockHttpServletRequestByUserName("admin");
     String errorMsg2 = "Specified queueAclType=XYZ_ACL is not a valid type, " +
         "valid queue acl types={SUBMIT_APPLICATIONS/ADMINISTER_QUEUE}";
-    LambdaTestUtils.intercept(YarnRuntimeException.class, errorMsg2,
-        () -> interceptor.checkUserAccessToQueue("queue", "jack", "XYZ_ACL", mockHsr1));
+    RuntimeException exception2 = assertThrows(RuntimeException.class, () -> {
+      interceptor.checkUserAccessToQueue("queue", "jack",
+          "XYZ_ACL", mockHsr1);
+    });
+    String stackTraceAsString2 = getStackTraceAsString(exception2);
+    assertTrue(stackTraceAsString2.contains(errorMsg2));
 
     // We design a test, admin user has ADMINISTER_QUEUE, SUBMIT_APPLICATIONS permissions,
     // yarn user has SUBMIT_APPLICATIONS permissions, other users have no permissions
@@ -1481,14 +1507,14 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     HttpServletRequest mockHsr = mockHttpServletRequestByUserName(mockUser);
     RMQueueAclInfo aclInfo =
         interceptor.checkUserAccessToQueue(queue, userName, queueACL.name(), mockHsr);
-    Assert.assertNotNull(aclInfo);
-    Assert.assertTrue(aclInfo instanceof FederationRMQueueAclInfo);
+    assertNotNull(aclInfo);
+    assertTrue(aclInfo instanceof FederationRMQueueAclInfo);
     FederationRMQueueAclInfo fedAclInfo = (FederationRMQueueAclInfo) aclInfo;
     List<RMQueueAclInfo> aclInfos = fedAclInfo.getList();
-    Assert.assertNotNull(aclInfos);
-    Assert.assertEquals(4, aclInfos.size());
+    assertNotNull(aclInfos);
+    assertEquals(4, aclInfos.size());
     for (RMQueueAclInfo rMQueueAclInfo : aclInfos) {
-      Assert.assertTrue(rMQueueAclInfo.isAllowed());
+      assertTrue(rMQueueAclInfo.isAllowed());
     }
   }
 
@@ -1497,17 +1523,17 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     HttpServletRequest mockHsr = mockHttpServletRequestByUserName(mockUser);
     RMQueueAclInfo aclInfo =
         interceptor.checkUserAccessToQueue(queue, userName, queueACL.name(), mockHsr);
-    Assert.assertNotNull(aclInfo);
-    Assert.assertTrue(aclInfo instanceof FederationRMQueueAclInfo);
+    assertNotNull(aclInfo);
+    assertTrue(aclInfo instanceof FederationRMQueueAclInfo);
     FederationRMQueueAclInfo fedAclInfo = (FederationRMQueueAclInfo) aclInfo;
     List<RMQueueAclInfo> aclInfos = fedAclInfo.getList();
-    Assert.assertNotNull(aclInfos);
-    Assert.assertEquals(4, aclInfos.size());
+    assertNotNull(aclInfos);
+    assertEquals(4, aclInfos.size());
     for (RMQueueAclInfo rMQueueAclInfo : aclInfos) {
-      Assert.assertFalse(rMQueueAclInfo.isAllowed());
+      assertFalse(rMQueueAclInfo.isAllowed());
       String expectDiagnostics = "User=" + userName +
           " doesn't have access to queue=queue with acl-type=" + queueACL.name();
-      Assert.assertEquals(expectDiagnostics, rMQueueAclInfo.getDiagnostics());
+      assertEquals(expectDiagnostics, rMQueueAclInfo.getDiagnostics());
     }
   }
 
@@ -1534,9 +1560,9 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     DefaultRequestInterceptorREST interceptorREST =
         rest.getOrCreateInterceptorForSubCluster(subClusterId, webAppSocket);
 
-    Assert.assertNotNull(interceptorREST);
-    Assert.assertNotNull(interceptorREST.getClient());
-    Assert.assertEquals(webAppAddress, interceptorREST.getWebAppAddress());
+    assertNotNull(interceptorREST);
+    assertNotNull(interceptorREST.getClient());
+    assertEquals(webAppAddress, interceptorREST.getWebAppAddress());
   }
 
   @Test
@@ -1552,18 +1578,18 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // of the multi-thread call can match the node data
     Map<SubClusterInfo, NodesInfo> subClusterInfoNodesInfoMap =
         interceptor.invokeConcurrentGetNodeLabel();
-    Assert.assertNotNull(subClusterInfoNodesInfoMap);
-    Assert.assertEquals(4, subClusterInfoNodesInfoMap.size());
+    assertNotNull(subClusterInfoNodesInfoMap);
+    assertEquals(4, subClusterInfoNodesInfoMap.size());
 
     subClusterInfoNodesInfoMap.forEach((subClusterInfo, nodesInfo) -> {
       String subClusterId = subClusterInfo.getSubClusterId().getId();
       List<NodeInfo> nodeInfos = nodesInfo.getNodes();
-      Assert.assertNotNull(nodeInfos);
-      Assert.assertEquals(1, nodeInfos.size());
+      assertNotNull(nodeInfos);
+      assertEquals(1, nodeInfos.size());
 
       String expectNodeId = "Node " + subClusterId;
       String nodeId = nodeInfos.get(0).getNodeId();
-      Assert.assertEquals(expectNodeId, nodeId);
+      assertEquals(expectNodeId, nodeId);
     });
   }
 
@@ -1571,54 +1597,54 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   public void testGetSchedulerInfo() {
     // In this test case, we will get the return results of 4 sub-clusters.
     SchedulerTypeInfo typeInfo = interceptor.getSchedulerInfo();
-    Assert.assertNotNull(typeInfo);
-    Assert.assertTrue(typeInfo instanceof FederationSchedulerTypeInfo);
+    assertNotNull(typeInfo);
+    assertTrue(typeInfo instanceof FederationSchedulerTypeInfo);
 
     FederationSchedulerTypeInfo federationSchedulerTypeInfo =
         (FederationSchedulerTypeInfo) typeInfo;
-    Assert.assertNotNull(federationSchedulerTypeInfo);
+    assertNotNull(federationSchedulerTypeInfo);
     List<SchedulerTypeInfo> schedulerTypeInfos = federationSchedulerTypeInfo.getList();
-    Assert.assertNotNull(schedulerTypeInfos);
-    Assert.assertEquals(4, schedulerTypeInfos.size());
+    assertNotNull(schedulerTypeInfos);
+    assertEquals(4, schedulerTypeInfos.size());
     List<String> subClusterIds = subClusters.stream().map(SubClusterId::getId).
         collect(Collectors.toList());
 
     for (SchedulerTypeInfo schedulerTypeInfo : schedulerTypeInfos) {
-      Assert.assertNotNull(schedulerTypeInfo);
+      assertNotNull(schedulerTypeInfo);
 
       // 1. Whether the returned subClusterId is in the subCluster list
       String subClusterId = schedulerTypeInfo.getSubClusterId();
-      Assert.assertTrue(subClusterIds.contains(subClusterId));
+      assertTrue(subClusterIds.contains(subClusterId));
 
       // 2. We test CapacityScheduler, the returned type should be CapacityScheduler.
       SchedulerInfo schedulerInfo = schedulerTypeInfo.getSchedulerInfo();
-      Assert.assertNotNull(schedulerInfo);
-      Assert.assertTrue(schedulerInfo instanceof CapacitySchedulerInfo);
+      assertNotNull(schedulerInfo);
+      assertTrue(schedulerInfo instanceof CapacitySchedulerInfo);
       CapacitySchedulerInfo capacitySchedulerInfo = (CapacitySchedulerInfo) schedulerInfo;
-      Assert.assertNotNull(capacitySchedulerInfo);
+      assertNotNull(capacitySchedulerInfo);
 
       // 3. The parent queue name should be root
       String queueName = capacitySchedulerInfo.getQueueName();
-      Assert.assertEquals("root", queueName);
+      assertEquals("root", queueName);
 
       // 4. schedulerType should be CapacityScheduler
       String schedulerType = capacitySchedulerInfo.getSchedulerType();
-      Assert.assertEquals("Capacity Scheduler", schedulerType);
+      assertEquals("Capacity Scheduler", schedulerType);
 
       // 5. queue path should be root
       String queuePath = capacitySchedulerInfo.getQueuePath();
-      Assert.assertEquals("root", queuePath);
+      assertEquals("root", queuePath);
 
       // 6. mockRM has 2 test queues, [root.a, root.b]
       List<String> queues = Lists.newArrayList("root.a", "root.b");
       CapacitySchedulerQueueInfoList csSchedulerQueueInfoList = capacitySchedulerInfo.getQueues();
-      Assert.assertNotNull(csSchedulerQueueInfoList);
+      assertNotNull(csSchedulerQueueInfoList);
       List<CapacitySchedulerQueueInfo> csQueueInfoList =
           csSchedulerQueueInfoList.getQueueInfoList();
-      Assert.assertEquals(2, csQueueInfoList.size());
+      assertEquals(2, csQueueInfoList.size());
       for (CapacitySchedulerQueueInfo csQueueInfo : csQueueInfoList) {
-        Assert.assertNotNull(csQueueInfo);
-        Assert.assertTrue(queues.contains(csQueueInfo.getQueuePath()));
+        assertNotNull(csQueueInfo);
+        assertTrue(queues.contains(csQueueInfo.getQueuePath()));
       }
     }
   }
@@ -1653,15 +1679,15 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     // If we don't set the authentication type, we will get error message.
     Response response = interceptor.postDelegationToken(token, request);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(response.getStatus(), Status.FORBIDDEN.getStatusCode());
+    assertNotNull(response);
+    assertEquals(response.getStatus(), Status.FORBIDDEN.getStatusCode());
     String errMsg = "Delegation token operations can only be carried out on a " +
         "Kerberos authenticated channel. Expected auth type is kerberos, got type null";
     Object entity = response.getEntity();
-    Assert.assertNotNull(entity);
-    Assert.assertTrue(entity instanceof String);
+    assertNotNull(entity);
+    assertTrue(entity instanceof String);
     String entityMsg = String.valueOf(entity);
-    Assert.assertTrue(errMsg.contains(entityMsg));
+    assertTrue(errMsg.contains(entityMsg));
   }
 
   @Test
@@ -1680,18 +1706,18 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     when(request.getAuthType()).thenReturn("kerberos");
 
     Response response = interceptor.postDelegationToken(token, request);
-    Assert.assertNotNull(response);
+    assertNotNull(response);
 
     Object entity = response.getEntity();
-    Assert.assertNotNull(entity);
-    Assert.assertTrue(entity instanceof DelegationToken);
+    assertNotNull(entity);
+    assertTrue(entity instanceof DelegationToken);
 
     DelegationToken dtoken = (DelegationToken) entity;
-    Assert.assertEquals(TEST_RENEWER, dtoken.getRenewer());
-    Assert.assertEquals(TEST_RENEWER, dtoken.getOwner());
-    Assert.assertEquals("RM_DELEGATION_TOKEN", dtoken.getKind());
-    Assert.assertNotNull(dtoken.getToken());
-    Assert.assertTrue(dtoken.getNextExpirationTime() > now);
+    assertEquals(TEST_RENEWER, dtoken.getRenewer());
+    assertEquals(TEST_RENEWER, dtoken.getOwner());
+    assertEquals("RM_DELEGATION_TOKEN", dtoken.getKind());
+    assertNotNull(dtoken.getToken());
+    assertTrue(dtoken.getNextExpirationTime() > now);
   }
 
   @Test
@@ -1712,8 +1738,11 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     // If we don't set the header.
     String errorMsg = "Header 'Hadoop-YARN-RM-Delegation-Token' containing encoded token not found";
-    LambdaTestUtils.intercept(BadRequestException.class, errorMsg,
-        () -> interceptor.postDelegationTokenExpiration(request));
+    BadRequestException badRequestException = assertThrows(BadRequestException.class, () -> {
+      interceptor.postDelegationTokenExpiration(request);
+    });
+    String stackTraceAsString = getStackTraceAsString(badRequestException);
+    assertTrue(stackTraceAsString.contains(errorMsg));
   }
 
   @Test
@@ -1731,28 +1760,28 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     when(request.getAuthType()).thenReturn("kerberos");
 
     Response response = interceptor.postDelegationToken(token, request);
-    Assert.assertNotNull(response);
+    assertNotNull(response);
     Object entity = response.getEntity();
-    Assert.assertNotNull(entity);
-    Assert.assertTrue(entity instanceof DelegationToken);
+    assertNotNull(entity);
+    assertTrue(entity instanceof DelegationToken);
     DelegationToken dtoken = (DelegationToken) entity;
 
     final String yarnTokenHeader = "Hadoop-YARN-RM-Delegation-Token";
     when(request.getHeader(yarnTokenHeader)).thenReturn(dtoken.getToken());
 
     Response renewResponse = interceptor.postDelegationTokenExpiration(request);
-    Assert.assertNotNull(renewResponse);
+    assertNotNull(renewResponse);
 
     Object renewEntity = renewResponse.getEntity();
-    Assert.assertNotNull(renewEntity);
-    Assert.assertTrue(renewEntity instanceof DelegationToken);
+    assertNotNull(renewEntity);
+    assertTrue(renewEntity instanceof DelegationToken);
 
     // renewDelegation, we only return renewDate, other values are NULL.
     DelegationToken renewDToken = (DelegationToken) renewEntity;
-    Assert.assertNull(renewDToken.getRenewer());
-    Assert.assertNull(renewDToken.getOwner());
-    Assert.assertNull(renewDToken.getKind());
-    Assert.assertTrue(renewDToken.getNextExpirationTime() > dtoken.getNextExpirationTime());
+    assertNull(renewDToken.getRenewer());
+    assertNull(renewDToken.getOwner());
+    assertNull(renewDToken.getKind());
+    assertTrue(renewDToken.getNextExpirationTime() > dtoken.getNextExpirationTime());
   }
 
   @Test
@@ -1769,18 +1798,18 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     when(request.getAuthType()).thenReturn("kerberos");
 
     Response response = interceptor.postDelegationToken(token, request);
-    Assert.assertNotNull(response);
+    assertNotNull(response);
     Object entity = response.getEntity();
-    Assert.assertNotNull(entity);
-    Assert.assertTrue(entity instanceof DelegationToken);
+    assertNotNull(entity);
+    assertTrue(entity instanceof DelegationToken);
     DelegationToken dtoken = (DelegationToken) entity;
 
     final String yarnTokenHeader = "Hadoop-YARN-RM-Delegation-Token";
     when(request.getHeader(yarnTokenHeader)).thenReturn(dtoken.getToken());
 
     Response cancelResponse = interceptor.cancelDelegationToken(request);
-    Assert.assertNotNull(cancelResponse);
-    Assert.assertEquals(response.getStatus(), Status.OK.getStatusCode());
+    assertNotNull(cancelResponse);
+    assertEquals(response.getStatus(), Status.OK.getStatusCode());
   }
 
   @Test
@@ -1805,20 +1834,20 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // subCluster#0:Success;subCluster#1:Success;subCluster#3:Success;subCluster#2:Success;
     // We can't confirm the complete return order.
     Response response = interceptor.replaceLabelsOnNodes(nodeToLabelsEntryList, null);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(200, response.getStatus());
+    assertNotNull(response);
+    assertEquals(200, response.getStatus());
 
     Object entityObject = response.getEntity();
-    Assert.assertNotNull(entityObject);
+    assertNotNull(entityObject);
 
     String entityValue = String.valueOf(entityObject);
     String[] entities = entityValue.split(",");
-    Assert.assertNotNull(entities);
-    Assert.assertEquals(4, entities.length);
+    assertNotNull(entities);
+    assertEquals(4, entities.length);
     String expectValue =
         "subCluster-0:Success,subCluster-1:Success,subCluster-2:Success,subCluster-3:Success,";
     for (String entity : entities) {
-      Assert.assertTrue(expectValue.contains(entity));
+      assertTrue(expectValue.contains(entity));
     }
   }
 
@@ -1837,6 +1866,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   @Test
+  @Order(1)
   public void testReplaceLabelsOnNode() throws Exception {
     // subCluster3 -> node3:3 -> label:NodeLabel3
     String nodeId = "node3:3";
@@ -1845,15 +1875,15 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // We expect the following result: subCluster#3:Success;
     String expectValue = "subCluster#3:Success;";
     Response response = interceptor.replaceLabelsOnNode(labels, null, nodeId);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(200, response.getStatus());
+    assertNotNull(response);
+    assertEquals(200, response.getStatus());
 
     Object entityObject = response.getEntity();
-    Assert.assertNotNull(entityObject);
+    assertNotNull(entityObject);
 
     String entityValue = String.valueOf(entityObject);
-    Assert.assertNotNull(entityValue);
-    Assert.assertEquals(expectValue, entityValue);
+    assertNotNull(entityValue);
+    assertEquals(expectValue, entityValue);
   }
 
   @Test
@@ -1886,11 +1916,11 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     // We cannot guarantee the calling order of the sub-clusters,
     // We guarantee that the returned result contains the information of each subCluster.
-    Assert.assertNotNull(dumpSchedulerLogsMsg);
+    assertNotNull(dumpSchedulerLogsMsg);
     subClusters.forEach(subClusterId -> {
       String subClusterMsg =
           "subClusterId" + subClusterId + " : Capacity scheduler logs are being created.; ";
-      Assert.assertTrue(dumpSchedulerLogsMsg.contains(subClusterMsg));
+      assertTrue(dumpSchedulerLogsMsg.contains(subClusterMsg));
     });
   }
 
@@ -1917,22 +1947,22 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   @Test
   public void testGetActivitiesNormal() {
     ActivitiesInfo activitiesInfo = interceptor.getActivities(null, "1", "DIAGNOSTIC");
-    Assert.assertNotNull(activitiesInfo);
+    assertNotNull(activitiesInfo);
 
     String nodeId = activitiesInfo.getNodeId();
-    Assert.assertNotNull(nodeId);
-    Assert.assertEquals("1", nodeId);
+    assertNotNull(nodeId);
+    assertEquals("1", nodeId);
 
     String diagnostic = activitiesInfo.getDiagnostic();
-    Assert.assertNotNull(diagnostic);
-    Assert.assertTrue(StringUtils.contains(diagnostic, "Diagnostic"));
+    assertNotNull(diagnostic);
+    assertTrue(StringUtils.contains(diagnostic, "Diagnostic"));
 
     long timestamp = activitiesInfo.getTimestamp();
-    Assert.assertEquals(1673081972L, timestamp);
+    assertEquals(1673081972L, timestamp);
 
     List<NodeAllocationInfo> allocationInfos = activitiesInfo.getAllocations();
-    Assert.assertNotNull(allocationInfos);
-    Assert.assertEquals(1, allocationInfos.size());
+    assertNotNull(allocationInfos);
+    assertEquals(1, allocationInfos.size());
   }
 
   @Test
@@ -1957,23 +1987,23 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   public void testGetBulkActivitiesNormal() throws InterruptedException {
     BulkActivitiesInfo bulkActivitiesInfo =
         interceptor.getBulkActivities(null, "DIAGNOSTIC", 5);
-    Assert.assertNotNull(bulkActivitiesInfo);
+    assertNotNull(bulkActivitiesInfo);
 
-    Assert.assertTrue(bulkActivitiesInfo instanceof FederationBulkActivitiesInfo);
+    assertTrue(bulkActivitiesInfo instanceof FederationBulkActivitiesInfo);
 
     FederationBulkActivitiesInfo federationBulkActivitiesInfo =
         (FederationBulkActivitiesInfo) bulkActivitiesInfo;
-    Assert.assertNotNull(federationBulkActivitiesInfo);
+    assertNotNull(federationBulkActivitiesInfo);
 
     List<BulkActivitiesInfo> activitiesInfos = federationBulkActivitiesInfo.getList();
-    Assert.assertNotNull(activitiesInfos);
-    Assert.assertEquals(4, activitiesInfos.size());
+    assertNotNull(activitiesInfos);
+    assertEquals(4, activitiesInfos.size());
 
     for (BulkActivitiesInfo activitiesInfo : activitiesInfos) {
-      Assert.assertNotNull(activitiesInfo);
+      assertNotNull(activitiesInfo);
       List<ActivitiesInfo> activitiesInfoList = activitiesInfo.getActivities();
-      Assert.assertNotNull(activitiesInfoList);
-      Assert.assertEquals(5, activitiesInfoList.size());
+      assertNotNull(activitiesInfoList);
+      assertEquals(5, activitiesInfoList.size());
     }
   }
 
@@ -2003,21 +2033,21 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     nodeLabelsInfo.getNodeLabelsInfo().add(nodeLabelInfo);
 
     Response response = interceptor.addToClusterNodeLabels(nodeLabelsInfo, null);
-    Assert.assertNotNull(response);
+    assertNotNull(response);
 
     Object entityObj = response.getEntity();
-    Assert.assertNotNull(entityObj);
+    assertNotNull(entityObj);
 
     String entity = String.valueOf(entityObj);
     String[] entities = StringUtils.split(entity, ",");
-    Assert.assertNotNull(entities);
-    Assert.assertEquals(4, entities.length);
+    assertNotNull(entities);
+    assertEquals(4, entities.length);
 
     // The order in which the cluster returns messages is uncertain,
     // we confirm the result by contains
     String expectedMsg =
         "SubCluster-0:SUCCESS,SubCluster-1:SUCCESS,SubCluster-2:SUCCESS,SubCluster-3:SUCCESS";
-    Arrays.stream(entities).forEach(item -> Assert.assertTrue(expectedMsg.contains(item)));
+    Arrays.stream(entities).forEach(item -> assertTrue(expectedMsg.contains(item)));
   }
 
   @Test
@@ -2029,14 +2059,14 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     nodeLabelsInfo.getNodeLabelsInfo().add(nodeLabelInfo);
 
     Response response = interceptor.addToClusterNodeLabels(nodeLabelsInfo, null);
-    Assert.assertNotNull(response);
+    assertNotNull(response);
 
     Object entityObj = response.getEntity();
-    Assert.assertNotNull(entityObj);
+    assertNotNull(entityObj);
 
     String expectedValue = "SubCluster-0:SUCCESS,";
     String entity = String.valueOf(entityObj);
-    Assert.assertTrue(entity.contains(expectedValue));
+    assertTrue(entity.contains(expectedValue));
   }
 
   @Test
@@ -2066,21 +2096,21 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     oldNodeLabels.add("ALL");
 
     Response response = interceptor.removeFromClusterNodeLabels(oldNodeLabels, null);
-    Assert.assertNotNull(response);
+    assertNotNull(response);
 
     Object entityObj = response.getEntity();
-    Assert.assertNotNull(entityObj);
+    assertNotNull(entityObj);
 
     String entity = String.valueOf(entityObj);
     String[] entities = StringUtils.split(entity, ",");
-    Assert.assertNotNull(entities);
-    Assert.assertEquals(4, entities.length);
+    assertNotNull(entities);
+    assertEquals(4, entities.length);
 
     // The order in which the cluster returns messages is uncertain,
     // we confirm the result by contains
     String expectedMsg =
         "SubCluster-0:SUCCESS,SubCluster-1:SUCCESS,SubCluster-2:SUCCESS,SubCluster-3:SUCCESS";
-    Arrays.stream(entities).forEach(item -> Assert.assertTrue(expectedMsg.contains(item)));
+    Arrays.stream(entities).forEach(item -> assertTrue(expectedMsg.contains(item)));
   }
 
   @Test
@@ -2089,14 +2119,14 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     oldNodeLabels.add("A0");
 
     Response response = interceptor.removeFromClusterNodeLabels(oldNodeLabels, null);
-    Assert.assertNotNull(response);
+    assertNotNull(response);
 
     Object entityObj = response.getEntity();
-    Assert.assertNotNull(entityObj);
+    assertNotNull(entityObj);
 
     String expectedValue = "SubCluster-0:SUCCESS,";
     String entity = String.valueOf(entityObj);
-    Assert.assertTrue(entity.contains(expectedValue));
+    assertTrue(entity.contains(expectedValue));
   }
 
   @Test
@@ -2122,29 +2152,29 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   @Test
   public void testGetSchedulerConfiguration() throws Exception {
     Response response = interceptor.getSchedulerConfiguration(null);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(OK, response.getStatus());
+    assertNotNull(response);
+    assertEquals(OK, response.getStatus());
 
     Object entity = response.getEntity();
-    Assert.assertNotNull(entity);
-    Assert.assertTrue(entity instanceof FederationConfInfo);
+    assertNotNull(entity);
+    assertTrue(entity instanceof FederationConfInfo);
 
     FederationConfInfo federationConfInfo = FederationConfInfo.class.cast(entity);
     List<ConfInfo> confInfos = federationConfInfo.getList();
-    Assert.assertNotNull(confInfos);
-    Assert.assertEquals(4, confInfos.size());
+    assertNotNull(confInfos);
+    assertEquals(4, confInfos.size());
 
     List<String> errors = federationConfInfo.getErrorMsgs();
-    Assert.assertEquals(0, errors.size());
+    assertEquals(0, errors.size());
 
     Set<String> subClusterSet = subClusters.stream()
         .map(subClusterId -> subClusterId.getId()).collect(Collectors.toSet());
 
     for (ConfInfo confInfo : confInfos) {
       List<ConfInfo.ConfItem> confItems = confInfo.getItems();
-      Assert.assertNotNull(confItems);
-      Assert.assertTrue(confItems.size() > 0);
-      Assert.assertTrue(subClusterSet.contains(confInfo.getSubClusterId()));
+      assertNotNull(confItems);
+      assertTrue(confItems.size() > 0);
+      assertTrue(subClusterSet.contains(confInfo.getSubClusterId()));
     }
   }
 
@@ -2155,15 +2185,15 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     when(hsr.getRemoteUser()).thenReturn(requestUserName);
     ClusterUserInfo clusterUserInfo = interceptor.getClusterUserInfo(hsr);
 
-    Assert.assertNotNull(clusterUserInfo);
-    Assert.assertTrue(clusterUserInfo instanceof FederationClusterUserInfo);
+    assertNotNull(clusterUserInfo);
+    assertTrue(clusterUserInfo instanceof FederationClusterUserInfo);
 
     FederationClusterUserInfo federationClusterUserInfo =
         (FederationClusterUserInfo) clusterUserInfo;
 
     List<ClusterUserInfo> fedClusterUserInfoList = federationClusterUserInfo.getList();
-    Assert.assertNotNull(fedClusterUserInfoList);
-    Assert.assertEquals(4, fedClusterUserInfoList.size());
+    assertNotNull(fedClusterUserInfoList);
+    assertEquals(4, fedClusterUserInfoList.size());
 
     List<String> subClusterIds = subClusters.stream().map(
         subClusterId -> subClusterId.getId()).collect(Collectors.toList());
@@ -2172,18 +2202,18 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     for (ClusterUserInfo fedClusterUserInfo : fedClusterUserInfoList) {
       // Check subClusterId
       String subClusterId = fedClusterUserInfo.getSubClusterId();
-      Assert.assertNotNull(subClusterId);
-      Assert.assertTrue(subClusterIds.contains(subClusterId));
+      assertNotNull(subClusterId);
+      assertTrue(subClusterIds.contains(subClusterId));
 
       // Check requestedUser
       String requestedUser = fedClusterUserInfo.getRequestedUser();
-      Assert.assertNotNull(requestedUser);
-      Assert.assertEquals(requestUserName, requestedUser);
+      assertNotNull(requestedUser);
+      assertEquals(requestUserName, requestedUser);
 
       // Check rmLoginUser
       String rmLoginUser = fedClusterUserInfo.getRmLoginUser();
-      Assert.assertNotNull(rmLoginUser);
-      Assert.assertEquals(mockRM.getRMLoginUser(), rmLoginUser);
+      assertNotNull(rmLoginUser);
+      assertEquals(mockRM.getRMLoginUser(), rmLoginUser);
     }
   }
 
@@ -2211,29 +2241,29 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     updateInfo.getUpdateQueueInfo().add(goodUpdateInfo);
     Response response = interceptor.updateSchedulerConfiguration(updateInfo, null);
 
-    Assert.assertNotNull(response);
-    Assert.assertEquals(OK, response.getStatus());
+    assertNotNull(response);
+    assertEquals(OK, response.getStatus());
 
     String expectMsg = "Configuration change successfully applied.";
     Object entity = response.getEntity();
-    Assert.assertNotNull(entity);
+    assertNotNull(entity);
 
     String entityMsg = String.valueOf(entity);
-    Assert.assertEquals(expectMsg, entityMsg);
+    assertEquals(expectMsg, entityMsg);
   }
 
   @Test
   public void testGetClusterInfo() {
     ClusterInfo clusterInfos = interceptor.getClusterInfo();
-    Assert.assertNotNull(clusterInfos);
-    Assert.assertTrue(clusterInfos instanceof FederationClusterInfo);
+    assertNotNull(clusterInfos);
+    assertTrue(clusterInfos instanceof FederationClusterInfo);
 
     FederationClusterInfo federationClusterInfos =
         (FederationClusterInfo) (clusterInfos);
 
     List<ClusterInfo> fedClusterInfosList = federationClusterInfos.getList();
-    Assert.assertNotNull(fedClusterInfosList);
-    Assert.assertEquals(4, fedClusterInfosList.size());
+    assertNotNull(fedClusterInfosList);
+    assertEquals(4, fedClusterInfosList.size());
 
     List<String> subClusterIds = subClusters.stream().map(
         subClusterId -> subClusterId.getId()).collect(Collectors.toList());
@@ -2244,24 +2274,31 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     for (ClusterInfo clusterInfo : fedClusterInfosList) {
       String subClusterId = clusterInfo.getSubClusterId();
       // Check subClusterId
-      Assert.assertTrue(subClusterIds.contains(subClusterId));
+      assertTrue(subClusterIds.contains(subClusterId));
 
       // Check state
       String clusterState = mockRM.getServiceState().toString();
-      Assert.assertEquals(clusterState, clusterInfo.getState());
+      assertEquals(clusterState, clusterInfo.getState());
 
       // Check rmStateStoreName
       String rmStateStoreName =
           mockRM.getRMContext().getStateStore().getClass().getName();
-      Assert.assertEquals(rmStateStoreName, clusterInfo.getRMStateStore());
+      assertEquals(rmStateStoreName, clusterInfo.getRMStateStore());
 
       // Check RM Version
-      Assert.assertEquals(yarnVersion, clusterInfo.getRMVersion());
+      assertEquals(yarnVersion, clusterInfo.getRMVersion());
 
       // Check haZooKeeperConnectionState
       String rmHAZookeeperConnectionState = mockRM.getRMContext().getHAZookeeperConnectionState();
-      Assert.assertEquals(rmHAZookeeperConnectionState,
+      assertEquals(rmHAZookeeperConnectionState,
           clusterInfo.getHAZookeeperConnectionState());
     }
+  }
+
+  private String getStackTraceAsString(Exception e) {
+    StringWriter sw = new StringWriter();
+    PrintWriter pw = new PrintWriter(sw);
+    e.printStackTrace(pw);
+    return sw.toString();
   }
 }

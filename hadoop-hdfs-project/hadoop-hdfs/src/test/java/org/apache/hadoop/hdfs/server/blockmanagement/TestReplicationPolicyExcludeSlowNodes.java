@@ -26,21 +26,23 @@ import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.hdfs.util.RwLockMode;
 
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
+
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(Parameterized.class)
+@MethodSource("data")
+@ParameterizedClass
 public class TestReplicationPolicyExcludeSlowNodes
     extends BaseReplicationPolicyTest {
 
@@ -48,7 +50,6 @@ public class TestReplicationPolicyExcludeSlowNodes
     this.blockPlacementPolicy = blockPlacementPolicy;
   }
 
-  @Parameterized.Parameters
   public static Iterable<Object[]> data() {
     return Arrays.asList(new Object[][] {
         {BlockPlacementPolicyDefault.class.getName()},
@@ -153,7 +154,7 @@ public class TestReplicationPolicyExcludeSlowNodes
 
       // mock slow nodes
       SlowPeerTracker tracker = dnManager.getSlowPeerTracker();
-      Assert.assertNotNull(tracker);
+      assertNotNull(tracker);
 
       OutlierMetrics outlierMetrics = new OutlierMetrics(0.0, 0.0, 0.0, 5.0);
       tracker.addReport(dataNodes[0].getInfoAddr(), dataNodes[3].getInfoAddr(),

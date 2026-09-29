@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -27,12 +27,11 @@ import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.TimeUnit;
-
 import java.util.function.Supplier;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.StorageType;
@@ -53,9 +52,10 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 /**
@@ -67,7 +67,7 @@ public class TestDiskError {
   private MiniDFSCluster cluster;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512L);
@@ -79,7 +79,7 @@ public class TestDiskError {
     fs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -91,42 +91,20 @@ public class TestDiskError {
    * Test to check that a DN goes down when all its volumes have failed.
    */
   @Test
+  @Timeout(value = 60)
   public void testShutdown() throws Exception {
-    if (System.getProperty("os.name").startsWith("Windows")) {
-      /**
-       * This test depends on OS not allowing file creations on a directory
-       * that does not have write permissions for the user. Apparently it is 
-       * not the case on Windows (at least under Cygwin), and possibly AIX.
-       * This is disabled on Windows.
-       */
-      return;
-    }
-    // Bring up two more datanodes
-    cluster.startDataNodes(conf, 2, true, null, null);
-    cluster.waitActive();
+    assumeNotWindows();
     final int dnIndex = 0;
-    String bpid = cluster.getNamesystem().getBlockPoolId();
-    File storageDir = cluster.getInstanceStorageDir(dnIndex, 0);
-    File dir1 = MiniDFSCluster.getRbwDir(storageDir, bpid);
-    storageDir = cluster.getInstanceStorageDir(dnIndex, 1);
-    File dir2 = MiniDFSCluster.getRbwDir(storageDir, bpid);
+    final File dir1 = cluster.getInstanceStorageDir(dnIndex, 0);
+    final File dir2 = cluster.getInstanceStorageDir(dnIndex, 1);
+    final DataNode dn = cluster.getDataNodes().get(dnIndex);
     try {
-      // make the data directory of the first datanode to be readonly
-      assertTrue("Couldn't chmod local vol", dir1.setReadOnly());
-      assertTrue("Couldn't chmod local vol", dir2.setReadOnly());
-
-      // create files and make sure that first datanode will be down
-      DataNode dn = cluster.getDataNodes().get(dnIndex);
-      for (int i=0; dn.isDatanodeUp(); i++) {
-        Path fileName = new Path("/test.txt"+i);
-        DFSTestUtil.createFile(fs, fileName, 1024, (short)2, 1L);
-        DFSTestUtil.waitReplication(fs, fileName, (short)2);
-        fs.delete(fileName, true);
-      }
+      DataNodeTestUtils.injectDataDirFailure(dir1, dir2);
+      dn.checkDiskError();
+      GenericTestUtils.waitFor(() -> !dn.isDatanodeUp(), 100, 30000,
+          "DataNode should exit when all volumes fail.");
     } finally {
-      // restore its old permission
-      FileUtil.setWritable(dir1, true);
-      FileUtil.setWritable(dir2, true);
+      DataNodeTestUtils.restoreDataDirFromFailure(dir1, dir2);
     }
   }
 
@@ -145,7 +123,7 @@ public class TestDiskError {
     // get the block belonged to the created file
     LocatedBlocks blocks = NameNodeAdapter.getBlockLocations(
         cluster.getNameNode(), fileName.toString(), 0, (long)fileLen);
-    assertEquals("Should only find 1 block", blocks.locatedBlockCount(), 1);
+    assertEquals(blocks.locatedBlockCount(), 1, "Should only find 1 block");
     LocatedBlock block = blocks.get(0);
 
     // bring up a second datanode
@@ -207,8 +185,8 @@ public class TestDiskError {
         for (FsVolumeSpi vol : volumes) {
           Path dataDir = new Path(vol.getStorageLocation().getNormalizedUri());
           FsPermission actual = localFS.getFileStatus(dataDir).getPermission();
-          assertEquals("Permission for dir: " + dataDir + ", is " + actual +
-              ", while expected is " + expected, expected, actual);
+          assertEquals(expected, actual, "Permission for dir: " + dataDir + ", is " + actual
+              + ", while expected is " + expected);
         }
       }
     }
@@ -219,7 +197,8 @@ public class TestDiskError {
    * Before refactoring the code the above function was not getting called 
    * @throws IOException, InterruptedException
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testcheckDiskError() throws Exception {
     if(cluster.getDataNodes().size() <= 0) {
       cluster.startDataNodes(conf, 1, true, null, null);

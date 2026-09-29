@@ -24,8 +24,6 @@ import org.apache.hadoop.security.authentication.util.ZookeeperClient.SASLOwnerA
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.common.ClientX509Util;
-import org.hamcrest.Matcher;
-import org.hamcrest.core.IsNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -35,10 +33,7 @@ import javax.security.auth.login.Configuration;
 
 import java.util.Arrays;
 
-import static org.hamcrest.CoreMatchers.anyOf;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.isA;
@@ -219,14 +214,18 @@ public class TestZookeeperClientCreation {
     verify(cfBuilder).zkClientConfig(clientConfCaptor.capture());
     ZKClientConfig conf = clientConfCaptor.getValue();
 
-    assertThat(conf.getProperty(ZKClientConfig.SECURE_CLIENT), is("true"));
-    assertThat(conf.getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET),
-        is("org.apache.zookeeper.ClientCnxnSocketNetty"));
+    assertThat(conf.getProperty(ZKClientConfig.SECURE_CLIENT)).isEqualTo("true");
+    assertThat(conf.getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET))
+        .isEqualTo("org.apache.zookeeper.ClientCnxnSocketNetty");
     try (ClientX509Util sslOpts = new ClientX509Util()) {
-      assertThat(conf.getProperty(sslOpts.getSslKeystoreLocationProperty()), is("keystoreLoc"));
-      assertThat(conf.getProperty(sslOpts.getSslKeystorePasswdProperty()), is("ksPass"));
-      assertThat(conf.getProperty(sslOpts.getSslTruststoreLocationProperty()), is("truststoreLoc"));
-      assertThat(conf.getProperty(sslOpts.getSslTruststorePasswdProperty()), is("tsPass"));
+      assertThat(conf.getProperty(sslOpts.getSslKeystoreLocationProperty()))
+          .isEqualTo("keystoreLoc");
+      assertThat(conf.getProperty(sslOpts.getSslKeystorePasswdProperty()))
+          .isEqualTo("ksPass");
+      assertThat(conf.getProperty(sslOpts.getSslTruststoreLocationProperty()))
+          .isEqualTo("truststoreLoc");
+      assertThat(conf.getProperty(sslOpts.getSslTruststorePasswdProperty()))
+          .isEqualTo("tsPass");
     }
 
     verifyDummyConnectionString();
@@ -244,7 +243,7 @@ public class TestZookeeperClientCreation {
     clientConfigurer.withConnectionString(null);
 
     Throwable t = assertThrows(NullPointerException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage(), containsString("Zookeeper connection string cannot be null!"));
+    assertThat(t.getMessage()).contains("Zookeeper connection string cannot be null!");
   }
 
   @Test
@@ -252,7 +251,7 @@ public class TestZookeeperClientCreation {
     clientConfigurer.withRetryPolicy(null);
 
     Throwable t = assertThrows(NullPointerException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage(), containsString("Zookeeper connection retry policy cannot be null!"));
+    assertThat(t.getMessage()).contains("Zookeeper connection retry policy cannot be null!");
   }
 
   @Test
@@ -260,7 +259,7 @@ public class TestZookeeperClientCreation {
     clientConfigurer.withAuthType(null);
 
     Throwable t = assertThrows(NullPointerException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage(), containsString("Zookeeper authType cannot be null!"));
+    assertThat(t.getMessage()).contains("Zookeeper authType cannot be null!");
   }
 
   @Test
@@ -268,7 +267,7 @@ public class TestZookeeperClientCreation {
     clientConfigurer.withAuthType("something");
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage(), is("Zookeeper authType must be one of [none, sasl]!"));
+    assertThat(t.getMessage()).isEqualTo("Zookeeper authType must be one of [none, sasl]!");
   }
 
   @Test
@@ -276,7 +275,7 @@ public class TestZookeeperClientCreation {
     clientConfigurer.withAuthType("sasl");
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage(), is("Zookeeper client's Kerberos Keytab must be specified!"));
+    assertThat(t.getMessage()).isEqualTo("Zookeeper client's Kerberos Keytab must be specified!");
   }
 
   @Test
@@ -286,7 +285,8 @@ public class TestZookeeperClientCreation {
         .withKeytab("");
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage(), is("Zookeeper client's Kerberos Keytab must be specified!"));
+
+    assertThat(t.getMessage()).isEqualTo("Zookeeper client's Kerberos Keytab must be specified!");
   }
 
   @Test
@@ -296,7 +296,8 @@ public class TestZookeeperClientCreation {
         .withKeytab("keytabLoc");
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage(), is("Zookeeper client's Kerberos Principal must be specified!"));
+    assertThat(t.getMessage()).isEqualTo(
+        "Zookeeper client's Kerberos Principal must be specified!");
   }
 
   @Test
@@ -307,7 +308,8 @@ public class TestZookeeperClientCreation {
         .withPrincipal("");
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage(), is("Zookeeper client's Kerberos Principal must be specified!"));
+    assertThat(t.getMessage()).isEqualTo(
+        "Zookeeper client's Kerberos Principal must be specified!");
   }
 
   @Test
@@ -319,7 +321,7 @@ public class TestZookeeperClientCreation {
         .withJaasLoginEntryName(null);
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage(), is("JAAS Login Entry name must be specified!"));
+    assertThat(t.getMessage()).isEqualTo("JAAS Login Entry name must be specified!");
   }
 
   @Test
@@ -331,7 +333,7 @@ public class TestZookeeperClientCreation {
         .withJaasLoginEntryName("");
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage(), is("JAAS Login Entry name must be specified!"));
+    assertThat(t.getMessage()).isEqualTo("JAAS Login Entry name must be specified!");
   }
 
   @Test
@@ -340,8 +342,8 @@ public class TestZookeeperClientCreation {
         .enableSSL(true);
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage(),
-        is("The keystore location parameter is empty for the ZooKeeper client connection."));
+    assertThat(t.getMessage()).isEqualTo(
+        "The keystore location parameter is empty for the ZooKeeper client connection.");
   }
 
   @Test
@@ -351,8 +353,8 @@ public class TestZookeeperClientCreation {
         .withKeystore("");
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage(),
-        is("The keystore location parameter is empty for the ZooKeeper client connection."));
+    assertThat(t.getMessage()).isEqualTo(
+        "The keystore location parameter is empty for the ZooKeeper client connection.");
   }
 
   @Test
@@ -362,8 +364,8 @@ public class TestZookeeperClientCreation {
         .withKeystore("keyStoreLoc");
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage(),
-        is("The truststore location parameter is empty for the ZooKeeper client connection."));
+    assertThat(t.getMessage()).isEqualTo(
+        "The truststore location parameter is empty for the ZooKeeper client connection.");
   }
 
   @Test
@@ -374,8 +376,8 @@ public class TestZookeeperClientCreation {
         .withTruststore("");
 
     Throwable t = assertThrows(IllegalArgumentException.class, () -> clientConfigurer.create());
-    assertThat(t.getMessage(),
-        is("The truststore location parameter is empty for the ZooKeeper client connection."));
+    assertThat(t.getMessage()).isEqualTo(
+        "The truststore location parameter is empty for the ZooKeeper client connection.");
   }
 
   private void testSaslAuthType(String vendor) {
@@ -395,36 +397,39 @@ public class TestZookeeperClientCreation {
       verify(cfBuilder).aclProvider(aclProviderCaptor.capture());
       SASLOwnerACLProvider aclProvider = aclProviderCaptor.getValue();
 
-      assertThat(aclProvider.getDefaultAcl().size(), is(1));
-      assertThat(aclProvider.getDefaultAcl().get(0).getId().getScheme(), is("sasl"));
-      assertThat(aclProvider.getDefaultAcl().get(0).getId().getId(), is("principal"));
-      assertThat(aclProvider.getDefaultAcl().get(0).getPerms(), is(ZooDefs.Perms.ALL));
+      assertThat(aclProvider.getDefaultAcl().size()).isEqualTo(1);
+      assertThat(aclProvider.getDefaultAcl().get(0).getId().getScheme()).isEqualTo("sasl");
+      assertThat(aclProvider.getDefaultAcl().get(0).getId().getId()).isEqualTo("principal");
+      assertThat(aclProvider.getDefaultAcl().get(0).getPerms()).isEqualTo(ZooDefs.Perms.ALL);
 
       Arrays.stream(new String[] {"/", "/foo", "/foo/bar/baz", "/random/path"})
           .forEach(s -> {
-            assertThat(aclProvider.getAclForPath(s).size(), is(1));
-            assertThat(aclProvider.getAclForPath(s).get(0).getId().getScheme(), is("sasl"));
-            assertThat(aclProvider.getAclForPath(s).get(0).getId().getId(), is("principal"));
-            assertThat(aclProvider.getAclForPath(s).get(0).getPerms(), is(ZooDefs.Perms.ALL));
+            assertThat(aclProvider.getAclForPath(s).size()).isEqualTo(1);
+            assertThat(aclProvider.getAclForPath(s).get(0).getId().getScheme()).isEqualTo("sasl");
+            assertThat(aclProvider.getAclForPath(s).get(0).getId().getId()).isEqualTo("principal");
+            assertThat(aclProvider.getAclForPath(s).get(0).getPerms()).isEqualTo(ZooDefs.Perms.ALL);
           });
 
-      assertThat(System.getProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY), is("TestEntry"));
-      assertThat(System.getProperty("zookeeper.authProvider.1"),
-          is("org.apache.zookeeper.server.auth.SASLAuthenticationProvider"));
+      assertThat(System.getProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY)).isEqualTo("TestEntry");
+      assertThat(System.getProperty("zookeeper.authProvider.1")).isEqualTo(
+          "org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
 
       Configuration config = Configuration.getConfiguration();
-      assertThat(config.getAppConfigurationEntry("TestEntry").length, is(1));
+      assertThat(config.getAppConfigurationEntry("TestEntry").length).isEqualTo(1);
       AppConfigurationEntry entry = config.getAppConfigurationEntry("TestEntry")[0];
-      assertThat(entry.getOptions().get("keyTab"), is("keytabLoc"));
-      assertThat(entry.getOptions().get("principal"), is("principal@some.host/SOME.REALM"));
-      assertThat(entry.getOptions().get("useKeyTab"), is("true"));
-      assertThat(entry.getOptions().get("storeKey"), is("true"));
-      assertThat(entry.getOptions().get("useTicketCache"), is("false"));
-      assertThat(entry.getOptions().get("refreshKrb5Config"), is("true"));
+      assertThat(entry.getOptions().get("keyTab")).isEqualTo("keytabLoc");
+      assertThat(entry.getOptions().get("principal")).isEqualTo("principal@some.host/SOME.REALM");
+      assertThat(entry.getOptions().get("useKeyTab")).isEqualTo("true");
+      assertThat(entry.getOptions().get("storeKey")).isEqualTo("true");
+      assertThat(entry.getOptions().get("useTicketCache")).isEqualTo("false");
+      assertThat(entry.getOptions().get("refreshKrb5Config")).isEqualTo("true");
+
       if (System.getProperty("java.vendor").contains("IBM")){
-        assertThat(entry.getLoginModuleName(), is("com.ibm.security.auth.module.Krb5LoginModule"));
+        assertThat(entry.getLoginModuleName()).isEqualTo(
+            "com.ibm.security.auth.module.Krb5LoginModule");
       } else {
-        assertThat(entry.getLoginModuleName(), is("com.sun.security.auth.module.Krb5LoginModule"));
+        assertThat(entry.getLoginModuleName()).isEqualTo(
+            "com.sun.security.auth.module.Krb5LoginModule");
       }
     } finally {
       Configuration.setConfiguration(origConf);
@@ -465,8 +470,8 @@ public class TestZookeeperClientCreation {
     verify(cfBuilder).retryPolicy(retry.capture());
     ExponentialBackoffRetry policy = retry.getValue();
 
-    assertThat(policy.getBaseSleepTimeMs(), is(1000));
-    assertThat(policy.getN(), is(3));
+    assertThat(policy.getBaseSleepTimeMs()).isEqualTo(1000);
+    assertThat(policy.getN()).isEqualTo(3);
   }
 
   private void verifyDefaultAclProvider() {
@@ -478,21 +483,16 @@ public class TestZookeeperClientCreation {
     verify(cfBuilder).zkClientConfig(clientConfCaptor.capture());
     ZKClientConfig conf = clientConfCaptor.getValue();
 
-    assertThat(conf.getProperty(ZKClientConfig.SECURE_CLIENT), isEmptyOrFalse());
+    assertThat(conf.getProperty(ZKClientConfig.SECURE_CLIENT))
+        .satisfiesAnyOf(value -> assertThat(value).isNullOrEmpty(),
+            value -> assertThat(value).isEqualTo("false"));
+
     try (ClientX509Util sslOpts = new ClientX509Util()) {
-      assertThat(conf.getProperty(sslOpts.getSslKeystoreLocationProperty()), isEmpty());
-      assertThat(conf.getProperty(sslOpts.getSslKeystorePasswdProperty()), isEmpty());
-      assertThat(conf.getProperty(sslOpts.getSslTruststoreLocationProperty()), isEmpty());
-      assertThat(conf.getProperty(sslOpts.getSslTruststorePasswdProperty()), isEmpty());
+      assertThat(conf.getProperty(sslOpts.getSslKeystoreLocationProperty())).isNullOrEmpty();
+      assertThat(conf.getProperty(sslOpts.getSslKeystorePasswdProperty())).isNullOrEmpty();
+      assertThat(conf.getProperty(sslOpts.getSslTruststoreLocationProperty())).isNullOrEmpty();
+      assertThat(conf.getProperty(sslOpts.getSslTruststorePasswdProperty())).isNullOrEmpty();
     }
-  }
-
-  private Matcher<String> isEmptyOrFalse() {
-    return anyOf(isEmpty(), is("false"));
-  }
-
-  private Matcher<String> isEmpty() {
-    return anyOf(new IsNull<>(), is(""));
   }
 
 }

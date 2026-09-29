@@ -61,4 +61,16 @@ public final class MagicCommitTrackerUtils {
         CommitConstants.FS_S3A_COMMITTER_MAGIC_TRACK_COMMITS_IN_MEMORY_ENABLED,
         CommitConstants.FS_S3A_COMMITTER_MAGIC_TRACK_COMMITS_IN_MEMORY_ENABLED_DEFAULT);
   }
+
+  /**
+   * Is cleanup of magic committer staging dirs enabled.
+   * @param conf Configuration
+   * @return true if cleanup of staging dir is enabled.
+   */
+  public static boolean isCleanupMagicCommitterEnabled(
+      Configuration conf) {
+    return conf.getBoolean(
+        CommitConstants.FS_S3A_COMMITTER_MAGIC_CLEANUP_ENABLED,
+        CommitConstants.FS_S3A_COMMITTER_MAGIC_CLEANUP_ENABLED_DEFAULT);
+  }
 }

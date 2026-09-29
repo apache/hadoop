@@ -19,12 +19,12 @@
 package org.apache.hadoop.service;
 
 import org.apache.hadoop.service.Service;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * A set of assertions about the state of any service
  */
-public class ServiceAssert extends Assert {
+public class ServiceAssert extends Assertions {
 
   public static void assertServiceStateCreated(Service service) {
     assertServiceInState(service, Service.STATE.NOTINITED);
@@ -43,9 +43,9 @@ public class ServiceAssert extends Assert {
   }
 
   public static void assertServiceInState(Service service, Service.STATE state) {
-    assertNotNull("Null service", service);
-    assertEquals("Service in wrong state: " + service, state,
-                 service.getServiceState());
+    assertNotNull(service, "Null service");
+    assertEquals(state, service.getServiceState(),
+        "Service in wrong state: " + service);
   }
 
   /**
@@ -58,7 +58,7 @@ public class ServiceAssert extends Assert {
   public static void assertStateCount(BreakableService service,
                         Service.STATE state,
                         int expected) {
-    assertNotNull("Null service", service);
+    assertNotNull(service, "Null service");
     int actual = service.getCount(state);
     if (expected != actual) {
       fail("Expected entry count for state [" + state +"] of " + service
@@ -74,7 +74,7 @@ public class ServiceAssert extends Assert {
    */
   public static void assertServiceConfigurationContains(Service service,
                                                         String key) {
-    assertNotNull("No option "+ key + " in service configuration",
-                  service.getConfig().get(key));
+    assertNotNull(service.getConfig().get(key),
+        "No option "+ key + " in service configuration");
   }
 }

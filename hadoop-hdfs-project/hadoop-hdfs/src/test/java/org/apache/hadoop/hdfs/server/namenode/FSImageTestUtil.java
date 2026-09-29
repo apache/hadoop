@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -445,7 +445,7 @@ public abstract class FSImageTestUtil {
   public static Map<File, String> getFileMD5s(File... files) throws Exception {
     Map<File, String> ret = Maps.newHashMap();
     for (File f : files) {
-      assertTrue("Must exist: " + f, f.exists());
+      assertTrue(f.exists(), "Must exist: " + f);
       ret.put(f, getFileMD5(f));
     }
     return ret;
@@ -514,7 +514,7 @@ public abstract class FSImageTestUtil {
       for (long checkpointTxId : txids) {
         File image = new File(nameDir,
                               NNStorage.getImageFileName(checkpointTxId));
-        assertTrue("Expected non-empty " + image, image.length() > 0);
+        assertTrue(image.length() > 0, "Expected non-empty " + image);
       }
     }
   }
@@ -531,7 +531,7 @@ public abstract class FSImageTestUtil {
       for (long checkpointTxId : txids) {
         File image = new File(nameDir,
             NNStorage.getRollbackImageFileName(checkpointTxId));
-        assertTrue("Expected non-empty " + image, image.length() > 0);
+        assertTrue(image.length() > 0, "Expected non-empty " + image);
       }
     }
   }

@@ -23,15 +23,15 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import org.assertj.core.api.Assertions;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultSchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListXmlParser;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestBlobListXmlParser {
   @Test
@@ -105,12 +105,12 @@ public class TestBlobListXmlParser {
         + "</EnumerationResults>";
     BlobListResultSchema listResultSchema = getResultSchema(xmlResponseWithDelimiter);
     List<BlobListResultEntrySchema> paths = listResultSchema.paths();
-    Assertions.assertThat(paths.size()).isEqualTo(4);
-    Assertions.assertThat(paths.get(0).isDirectory()).isEqualTo(true);
-    Assertions.assertThat(paths.get(1).isDirectory()).isEqualTo(true);
-    Assertions.assertThat(paths.get(2).isDirectory()).isEqualTo(true);
-    Assertions.assertThat(paths.get(3).isDirectory()).isEqualTo(false);
-    Assertions.assertThat(listResultSchema.getNextMarker()).isNotNull();
+    assertThat(paths.size()).isEqualTo(4);
+    assertThat(paths.get(0).isDirectory()).isEqualTo(true);
+    assertThat(paths.get(1).isDirectory()).isEqualTo(true);
+    assertThat(paths.get(2).isDirectory()).isEqualTo(true);
+    assertThat(paths.get(3).isDirectory()).isEqualTo(false);
+    assertThat(listResultSchema.getNextMarker()).isNotNull();
   }
 
   @Test
@@ -124,8 +124,8 @@ public class TestBlobListXmlParser {
         + "</EnumerationResults>";
     BlobListResultSchema listResultSchema = getResultSchema(xmlResponse);
     List<BlobListResultEntrySchema> paths = listResultSchema.paths();
-    Assertions.assertThat(paths.size()).isEqualTo(0);
-    Assertions.assertThat(listResultSchema.getNextMarker()).isNull();
+    assertThat(paths.size()).isEqualTo(0);
+    assertThat(listResultSchema.getNextMarker()).isNull();
   }
 
   @Test
@@ -140,8 +140,8 @@ public class TestBlobListXmlParser {
         + "</EnumerationResults>";
     BlobListResultSchema listResultSchema = getResultSchema(xmlResponse);
     List<BlobListResultEntrySchema> paths = listResultSchema.paths();
-    Assertions.assertThat(paths.size()).isEqualTo(0);
-    Assertions.assertThat(listResultSchema.getNextMarker()).isNotNull();
+    assertThat(paths.size()).isEqualTo(0);
+    assertThat(listResultSchema.getNextMarker()).isNotNull();
   }
 
   @Test
@@ -160,8 +160,8 @@ public class TestBlobListXmlParser {
         + "</EnumerationResults>";
     BlobListResultSchema listResultSchema = getResultSchema(xmlResponse);
     List<BlobListResultEntrySchema> paths = listResultSchema.paths();
-    Assertions.assertThat(paths.size()).isEqualTo(1);
-    Assertions.assertThat(listResultSchema.getNextMarker()).isNull();
+    assertThat(paths.size()).isEqualTo(1);
+    assertThat(listResultSchema.getNextMarker()).isNull();
   }
 
   private static final ThreadLocal<SAXParser> SAX_PARSER_THREAD_LOCAL

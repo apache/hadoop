@@ -48,7 +48,6 @@ using ::testing::Return;
 using ::std::make_pair;
 using ::std::string;
 
-namespace pb = ::google::protobuf;
 namespace pbio = ::google::protobuf::io;
 
 namespace hdfs {

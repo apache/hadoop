@@ -337,6 +337,30 @@
   </property>
 
   <property>
+    <description>To enable YARN Capacity Scheduler UI.</description>
+    <name>yarn.webapp.scheduler-ui.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      The WAR file path for the YARN Capacity Scheduler UI.
+      If not specified, the scheduler UI will be loaded from the classpath.
+    </description>
+    <name>yarn.webapp.scheduler-ui.war-file-path</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Enable read-only mode for YARN Capacity Scheduler UI.
+      When set to true, the UI will not allow configuration changes.
+    </description>
+    <name>yarn.webapp.scheduler-ui.read-only.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>
       Enable services rest api on ResourceManager.
     </description>
@@ -1050,15 +1074,6 @@
 
   <property>
     <description>The setting that controls whether yarn system metrics is
-    published to the Timeline server (version one) or not, by RM.
-    This configuration is now deprecated in favor of
-    yarn.system-metrics-publisher.enabled.</description>
-    <name>yarn.resourcemanager.system-metrics-publisher.enabled</name>
-    <value>false</value>
-  </property>
-
-  <property>
-    <description>The setting that controls whether yarn system metrics is
     published on the Timeline service or not by RM And NM.</description>
     <name>yarn.system-metrics-publisher.enabled</name>
     <value>false</value>
@@ -1756,6 +1771,10 @@
 
   <property>
     <description>Whether YARN CGroups strict memory enforcement is enabled.
+    This only takes effect when the CGroups memory controller is enabled via
+    yarn.nodemanager.resource.memory.enabled. When CGroups memory is disabled
+    (the default), this flag has no effect and container memory limits are
+    enforced (if at all) by the polling-based ContainersMonitor.
     </description>
     <name>yarn.nodemanager.resource.memory.enforced</name>
     <value>true</value>
@@ -2815,6 +2834,15 @@
     <description>The web proxy connection timeout.</description>
     <name>yarn.resourcemanager.proxy.connection.timeout</name>
     <value>60000</value>
+  </property>
+
+  <property>
+    <description>Optional query parameter name that signals the YARN WebAppProxy to redirect
+      the user to the application's tracking URL instead of proxying the request.
+      When the tracking URL contains this flag with the value "true", the proxy
+      performs an HTTP redirect (302) to the tracking URL.</description>
+    <name>yarn.web-proxy.redirect-flag</name>
+    <value/>
   </property>
 
   <!-- Applications' Configuration -->
@@ -4611,6 +4639,17 @@
 
   <property>
     <description>
+      ZK read-retry seconds when using zookeeper-based configuration store.
+      Should the ZK configuration store being formatted while one of the RM
+      is in the INIT state, allow retries using this interval in the hope that the store will be
+      re-populated with some data soon.
+    </description>
+    <name>yarn.scheduler.configuration.zk-store.read-retry-secs</name>
+    <value>3</value>
+  </property>
+
+  <property>
+    <description>
       Provides an option for client to load supported resource types from RM
       instead of depending on local resource-types.xml file.
     </description>
@@ -4648,6 +4687,34 @@
     </description>
     <name>yarn.nodemanager.resource-plugins.gpu.path-to-discovery-executables</name>
     <value></value>
+  </property>
+
+  <property>
+    <description>
+      Sets the maximum duration for executions of the discovery binary defined in
+      yarn.nodemanager.resource-plugins.gpu.path-to-discovery-executables. If
+      the binary takes longer than this amount of time to run, then the process
+      is aborted. Discovery may be attempted again, depending on
+      yarn.nodemanager.resource-plugins.gpu.discovery-max-errors.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.gpu.discovery-timeout</name>
+    <value>10s</value>
+  </property>
+
+  <property>
+    <description>
+      Sets the maximum number of errors allowed from the discovery binary
+      defined in
+      yarn.nodemanager.resource-plugins.gpu.path-to-discovery-executables. If
+      the number of errors exceeds this amount, then discovery is aborted, and
+      the NodeManager will never reattempt discovery again. Errors may be either
+      non-zero exit codes returned from the binary or timeouts as defined by
+      yarn.nodemanager.resource-plugins.gpu.discovery-timeout. Set this to a
+      negative value to disable enforcement of max errors and retry continually
+      until successful.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.gpu.discovery-max-errors</name>
+    <value>10</value>
   </property>
 
   <property>

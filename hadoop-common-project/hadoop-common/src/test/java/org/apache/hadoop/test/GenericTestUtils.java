@@ -64,8 +64,6 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.WriterAppender;
-import org.junit.Assert;
-import org.junit.Assume;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.LoggerFactory;
@@ -75,6 +73,12 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.util.functional.CommonCallableSupplier.submit;
 import static org.apache.hadoop.util.functional.CommonCallableSupplier.waitForCompletion;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test provides some very generic helpers which might be used across the tests
@@ -217,8 +221,9 @@ public abstract class GenericTestUtils {
       prop = DEFAULT_TEST_DATA_DIR;
     }
     File dir = new File(prop).getAbsoluteFile();
-    dir.mkdirs();
-    assertExists(dir);
+    if (dir.mkdirs() && !dir.exists()) {
+      throw new IllegalStateException("Directory " + dir + " not created");
+    }
     return dir;
   }
 
@@ -274,7 +279,7 @@ public abstract class GenericTestUtils {
    * Assert that a given file exists.
    */
   public static void assertExists(File f) {
-    Assert.assertTrue("File " + f + " should exist", f.exists());
+    assertTrue(f.exists(), "File " + f + " should exist");
   }
 
   /**
@@ -293,9 +298,9 @@ public abstract class GenericTestUtils {
     }
     Set<String> expectedSet = new TreeSet<>(
         Arrays.asList(expectedMatches));
-    Assert.assertEquals("Bad files matching " + pattern + " in " + dir,
-        Joiner.on(",").join(expectedSet),
-        Joiner.on(",").join(found));
+    assertEquals(Joiner.on(",").join(expectedSet),
+        Joiner.on(",").join(found),
+        "Bad files matching " + pattern + " in " + dir);
   }
 
   static final String E_NULL_THROWABLE = "Null Throwable";
@@ -325,14 +330,13 @@ public abstract class GenericTestUtils {
   public static void assertExceptionContains(String expectedText,
       Throwable t,
       String message) {
-    Assert.assertNotNull(E_NULL_THROWABLE, t);
+    assertNotNull(t, E_NULL_THROWABLE);
     String msg = t.toString();
     if (msg == null) {
       throw new AssertionError(E_NULL_THROWABLE_STRING, t);
     }
-    if (expectedText != null && !msg.contains(expectedText)) {
-      String prefix = org.apache.commons.lang3.StringUtils.isEmpty(message)
-          ? "" : (message + ": ");
+    if (expectedText != null && !msg.toLowerCase().contains(expectedText.toLowerCase())) {
+      final String prefix = message == null || message.isEmpty() ? "" : message + ": ";
       throw new AssertionError(
           String.format("%s Expected to find '%s' %s: %s",
               prefix, expectedText, E_UNEXPECTED_EXCEPTION,
@@ -692,15 +696,15 @@ public abstract class GenericTestUtils {
   }
 
   public static void assertDoesNotMatch(String output, String pattern) {
-    Assert.assertFalse("Expected output to match /" + pattern + "/" +
-        " but got:\n" + output,
-        Pattern.compile(pattern).matcher(output).find());
+    assertFalse(Pattern.compile(pattern).matcher(output).find(),
+        "Expected output to match /" + pattern + "/" +
+        " but got:\n" + output);
   }
 
   public static void assertMatches(String output, String pattern) {
-    Assert.assertTrue("Expected output to match /" + pattern + "/" +
-        " but got:\n" + output,
-        Pattern.compile(pattern).matcher(output).find());
+    assertTrue(Pattern.compile(pattern).matcher(output).find(),
+        "Expected output to match /" + pattern + "/" +
+        " but got:\n" + output);
   }
 
   public static void assertValueNear(long expected, long actual, long allowedError) {
@@ -709,8 +713,9 @@ public abstract class GenericTestUtils {
 
   public static void assertValueWithinRange(long expectedMin, long expectedMax,
       long actual) {
-    Assert.assertTrue("Expected " + actual + " to be in range (" + expectedMin + ","
-        + expectedMax + ")", expectedMin <= actual && actual <= expectedMax);
+    assertTrue(expectedMin <= actual && actual <= expectedMax,
+        "Expected " + actual + " to be in range (" + expectedMin + ","
+        + expectedMax + ")");
   }
 
   /**
@@ -734,6 +739,28 @@ public abstract class GenericTestUtils {
   }
 
   /**
+   * Count the live threads whose name matches the given pattern.
+   * @param pattern a Pattern object used to match thread names
+   * @return the number of live threads whose name matches the pattern
+   */
+  public static int countThreadsMatching(Pattern pattern) {
+    ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+
+    ThreadInfo[] infos =
+        threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
+    int count = 0;
+    for (ThreadInfo info : infos) {
+      if (info == null) {
+        continue;
+      }
+      if (pattern.matcher(info.getThreadName()).matches()) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
    * Assert that there are no threads running whose name matches the
    * given regular expression.
    * @param regex the regex to match against
@@ -741,7 +768,7 @@ public abstract class GenericTestUtils {
   public static void assertNoThreadsMatching(String regex) {
     Pattern pattern = Pattern.compile(regex);
     if (anyThreadMatching(pattern)) {
-      Assert.fail("Leaked thread matches " + regex);
+      fail("Leaked thread matches " + regex);
     }
   }
 
@@ -774,8 +801,8 @@ public abstract class GenericTestUtils {
    * in the definition of native profile in pom.xml.
    */
   public static void assumeInNativeProfile() {
-    Assume.assumeTrue(
-        Boolean.parseBoolean(System.getProperty("runningWithNative", "false")));
+    assumeTrue(Boolean.parseBoolean(
+        System.getProperty("runningWithNative", "false")));
   }
 
   /**

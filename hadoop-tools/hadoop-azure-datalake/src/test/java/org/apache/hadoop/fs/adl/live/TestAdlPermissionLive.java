@@ -24,12 +24,11 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.adl.common.Parallelized;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.junit.*;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -38,10 +37,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 /**
  * Test ACL permission on file/folder on Adl file system.
  */
-@RunWith(Parallelized.class)
 public class TestAdlPermissionLive {
 
   private static Path testRoot = new Path("/test");
@@ -49,11 +51,11 @@ public class TestAdlPermissionLive {
   private Path path;
   private FileSystem adlStore;
 
-  public TestAdlPermissionLive(FsPermission testPermission) {
-    permission = testPermission;
+  public void initTestAdlPermissionLive(FsPermission pTestPermission) throws Exception {
+    permission = pTestPermission;
+    setUp();
   }
 
-  @Parameterized.Parameters(name = "{0}")
   public static Collection adlCreateNonRecursiveTestData()
       throws UnsupportedEncodingException {
     /*
@@ -71,22 +73,23 @@ public class TestAdlPermissionLive {
     return datas;
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanUp() throws IOException, URISyntaxException {
     if (AdlStorageConfiguration.isContractTestEnabled()) {
-      Assert.assertTrue(AdlStorageConfiguration.createStorageConnector()
+      assertTrue(AdlStorageConfiguration.createStorageConnector()
           .delete(testRoot, true));
     }
   }
 
-  @Before
   public void setUp() throws Exception {
-    Assume.assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
+    assumeTrue(AdlStorageConfiguration.isContractTestEnabled());
     adlStore = AdlStorageConfiguration.createStorageConnector();
   }
 
-  @Test
-  public void testFilePermission() throws IOException {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("adlCreateNonRecursiveTestData")
+  public void testFilePermission(FsPermission pTestPermission) throws Exception {
+    initTestAdlPermissionLive(pTestPermission);
     path = new Path(testRoot, UUID.randomUUID().toString());
     adlStore.getConf()
         .set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "000");
@@ -97,11 +100,13 @@ public class TestAdlPermissionLive {
 
     adlStore.create(path, permission, true, 1024, (short) 1, 1023, null);
     FileStatus status = adlStore.getFileStatus(path);
-    Assert.assertEquals(permission, status.getPermission());
+    assertEquals(permission, status.getPermission());
   }
 
-  @Test
-  public void testFolderPermission() throws IOException {
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("adlCreateNonRecursiveTestData")
+  public void testFolderPermission(FsPermission pTestPermission) throws Exception {
+    initTestAdlPermissionLive(pTestPermission);
     path = new Path(testRoot, UUID.randomUUID().toString());
     adlStore.getConf()
         .set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "000");
@@ -111,6 +116,6 @@ public class TestAdlPermissionLive {
 
     adlStore.mkdirs(path, permission);
     FileStatus status = adlStore.getFileStatus(path);
-    Assert.assertEquals(permission, status.getPermission());
+    assertEquals(permission, status.getPermission());
   }
 }

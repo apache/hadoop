@@ -24,9 +24,9 @@ import java.util.Collection;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.toChar;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CONDITIONAL_CREATE_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Constants.XA_HEADER_PREFIX;
@@ -63,7 +64,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * with the FS_S3A_CREATE_PERFORMANCE option.
  */
 @SuppressWarnings("resource")
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="performance-{0}")
+@MethodSource("params")
 public class ITestCreateFileCost extends AbstractS3ACostTest {
 
   /**
@@ -71,7 +73,6 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
    * options.
    * @return a list of test parameters.
    */
-  @Parameterized.Parameters
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {false},
@@ -201,9 +202,14 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
           () -> buildFile(testFile, false, true,
               GET_FILE_STATUS_ON_FILE));
     } else {
-      // will trigger conditional create and throw RemoteFileChangedException
-      intercept(RemoteFileChangedException.class,
-              () -> buildFile(testFile, false, true, NO_HEAD_OR_LIST));
+      if (getFileSystem().getConf().getBoolean(FS_S3A_CONDITIONAL_CREATE_ENABLED, true)) {
+        // will trigger conditional create and throw RemoteFileChangedException
+        intercept(RemoteFileChangedException.class,
+            () -> buildFile(testFile, false, true, NO_HEAD_OR_LIST));
+      } else {
+        // third party store w/out conditional overwrite support
+        buildFile(testFile, false, true, NO_HEAD_OR_LIST);
+      }
     }
   }
 

@@ -684,9 +684,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       s3ExpressStore = isS3ExpressStore(bucket, endpoint);
 
       // should the delete also purge uploads?
-      // happens if explicitly enabled, or if the store is S3Express storage.
       dirOperationsPurgeUploads = conf.getBoolean(DIRECTORY_OPERATIONS_PURGE_UPLOADS,
-          s3ExpressStore);
+          DIRECTORY_OPERATIONS_PURGE_UPLOADS_DEFAULT);
 
       this.isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
           DEFAULT_MULTIPART_UPLOAD_ENABLED);
@@ -1174,10 +1173,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withTransferManagerExecutor(unboundedThreadPool)
         .withRegion(configuredRegion)
         .withFipsEnabled(fipsEnabled)
+        .withS3ExpressStore(s3ExpressStore)
         .withExpressCreateSession(
             conf.getBoolean(S3EXPRESS_CREATE_SESSION, S3EXPRESS_CREATE_SESSION_DEFAULT))
         .withChecksumValidationEnabled(
             conf.getBoolean(CHECKSUM_VALIDATION, CHECKSUM_VALIDATION_DEFAULT))
+        .withChecksumCalculationEnabled(
+            conf.getBoolean(CHECKSUM_GENERATION, DEFAULT_CHECKSUM_GENERATION))
+        .withMd5HeaderEnabled(conf.getBoolean(REQUEST_MD5_HEADER,
+            DEFAULT_REQUEST_MD5_HEADER))
         .withClientSideEncryptionEnabled(isCSEEnabled)
         .withClientSideEncryptionMaterials(cseMaterials)
         .withAnalyticsAcceleratorEnabled(isAnalyticsAcceleratorEnabled)
@@ -1920,7 +1924,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withCallbacks(createInputStreamCallbacks(auditSpan))
         .withContext(readContext.build())
         .withObjectAttributes(createObjectAttributes(path, fileStatus))
-        .withStreamStatistics(inputStreamStats);
+        .withStreamStatistics(inputStreamStats)
+        .withEncryptionSecrets(getEncryptionSecrets())
+        .withAuditSpan(auditSpan);
+
     return new FSDataInputStream(getStore().readObject(parameters));
   }
 

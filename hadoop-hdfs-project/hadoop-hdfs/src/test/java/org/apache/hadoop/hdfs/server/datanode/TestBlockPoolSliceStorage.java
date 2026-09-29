@@ -18,7 +18,8 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -27,8 +28,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test that BlockPoolSliceStorage can correctly generate trash and
@@ -52,7 +52,7 @@ public class TestBlockPoolSliceStorage {
                               String clusterId) {
       super(namespaceID, bpID, cTime, clusterId);
       addStorageDir(new StorageDirectory(new File("/tmp/dontcare/" + bpID)));
-      assertThat(getStorageDirs().size(), is(1));
+      assertThat(getStorageDirs().size()).isEqualTo(1);
     }
   }
 
@@ -111,7 +111,7 @@ public class TestBlockPoolSliceStorage {
 
     ReplicaInfo info = Mockito.mock(ReplicaInfo.class);
     Mockito.when(info.getBlockURI()).thenReturn(new File(testFilePath).toURI());
-    assertThat(storage.getTrashDirectory(info), is(expectedTrashPath));
+    assertThat(storage.getTrashDirectory(info)).isEqualTo(expectedTrashPath);
   }
 
   /*
@@ -134,12 +134,13 @@ public class TestBlockPoolSliceStorage {
             blockFileSubdir.substring(0, blockFileSubdir.length() - 1);
 
     LOG.info("Generated deleted file path {}", deletedFilePath);
-    assertThat(storage.getRestoreDirectory(new File(deletedFilePath)),
-               is(expectedRestorePath));
+    assertThat(storage.getRestoreDirectory(new File(deletedFilePath)))
+        .isEqualTo(expectedRestorePath);
 
   }
 
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testGetTrashAndRestoreDirectories() {
     storage = makeBlockPoolStorage();
 

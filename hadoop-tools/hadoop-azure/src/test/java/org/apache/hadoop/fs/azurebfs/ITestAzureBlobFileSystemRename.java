@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
 import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
@@ -74,6 +75,7 @@ import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 import static java.net.HttpURLConnection.HTTP_CLIENT_TIMEOUT;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
@@ -108,6 +110,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcom
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test rename operation.
@@ -160,10 +163,9 @@ public class ITestAzureBlobFileSystemRename extends
     Path destDir = path("/testDst");
     assertRenameOutcome(fs, sourceDir, destDir, true);
     FileStatus[] fileStatus = fs.listStatus(destDir);
-    assertNotNull("Null file status", fileStatus);
+    assertNotNull(fileStatus, "Null file status");
     FileStatus status = fileStatus[0];
-    assertEquals("Wrong filename in " + status,
-        filename, status.getPath().getName());
+    assertEquals(filename, status.getPath().getName(), "Wrong filename in " + status);
   }
 
   @Test
@@ -210,7 +212,7 @@ public class ITestAzureBlobFileSystemRename extends
     assertRenameOutcome(fs, source, dest, true);
 
     FileStatus[] files = fs.listStatus(dest);
-    assertEquals("Wrong number of files in listing", 1000, files.length);
+    assertEquals(1000, files.length, "Wrong number of files in listing");
     assertPathDoesNotExist(fs, "rename source dir", source);
   }
 
@@ -260,8 +262,8 @@ public class ITestAzureBlobFileSystemRename extends
 
     // Verify that renaming on a destination with no parent dir wasn't
     // successful.
-    assertFalse("Rename result expected to be false with no Parent dir",
-        fs.rename(sourcePath, destPath));
+    assertFalse(
+       fs.rename(sourcePath, destPath), "Rename result expected to be false with no Parent dir");
 
     // Verify that metadata was in an incomplete state after the rename
     // failure, and we retired the rename once more.
@@ -513,9 +515,7 @@ public class ITestAzureBlobFileSystemRename extends
             Mockito.any(TracingContext.class));
     assertTrue(fs.rename(new Path("hbase/test1/test2/test3"),
         new Path("hbase/test4")));
-    assertEquals("RenamePendingJson should be deleted",
-        1,
-        (int) correctDeletePathCount[0]);
+    assertEquals(1, (int) correctDeletePathCount[0], "RenamePendingJson should be deleted");
   }
 
   /**
@@ -1706,6 +1706,85 @@ public class ITestAzureBlobFileSystemRename extends
   }
 
   /**
+   * Test to simulate a successful copy blob operation followed by a connection reset
+   * on the response, triggering a retry.
+   *
+   * This test verifies that the copy blob operation is retried in the event of a
+   * connection reset during the response phase. The test creates a mock
+   * AzureBlobFileSystem and its associated components to simulate the copy blob
+   * operation and the connection reset. It then verifies that the create
+   * operation is retried once before succeeding.
+   *
+   * @throws Exception if an error occurs during the test execution.
+   */
+  @Test
+  public void testRenameIdempotencyForNonHnsBlob() throws Exception {
+    assumeThat(isAppendBlobEnabled()).as("Not valid for APPEND BLOB").isFalse();
+    assumeHnsDisabled();
+    assumeBlobServiceType();
+    // Create a spy of AzureBlobFileSystem
+    try (AzureBlobFileSystem fs = Mockito.spy(
+        (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration()))) {
+      // Create a spy of AzureBlobFileSystemStore
+      AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+
+      // Create spies for the client handler and blob client
+      AbfsClientHandler clientHandler = Mockito.spy(store.getClientHandler());
+      AbfsBlobClient blobClient = Mockito.spy(clientHandler.getBlobClient());
+      fs.getAbfsStore().setClient(blobClient);
+      fs.getAbfsStore().setClientHandler(clientHandler);
+      // Set up the spies to return the mocked objects
+      Mockito.doReturn(clientHandler).when(store).getClientHandler();
+      Mockito.doReturn(blobClient).when(clientHandler).getBlobClient();
+      Mockito.doReturn(blobClient).when(clientHandler).getIngressClient();
+
+      AtomicInteger copyBlobCount = new AtomicInteger(0);
+      Path sourceDir = path("/testSrc");
+      assertMkdirs(fs, sourceDir);
+      String filename = "file1";
+      Path sourceFilePath = new Path(sourceDir, filename);
+      touch(sourceFilePath);
+      Path destFilePath = new Path(sourceDir, "file2");
+      Mockito.doAnswer(answer -> {
+        // Set up the mock for the create operation
+        AbfsClientTestUtil.setMockAbfsRestOperationForCopyBlobOperation(blobClient,  sourceFilePath, destFilePath,
+            (httpOperation) -> {
+              Mockito.doAnswer(invocation -> {
+                // Call the real processResponse method
+                invocation.callRealMethod();
+
+                int currentCount = copyBlobCount.incrementAndGet();
+                if (currentCount == 1) {
+                  Mockito.when(httpOperation.getStatusCode())
+                      .thenReturn(
+                          HTTP_INTERNAL_ERROR); // Status code 500 for Internal Server Error
+                  Mockito.when(httpOperation.getStorageErrorMessage())
+                      .thenReturn("CONNECTION_RESET"); // Error message
+                  throw new IOException("Connection Reset");
+                }
+                return null;
+              }).when(httpOperation).processResponse(
+                  Mockito.nullable(byte[].class),
+                  Mockito.anyInt(),
+                  Mockito.anyInt()
+              );
+
+              return httpOperation;
+            });
+        return answer.callRealMethod();
+      }).when(blobClient).copyBlob(
+          Mockito.any(Path.class),
+          Mockito.any(Path.class),
+          Mockito.nullable(String.class),
+          Mockito.any(TracingContext.class)
+      );
+      Assertions.assertThat(fs.rename(sourceFilePath, destFilePath))
+          .describedAs("Rename should succeed.")
+          .isTrue();
+    }
+  }
+
+  /**
    * Test to verify that the client transaction ID is included in the response header
    * after renaming a file in Azure Blob Storage.
    *
@@ -2128,7 +2207,7 @@ public class ITestAzureBlobFileSystemRename extends
               Mockito.anyBoolean(), Mockito.nullable(String.class),
               Mockito.nullable(String.class), Mockito.anyString(),
               Mockito.nullable(ContextEncryptionAdapter.class),
-              Mockito.any(TracingContext.class));
+              Mockito.any(TracingContext.class), Mockito.nullable(String.class));
       return createAnswer.callRealMethod();
     };
     RenameAtomicityTestUtils.addCreatePathMock(client,

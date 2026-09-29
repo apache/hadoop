@@ -18,8 +18,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractConcatTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 import java.io.IOException;
 
@@ -29,14 +29,14 @@ import java.io.IOException;
 public class TestRouterHDFSContractConcatSecure
     extends AbstractContractConcatTest {
 
-  @BeforeClass
+  @BeforeAll
   public static void createCluster() throws Exception {
     RouterHDFSContract.createCluster(true);
     // perform a simple operation on the cluster to verify it is up
     RouterHDFSContract.getFileSystem().getDefaultBlockSize(new Path("/"));
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() throws IOException {
     RouterHDFSContract.destroyCluster();
   }

@@ -17,17 +17,17 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for BlockPlacementStatusWithUpgradeDomain class.
@@ -38,7 +38,7 @@ public class TestBlockPlacementStatusWithUpgradeDomain {
   private BlockPlacementStatusDefault bpsd =
       mock(BlockPlacementStatusDefault.class);
 
-  @Before
+  @BeforeEach
   public void setup() {
     upgradeDomains = new HashSet<String>();
     upgradeDomains.add("1");

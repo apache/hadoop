@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.azurebfs;
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 
 /**
@@ -41,12 +43,14 @@ public class ITestAzureBlobFileSystemMainOperation extends FSMainOperationsBaseT
     binding = new ABFSContractTestBinding(false);
   }
 
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     binding.setup();
     fSys = binding.getFileSystem();
   }
 
+  @AfterEach
   @Override
   public void tearDown() throws Exception {
     // Note: Because "tearDown()" is called during the testing,

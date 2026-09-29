@@ -20,8 +20,7 @@ package org.apache.hadoop.fs.impl;
 
 import java.util.EnumSet;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
@@ -31,6 +30,7 @@ import static java.util.EnumSet.noneOf;
 import static org.apache.hadoop.fs.impl.FlagSet.buildFlagSet;
 import static org.apache.hadoop.fs.impl.FlagSet.createFlagSet;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link FlagSet} class.
@@ -68,7 +68,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
    */
   @Test
   public void testEntryEnableDisable() {
-    Assertions.assertThat(flagSet.flags()).isEmpty();
+    assertThat(flagSet.flags()).isEmpty();
     assertDisabled(SimpleEnum.a);
     flagSet.enable(SimpleEnum.a);
     assertEnabled(SimpleEnum.a);
@@ -81,7 +81,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
    */
   @Test
   public void testSetMethod() {
-    Assertions.assertThat(flagSet.flags()).isEmpty();
+    assertThat(flagSet.flags()).isEmpty();
     flagSet.set(SimpleEnum.a, true);
     assertEnabled(SimpleEnum.a);
     flagSet.set(SimpleEnum.a, false);
@@ -136,7 +136,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
    * @param expected expected value
    */
   private void assertStringValue(final String expected) {
-    Assertions.assertThat(flagSet.toString())
+    assertThat(flagSet.toString())
         .isEqualTo(expected);
   }
 
@@ -144,7 +144,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
    * Assert the configuration string form matches that expected.
    */
   public void assertConfigurationStringMatches(final String expected) {
-    Assertions.assertThat(flagSet.toConfigurationString())
+    assertThat(flagSet.toConfigurationString())
         .describedAs("Configuration string of %s", flagSet)
         .isEqualTo(expected);
   }
@@ -224,7 +224,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
    * @param capability capability to probe for
    */
   private void assertHasCapability(final String capability) {
-    Assertions.assertThat(flagSet.hasCapability(capability))
+    assertThat(flagSet.hasCapability(capability))
         .describedAs("Capability of %s on %s", capability, flagSet)
         .isTrue();
   }
@@ -234,7 +234,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
    * @param capability capability to probe for
    */
   private void assertLacksCapability(final String capability) {
-    Assertions.assertThat(flagSet.hasCapability(capability))
+    assertThat(flagSet.hasCapability(capability))
         .describedAs("Capability of %s on %s", capability, flagSet)
         .isFalse();
   }
@@ -248,7 +248,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
     assertFlags(SimpleEnum.a, SimpleEnum.b, SimpleEnum.c);
     assertHasCapability(CAPABILITY_A);
     assertHasCapability(CAPABILITY_B);
-    Assertions.assertThat(flagSet.pathCapabilities())
+    assertThat(flagSet.pathCapabilities())
         .describedAs("path capabilities of %s", flagSet)
         .containsExactlyInAnyOrder(CAPABILITY_A, CAPABILITY_B, CAPABILITY_C);
   }
@@ -259,7 +259,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
         KEYDOT,
         allOf(SimpleEnum.class));
     final FlagSet<SimpleEnum> s2 = roundTrip(s1);
-    Assertions.assertThat(s1.flags()).isEqualTo(s2.flags());
+    assertThat(s1.flags()).isEqualTo(s2.flags());
     assertFlagSetMatches(s2, SimpleEnum.a, SimpleEnum.b, SimpleEnum.c);
   }
 
@@ -268,13 +268,13 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
     final FlagSet<SimpleEnum> s1 = createFlagSet(SimpleEnum.class, KEYDOT,
         noneOf(SimpleEnum.class));
     final FlagSet<SimpleEnum> s2 = roundTrip(s1);
-    Assertions.assertThat(s1.flags())
+    assertThat(s1.flags())
         .isEqualTo(s2.flags());
-    Assertions.assertThat(s2.isEmpty())
+    assertThat(s2.isEmpty())
         .describedAs("empty flagset %s", s2)
         .isTrue();
     assertFlagSetMatches(flagSet);
-    Assertions.assertThat(flagSet.pathCapabilities())
+    assertThat(flagSet.pathCapabilities())
         .describedAs("path capabilities of %s", flagSet)
         .isEmpty();
   }
@@ -298,10 +298,10 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
     final FlagSet<SimpleEnum> s2 = createFlagSet(SimpleEnum.class, KEYDOT, SimpleEnum.a);
     // make one of them immutable
     s2.makeImmutable();
-    Assertions.assertThat(s1)
+    assertThat(s1)
         .describedAs("s1 == s2")
         .isEqualTo(s2);
-    Assertions.assertThat(s1.hashCode())
+    assertThat(s1.hashCode())
         .describedAs("hashcode of s1 == hashcode of s2")
         .isEqualTo(s2.hashCode());
   }
@@ -312,7 +312,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
         createFlagSet(SimpleEnum.class, KEYDOT, noneOf(SimpleEnum.class));
     final FlagSet<SimpleEnum> s2 =
         createFlagSet(SimpleEnum.class, KEYDOT, SimpleEnum.a, SimpleEnum.b);
-    Assertions.assertThat(s1)
+    assertThat(s1)
         .describedAs("s1 == s2")
         .isNotEqualTo(s2);
   }
@@ -323,7 +323,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
         createFlagSet(SimpleEnum.class, KEYDOT, noneOf(SimpleEnum.class));
     final FlagSet<?> s2 =
         createFlagSet(OtherEnum.class, KEYDOT, OtherEnum.a);
-    Assertions.assertThat(s1)
+    assertThat(s1)
         .describedAs("s1 == s2")
         .isNotEqualTo(s2);
   }
@@ -338,13 +338,13 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
             createFlagSet(SimpleEnum.class, KEYDOT, SimpleEnum.a, SimpleEnum.b);
     s1.makeImmutable();
     FlagSet<SimpleEnum> s2 = s1.copy();
-    Assertions.assertThat(s2)
+    assertThat(s2)
         .describedAs("copy of %s", s1)
         .isNotSameAs(s1);
-    Assertions.assertThat(!s2.isImmutable())
+    assertThat(!s2.isImmutable())
         .describedAs("set %s is immutable", s2)
         .isTrue();
-    Assertions.assertThat(s1)
+    assertThat(s1)
         .describedAs("s1 == s2")
         .isEqualTo(s2);
   }
@@ -377,7 +377,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
    * @param flag flag to check
    */
   private void assertEnabled(final SimpleEnum flag) {
-    Assertions.assertThat(flagSet.enabled(flag))
+    assertThat(flagSet.enabled(flag))
         .describedAs("status of flag %s in %s", flag, flagSet)
         .isTrue();
   }
@@ -387,7 +387,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
    * @param flag flag to check
    */
   private void assertDisabled(final SimpleEnum flag) {
-    Assertions.assertThat(flagSet.enabled(flag))
+    assertThat(flagSet.enabled(flag))
         .describedAs("status of flag %s in %s", flag, flagSet)
         .isFalse();
   }
@@ -409,7 +409,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
   private void assertFlagSetMatches(
       FlagSet<SimpleEnum> fs,
       SimpleEnum... flags) {
-    Assertions.assertThat(fs.flags())
+    assertThat(fs.flags())
         .describedAs("path capabilities of %s", fs)
         .containsExactly(flags);
   }
@@ -424,7 +424,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
   private void assertPathCapabilitiesMatch(
       FlagSet<SimpleEnum> fs,
       String... capabilities) {
-    Assertions.assertThat(fs.pathCapabilities())
+    assertThat(fs.pathCapabilities())
         .describedAs("path capabilities of %s", fs)
         .containsExactlyInAnyOrder(capabilities);
   }

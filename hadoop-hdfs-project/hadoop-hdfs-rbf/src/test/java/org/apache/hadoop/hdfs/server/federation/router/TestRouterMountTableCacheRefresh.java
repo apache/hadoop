@@ -117,6 +117,11 @@ public class TestRouterMountTableCacheRefresh {
       }
     } catch (IOException e) {
       // do nothing
+    } finally {
+      cluster = null;
+      routerContext = null;
+      mountTableManager = null;
+      curatorTestingServer = null;
     }
   }
 

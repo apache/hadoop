@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.webproxy;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -57,9 +57,10 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,7 +85,7 @@ public class TestWebAppProxyServletFed {
   /**
    * Simple http server. Server should send answer with status 200
    */
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     mockServer = new Server(0);
     ((QueuedThreadPool) mockServer.getThreadPool()).setMaxThreads(20);
@@ -102,7 +103,7 @@ public class TestWebAppProxyServletFed {
     LOG.info("Running embedded servlet container at: http://localhost:" + mockServerPort);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (mockServer != null) {
       mockServer.stop();
@@ -139,7 +140,8 @@ public class TestWebAppProxyServletFed {
     conn.disconnect();
   }
 
-  @Test(timeout=5000)
+  @Test
+  @Timeout(value = 5)
   public void testWebAppProxyServletFed() throws Exception {
 
     Configuration conf = new Configuration();

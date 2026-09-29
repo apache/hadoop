@@ -24,7 +24,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.invariants.MetricsInvariantChecker;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.Assume;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 
@@ -35,6 +34,8 @@ import java.util.List;
 import java.util.UUID;
 
 import javax.script.ScriptEngineManager;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * This is a base class to ease the implementation of SLS-based tests.
@@ -57,8 +58,8 @@ public abstract class BaseSLSRunnerTest {
 
   @BeforeAll
   public static void checkForJavaScript() {
-    Assume.assumeNotNull("JavaScript engine not available (JEP 372)",
-        new ScriptEngineManager().getEngineByName("JavaScript"));
+    assumeTrue(new ScriptEngineManager().getEngineByName("JavaScript") != null,
+        "JavaScript engine not available (JEP 372)");
   }
 
   @BeforeEach

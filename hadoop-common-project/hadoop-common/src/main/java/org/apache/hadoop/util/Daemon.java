@@ -29,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class Daemon extends Thread {
 
   {
-    setDaemon(true);                              // always a daemon
+    setDaemon(true); // always a daemon
   }
 
   /**
@@ -47,6 +47,7 @@ public class Daemon extends Thread {
   }
 
   Runnable runnable = null;
+
   /** Construct a daemon thread. */
   public Daemon() {
     super();
@@ -54,23 +55,25 @@ public class Daemon extends Thread {
 
   /**
    * Construct a daemon thread.
+   *
    * @param runnable runnable.
    */
   public Daemon(Runnable runnable) {
     super(runnable);
     this.runnable = runnable;
-    this.setName(((Object)runnable).toString());
+    this.setName(((Object) runnable).toString());
   }
 
   /**
    * Construct a daemon thread to be part of a specified thread group.
-   * @param group thread group.
+   *
+   * @param group    thread group.
    * @param runnable runnable.
    */
   public Daemon(ThreadGroup group, Runnable runnable) {
     super(group, runnable);
     this.runnable = runnable;
-    this.setName(((Object)runnable).toString());
+    this.setName(((Object) runnable).toString());
   }
 
   public Runnable getRunnable() {

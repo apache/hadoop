@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 add_definitions(-DLIBHDFS_DLL_EXPORT)
 

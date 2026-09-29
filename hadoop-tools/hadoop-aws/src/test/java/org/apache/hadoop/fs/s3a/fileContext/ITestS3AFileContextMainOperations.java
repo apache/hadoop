@@ -26,12 +26,14 @@ import org.apache.hadoop.fs.FileContextMainOperationsBaseTest;
 import org.apache.hadoop.fs.FileContextTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 
 /**
  * S3A implementation of FileContextMainOperationsBaseTest.
  */
+@IntegrationTest
 public class ITestS3AFileContextMainOperations
     extends FileContextMainOperationsBaseTest {
 

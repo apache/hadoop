@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.shell;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
@@ -34,17 +35,16 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.assertj.core.api.Assertions;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
 
 /**
  * This class tests the logic for displaying the binary formats supported
  * by the Text command.
  */
-public class TestTextCommand {
+public class TestTextCommand extends AbstractHadoopTestBase {
   private static final File TEST_ROOT_DIR =
       GenericTestUtils.getTestDir("testText");
   private static final String AVRO_FILENAME =
@@ -66,9 +66,6 @@ public class TestTextCommand {
   private static final String SEQUENCE_FILE_EXPECTED_OUTPUT =
       "Key1\tValue1\nKey2\tValue2\n";
 
-  @Rule
-  public final Timeout testTimeout = new Timeout(30000);
-
   /**
    * Tests whether binary Avro data files are displayed correctly.
    */
@@ -76,7 +73,7 @@ public class TestTextCommand {
   public void testDisplayForAvroFiles() throws Exception {
     String output = readUsingTextCommand(AVRO_FILENAME,
                                          generateWeatherAvroBinaryData());
-    Assertions.assertThat(output).describedAs("output").isEqualTo(AVRO_EXPECTED_OUTPUT);
+    assertThat(output).describedAs("output").isEqualTo(AVRO_EXPECTED_OUTPUT);
   }
 
   @Test
@@ -86,14 +83,14 @@ public class TestTextCommand {
     createFile(AVRO_FILENAME, generateWeatherAvroBinaryData());
     URI uri = new URI(AVRO_FILENAME);
     String output = readUsingTextCommand(uri, conf);
-    Assertions.assertThat(output).describedAs("output").isEqualTo(AVRO_EXPECTED_OUTPUT);
+    assertThat(output).describedAs("output").isEqualTo(AVRO_EXPECTED_OUTPUT);
   }
 
   @Test
   public void testEmptyAvroFile() throws Exception {
     String output = readUsingTextCommand(AVRO_FILENAME,
                                          generateEmptyAvroBinaryData());
-    Assertions.assertThat(output).describedAs("output").isEmpty();
+    assertThat(output).describedAs("output").isEmpty();
   }
 
   @Test
@@ -138,7 +135,7 @@ public class TestTextCommand {
     URI uri = new URI(AVRO_FILENAME);
     Configuration conf = new Configuration();
     try (InputStream is = getInputStream(uri, conf)) {
-      Assertions.assertThat(is.read(new byte[10], 0, 0)).describedAs("bytes read").isEqualTo(0);
+      assertThat(is.read(new byte[10], 0, 0)).describedAs("bytes read").isEqualTo(0);
     }
   }
 
@@ -149,8 +146,8 @@ public class TestTextCommand {
     Configuration conf = new Configuration();
     try (InputStream is = getInputStream(uri, conf)) {
       inputStreamToString(is);
-      Assertions.assertThat(is.read()).describedAs("single byte EOF").isEqualTo(-1);
-      Assertions.assertThat(is.read(new byte[10], 0, 10)).describedAs("multi byte EOF")
+      assertThat(is.read()).describedAs("single byte EOF").isEqualTo(-1);
+      assertThat(is.read(new byte[10], 0, 10)).describedAs("multi byte EOF")
               .isEqualTo(-1);
     }
   }
@@ -164,7 +161,7 @@ public class TestTextCommand {
         InputStream is2 = getInputStream(uri, conf)) {
       String multiByteReads = inputStreamToString(is1);
       String singleByteReads = inputStreamSingleByteReadsToString(is2);
-      Assertions.assertThat(multiByteReads)
+      assertThat(multiByteReads)
           .describedAs("same bytes read from multi and single byte reads")
           .isEqualTo(singleByteReads);
     }
@@ -177,7 +174,7 @@ public class TestTextCommand {
   public void testEmptyTextFile() throws Exception {
     byte[] emptyContents = {};
     String output = readUsingTextCommand(TEXT_FILENAME, emptyContents);
-    Assertions.assertThat(output).describedAs("output").isEmpty();
+    assertThat(output).describedAs("output").isEmpty();
   }
 
   /**
@@ -188,7 +185,7 @@ public class TestTextCommand {
     byte[] oneByteContents = {'x'};
     String output = readUsingTextCommand(TEXT_FILENAME, oneByteContents);
     String expected = new String(oneByteContents, StandardCharsets.UTF_8);
-    Assertions.assertThat(output).describedAs("output").isEqualTo(expected);
+    assertThat(output).describedAs("output").isEqualTo(expected);
   }
 
   /**
@@ -199,26 +196,26 @@ public class TestTextCommand {
     byte[] twoByteContents = {'x', 'y'};
     String output = readUsingTextCommand(TEXT_FILENAME, twoByteContents);
     String expected = new String(twoByteContents, StandardCharsets.UTF_8);
-    Assertions.assertThat(output).describedAs("output").isEqualTo(expected);
+    assertThat(output).describedAs("output").isEqualTo(expected);
   }
 
   @Test
   public void testDisplayForNonWritableSequenceFile() throws Exception {
     Configuration conf = new Configuration();
-    createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+    createTextSequenceFile(SEQUENCE_FILENAME, conf);
     URI uri = new URI(SEQUENCE_FILENAME);
     String output = readUsingTextCommand(uri, conf);
-    Assertions.assertThat(output).describedAs("output").isEqualTo(SEQUENCE_FILE_EXPECTED_OUTPUT);
+    assertThat(output).describedAs("output").isEqualTo(SEQUENCE_FILE_EXPECTED_OUTPUT);
   }
 
   @Test
   public void testDisplayForSequenceFileSmallMultiByteReads() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(IO_FILE_BUFFER_SIZE_KEY, 2);
-    createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+    createTextSequenceFile(SEQUENCE_FILENAME, conf);
     URI uri = new URI(SEQUENCE_FILENAME);
     String output = readUsingTextCommand(uri, conf);
-    Assertions.assertThat(output).describedAs("output").isEqualTo(SEQUENCE_FILE_EXPECTED_OUTPUT);
+    assertThat(output).describedAs("output").isEqualTo(SEQUENCE_FILE_EXPECTED_OUTPUT);
   }
 
   @Test
@@ -227,14 +224,14 @@ public class TestTextCommand {
     createEmptySequenceFile(SEQUENCE_FILENAME, conf);
     URI uri = new URI(SEQUENCE_FILENAME);
     String output = readUsingTextCommand(uri, conf);
-    Assertions.assertThat(output).describedAs("output").isEmpty();
+    assertThat(output).describedAs("output").isEmpty();
   }
 
   @Test
   public void testSequenceFileInputStreamNullBuffer() throws Exception {
     assertThrows(NullPointerException.class, () -> {
       Configuration conf = new Configuration();
-      createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+      createTextSequenceFile(SEQUENCE_FILENAME, conf);
       URI uri = new URI(SEQUENCE_FILENAME);
       try (InputStream is = getInputStream(uri, conf)) {
         is.read(null, 0, 10);
@@ -246,7 +243,7 @@ public class TestTextCommand {
   public void testSequenceFileInputStreamNegativePosition() throws Exception {
     assertThrows(IndexOutOfBoundsException.class, () -> {
       Configuration conf = new Configuration();
-      createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+      createTextSequenceFile(SEQUENCE_FILENAME, conf);
       URI uri = new URI(SEQUENCE_FILENAME);
       try (InputStream is = getInputStream(uri, conf)) {
         is.read(new byte[10], -1, 10);
@@ -258,7 +255,7 @@ public class TestTextCommand {
   public void testSequenceFileInputStreamTooLong() throws Exception {
     assertThrows(IndexOutOfBoundsException.class, () -> {
       Configuration conf = new Configuration();
-      createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+      createTextSequenceFile(SEQUENCE_FILENAME, conf);
       URI uri = new URI(SEQUENCE_FILENAME);
       try (InputStream is = getInputStream(uri, conf)) {
         is.read(new byte[10], 0, 11);
@@ -269,22 +266,22 @@ public class TestTextCommand {
   @Test
   public void testSequenceFileInputStreamZeroLengthRead() throws Exception {
     Configuration conf = new Configuration();
-    createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+    createTextSequenceFile(SEQUENCE_FILENAME, conf);
     URI uri = new URI(SEQUENCE_FILENAME);
     try (InputStream is = getInputStream(uri, conf)) {
-      Assertions.assertThat(is.read(new byte[10], 0, 0)).describedAs("bytes read").isEqualTo(0);
+      assertThat(is.read(new byte[10], 0, 0)).describedAs("bytes read").isEqualTo(0);
     }
   }
 
   @Test
   public void testSequenceFileInputStreamConsistentEOF() throws Exception {
     Configuration conf = new Configuration();
-    createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+    createTextSequenceFile(SEQUENCE_FILENAME, conf);
     URI uri = new URI(SEQUENCE_FILENAME);
     try (InputStream is = getInputStream(uri, conf)) {
       inputStreamToString(is);
-      Assertions.assertThat(is.read()).describedAs("single byte EOF").isEqualTo(-1);
-      Assertions.assertThat(is.read(new byte[10], 0, 10)).describedAs("multi byte EOF")
+      assertThat(is.read()).describedAs("single byte EOF").isEqualTo(-1);
+      assertThat(is.read(new byte[10], 0, 10)).describedAs("multi byte EOF")
               .isEqualTo(-1);
     }
   }
@@ -292,13 +289,13 @@ public class TestTextCommand {
   @Test
   public void testSequenceFileInputStreamSingleAndMultiByteReads() throws Exception {
     Configuration conf = new Configuration();
-    createNonWritableSequenceFile(SEQUENCE_FILENAME, conf);
+    createTextSequenceFile(SEQUENCE_FILENAME, conf);
     URI uri = new URI(SEQUENCE_FILENAME);
     try (InputStream is1 = getInputStream(uri, conf);
         InputStream is2 = getInputStream(uri, conf)) {
       String multiByteReads = inputStreamToString(is1);
       String singleByteReads = inputStreamSingleByteReadsToString(is2);
-      Assertions.assertThat(multiByteReads)
+      assertThat(multiByteReads)
           .describedAs("same bytes read from multi and single byte reads")
           .isEqualTo(singleByteReads);
     }
@@ -516,22 +513,20 @@ public class TestTextCommand {
 
   private static void createEmptySequenceFile(String fileName, Configuration conf)
       throws IOException {
-    conf.set("io.serializations", "org.apache.hadoop.io.serializer.JavaSerialization");
     Path path = new Path(fileName);
     SequenceFile.Writer writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(path),
-        SequenceFile.Writer.keyClass(String.class), SequenceFile.Writer.valueClass(String.class));
+        SequenceFile.Writer.keyClass(Text.class), SequenceFile.Writer.valueClass(Text.class));
     writer.close();
   }
 
-  private static void createNonWritableSequenceFile(String fileName, Configuration conf)
+  private static void createTextSequenceFile(String fileName, Configuration conf)
       throws IOException {
-    conf.set("io.serializations", "org.apache.hadoop.io.serializer.JavaSerialization");
     Path path = new Path(fileName);
     try (SequenceFile.Writer writer = SequenceFile.createWriter(conf,
-        SequenceFile.Writer.file(path), SequenceFile.Writer.keyClass(String.class),
-        SequenceFile.Writer.valueClass(String.class))) {
-      writer.append("Key1", "Value1");
-      writer.append("Key2", "Value2");
+        SequenceFile.Writer.file(path), SequenceFile.Writer.keyClass(Text.class),
+        SequenceFile.Writer.valueClass(Text.class))) {
+      writer.append(new Text("Key1"), new Text("Value1"));
+      writer.append(new Text("Key2"), new Text("Value2"));
     }
   }
 

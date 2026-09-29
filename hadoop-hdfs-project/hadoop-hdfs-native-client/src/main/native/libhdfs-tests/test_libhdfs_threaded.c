@@ -144,6 +144,7 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
                                 const struct tlhPaths *paths)
 {
     char tmp[4096];
+    char renamedFile2[PATH_MAX];
     hdfsFile file;
     int ret, expected, numEntries;
     hdfsFileInfo *fileInfo;
@@ -285,6 +286,17 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     //Non-recursive delete fails
     EXPECT_NONZERO(hdfsDelete(fs, paths->prefix, 0));
     EXPECT_ZERO(hdfsCopy(fs, paths->file1, fs, paths->file2));
+
+    EXPECT_INT_LT(snprintf(renamedFile2, sizeof(renamedFile2), "%s/file2_renamed",
+            paths->prefix), PATH_MAX);
+    EXPECT_ZERO(hdfsRename(fs, paths->file2, renamedFile2));
+    EXPECT_NONZERO(hdfsExists(fs, paths->file2));
+    EXPECT_ZERO(hdfsExists(fs, renamedFile2));
+    EXPECT_NONZERO(hdfsRename(fs, paths->file1, renamedFile2));
+    EXPECT_ZERO(hdfsExists(fs, paths->file1));
+    EXPECT_ZERO(hdfsExists(fs, renamedFile2));
+    EXPECT_ZERO(hdfsRename(fs, renamedFile2, paths->file2));
+    EXPECT_ZERO(hdfsExists(fs, paths->file2));
 
     EXPECT_ZERO(hdfsChown(fs, paths->file2, NULL, NULL));
     EXPECT_ZERO(hdfsChown(fs, paths->file2, NULL, "doop"));

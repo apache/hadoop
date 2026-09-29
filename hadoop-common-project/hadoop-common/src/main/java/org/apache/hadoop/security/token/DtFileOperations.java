@@ -180,11 +180,15 @@ public final class DtFileOperations {
         Credentials.readTokenStorageFile(tokenFile, conf) : new Credentials();
     ServiceLoader<DtFetcher> loader = ServiceLoader.load(DtFetcher.class);
     Iterator<DtFetcher> iterator = loader.iterator();
-    while (iterator.hasNext()) {
+    // both "hasNext()" and "next()" calls might trigger implementations loading.
+    while (true) {
       DtFetcher fetcher;
       try {
+        if (!iterator.hasNext()) {
+          break;
+        }
         fetcher = iterator.next();
-      } catch (ServiceConfigurationError e) {
+      } catch (ServiceConfigurationError | LinkageError e) {
         // failure to load a token implementation
         // log at debug and continue.
         LOG.debug("Failed to load token fetcher implementation", e);

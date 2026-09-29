@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.5.0-SNAPSHOT</version>
+    <version>3.6.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-applications</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN Applications</name>
   <packaging>pom</packaging>
 
@@ -41,21 +41,4 @@
     <module>hadoop-yarn-applications-mawo</module>
   </modules>
 
- <profiles>
-  <profile>
-    <id>clover</id>
-    <activation>
-      <activeByDefault>false</activeByDefault>
-      <property>
-        <name>clover</name>
-      </property>
-    </activation>
-    <dependencies>
-      <dependency>
-        <groupId>com.cenqua.clover</groupId>
-        <artifactId>clover</artifactId>
-      </dependency>
-    </dependencies>
-  </profile>
-</profiles>
 </project>

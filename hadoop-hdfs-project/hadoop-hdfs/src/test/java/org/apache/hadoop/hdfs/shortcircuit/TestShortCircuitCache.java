@@ -459,67 +459,70 @@ public class TestShortCircuitCache {
     Configuration conf = createShortCircuitConf("testAllocShm", sockDir);
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    cluster.waitActive();
-    DistributedFileSystem fs = cluster.getFileSystem();
-    final ShortCircuitCache cache =
-        fs.getClient().getClientContext().getShortCircuitCache(0);
-    cache.getDfsClientShmManager().visit(new Visitor() {
-      @Override
-      public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
-          throws IOException {
-        // The ClientShmManager starts off empty
-        assertEquals(0,  info.size());
-      }
-    });
-    DomainPeer peer = getDomainPeerToDn(conf);
-    MutableBoolean usedPeer = new MutableBoolean(false);
-    ExtendedBlockId blockId = new ExtendedBlockId(123, "xyz");
-    final DatanodeInfo datanode = new DatanodeInfoBuilder()
-        .setNodeID(cluster.getDataNodes().get(0).getDatanodeId())
-        .build();
-    // Allocating the first shm slot requires using up a peer.
-    Slot slot = cache.allocShmSlot(datanode, peer, usedPeer,
-                    blockId, "testAllocShm_client");
-    assertNotNull(slot);
-    assertTrue(usedPeer.booleanValue());
-    cache.getDfsClientShmManager().visit(new Visitor() {
-      @Override
-      public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
-          throws IOException {
-        // The ClientShmManager starts off empty
-        assertEquals(1,  info.size());
-        PerDatanodeVisitorInfo vinfo = info.get(datanode);
-        assertFalse(vinfo.disabled);
-        assertEquals(0, vinfo.full.size());
-        assertEquals(1, vinfo.notFull.size());
-      }
-    });
-    cache.scheduleSlotReleaser(slot);
-    // Wait for the slot to be released, and the shared memory area to be
-    // closed.  Since we didn't register this shared memory segment on the
-    // server, it will also be a test of how well the server deals with
-    // bogus client behavior.
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        final MutableBoolean done = new MutableBoolean(false);
-        try {
-          cache.getDfsClientShmManager().visit(new Visitor() {
-            @Override
-            public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
-                throws IOException {
-              done.setValue(info.get(datanode).full.isEmpty() &&
-                  info.get(datanode).notFull.isEmpty());
-            }
-          });
-        } catch (IOException e) {
-          LOG.error("error running visitor", e);
+    try {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      final ShortCircuitCache cache =
+          fs.getClient().getClientContext().getShortCircuitCache(0);
+      cache.getDfsClientShmManager().visit(new Visitor() {
+        @Override
+        public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
+            throws IOException {
+          // The ClientShmManager starts off empty
+          assertEquals(0,  info.size());
         }
-        return done.booleanValue();
-      }
-    }, 10, 60000);
-    cluster.shutdown();
-    sockDir.close();
+      });
+      DomainPeer peer = getDomainPeerToDn(conf);
+      MutableBoolean usedPeer = new MutableBoolean(false);
+      ExtendedBlockId blockId = new ExtendedBlockId(123, "xyz");
+      final DatanodeInfo datanode = new DatanodeInfoBuilder()
+          .setNodeID(cluster.getDataNodes().get(0).getDatanodeId())
+          .build();
+      // Allocating the first shm slot requires using up a peer.
+      Slot slot = cache.allocShmSlot(datanode, peer, usedPeer,
+                      blockId, "testAllocShm_client");
+      assertNotNull(slot);
+      assertTrue(usedPeer.booleanValue());
+      cache.getDfsClientShmManager().visit(new Visitor() {
+        @Override
+        public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
+            throws IOException {
+          // The ClientShmManager starts off empty
+          assertEquals(1,  info.size());
+          PerDatanodeVisitorInfo vinfo = info.get(datanode);
+          assertFalse(vinfo.disabled);
+          assertEquals(0, vinfo.full.size());
+          assertEquals(1, vinfo.notFull.size());
+        }
+      });
+      cache.scheduleSlotReleaser(slot);
+      // Wait for the slot to be released, and the shared memory area to be
+      // closed.  Since we didn't register this shared memory segment on the
+      // server, it will also be a test of how well the server deals with
+      // bogus client behavior.
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          final MutableBoolean done = new MutableBoolean(false);
+          try {
+            cache.getDfsClientShmManager().visit(new Visitor() {
+              @Override
+              public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
+                  throws IOException {
+                done.setValue(info.get(datanode).full.isEmpty() &&
+                    info.get(datanode).notFull.isEmpty());
+              }
+            });
+          } catch (IOException e) {
+            LOG.error("error running visitor", e);
+          }
+          return done.booleanValue();
+        }
+      }, 10, 60000);
+    } finally {
+      cluster.shutdown();
+      sockDir.close();
+    }
   }
 
   @Test
@@ -530,51 +533,54 @@ public class TestShortCircuitCache {
     Configuration conf = createShortCircuitConf("testShmBasedStaleness", sockDir);
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    cluster.waitActive();
-    DistributedFileSystem fs = cluster.getFileSystem();
-    final ShortCircuitCache cache =
-        fs.getClient().getClientContext().getShortCircuitCache(0);
-    String TEST_FILE = "/test_file";
-    final int TEST_FILE_LEN = 8193;
-    final int SEED = 0xFADED;
-    DFSTestUtil.createFile(fs, new Path(TEST_FILE), TEST_FILE_LEN,
-        (short)1, SEED);
-    FSDataInputStream fis = fs.open(new Path(TEST_FILE));
-    int first = fis.read();
-    final ExtendedBlock block =
-        DFSTestUtil.getFirstBlock(fs, new Path(TEST_FILE));
-    assertTrue(first != -1);
-    cache.accept(new CacheVisitor() {
-      @Override
-      public void visit(int numOutstandingMmaps,
-          Map<ExtendedBlockId, ShortCircuitReplica> replicas,
-          Map<ExtendedBlockId, InvalidToken> failedLoads,
-          LinkedMap evictable,
-          LinkedMap evictableMmapped) {
-        ShortCircuitReplica replica = replicas.get(
-            ExtendedBlockId.fromExtendedBlock(block));
-        assertNotNull(replica);
-        assertTrue(replica.getSlot().isValid());
-      }
-    });
-    // Stop the Namenode.  This will close the socket keeping the client's
-    // shared memory segment alive, and make it stale.
-    cluster.getDataNodes().get(0).shutdown();
-    cache.accept(new CacheVisitor() {
-      @Override
-      public void visit(int numOutstandingMmaps,
-          Map<ExtendedBlockId, ShortCircuitReplica> replicas,
-          Map<ExtendedBlockId, InvalidToken> failedLoads,
-          LinkedMap evictable,
-          LinkedMap evictableMmapped) {
-        ShortCircuitReplica replica = replicas.get(
-            ExtendedBlockId.fromExtendedBlock(block));
-        assertNotNull(replica);
-        assertFalse(replica.getSlot().isValid());
-      }
-    });
-    cluster.shutdown();
-    sockDir.close();
+    try {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      final ShortCircuitCache cache =
+          fs.getClient().getClientContext().getShortCircuitCache(0);
+      String TEST_FILE = "/test_file";
+      final int TEST_FILE_LEN = 8193;
+      final int SEED = 0xFADED;
+      DFSTestUtil.createFile(fs, new Path(TEST_FILE), TEST_FILE_LEN,
+          (short)1, SEED);
+      FSDataInputStream fis = fs.open(new Path(TEST_FILE));
+      int first = fis.read();
+      final ExtendedBlock block =
+          DFSTestUtil.getFirstBlock(fs, new Path(TEST_FILE));
+      assertTrue(first != -1);
+      cache.accept(new CacheVisitor() {
+        @Override
+        public void visit(int numOutstandingMmaps,
+            Map<ExtendedBlockId, ShortCircuitReplica> replicas,
+            Map<ExtendedBlockId, InvalidToken> failedLoads,
+            LinkedMap evictable,
+            LinkedMap evictableMmapped) {
+          ShortCircuitReplica replica = replicas.get(
+              ExtendedBlockId.fromExtendedBlock(block));
+          assertNotNull(replica);
+          assertTrue(replica.getSlot().isValid());
+        }
+      });
+      // Stop the Namenode.  This will close the socket keeping the client's
+      // shared memory segment alive, and make it stale.
+      cluster.getDataNodes().get(0).shutdown();
+      cache.accept(new CacheVisitor() {
+        @Override
+        public void visit(int numOutstandingMmaps,
+            Map<ExtendedBlockId, ShortCircuitReplica> replicas,
+            Map<ExtendedBlockId, InvalidToken> failedLoads,
+            LinkedMap evictable,
+            LinkedMap evictableMmapped) {
+          ShortCircuitReplica replica = replicas.get(
+              ExtendedBlockId.fromExtendedBlock(block));
+          assertNotNull(replica);
+          assertFalse(replica.getSlot().isValid());
+        }
+      });
+    } finally {
+      cluster.shutdown();
+      sockDir.close();
+    }
   }
 
   /**
@@ -595,82 +601,85 @@ public class TestShortCircuitCache {
         1000000000L);
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    cluster.waitActive();
-    DistributedFileSystem fs = cluster.getFileSystem();
-    final ShortCircuitCache cache =
-        fs.getClient().getClientContext().getShortCircuitCache(0);
-    cache.getDfsClientShmManager().visit(new Visitor() {
-      @Override
-      public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
-          throws IOException {
-        // The ClientShmManager starts off empty.
-        assertEquals(0,  info.size());
-      }
-    });
-    final Path TEST_PATH = new Path("/test_file");
-    final int TEST_FILE_LEN = 8193;
-    final int SEED = 0xFADE0;
-    DFSTestUtil.createFile(fs, TEST_PATH, TEST_FILE_LEN,
-        (short)1, SEED);
-    byte contents[] = DFSTestUtil.readFileBuffer(fs, TEST_PATH);
-    byte expected[] = DFSTestUtil.
-        calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
-    assertTrue(Arrays.equals(contents, expected));
-    // Loading this file brought the ShortCircuitReplica into our local
-    // replica cache.
-    final DatanodeInfo datanode = new DatanodeInfoBuilder()
-        .setNodeID(cluster.getDataNodes().get(0).getDatanodeId())
-        .build();
-    cache.getDfsClientShmManager().visit(new Visitor() {
-      @Override
-      public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
-          throws IOException {
-        assertTrue(info.get(datanode).full.isEmpty());
-        assertFalse(info.get(datanode).disabled);
-        assertEquals(1, info.get(datanode).notFull.values().size());
-        DfsClientShm shm =
-            info.get(datanode).notFull.values().iterator().next();
-        assertFalse(shm.isDisconnected());
-      }
-    });
-    // Remove the file whose blocks we just read.
-    fs.delete(TEST_PATH, false);
+    try {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      final ShortCircuitCache cache =
+          fs.getClient().getClientContext().getShortCircuitCache(0);
+      cache.getDfsClientShmManager().visit(new Visitor() {
+        @Override
+        public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
+            throws IOException {
+          // The ClientShmManager starts off empty.
+          assertEquals(0,  info.size());
+        }
+      });
+      final Path TEST_PATH = new Path("/test_file");
+      final int TEST_FILE_LEN = 8193;
+      final int SEED = 0xFADE0;
+      DFSTestUtil.createFile(fs, TEST_PATH, TEST_FILE_LEN,
+          (short)1, SEED);
+      byte contents[] = DFSTestUtil.readFileBuffer(fs, TEST_PATH);
+      byte expected[] = DFSTestUtil.
+          calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
+      assertTrue(Arrays.equals(contents, expected));
+      // Loading this file brought the ShortCircuitReplica into our local
+      // replica cache.
+      final DatanodeInfo datanode = new DatanodeInfoBuilder()
+          .setNodeID(cluster.getDataNodes().get(0).getDatanodeId())
+          .build();
+      cache.getDfsClientShmManager().visit(new Visitor() {
+        @Override
+        public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
+            throws IOException {
+          assertTrue(info.get(datanode).full.isEmpty());
+          assertFalse(info.get(datanode).disabled);
+          assertEquals(1, info.get(datanode).notFull.values().size());
+          DfsClientShm shm =
+              info.get(datanode).notFull.values().iterator().next();
+          assertFalse(shm.isDisconnected());
+        }
+      });
+      // Remove the file whose blocks we just read.
+      fs.delete(TEST_PATH, false);
 
-    // Wait for the replica to be purged from the DFSClient's cache.
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      MutableBoolean done = new MutableBoolean(true);
-      @Override
-      public Boolean get() {
-        try {
-          done.setValue(true);
-          cache.getDfsClientShmManager().visit(new Visitor() {
-            @Override
-            public void visit(HashMap<DatanodeInfo,
-                  PerDatanodeVisitorInfo> info) throws IOException {
-              assertTrue(info.get(datanode).full.isEmpty());
-              assertFalse(info.get(datanode).disabled);
-              assertEquals(1,
-                  info.get(datanode).notFull.values().size());
-              DfsClientShm shm = info.get(datanode).notFull.values().
-                  iterator().next();
-              // Check that all slots have been invalidated.
-              for (Iterator<Slot> iter = shm.slotIterator();
-                   iter.hasNext(); ) {
-                Slot slot = iter.next();
-                if (slot.isValid()) {
-                  done.setValue(false);
+      // Wait for the replica to be purged from the DFSClient's cache.
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        MutableBoolean done = new MutableBoolean(true);
+        @Override
+        public Boolean get() {
+          try {
+            done.setValue(true);
+            cache.getDfsClientShmManager().visit(new Visitor() {
+              @Override
+              public void visit(HashMap<DatanodeInfo,
+                    PerDatanodeVisitorInfo> info) throws IOException {
+                assertTrue(info.get(datanode).full.isEmpty());
+                assertFalse(info.get(datanode).disabled);
+                assertEquals(1,
+                    info.get(datanode).notFull.values().size());
+                DfsClientShm shm = info.get(datanode).notFull.values().
+                    iterator().next();
+                // Check that all slots have been invalidated.
+                for (Iterator<Slot> iter = shm.slotIterator();
+                     iter.hasNext(); ) {
+                  Slot slot = iter.next();
+                  if (slot.isValid()) {
+                    done.setValue(false);
+                  }
                 }
               }
-            }
-          });
-        } catch (IOException e) {
-          LOG.error("error running visitor", e);
+            });
+          } catch (IOException e) {
+            LOG.error("error running visitor", e);
+          }
+          return done.booleanValue();
         }
-        return done.booleanValue();
-      }
-    }, 10, 60000);
-    cluster.shutdown();
-    sockDir.close();
+      }, 10, 60000);
+    } finally {
+      cluster.shutdown();
+      sockDir.close();
+    }
   }
 
   static private void checkNumberOfSegmentsAndSlots(final int expectedSegments,
@@ -713,34 +722,37 @@ public class TestShortCircuitCache {
         1000000000L);
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    cluster.waitActive();
-    DistributedFileSystem fs = cluster.getFileSystem();
-    final Path TEST_PATH1 = new Path("/test_file1");
-    final Path TEST_PATH2 = new Path("/test_file2");
-    final int TEST_FILE_LEN = 4096;
-    final int SEED = 0xFADE1;
-    DFSTestUtil.createFile(fs, TEST_PATH1, TEST_FILE_LEN,
-        (short)1, SEED);
-    DFSTestUtil.createFile(fs, TEST_PATH2, TEST_FILE_LEN,
-        (short)1, SEED);
-
-    // The first read should allocate one shared memory segment and slot.
-    DFSTestUtil.readFileBuffer(fs, TEST_PATH1);
-
-    // The second read should fail, and we should only have 1 segment and 1 slot
-    // left.
-    BlockReaderFactory.setFailureInjectorForTesting(
-        new TestCleanupFailureInjector());
     try {
-      DFSTestUtil.readFileBuffer(fs, TEST_PATH2);
-    } catch (Throwable t) {
-      GenericTestUtils.assertExceptionContains("TCP reads were disabled for " +
-          "testing, but we failed to do a non-TCP read.", t);
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      final Path TEST_PATH1 = new Path("/test_file1");
+      final Path TEST_PATH2 = new Path("/test_file2");
+      final int TEST_FILE_LEN = 4096;
+      final int SEED = 0xFADE1;
+      DFSTestUtil.createFile(fs, TEST_PATH1, TEST_FILE_LEN,
+          (short)1, SEED);
+      DFSTestUtil.createFile(fs, TEST_PATH2, TEST_FILE_LEN,
+          (short)1, SEED);
+
+      // The first read should allocate one shared memory segment and slot.
+      DFSTestUtil.readFileBuffer(fs, TEST_PATH1);
+
+      // The second read should fail, and we should only have 1 segment and 1 slot
+      // left.
+      BlockReaderFactory.setFailureInjectorForTesting(
+          new TestCleanupFailureInjector());
+      try {
+        DFSTestUtil.readFileBuffer(fs, TEST_PATH2);
+      } catch (Throwable t) {
+        GenericTestUtils.assertExceptionContains("TCP reads were disabled for " +
+            "testing, but we failed to do a non-TCP read.", t);
+      }
+      checkNumberOfSegmentsAndSlots(1, 1,
+          cluster.getDataNodes().get(0).getShortCircuitRegistry());
+    } finally {
+      cluster.shutdown();
+      sockDir.close();
     }
-    checkNumberOfSegmentsAndSlots(1, 1,
-        cluster.getDataNodes().get(0).getShortCircuitRegistry());
-    cluster.shutdown();
-    sockDir.close();
   }
 
   // Regression test for HADOOP-11802
@@ -756,51 +768,53 @@ public class TestShortCircuitCache {
         1000000000L);
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    cluster.waitActive();
-    DistributedFileSystem fs = cluster.getFileSystem();
-    final Path TEST_PATH1 = new Path("/test_file1");
-    DFSTestUtil.createFile(fs, TEST_PATH1, 4096,
-        (short)1, 0xFADE1);
-    LOG.info("Setting failure injector and performing a read which " +
-        "should fail...");
-    DataNodeFaultInjector failureInjector = Mockito.mock(DataNodeFaultInjector.class);
-    Mockito.doAnswer(new Answer<Void>() {
-      @Override
-      public Void answer(InvocationOnMock invocation) throws Throwable {
-        throw new IOException("injected error into sendShmResponse");
-      }
-    }).when(failureInjector).sendShortCircuitShmResponse();
-    DataNodeFaultInjector prevInjector = DataNodeFaultInjector.get();
-    DataNodeFaultInjector.set(failureInjector);
-
     try {
-      // The first read will try to allocate a shared memory segment and slot.
-      // The shared memory segment allocation will fail because of the failure
-      // injector.
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      final Path TEST_PATH1 = new Path("/test_file1");
+      DFSTestUtil.createFile(fs, TEST_PATH1, 4096,
+          (short)1, 0xFADE1);
+      LOG.info("Setting failure injector and performing a read which " +
+          "should fail...");
+      DataNodeFaultInjector failureInjector = Mockito.mock(DataNodeFaultInjector.class);
+      Mockito.doAnswer(new Answer<Void>() {
+        @Override
+        public Void answer(InvocationOnMock invocation) throws Throwable {
+          throw new IOException("injected error into sendShmResponse");
+        }
+      }).when(failureInjector).sendShortCircuitShmResponse();
+      DataNodeFaultInjector prevInjector = DataNodeFaultInjector.get();
+      DataNodeFaultInjector.set(failureInjector);
+
+      try {
+        // The first read will try to allocate a shared memory segment and slot.
+        // The shared memory segment allocation will fail because of the failure
+        // injector.
+        DFSTestUtil.readFileBuffer(fs, TEST_PATH1);
+        fail("expected readFileBuffer to fail, but it succeeded.");
+      } catch (Throwable t) {
+        GenericTestUtils.assertExceptionContains("TCP reads were disabled for " +
+            "testing, but we failed to do a non-TCP read.", t);
+      }
+
+      checkNumberOfSegmentsAndSlots(0, 0,
+          cluster.getDataNodes().get(0).getShortCircuitRegistry());
+
+      LOG.info("Clearing failure injector and performing another read...");
+      DataNodeFaultInjector.set(prevInjector);
+
+      fs.getClient().getClientContext().getDomainSocketFactory().clearPathMap();
+
+      // The second read should succeed.
       DFSTestUtil.readFileBuffer(fs, TEST_PATH1);
-      fail("expected readFileBuffer to fail, but it succeeded.");
-    } catch (Throwable t) {
-      GenericTestUtils.assertExceptionContains("TCP reads were disabled for " +
-          "testing, but we failed to do a non-TCP read.", t);
+
+      // We should have added a new short-circuit shared memory segment and slot.
+      checkNumberOfSegmentsAndSlots(1, 1,
+          cluster.getDataNodes().get(0).getShortCircuitRegistry());
+    } finally {
+      cluster.shutdown();
+      sockDir.close();
     }
-
-    checkNumberOfSegmentsAndSlots(0, 0,
-        cluster.getDataNodes().get(0).getShortCircuitRegistry());
-
-    LOG.info("Clearing failure injector and performing another read...");
-    DataNodeFaultInjector.set(prevInjector);
-
-    fs.getClient().getClientContext().getDomainSocketFactory().clearPathMap();
-
-    // The second read should succeed.
-    DFSTestUtil.readFileBuffer(fs, TEST_PATH1);
-
-    // We should have added a new short-circuit shared memory segment and slot.
-    checkNumberOfSegmentsAndSlots(1, 1,
-        cluster.getDataNodes().get(0).getShortCircuitRegistry());
-
-    cluster.shutdown();
-    sockDir.close();
   }
 
   public static class TestPreReceiptVerificationFailureInjector
@@ -824,20 +838,23 @@ public class TestShortCircuitCache {
         1000000000L);
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    cluster.waitActive();
-    DistributedFileSystem fs = cluster.getFileSystem();
-    BlockReaderFactory.setFailureInjectorForTesting(
-        new TestPreReceiptVerificationFailureInjector());
-    final Path TEST_PATH1 = new Path("/test_file1");
-    DFSTestUtil.createFile(fs, TEST_PATH1, 4096, (short)1, 0xFADE2);
-    final Path TEST_PATH2 = new Path("/test_file2");
-    DFSTestUtil.createFile(fs, TEST_PATH2, 4096, (short)1, 0xFADE2);
-    DFSTestUtil.readFileBuffer(fs, TEST_PATH1);
-    DFSTestUtil.readFileBuffer(fs, TEST_PATH2);
-    checkNumberOfSegmentsAndSlots(1, 2,
-        cluster.getDataNodes().get(0).getShortCircuitRegistry());
-    cluster.shutdown();
-    sockDir.close();
+    try {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      BlockReaderFactory.setFailureInjectorForTesting(
+          new TestPreReceiptVerificationFailureInjector());
+      final Path TEST_PATH1 = new Path("/test_file1");
+      DFSTestUtil.createFile(fs, TEST_PATH1, 4096, (short)1, 0xFADE2);
+      final Path TEST_PATH2 = new Path("/test_file2");
+      DFSTestUtil.createFile(fs, TEST_PATH2, 4096, (short)1, 0xFADE2);
+      DFSTestUtil.readFileBuffer(fs, TEST_PATH1);
+      DFSTestUtil.readFileBuffer(fs, TEST_PATH2);
+      checkNumberOfSegmentsAndSlots(1, 2,
+          cluster.getDataNodes().get(0).getShortCircuitRegistry());
+    } finally {
+      cluster.shutdown();
+      sockDir.close();
+    }
   }
 
   @Test

@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.federation.router.async;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -34,6 +36,8 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
@@ -67,6 +71,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.ha.HAServiceProtocol;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -283,6 +288,7 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
     RemoteParam dstParam = getRenameDestinations(locs, dstLocations);
     if (locs.isEmpty()) {
       rbfRename.routerFedRename(src, dst, srcLocations, dstLocations);
+      asyncComplete(null);
       return;
     }
     RemoteMethod method = new RemoteMethod("rename2",
@@ -840,6 +846,23 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   }
 
   @Override
+  public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId,
+      EnumSet<OpenFilesIterator.OpenFilesType> openFilesTypes, String path) throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
+    List<RemoteLocation> locations = rpcServer.getLocationsForPath(path, false, false);
+    RemoteMethod method =
+        new RemoteMethod("listOpenFiles", new Class<?>[] {long.class, EnumSet.class, String.class},
+            prevId, openFilesTypes, new RemoteParam());
+    rpcClient.invokeConcurrent(locations, method, true, false, -1, BatchedEntries.class);
+
+    asyncApply(o -> {
+      Map<RemoteLocation, BatchedEntries> results = (Map<RemoteLocation, BatchedEntries>) o;
+      return mergeAndSortOpenFileListResults(results);
+    });
+    return asyncReturn(BatchedListEntries.class);
+  }
+
+  @Override
   public DatanodeInfo[] getDatanodeReport(HdfsConstants.DatanodeReportType type)
       throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
@@ -1191,6 +1214,12 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE, true);
     getSecurityManager().cancelDelegationToken(token);
     asyncComplete(null);
+  }
+
+  @Override
+  public HAServiceProtocol.HAServiceState getHAServiceState() {
+    asyncComplete(super.getHAServiceState());
+    return asyncReturn(HAServiceProtocol.HAServiceState.class);
   }
 
 }

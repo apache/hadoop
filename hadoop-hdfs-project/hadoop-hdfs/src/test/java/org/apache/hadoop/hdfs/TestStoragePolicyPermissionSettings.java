@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.IOException;
 
@@ -33,9 +33,9 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.ReflectionUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class TestStoragePolicyPermissionSettings {
 
@@ -50,7 +50,7 @@ public class TestStoragePolicyPermissionSettings {
   private static UserGroupInformation nonAdmin;
   private static UserGroupInformation admin;
 
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetUp() throws IOException {
     conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL).build();
@@ -64,7 +64,7 @@ public class TestStoragePolicyPermissionSettings {
         new String[]{"supergroup"});
   }
 
-  @AfterClass
+  @AfterAll
   public static void clusterShutdown() throws IOException {
     if (fs != null) {
       fs.close();

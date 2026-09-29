@@ -12,17 +12,19 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# Hadoop Azure Support: WASB Driver
+# Deprecated WASB Driver
+
+### Note: WASB Driver is removed and won't be a part of official hadoop releases starting from hadoop-3.5.0
 
 ## Introduction
-WASB Driver is a legacy Hadoop File System driver that was developed to support
+WASB Driver was a legacy Hadoop File System driver that was developed to support
 [FNS(FlatNameSpace) Azure Storage accounts](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction)
 that do not honor File-Folder syntax.
-HDFS Folder operations hence are mimicked at client side by WASB driver and
-certain folder operations like Rename and Delete can lead to a lot of IOPs with
+HDFS Folder operations hence were mimicked at client side by WASB driver and
+certain folder operations like Rename and Delete could lead to a lot of IOPs with
 client-side enumeration and orchestration of rename/delete operation blob by blob.
 It was not ideal for other APIs too as initial checks for path is a file or folder
-needs to be done over multiple metadata calls. These led to a degraded performance.
+needed to be done over multiple metadata calls. These led to a degraded performance.
 
 To provide better service to Analytics users, Microsoft released [ADLS Gen2](https://learn.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-introduction)
 which are HNS (Hierarchical Namespace) enabled, i.e. File-Folder aware storage accounts.
@@ -40,19 +42,19 @@ transition situation.
 workloads to migrate to the ABFS driver, which is available only on HNS enabled
 accounts in a fully tested and supported scenario.
 
-## Deprecation plans for WASB Driver
-We are introducing a new feature that will enable the ABFS driver to support
+## Deprecation of WASB Driver
+We have introduced a new feature that will enable the [ABFS](./fns_blob.html) driver to support
 FNS accounts (over BlobEndpoint that WASB Driver uses) using the ABFS scheme.
 This feature will enable us to use the ABFS driver to interact with data stored in GPv2
 (General Purpose v2) storage accounts.
 
-With this feature, the users who still use the legacy WASB driver will be able
-to migrate to the ABFS driver without much re-work on their workloads. They will
+With this feature, the WASB users are now required to migrate to the ABFS driver
+without much re-work on their workloads. They will
 however need to change the URIs from the WASB scheme to the ABFS scheme.
+Refer to [Wasb To Abfs Migration Guide](./wasbToAbfsMigration.html) for more details.
 
-Once ABFS driver has built FNS support capability to migrate WASB users, WASB
-driver will be marked for removal in next major release. This will remove any ambiguity
-for new users onboards as there will be only one Microsoft driver for Azure Storage
+With removal of WASB Driver our aim is to remove any ambiguity
+for new user onboards as there will be only one Microsoft driver for Azure Storage
 and migrating users will get SLA bound support for driver and service,
 which was not guaranteed over WASB.
 
@@ -61,7 +63,7 @@ move to HNS enabled accounts with the ABFS driver, which is our recommended stac
 for big data analytics on ADLS Gen2.
 
 ### Impact for existing ABFS users using ADLS Gen2 (HNS enabled account)
-This feature does not impact the existing users who are using ADLS Gen2 Accounts
+Removal of WASB Driver does not impact the existing users who are using ADLS Gen2 Accounts
 (HNS enabled account) with ABFS driver.
 
 They do not need to make any changes to their workloads or configurations. They
@@ -76,7 +78,7 @@ users to transition to a supported scenario immediately, while they plan to
 ultimately move to ADLS Gen2 (HNS enabled account).
 
 ### New Authentication Options for a migrating user
-Below auth types that WASB provides will continue to work on the new FNS over
+Below auth types that WASB provided will continue to work on the new FNS over
 ABFS Driver over configuration that accepts these SAS types (similar to WASB):
 1. SharedKey
 2. Account SAS

@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
@@ -60,7 +61,6 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.TestProperties;
 
@@ -84,7 +84,8 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     config.register(new JerseyBinder());
     config.register(RMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }
@@ -198,7 +199,10 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     // Verify apps resource
     JSONObject apps = json.getJSONObject("apps");
     assertEquals(1, apps.length(), "incorrect number of elements");
-    JSONObject jsonObject = apps.getJSONObject("app").getJSONObject("resourceInfo");
+    JSONObject jsonObject = apps
+        .getJSONArray("app")
+        .getJSONObject(0)
+        .getJSONObject("resourceInfo");
     JSONArray jsonArray = jsonObject.getJSONArray("resourceUsagesByPartition");
     assertEquals(2, jsonArray.length(), "Partition expected is 2");
 

@@ -41,14 +41,16 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Lists;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestINodeAttributeProvider {
   private static final Logger LOG =
@@ -233,7 +235,7 @@ public class TestINodeAttributeProvider {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     CALLED.clear();
     Configuration conf = new HdfsConfiguration();
@@ -247,7 +249,7 @@ public class TestINodeAttributeProvider {
     miniDFS = new MiniDFSCluster.Builder(conf).build();
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws IOException {
     CALLED.clear();
     if (miniDFS != null) {
@@ -256,12 +258,12 @@ public class TestINodeAttributeProvider {
     }
     runPermissionCheck = false;
     shouldThrowAccessException = false;
-    Assert.assertTrue(CALLED.contains("stop"));
+    assertTrue(CALLED.contains("stop"));
   }
 
   @Test
   public void testDelegationToProvider() throws Exception {
-    Assert.assertTrue(CALLED.contains("start"));
+    assertTrue(CALLED.contains("start"));
     FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
     final Path tmpPath = new Path("/tmp");
     final Path fooPath = new Path("/tmp/foo");
@@ -276,21 +278,21 @@ public class TestINodeAttributeProvider {
         FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
         CALLED.clear();
         fs.mkdirs(fooPath);
-        Assert.assertTrue(CALLED.contains("getAttributes"));
-        Assert.assertTrue(CALLED.contains("checkPermission|null|null|null"));
-        Assert.assertTrue(CALLED.contains("checkPermission|WRITE|null|null"));
+            assertTrue(CALLED.contains("getAttributes"));
+            assertTrue(CALLED.contains("checkPermission|null|null|null"));
+            assertTrue(CALLED.contains("checkPermission|WRITE|null|null"));
 
         CALLED.clear();
         fs.listStatus(fooPath);
-        Assert.assertTrue(CALLED.contains("getAttributes"));
-        Assert.assertTrue(
-            CALLED.contains("checkPermission|null|null|READ_EXECUTE"));
+            assertTrue(CALLED.contains("getAttributes"));
+            assertTrue(
+                CALLED.contains("checkPermission|null|null|READ_EXECUTE"));
 
         CALLED.clear();
         fs.getAclStatus(fooPath);
-        Assert.assertTrue(CALLED.contains("getAttributes"));
-        Assert.assertTrue(CALLED.contains("checkPermission|null|null|null"));
-        return null;
+            assertTrue(CALLED.contains("getAttributes"));
+            assertTrue(CALLED.contains("checkPermission|null|null|null"));
+            return null;
       }
     });
   }
@@ -302,9 +304,9 @@ public class TestINodeAttributeProvider {
     }
     public void doAssert(boolean x) {
       if (bypass) {
-        Assert.assertFalse(x);
+        assertFalse(x);
       } else {
-        Assert.assertTrue(x);
+        assertTrue(x);
       }
     }
   }
@@ -313,7 +315,7 @@ public class TestINodeAttributeProvider {
       final short expectedPermission, final boolean bypass) throws Exception {
     final AssertHelper asserter = new AssertHelper(bypass);
 
-    Assert.assertTrue(CALLED.contains("start"));
+    assertTrue(CALLED.contains("start"));
 
     FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
     final Path userPath = new Path("/user");
@@ -334,14 +336,14 @@ public class TestINodeAttributeProvider {
         @Override
         public Void run() throws Exception {
           FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
-          Assert.assertEquals(expectedPermission,
-              fs.getFileStatus(authzChild).getPermission().toShort());
+              assertEquals(expectedPermission,
+                  fs.getFileStatus(authzChild).getPermission().toShort());
           asserter.doAssert(CALLED.contains("getAttributes"));
           asserter.doAssert(CALLED.contains("checkPermission|null|null|null"));
 
           CALLED.clear();
-          Assert.assertEquals(expectedPermission,
-              fs.listStatus(userPath)[0].getPermission().toShort());
+              assertEquals(expectedPermission,
+                  fs.listStatus(userPath)[0].getPermission().toShort());
           asserter.doAssert(CALLED.contains("getAttributes"));
           asserter.doAssert(
               CALLED.contains("checkPermission|null|null|READ_EXECUTE"));
@@ -380,28 +382,25 @@ public class TestINodeAttributeProvider {
     Path userDir = new Path("/user/" + ugi.getShortUserName());
     fs.mkdirs(userDir);
     status = fs.getFileStatus(userDir);
-    Assert.assertEquals(ugi.getShortUserName(), status.getOwner());
-    Assert.assertEquals("supergroup", status.getGroup());
-    Assert.assertEquals(new FsPermission((short) 0755), status.getPermission());
+    assertEquals(ugi.getShortUserName(), status.getOwner());
+    assertEquals("supergroup", status.getGroup());
+    assertEquals(new FsPermission((short) 0755), status.getPermission());
 
     Path authzDir = new Path("/user/authz");
     fs.mkdirs(authzDir);
     status = fs.getFileStatus(authzDir);
-    Assert.assertEquals("foo", status.getOwner());
-    Assert.assertEquals("bar", status.getGroup());
-    Assert.assertEquals(new FsPermission((short) 0770), status.getPermission());
+    assertEquals("foo", status.getOwner());
+    assertEquals("bar", status.getGroup());
+    assertEquals(new FsPermission((short) 0770), status.getPermission());
 
     AclStatus aclStatus = fs.getAclStatus(authzDir);
-    Assert.assertEquals(1, aclStatus.getEntries().size());
-    Assert.assertEquals(AclEntryType.GROUP,
-        aclStatus.getEntries().get(0).getType());
-    Assert.assertEquals("xxx",
-        aclStatus.getEntries().get(0).getName());
-    Assert.assertEquals(FsAction.ALL,
-        aclStatus.getEntries().get(0).getPermission());
+    assertEquals(1, aclStatus.getEntries().size());
+    assertEquals(AclEntryType.GROUP, aclStatus.getEntries().get(0).getType());
+    assertEquals("xxx", aclStatus.getEntries().get(0).getName());
+    assertEquals(FsAction.ALL, aclStatus.getEntries().get(0).getPermission());
     Map<String, byte[]> xAttrs = fs.getXAttrs(authzDir);
-    Assert.assertTrue(xAttrs.containsKey("user.test"));
-    Assert.assertEquals(2, xAttrs.get("user.test").length);
+    assertTrue(xAttrs.containsKey("user.test"));
+    assertEquals(2, xAttrs.get("user.test").length);
   }
 
   /**
@@ -437,7 +436,7 @@ public class TestINodeAttributeProvider {
       Path aclChildDir = new Path(aclDir, "subdir");
       fs.mkdirs(aclChildDir);
       AclStatus aclStatus = fs.getAclStatus(aclDir);
-      Assert.assertEquals(0, aclStatus.getEntries().size());
+      assertEquals(0, aclStatus.getEntries().size());
       return null;
     });
   }
@@ -463,13 +462,13 @@ public class TestINodeAttributeProvider {
       @Override
       public Void run() throws Exception {
         FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
-        Assert.assertEquals(PROVIDER_PERMISSION,
-            fs.getFileStatus(authzChild).getPermission().toShort());
+            assertEquals(PROVIDER_PERMISSION,
+                fs.getFileStatus(authzChild).getPermission().toShort());
 
-        Assert.assertEquals("foo", fs.getAclStatus(authzChild).getOwner());
-        Assert.assertEquals("bar", fs.getAclStatus(authzChild).getGroup());
-        Assert.assertEquals(PROVIDER_PERMISSION,
-            fs.getAclStatus(authzChild).getPermission().toShort());
+            assertEquals("foo", fs.getAclStatus(authzChild).getOwner());
+            assertEquals("bar", fs.getAclStatus(authzChild).getGroup());
+            assertEquals(PROVIDER_PERMISSION,
+                fs.getAclStatus(authzChild).getPermission().toShort());
         return null;
       }
     });
@@ -506,7 +505,7 @@ public class TestINodeAttributeProvider {
           // is to ensure ACE is always thrown rather than a sub class to avoid
           // this issue.
         } catch (AccessControlException ace) {
-          Assert.assertEquals(AccessControlException.class, ace.getClass());
+          assertEquals(AccessControlException.class, ace.getClass());
         }
         return null;
       }

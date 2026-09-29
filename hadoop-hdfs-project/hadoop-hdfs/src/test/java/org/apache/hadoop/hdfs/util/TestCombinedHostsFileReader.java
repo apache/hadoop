@@ -26,19 +26,23 @@ import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.Mock;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
 
 /**
  * Test for JSON based HostsFileReader.
  */
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class TestCombinedHostsFileReader {
 
   // Using /test/build/data/tmp directory to store temporary files
@@ -64,7 +68,6 @@ public class TestCombinedHostsFileReader {
   public void tearDown() throws Exception {
     // Delete test file after running tests
     newFile.delete();
-
   }
 
   /*
@@ -134,6 +137,7 @@ public class TestCombinedHostsFileReader {
   /*
    * When timeout is enabled, test for IOException when execution is interrupted
    */
+  @Order(1)
   @Test
   public void testReadFileWithTimeoutInterruptedException() throws Exception {
     when(callable.call()).thenAnswer(new Answer<Void>() {

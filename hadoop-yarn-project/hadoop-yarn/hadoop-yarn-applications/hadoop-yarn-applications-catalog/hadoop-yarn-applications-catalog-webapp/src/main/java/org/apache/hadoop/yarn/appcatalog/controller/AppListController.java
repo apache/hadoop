@@ -51,6 +51,7 @@ public class AppListController {
   /**
    * Get Application List.
    *
+   * <pre>{@code
    * @apiGroup AppListController
    * @apiName get
    * @api {get} /app_list  Get list of deployed applications.
@@ -116,7 +117,9 @@ public class AppListController {
    *        ...
    *        }
    *     ]
-   * @return - Active application deployed by current user.
+   * }</pre>
+   *
+   * @return Active application deployed by current user.
    */
   @GET
   @Produces(MediaType.APPLICATION_JSON)
@@ -128,13 +131,16 @@ public class AppListController {
   /**
    * Delete an application.
    *
+   * <pre>{@code
    * @apiGroup AppListController
    * @apiName delete
    * @api {delete} /app_list  Delete one instance of application.
    * @apiParam {String} id Application name to delete.
    * @apiSuccess {String} text Delete request accepted
-   * @param id - application ID
-   * @param name - application name
+   * }</pre>
+   *
+   * @param id application ID
+   * @param name application name
    * @return Web response
    */
   @DELETE
@@ -152,13 +158,16 @@ public class AppListController {
   /**
    * Deploy an application.
    *
+   * <pre>{@code
    * @apiGroup AppListController
    * @apiName deploy
    * @api {post} /app_list/{id}  Deploy one instance of application.
    * @apiParam {String} id Application ID to deploy.
    * @apiSuccess {String} text Give deployment status
    * @apiError BadRequest Unable to deploy requested application.
-   * @param id - application ID
+   * }</pre>
+   *
+   * @param id application ID
    * @return Web response
    */
   @POST

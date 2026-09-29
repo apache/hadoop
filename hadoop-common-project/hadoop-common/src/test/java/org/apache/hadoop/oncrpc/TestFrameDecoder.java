@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.net.BindException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -235,19 +236,46 @@ public class TestFrameDecoder {
             "localhost", serverPort, 100000, 1, 2, allowInsecurePorts);
         tcpServer = new SimpleTcpServer(serverPort, program, 1);
         tcpServer.run();
-        break;          // Successfully bound a port, break out.
-      } catch (InterruptedException | ChannelException e) {
+        return serverPort;    // Successfully bound a port.
+      } catch (InterruptedException e) {
         if (tcpServer != null) {
           tcpServer.shutdown();
         }
-        if (retries-- > 0) {
-          serverPort += rand.nextInt(20); // Port in use? Try another.
-        } else {
-          throw e;     // Out of retries.
+        Thread.currentThread().interrupt();
+        throw e;
+      } catch (Exception e) {
+        // Netty's ChannelFuture#sync may "sneaky-throw" a checked exception
+        // such as java.net.BindException via PlatformDependent#throwException,
+        // which is why catching ChannelException alone is not sufficient.
+        // Only retry on port-in-use style failures; rethrow anything else.
+        if (tcpServer != null) {
+          tcpServer.shutdown();
         }
+        if (!isPortInUse(e) || retries-- <= 0) {
+          throw e;     // Not a port-in-use error, or out of retries.
+        }
+        // Port in use? Try another. Ensure we never re-pick the same port.
+        serverPort += 1 + rand.nextInt(20);
       }
     }
-    return serverPort;
+  }
+
+  /**
+   * Check whether the given exception indicates that the port is already
+   * bound by another process. Netty may wrap bind failures in a
+   * {@link ChannelException}, so inspect the cause chain and only treat
+   * {@link BindException}s that indicate an address-in-use condition as
+   * retryable.
+   */
+  private static boolean isPortInUse(Throwable t) {
+    Throwable cursor = t;
+    while (cursor != null) {
+      if (cursor instanceof BindException) {
+        return true;
+      }
+      cursor = cursor.getCause();
+    }
+    return false;
   }
 
   static void createPortmapXDRheader(XDR xdr_out, int procedure) {

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.IOException;
+
 /**
  * Implementation of {@link AbfsThrottlingIntercept} that does not throttle
  * the ABFS process.
@@ -39,5 +41,15 @@ final class AbfsNoOpThrottlingIntercept implements AbfsThrottlingIntercept {
   @Override
   public void sendingRequest(final AbfsRestOperationType operationType,
       final AbfsCounters abfsCounters) {
+  }
+
+  /**
+   * No-op implementation of close method.
+   *
+   * @throws IOException if an I/O error occurs during cleanup
+   */
+  @Override
+  public void close() throws IOException {
+    // No resources to clean up in no-op implementation
   }
 }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,6 +26,7 @@ import org.slf4j.LoggerFactory;
  * This test extends TestReconstructStripedFile to use a random
  * (non-default) EC policy.
  */
+@Tag("slow")
 public class TestReconstructStripedFileWithRandomECPolicy extends
     TestReconstructStripedFile {
   private static final Logger LOG = LoggerFactory.getLogger(

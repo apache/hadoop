@@ -71,7 +71,7 @@ const ACCESS_MASK WinMasks[WIN_MASKS_TOTAL] =
 };
 
 //----------------------------------------------------------------------------
-// Function: GetFileInformationByName
+// Function: GetFileInformationByPathName
 //
 // Description:
 //  To retrieve the by handle file information given the file name
@@ -85,7 +85,7 @@ const ACCESS_MASK WinMasks[WIN_MASKS_TOTAL] =
 //  or junction point to get the target file information. Otherwise, the
 //  information for the symbolic link or junction point is retrieved.
 //
-DWORD GetFileInformationByName(
+DWORD GetFileInformationByPathName(
   __in LPCWSTR pathName,
   __in BOOL followLink,
   __out LPBY_HANDLE_FILE_INFORMATION lpFileInformation)
@@ -888,7 +888,7 @@ DWORD FindFileOwnerAndPermission(
 
   if (pMask == NULL) goto FindFileOwnerAndPermissionEnd;
 
-  dwRtnCode = GetFileInformationByName(pathName,
+  dwRtnCode = GetFileInformationByPathName(pathName,
     followLink, &fileInformation);
   if (dwRtnCode != ERROR_SUCCESS)
   {

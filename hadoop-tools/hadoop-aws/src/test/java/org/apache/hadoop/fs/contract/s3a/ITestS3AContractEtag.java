@@ -21,10 +21,12 @@ package org.apache.hadoop.fs.contract.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractEtagTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 /**
  * Test S3A etag support.
  */
+@IntegrationTest
 public class ITestS3AContractEtag extends AbstractContractEtagTest {
 
   @Override

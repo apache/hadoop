@@ -38,7 +38,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestCompressionStreamReuse {
   private static final Logger LOG = LoggerFactory
@@ -62,7 +61,6 @@ public class TestCompressionStreamReuse {
 
   @Test
   public void testZStandardCompressStreamReuse() throws IOException {
-    assumeTrue(ZStandardCodec.isNativeCodeLoaded());
     resetStateTest(conf, seed, count,
         "org.apache.hadoop.io.compress.ZStandardCodec");
   }

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -31,7 +33,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.viewfs.ViewFileSystemOverloadScheme.ChildFsGetter;
 import org.apache.hadoop.util.Shell;
 import org.eclipse.jetty.util.log.Log;
-import org.junit.Assert;
 
 
 /**
@@ -164,7 +165,7 @@ public class ViewFsTestSetup {
           out.writeBytes("<property><name>");
           if (isNfly) {
             String[] srcParts = src.split("[.]");
-            Assert.assertEquals("Invalid NFlyLink format", 3, srcParts.length);
+            assertEquals(3, srcParts.length, "Invalid NFlyLink format");
             String actualSrc = srcParts[srcParts.length - 1];
             String params = srcParts[srcParts.length - 2];
             out.writeBytes(prefix + Constants.CONFIG_VIEWFS_LINK_NFLY + "."
@@ -202,7 +203,7 @@ public class ViewFsTestSetup {
       boolean isNfly = src.startsWith(Constants.CONFIG_VIEWFS_LINK_NFLY);
       if (isNfly) {
         String[] srcParts = src.split("[.]");
-        Assert.assertEquals("Invalid NFlyLink format", 3, srcParts.length);
+        assertEquals(3, srcParts.length, "Invalid NFlyLink format");
         String actualSrc = srcParts[srcParts.length - 1];
         String params = srcParts[srcParts.length - 2];
         ConfigUtil.addLinkNfly(config, mountTableName, actualSrc, params,

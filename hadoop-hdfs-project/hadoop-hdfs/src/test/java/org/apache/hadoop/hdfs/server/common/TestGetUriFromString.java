@@ -17,15 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.net.URI;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This is a unit test, which tests {@link Util#stringAsURI(String)}
@@ -68,10 +68,10 @@ public class TestGetUriFromString {
     URI u = null;
     u = Util.stringAsURI(ABSOLUTE_PATH_WINDOWS);
     assertNotNull(
-        "Uri should not be null for Windows path" + ABSOLUTE_PATH_WINDOWS, u);
+        u, "Uri should not be null for Windows path" + ABSOLUTE_PATH_WINDOWS);
     assertEquals(URI_FILE_SCHEMA, u.getScheme());
     u = Util.stringAsURI(ABSOLUTE_PATH_UNIX);
-    assertNotNull("Uri should not be null for Unix path" + ABSOLUTE_PATH_UNIX, u);
+    assertNotNull(u, "Uri should not be null for Unix path" + ABSOLUTE_PATH_UNIX);
     assertEquals(URI_FILE_SCHEMA, u.getScheme());
   }
 
@@ -84,14 +84,14 @@ public class TestGetUriFromString {
     LOG.info("Testing correct Unix URI: " + URI_UNIX);
     URI u = Util.stringAsURI(URI_UNIX);
     LOG.info("Uri: " + u);    
-    assertNotNull("Uri should not be null at this point", u);
+    assertNotNull(u, "Uri should not be null at this point");
     assertEquals(URI_FILE_SCHEMA, u.getScheme());
     assertEquals(URI_PATH_UNIX, u.getPath());
 
     LOG.info("Testing correct windows URI: " + URI_WINDOWS);
     u = Util.stringAsURI(URI_WINDOWS);
     LOG.info("Uri: " + u);
-    assertNotNull("Uri should not be null at this point", u);
+    assertNotNull(u, "Uri should not be null at this point");
     assertEquals(URI_FILE_SCHEMA, u.getScheme());
     assertEquals(URI_PATH_WINDOWS.replace("%20", " "), u.getPath());
   }

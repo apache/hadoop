@@ -489,6 +489,23 @@ public final class StreamStatisticNames {
   public static final String STREAM_FILE_CACHE_EVICTION
       = "stream_file_cache_eviction";
 
+  /**
+   * Bytes that were prefetched by the stream.
+   */
+  public static final String STREAM_READ_PREFETCHED_BYTES = "stream_read_prefetched_bytes";
+
+  /**
+   * Tracks failures in footer parsing.
+   */
+  public static final String STREAM_READ_PARQUET_FOOTER_PARSING_FAILED
+          = "stream_read_parquet_footer_parsing_failed";
+
+  /**
+   * A cache hit occurs when the request range can be satisfied by the data in the cache.
+   */
+  public static final String STREAM_READ_CACHE_HIT = "stream_read_cache_hit";
+
+
   private StreamStatisticNames() {
   }
 

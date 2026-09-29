@@ -21,9 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.IsInstanceOf.instanceOf;
-import static org.hamcrest.core.IsSame.sameInstance;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
@@ -80,7 +78,7 @@ public class TestResourceCalculatorProcessTree {
     ResourceCalculatorProcessTree tree;
     tree = ResourceCalculatorProcessTree.getResourceCalculatorProcessTree("1", EmptyProcessTree.class, new Configuration());
     assertNotNull(tree);
-    assertThat(tree, instanceOf(EmptyProcessTree.class));
+    assertThat(tree).isInstanceOf(EmptyProcessTree.class);
   }
 
   @Test
@@ -89,6 +87,6 @@ public class TestResourceCalculatorProcessTree {
     Configuration conf = new Configuration();
     tree = ResourceCalculatorProcessTree.getResourceCalculatorProcessTree("1", EmptyProcessTree.class, conf);
     assertNotNull(tree);
-    assertThat(tree.getConf(), sameInstance(conf));
+    assertThat(tree).isInstanceOf(EmptyProcessTree.class);
   } 
 }

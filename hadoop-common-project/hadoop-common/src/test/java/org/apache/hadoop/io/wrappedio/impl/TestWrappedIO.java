@@ -29,8 +29,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,7 +80,7 @@ public class TestWrappedIO extends AbstractFSContractTestBase {
    */
   private DynamicWrappedStatistics statistics;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
 
@@ -88,6 +89,7 @@ public class TestWrappedIO extends AbstractFSContractTestBase {
     statistics.iostatisticsContext_reset();
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     super.teardown();

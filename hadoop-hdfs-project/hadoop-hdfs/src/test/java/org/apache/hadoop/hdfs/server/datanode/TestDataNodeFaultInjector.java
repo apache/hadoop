@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -33,7 +33,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * This class tests various cases where faults are injected to DataNode.
@@ -76,7 +77,8 @@ public class TestDataNodeFaultInjector {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testDelaySendingAckToUpstream() throws Exception {
     final MetricsDataNodeFaultInjector mdnFaultInjector =
         new MetricsDataNodeFaultInjector() {
@@ -95,7 +97,8 @@ public class TestDataNodeFaultInjector {
     verifyFaultInjectionDelayPipeline(mdnFaultInjector);
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testDelaySendingPacketDownstream() throws Exception {
     final MetricsDataNodeFaultInjector mdnFaultInjector =
         new MetricsDataNodeFaultInjector() {
@@ -161,8 +164,8 @@ public class TestDataNodeFaultInjector {
       }
       LOG.info("delay info: " + mdnFaultInjector.getDelayMs() + ":"
           + datanodeSlowLogThresholdMs);
-      assertTrue("Injected delay should be longer than the configured one",
-          mdnFaultInjector.getDelayMs() > datanodeSlowLogThresholdMs);
+      assertTrue(mdnFaultInjector.getDelayMs() > datanodeSlowLogThresholdMs,
+          "Injected delay should be longer than the configured one");
     } finally {
       if (cluster != null) {
         cluster.shutdown();

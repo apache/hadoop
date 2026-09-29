@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
+
+import org.apache.hadoop.yarn.server.nodemanager.webapp.jsonprovider.NMJsonProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +43,6 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import javax.servlet.Filter;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -69,12 +70,15 @@ public class WebServer extends AbstractService {
   }
 
   protected ResourceConfig configure() {
+    NMJsonProvider nmJsonProvider = new NMJsonProvider();
+
     ResourceConfig config = new ResourceConfig();
     config.packages("org.apache.hadoop.yarn.server.nodemanager.webapp");
     config.register(new JerseyBinder());
     config.register(NMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(nmJsonProvider);
+    config.register(JAXBContextResolver.class);
     return config;
   }
 

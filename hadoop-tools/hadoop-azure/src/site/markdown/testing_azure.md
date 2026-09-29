@@ -12,7 +12,15 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# Testing the Azure WASB client
+# Testing the Azure ABFS client
+
+Azure Data Lake Storage Gen 2 (ADLS Gen 2) is a set of capabilities dedicated to
+big data analytics, built on top of Azure Blob Storage. The ABFS and ABFSS
+schemes target the ADLS Gen 2 REST API now having support for both HNS and FNS Accounts.
+ADLS Gen 2 with HNS Enabled using DFS Endpoint offers better performance and
+scalability. ADLS Gen 2 also offers authentication and authorization compatible
+with the Hadoop Distributed File System permissions model when hierarchical
+namespace is enabled for the storage account.
 
 <!-- MACRO{toc|fromDepth=0|toDepth=5} -->
 
@@ -24,7 +32,7 @@ convention `Test*.java`.  Integration tests follow the naming convention
 
 ## Policy for submitting patches which affect the `hadoop-azure` module.
 
-The Apache Jenkins infrastucture does not run any cloud integration tests,
+The Apache Jenkins infrastructure does not run any cloud integration tests,
 due to the need to keep credentials secure.
 
 ### The submitter of any patch is required to run all the integration tests and declare which Azure region they used.
@@ -90,17 +98,17 @@ For example:
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
   <property>
-    <name>fs.azure.wasb.account.name</name>
-    <value>{ACCOUNTNAME}.blob.core.windows.net</value>
+    <name>fs.azure.abfs.account.name</name>
+    <value>{ACCOUNTNAME}.dfs.core.windows.net</value>
   </property>
   <property>
-    <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
+    <name>fs.azure.account.key.{ACCOUNTNAME}.dfs.core.windows.net</name>
     <value>{ACCOUNT ACCESS KEY}</value>
   </property>
 </configuration>
 ```
 
-To run contract tests, set the WASB file system URI in `src/test/resources/azure-auth-keys.xml`
+To run contract tests, set the ABFS file system URI in `src/test/resources/azure-auth-keys.xml`
 and the account access key. For example:
 
 ```xml
@@ -108,12 +116,12 @@ and the account access key. For example:
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
   <property>
-    <name>fs.contract.test.fs.wasb</name>
-    <value>wasb://{CONTAINERNAME}@{ACCOUNTNAME}.blob.core.windows.net</value>
+    <name>fs.contract.test.fs.abfs</name>
+    <value>wasb://{CONTAINERNAME}@{ACCOUNTNAME}.dfs.core.windows.net</value>
     <description>The name of the azure file system for testing.</description>
   </property>
   <property>
-    <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
+    <name>fs.azure.account.key.{ACCOUNTNAME}.dfs.core.windows.net</name>
     <value>{ACCOUNT ACCESS KEY}</value>
   </property>
 </configuration>
@@ -126,21 +134,21 @@ Overall, to run all the tests using `mvn test`,  a sample `azure-auth-keys.xml` 
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
   <property>
-    <name>fs.azure.wasb.account.name</name>
-    <value>{ACCOUNTNAME}.blob.core.windows.net</value>
+    <name>fs.azure.abfs.account.name</name>
+    <value>{ACCOUNTNAME}.dfs.core.windows.net</value>
   </property>
   <property>
-    <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
+    <name>fs.azure.account.key.{ACCOUNTNAME}.dfs.core.windows.net</name>
     <value>{ACCOUNT ACCESS KEY}</value>
   </property>
   <property>
-    <name>fs.contract.test.fs.wasb</name>
-    <value>wasb://{CONTAINERNAME}@{ACCOUNTNAME}.blob.core.windows.net</value>
+    <name>fs.contract.test.fs.abfs</name>
+    <value>wasb://{CONTAINERNAME}@{ACCOUNTNAME}.dfs.core.windows.net</value>
   </property>
 </configuration>
 ```
 
-DO NOT ADD `azure-auth-keys.xml` TO REVISION CONTROL.  The keys to your Azure
+DO NOT ADD `azure-auth-keys.xml` TO VERSION CONTROL.  The keys to your Azure
 Storage account are a secret and must not be shared.
 
 
@@ -153,35 +161,29 @@ mvn -T 1C clean verify
 ```
 
 It's also possible to execute multiple test suites in parallel by passing the
-`parallel-tests=wasb|abfs|both` property on the command line.  The tests spend most of their
+`parallel-tests=abfs` property on the command line.  The tests spend most of their
 time blocked on network I/O, so running in parallel tends to
 complete full test runs faster.
 
 ```bash
-mvn -T 1C -Dparallel-tests=both clean verify
-mvn -T 1C -Dparallel-tests=wasb clean verify
 mvn -T 1C -Dparallel-tests=abfs clean verify
 ```
-`-Dparallel-tests=wasb` runs the WASB related integration tests from azure directory<br/>
 `-Dparallel-tests=abfs` runs the ABFS related integration tests from azurebfs directory<br/>
-`-Dparallel-tests=both` runs all the integration tests from both azure and azurebfs directory<br/>
 
 Some tests must run with exclusive access to the storage container, so even with the
 `parallel-tests` property, several test suites will run in serial in a separate
 Maven execution step after the parallel tests.
 
-By default, `parallel-tests` runs 4 test suites concurrently.  This can be tuned
+By default, `parallel-tests` runs 8 test suites concurrently.  This can be tuned
 by passing the `testsThreadCount` property.
 
 ```bash
 mvn -T 1C -Dparallel-tests -DtestsThreadCount=8 clean verify
 ```
 
-<!---
 To run just unit tests, which do not require Azure connectivity or credentials,
 use any of the above invocations, but switch the goal to `test` instead of
 `verify`.
--->
 
 ```bash
 mvn -T 1C clean test
@@ -266,37 +268,6 @@ The most bandwidth intensive tests (those which upload data) always run
 sequentially; those which are slow due to HTTPS setup costs or server-side
 actions are included in the set of parallelized tests.
 
-
-### Scale test tuning options
-
-
-Some of the tests can be tuned from the maven build or from the
-configuration file used to run the tests.
-
-```bash
-mvn -T 1C verify -Dparallel-tests -Dscale -DtestsThreadCount=8 -Dfs.azure.scale.test.huge.filesize=128M
-```
-
-The algorithm is
-
-1. The value is queried from the configuration file, using a default value if
-it is not set.
-1. The value is queried from the JVM System Properties, where it is passed
-down by maven.
-1. If the system property is null, an empty string, or it has the value `unset`,
-then the configuration value is used. The `unset` option is used to
-[work round a quirk in maven property propagation](http://stackoverflow.com/questions/7773134/null-versus-empty-arguments-in-maven).
-
-Only a few properties can be set this way; more will be added.
-
-| Property | Meaninging |
-|-----------|-------------|
-| `fs.azure.scale.test.huge.filesize`| Size for huge file uploads |
-| `fs.azure.scale.test.huge.huge.partitionsize`| Size for partitions in huge file uploads |
-
-The file and partition sizes are numeric values with a k/m/g/t/p suffix depending
-on the desired size. For example: 128M, 128m, 2G, 2G, 4T or even 1P.
-
 #### Scale test configuration options
 
 Some scale tests perform multiple operations (such as creating many directories).
@@ -340,23 +311,6 @@ smaller to achieve faster test runs.
 </property>
 ```
 
-Azure-specific scale test properties are
-
-##### `fs.azure.scale.test.huge.filesize`: size in MB for "Huge file tests".
-
-The Huge File tests validate Azure storages's ability to handle large files —the property
-`fs.azure.scale.test.huge.filesize` declares the file size to use.
-
-```xml
-<property>
-  <name>fs.azure.scale.test.huge.filesize</name>
-  <value>200M</value>
-</property>
-```
-
-Tests at this scale are slow: they are best executed from hosts running in
-the cloud infrastructure where the storage endpoint is based.
-
 ## Using the emulator
 
 A selection of tests can run against the
@@ -389,7 +343,7 @@ Logging at debug level is the standard way to provide more diagnostics output;
 after setting this rerun the tests
 
 ```properties
-log4j.logger.org.apache.hadoop.fs.azure=DEBUG
+log4j.logger.org.apache.hadoop.fs.azurebfs=DEBUG
 ```
 
 ## Adding new tests
@@ -414,18 +368,6 @@ call to `exists()`, `isFile()`, etc.
 *Fail with useful information:* provide as much diagnostics as possible
 on a failure. Using `org.apache.hadoop.fs.contract.ContractTestUtils` to make
 assertions about the state of a filesystem helps here.
-
-*Isolating Scale tests*. Any test doing large amounts of IO MUST extend the
-class `AbstractAzureScaleTest`, so only running if `scale` is defined on a build,
-supporting test timeouts configurable by the user. Scale tests should also
-support configurability as to the actual size of objects/number of operations,
-so that behavior at different scale can be verified.
-
-*Designed for parallel execution*. A key need here is for each test suite to work
-on isolated parts of the filesystem. Subclasses of `AbstractWasbTestBase`
-SHOULD use the `path()`, `methodpath()` and `blobpath()` methods,
-to build isolated paths. Tests MUST NOT assume that they have exclusive access
-to a bucket.
 
 *Extending existing tests where appropriate*. This recommendation goes
 against normal testing best practise of "test one thing per method".
@@ -453,31 +395,8 @@ is critical.
 There are a set of base classes which should be extended for Azure tests and
 integration tests.
 
-##### `org.apache.hadoop.fs.azure.AbstractWasbTestWithTimeout`
-
-This extends the junit `Assert` class with thread names and timeouts,
-the default timeout being set in `AzureTestConstants.AZURE_TEST_TIMEOUT` to
-ten minutes. The thread names are set to aid analyzing the stack trace of
-a test: a `jstack` call can be used to
-
-##### `org.apache.hadoop.fs.azure.AbstractWasbTestBase`
-
-The base class for tests which use `AzureBlobStorageTestAccount` to create
-mock or live Azure clients; in test teardown it tries to clean up store state.
-
-1. This class requires subclasses to implement `createTestAccount()` to create
-a mock or real test account.
-
-1. The configuration used to create a test account *should* be that from
-`createConfiguration()`; this can be extended in subclasses to tune the settings.
-
-
-##### `org.apache.hadoop.fs.azure.integration.AbstractAzureScaleTest`
-
-This extends `AbstractWasbTestBase` for scale tests; those test which
-only run when `-Dscale` is used to select the "scale" profile.
-These tests have a timeout of 30 minutes, so as to support slow test runs.
-
+##### `org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest`
+This is the base class for all ABFS integration tests.
 Having shared base classes help reduces future maintenance. Please
 use them.
 
@@ -491,31 +410,17 @@ not provide meaningful logs or assertion messages precisely to avoid this.
 This means efficient in test setup/teardown, and, ideally, making use of
 existing public datasets to save setup time and tester cost.
 
-
-The reference example is `ITestAzureHugeFiles`:. This marks the test suite as
-`@FixMethodOrder(MethodSorters.NAME_ASCENDING)` then orders the test cases such
-that each test case expects the previous test to have completed (here: uploaded a file,
-renamed a file, ...). This provides for independent tests in the reports, yet still
-permits an ordered sequence of operations. Do note the use of `Assume.assume()`
-to detect when the preconditions for a single test case are not met, hence,
-the tests become skipped, rather than fail with a trace which is really a false alarm.
-
-
 ### Works Over Long-haul Links
 
-As well as making file size and operation counts scaleable, this includes
-making test timeouts adequate. The Scale tests make this configurable; it's
-hard coded to ten minutes in `AbstractAzureIntegrationTest()`; subclasses can
-change this by overriding `getTestTimeoutMillis()`.
+As well as making file size and operation counts scalable, this includes
+making test timeouts adequate.
 
-Equally importantly: support proxies, as some testers need them.
+Equally, importantly: support proxies, as some testers need them.
 
 
 ### Provides Diagnostics and timing information
 
 1. Create logs, log things.
-1. you can use `AbstractWasbTestBase.describe(format-string, args)` here; it
-adds some newlines so as to be easier to spot.
 1. Use `ContractTestUtils.NanoTimer` to measure the duration of operations,
 and log the output.
 
@@ -535,7 +440,7 @@ including error messages*.
 
 Keeps costs down.
 
-1. Do not only cleanup if a test case completes successfully; test suite
+1. Do not only clean up if a test case completes successfully; test suite
 teardown must do it.
 1. That teardown code must check for the filesystem and other fields being
 null before the cleanup. Why? If test setup fails, the teardown methods still
@@ -550,7 +455,7 @@ We really appreciate this &mdash; you will too.
 
 ### How to keep your credentials really safe
 
-Although the `auth-keys.xml` file is marged as ignored in git and subversion,
+Although the `auth-keys.xml` file is marked as ignored in git and subversion,
 it is still in your source tree, and there's always that risk that it may
 creep out.
 
@@ -568,7 +473,7 @@ using an absolute XInclude reference to it.
 
 ### Cleaning up Containers
 
-The Azure tests create containers with the prefix `"wasbtests-"` and delete
+The Azure tests create containers with the prefix `"abfs-testcontainer-"` and delete
 them after the test runs. If a test run is interrupted, these containers
 may not get deleted. There is a special test case which can be manually invoked
 to list and delete these, `CleanupTestContainers`
@@ -580,17 +485,6 @@ mvn test -Dtest=CleanupTestContainers
 This will delete the containers; the output log of the test run will
 provide the details and summary of the operation.
 
-
-# Testing the Azure ABFS Client
-
-Azure Data Lake Storage Gen 2 (ADLS Gen 2) is a set of capabilities dedicated to
-big data analytics, built on top of Azure Blob Storage. The ABFS and ABFSS
-schemes target the ADLS Gen 2 REST API, and the WASB and WASBS schemes target
-the Azure Blob Storage REST API.  ADLS Gen 2 offers better performance and
-scalability.  ADLS Gen 2 also offers authentication and authorization compatible
-with the Hadoop Distributed File System permissions model when hierarchical
-namespace is enabled for the storage account.  Furthermore, the metadata and data
-produced by ADLS Gen 2 REST API can be consumed by Blob REST API, and vice versa.
 
 ## Generating test run configurations and test triggers over various config combinations
 

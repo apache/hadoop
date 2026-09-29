@@ -22,7 +22,7 @@ import java.io.FileNotFoundException;
 import java.net.HttpURLConnection;
 import java.nio.file.AccessDeniedException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;

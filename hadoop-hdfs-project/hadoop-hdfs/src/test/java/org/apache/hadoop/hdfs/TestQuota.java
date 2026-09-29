@@ -18,14 +18,11 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
-import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
@@ -61,18 +58,18 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
 import org.slf4j.LoggerFactory;
 
 /** A class for testing quota-related commands */
+@Timeout(120)
 public class TestQuota {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestQuota.class);
@@ -88,10 +85,7 @@ public class TestQuota {
   /* set a smaller block size so that we can test with smaller space quotas */
   private static final int DEFAULT_BLOCK_SIZE = 512;
 
-  @Rule
-  public final Timeout testTestout = new Timeout(120000);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass() throws Exception {
     conf = new HdfsConfiguration();
     conf.set(
@@ -133,7 +127,7 @@ public class TestQuota {
     ERR_STREAM.reset();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() {
     try {
       System.out.flush();
@@ -289,7 +283,7 @@ public class TestQuota {
     try {
       fout.write(new byte[fileLen]);
       fout.close();
-      Assert.fail();
+      Assertions.fail();
     } catch (QuotaExceededException e) {
       IOUtils.closeStream(fout);
     }
@@ -397,8 +391,8 @@ public class TestQuota {
     ugi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {
-        assertEquals("Not running as new user", username,
-            UserGroupInformation.getCurrentUser().getShortUserName());
+        assertEquals(username, UserGroupInformation.getCurrentUser().getShortUserName(),
+            "Not running as new user");
         DFSAdmin userAdmin = new DFSAdmin(conf);
 
         args2[1] = "100";
@@ -981,20 +975,20 @@ public class TestQuota {
 
     DFSTestUtil.createFile(dfs, wow, size, repl, 0);
     DFSTestUtil.createFile(dfs, wow2, size, repl, 0);
-    assertTrue("Without storage policy, typeConsumed should be 0.",
-        dfs.getQuotaUsage(bs1).getTypeConsumed(StorageType.SSD) == 0);
-    assertTrue("With storage policy, typeConsumed should not be 0.",
-        dfs.getQuotaUsage(bs2).getTypeConsumed(StorageType.SSD) != 0);
+    assertTrue(dfs.getQuotaUsage(bs1).getTypeConsumed(StorageType.SSD) == 0,
+        "Without storage policy, typeConsumed should be 0.");
+    assertTrue(dfs.getQuotaUsage(bs2).getTypeConsumed(StorageType.SSD) != 0,
+        "With storage policy, typeConsumed should not be 0.");
     // wow3 without storage policy , rename will not change typeConsumed
     dfs.rename(wow3, bs1);
-    assertTrue("Rename src without storagePolicy, dst typeConsumed should not be changed.",
-        dfs.getQuotaUsage(bs2).getTypeConsumed(StorageType.SSD) == 0);
+    assertTrue(dfs.getQuotaUsage(bs2).getTypeConsumed(StorageType.SSD) == 0,
+        "Rename src without storagePolicy, dst typeConsumed should not be changed.");
 
     long srcTypeQuota = dfs.getQuotaUsage(bs2).getTypeQuota(StorageType.SSD);
     dfs.rename(bs2, bs1);
     long dstTypeQuota = dfs.getQuotaUsage(bs1).getTypeConsumed(StorageType.SSD);
-    assertTrue("Rename with storage policy, typeConsumed should not be 0.",
-        dstTypeQuota != srcTypeQuota);
+    assertTrue(dstTypeQuota != srcTypeQuota,
+        "Rename with storage policy, typeConsumed should not be 0.");
   }
 
   private static void checkContentSummary(final ContentSummary expected,
@@ -1013,8 +1007,7 @@ public class TestQuota {
     assertTrue(dfs.mkdirs(parent));
 
     final FileSystem fs = cluster.getFileSystem();
-    assertTrue("Not a HDFS: "+fs.getUri(),
-                fs instanceof DistributedFileSystem);
+    assertTrue(fs instanceof DistributedFileSystem, "Not a HDFS: " + fs.getUri());
     final DistributedFileSystem dfs = (DistributedFileSystem)fs;
 
     // create test directory
@@ -1025,25 +1018,25 @@ public class TestQuota {
     dfs.setQuota(testFolder, Long.MAX_VALUE - 1, 10);
     ContentSummary c = dfs.getContentSummary(testFolder);
     compareQuotaUsage(c, dfs, testFolder);
-    assertTrue("Quota not set properly", c.getQuota() == Long.MAX_VALUE - 1);
+    assertTrue(c.getQuota() == Long.MAX_VALUE - 1, "Quota not set properly");
 
     // setting diskspace quota to Long.MAX_VALUE - 1 should work
     dfs.setQuota(testFolder, 10, Long.MAX_VALUE - 1);
     c = dfs.getContentSummary(testFolder);
     compareQuotaUsage(c, dfs, testFolder);
-    assertTrue("Quota not set properly", c.getSpaceQuota() == Long.MAX_VALUE - 1);
+    assertTrue(c.getSpaceQuota() == Long.MAX_VALUE - 1, "Quota not set properly");
 
     // setting namespace quota to Long.MAX_VALUE should not work + no error
     dfs.setQuota(testFolder, Long.MAX_VALUE, 10);
     c = dfs.getContentSummary(testFolder);
     compareQuotaUsage(c, dfs, testFolder);
-    assertTrue("Quota should not have changed", c.getQuota() == 10);
+    assertTrue(c.getQuota() == 10, "Quota should not have changed");
 
     // setting diskspace quota to Long.MAX_VALUE should not work + no error
     dfs.setQuota(testFolder, 10, Long.MAX_VALUE);
     c = dfs.getContentSummary(testFolder);
     compareQuotaUsage(c, dfs, testFolder);
-    assertTrue("Quota should not have changed", c.getSpaceQuota() == 10);
+    assertTrue(c.getSpaceQuota() == 10, "Quota should not have changed");
 
     // setting namespace quota to Long.MAX_VALUE + 1 should not work + error
     try {
@@ -1096,8 +1089,7 @@ public class TestQuota {
     c = dfs.getContentSummary(dir);
     compareQuotaUsage(c, dfs, dir);
     checkContentSummary(c, webhdfs.getContentSummary(dir));
-    assertEquals("Quota is half consumed", QUOTA_SIZE / 2,
-                 c.getSpaceConsumed());
+    assertEquals(QUOTA_SIZE / 2, c.getSpaceConsumed(), "Quota is half consumed");
 
     // We can not create the 2nd file because even though the total spaced
     // used by two files (2 * 3 * 512/2) would fit within the quota (3 * 512)
@@ -1110,7 +1102,7 @@ public class TestQuota {
     } catch (QuotaExceededException e) {
       exceededQuota = true;
     }
-    assertTrue("Quota not exceeded", exceededQuota);
+    assertTrue(exceededQuota, "Quota not exceeded");
  }
 
  /**
@@ -1148,8 +1140,8 @@ public class TestQuota {
       long nsQuota = FSImageTestUtil.getNSQuota(dfsCluster.getNameNode()
           .getNamesystem());
       assertTrue(
-          "Default namespace quota expected as long max. But the value is :"
-              + nsQuota, nsQuota == Long.MAX_VALUE);
+          nsQuota == Long.MAX_VALUE,
+          "Default namespace quota expected as long max. But the value is :" + nsQuota);
       
       Path dir = new Path(parent, "test");
       boolean exceededQuota = false;
@@ -1184,10 +1176,10 @@ public class TestQuota {
       c = fs.getContentSummary(dir);
       compareQuotaUsage(c, fs, dir);
       checkContentSummary(c, webHDFS.getContentSummary(dir));
-      assertEquals("Invalid space consumed", 59 * FILE_SIZE * 3,
-          c.getSpaceConsumed());
-      assertEquals("Invalid space consumed", QUOTA_SIZE - (59 * FILE_SIZE * 3),
-          3 * (fs.getDefaultBlockSize(dir) - FILE_SIZE));
+      assertEquals(59 * FILE_SIZE * 3, c.getSpaceConsumed(),
+          "Invalid space consumed");
+      assertEquals(QUOTA_SIZE - (59 * FILE_SIZE * 3), 3 * (fs.getDefaultBlockSize(dir) - FILE_SIZE),
+          "Invalid space consumed");
 
       // Now check that trying to create another file violates the quota
       try {
@@ -1197,7 +1189,7 @@ public class TestQuota {
       } catch (QuotaExceededException e) {
         exceededQuota = true;
       }
-      assertTrue("Quota not exceeded", exceededQuota);
+      assertTrue(exceededQuota, "Quota not exceeded");
       assertEquals(2, dfsCluster.getNamesystem().getFSDirectory().getYieldCount());
     } finally {
       dfsCluster.shutdown();
@@ -1259,7 +1251,8 @@ public class TestQuota {
   /**
    * Test to set space quote using negative number.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSetSpaceQuotaNegativeNumber() throws Exception {
 
     final DFSAdmin dfsAdmin = new DFSAdmin(conf);
@@ -1279,19 +1272,20 @@ public class TestQuota {
     assertEquals(-1, ret);
     scanIntoList(ERR_STREAM, outs);
     assertEquals(
+        2, outs.size(),
         "It should be two lines of error messages,"
-        + " the 1st one is about Illegal option,"
-        + " the 2nd one is about SetSpaceQuota usage.",
-        2, outs.size());
-    assertThat(outs.get(0),
-        is(allOf(containsString("setSpaceQuota"),
-            containsString("Illegal option"))));
+            + " the 1st one is about Illegal option,"
+            + " the 2nd one is about SetSpaceQuota usage.");
+    assertThat(outs.get(0))
+        .contains("setSpaceQuota")
+        .contains("Illegal option");
   }
 
   /**
    * Test to set and clear space quote, regular usage.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSetAndClearSpaceQuotaRegular() throws Exception {
 
     final Path dir = new Path(
@@ -1317,7 +1311,8 @@ public class TestQuota {
   /**
    * Test to all the commands by passing the fully qualified path.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testQuotaCommandsWithURI() throws Exception {
     DFSAdmin dfsAdmin = new DFSAdmin(conf);
     final Path dir = new Path("/" + this.getClass().getSimpleName(),
@@ -1355,15 +1350,15 @@ public class TestQuota {
     final QuotaUsage quotaUsage = dfs.getQuotaUsage(dir);
     assertEquals(spaceQuota, quotaUsage.getSpaceQuota());
     scanIntoList(OUT_STREAM, outs);
-    assertTrue(
-        "There should be no output if it runs successfully.",
-        outs.isEmpty());
+    assertTrue(outs.isEmpty(),
+        "There should be no output if it runs successfully.");
   }
 
   /**
    * Test to set and clear space quote by storage type.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSetAndClearSpaceQuotaByStorageType() throws Exception {
 
     final Path dir = new Path(
@@ -1412,14 +1407,15 @@ public class TestQuota {
         quotaUsage.getTypeQuota(StorageType.DISK));
     scanIntoList(OUT_STREAM, outs);
     assertTrue(
-        "There should be no output if it runs successfully.",
-        outs.isEmpty());
+        outs.isEmpty(),
+        "There should be no output if it runs successfully.");
   }
 
   /**
    * Test to set and clear space quote when directory doesn't exist.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSetAndClearSpaceQuotaDirectoryNotExist() throws Exception {
     final Path dir = new Path(
         PathUtils.getTestDir(getClass()).getPath(),
@@ -1453,20 +1449,18 @@ public class TestQuota {
     final int ret = ToolRunner.run(dfsAdmin, args);
     assertEquals(cmdRet, ret);
     scanIntoList(ERR_STREAM, outs);
-    assertEquals(
-        "It should be one line error message like: clrSpaceQuota:"
-            + " Directory does not exist: <full path of XXX directory>",
-        1, outs.size());
-    assertThat(outs.get(0),
-        is(allOf(containsString(cmdName),
-            containsString("does not exist"),
-            containsString(dir.toString()))));
+    assertEquals(1, outs.size(), "It should be one line error message like: clrSpaceQuota:"
+        + " Directory does not exist: <full path of XXX directory>");
+    assertThat(outs.get(0)).contains(cmdName)
+        .contains("does not exist")
+        .contains(dir.toString());
   }
 
   /**
    * Test to set and clear space quote when path is a file.
    */
-  @Test (timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSetAndClearSpaceQuotaPathIsFile() throws Exception {
 
     final Path parent = new Path(
@@ -1505,19 +1499,20 @@ public class TestQuota {
     assertEquals(cmdRet, ret);
     scanIntoList(ERR_STREAM, outs);
     assertEquals(
+        1, outs.size(),
         "It should be one line error message like: clrSpaceQuota:"
-            + " <full path of XXX file> is not a directory",
-        1, outs.size());
-    assertThat(outs.get(0),
-        is(allOf(containsString(cmdName),
-            containsString(file.toString()),
-            containsString("Is not a directory"))));
+            + " <full path of XXX file> is not a directory");
+    assertThat(outs.get(0))
+        .contains(cmdName)
+        .contains(file.toString())
+        .contains("Is not a directory");
   }
 
   /**
    * Test to set and clear space quote when user has no access right.
    */
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testSetAndClearSpaceQuotaNoAccess() throws Exception {
 
     final Path dir = new Path(
@@ -1709,10 +1704,10 @@ public class TestQuota {
     });
     assertEquals(cmdRet, ret);
     scanIntoList(ERR_STREAM, outs);
-    assertThat(outs.get(0),
-        is(allOf(containsString(cmdName),
-            containsString("Access denied for user whoever"),
-            containsString("Superuser privilege is required"))));
+    assertThat(outs.get(0))
+        .contains(cmdName)
+        .contains("Access denied for user whoever")
+        .contains("Superuser privilege is required");
   }
 
   private static void scanIntoList(

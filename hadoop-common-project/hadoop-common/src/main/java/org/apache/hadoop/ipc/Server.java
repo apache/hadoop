@@ -68,6 +68,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
@@ -81,6 +82,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -106,6 +108,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto.SaslState;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RPCTraceInfoProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.AuthorizationContext;
 import org.apache.hadoop.security.SaslMechanismFactory;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SaslRpcServer;
@@ -124,19 +127,17 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.tracing.Span;
 import org.apache.hadoop.tracing.SpanContext;
 import org.apache.hadoop.tracing.TraceScope;
 import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.tracing.TraceUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.classification.VisibleForTesting;
-
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
 import org.apache.hadoop.thirdparty.protobuf.Message;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1004,6 +1005,7 @@ public abstract class Server {
     final byte[] clientId;
     private final Span span; // the trace span on the server side
     private final CallerContext callerContext; // the call context
+    private  final byte[] authHeader; // the auth header
     private boolean deferredResponse = false;
     private int priorityLevel;
     // the priority level assigned by scheduler, 0 by default
@@ -1035,6 +1037,11 @@ public abstract class Server {
 
     Call(int id, int retryCount, RPC.RpcKind kind, byte[] clientId,
         Span span, CallerContext callerContext) {
+      this(id, retryCount, kind, clientId, span, callerContext, null);
+    }
+
+    Call(int id, int retryCount, RPC.RpcKind kind, byte[] clientId,
+        Span span, CallerContext callerContext, byte[] authHeader) {
       this.callId = id;
       this.retryCount = retryCount;
       this.timestampNanos = Time.monotonicNowNanos();
@@ -1043,6 +1050,7 @@ public abstract class Server {
       this.clientId = clientId;
       this.span = span;
       this.callerContext = callerContext;
+      this.authHeader = authHeader;
       this.clientStateId = Long.MIN_VALUE;
       this.isCallCoordinated = false;
     }
@@ -1243,7 +1251,14 @@ public abstract class Server {
     RpcCall(Connection connection, int id, int retryCount,
         Writable param, RPC.RpcKind kind, byte[] clientId,
         Span span, CallerContext context) {
-      super(id, retryCount, kind, clientId, span, context);
+      this(connection, id, retryCount, param, kind, clientId,
+          span, context, new byte[0]);
+    }
+
+    RpcCall(Connection connection, int id, int retryCount,
+        Writable param, RPC.RpcKind kind, byte[] clientId,
+        Span span, CallerContext context, byte[] authHeader) {
+      super(id, retryCount, kind, clientId, span, context, authHeader);
       this.connection = connection;
       this.rpcRequest = param;
     }
@@ -2658,7 +2673,7 @@ public abstract class Server {
       // accelerate token negotiation by sending initial challenge
       // in the negotiation response
       if (enabledAuthMethods.contains(AuthMethod.TOKEN)
-          && SaslMechanismFactory.isDefaultMechanism(AuthMethod.TOKEN.getMechanismName())) {
+          && SaslMechanismFactory.isDigestMechanism(AuthMethod.TOKEN.getMechanismName())) {
         saslServer = createSaslServer(AuthMethod.TOKEN);
         byte[] challenge = saslServer.evaluateResponse(new byte[0]);
         RpcSaslProto.Builder negotiateBuilder =
@@ -2922,15 +2937,34 @@ public abstract class Server {
     private void processRpcRequest(RpcRequestHeaderProto header,
         RpcWritable.Buffer buffer) throws RpcServerException,
         InterruptedException {
-      Class<? extends Writable> rpcRequestClass = 
-          getRpcRequestWrapper(header.getRpcKind());
-      if (rpcRequestClass == null) {
-        LOG.warn("Unknown rpc kind "  + header.getRpcKind() + 
-            " from client " + getHostAddress());
-        final String err = "Unknown rpc kind in rpc header"  + 
-            header.getRpcKind();
+      if (header.getRpcKind() == RpcKindProto.RPC_WRITABLE) {
+        final String err = "WritableRpcEngine is no longer supported."
+            + " Upgrade your Hadoop client to use ProtobufRpcEngine.";
+        LOG.warn(err + " Client: " + getHostAddress());
         throw new FatalRpcServerException(
             RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER, err);
+      }
+      // Reject requests for RPC kinds with no registered protocols on this
+      // server instance. This prevents deserialization of untrusted payloads
+      // for unsupported kinds. See HADOOP-19864.
+      if (Server.this instanceof RPC.Server server) {
+        final RPC.RpcKind kind = ProtoUtil.convert(header.getRpcKind());
+        if (!server.hasRegisteredProtocols(kind)) {
+          final String err = "No protocols registered on this server for RpcKind "
+              + header.getRpcKind()
+              + ". Rejecting request without deserialization.";
+          LOG.info("{} Client: {}", err, getHostAddress());
+          throw new FatalRpcServerException(
+              RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER, err);
+        }
+      }
+      Class<? extends Writable> rpcRequestClass =
+          getRpcRequestWrapper(header.getRpcKind());
+      if (rpcRequestClass == null) {
+        LOG.warn("Unknown rpc kind {} from client {}", header.getRpcKind(), getHostAddress());
+        throw new FatalRpcServerException(
+            RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
+            "Unknown rpc kind in rpc header " + header.getRpcKind());
       }
       Writable rpcRequest;
       try { //Read the rpc request
@@ -2938,12 +2972,12 @@ public abstract class Server {
       } catch (RpcServerException rse) { // lets tests inject failures.
         throw rse;
       } catch (Throwable t) { // includes runtime exception from newInstance
-        LOG.warn("Unable to read call parameters for client " +
-                 getHostAddress() + "on connection protocol " +
-            this.protocolName + " for rpcKind " + header.getRpcKind(),  t);
-        String err = "IPC server unable to read call parameters: "+ t.getMessage();
+        LOG.warn(
+            "Unable to read call parameters for client {} on connection protocol {} for rpcKind {}",
+            getHostAddress(), this.protocolName, header.getRpcKind(), t);
         throw new FatalRpcServerException(
-            RpcErrorCodeProto.FATAL_DESERIALIZING_REQUEST, err);
+            RpcErrorCodeProto.FATAL_DESERIALIZING_REQUEST,
+            "IPC server unable to read call parameters: " + t.getMessage());
       }
 
       Span span = null;
@@ -2975,51 +3009,61 @@ public abstract class Server {
                 .build();
       }
 
-      RpcCall call = new RpcCall(this, header.getCallId(),
-          header.getRetryCount(), rpcRequest,
-          ProtoUtil.convert(header.getRpcKind()),
-          header.getClientId().toByteArray(), span, callerContext);
-
-      // Save the priority level assignment by the scheduler
-      call.setPriorityLevel(callQueue.getPriorityLevel(call));
-      call.markCallCoordinated(false);
-      if(alignmentContext != null && call.rpcRequest != null &&
-          (call.rpcRequest instanceof ProtobufRpcEngine2.RpcProtobufRequest)) {
-        // if call.rpcRequest is not RpcProtobufRequest, will skip the following
-        // step and treat the call as uncoordinated. As currently only certain
-        // ClientProtocol methods request made through RPC protobuf needs to be
-        // coordinated.
-        String methodName;
-        String protoName;
-        ProtobufRpcEngine2.RpcProtobufRequest req =
-            (ProtobufRpcEngine2.RpcProtobufRequest) call.rpcRequest;
-        try {
-          methodName = req.getRequestHeader().getMethodName();
-          protoName = req.getRequestHeader().getDeclaringClassProtocolName();
-          if (alignmentContext.isCoordinatedCall(protoName, methodName)) {
-            call.markCallCoordinated(true);
-            long stateId;
-            stateId = alignmentContext.receiveRequestState(
-                header, getMaxIdleTime());
-            call.setClientStateId(stateId);
-            if (header.hasRouterFederatedState()) {
-              call.setFederatedNamespaceState(header.getRouterFederatedState());
-            }
-          }
-        } catch (IOException ioe) {
-          throw new RpcServerException("Processing RPC request caught ", ioe);
-        }
-      }
-
+      // Set AuthorizationContext for this thread if present
+      byte[] authHeader = null;
       try {
-        internalQueueCall(call);
-      } catch (RpcServerException rse) {
-        throw rse;
-      } catch (IOException ioe) {
-        throw new FatalRpcServerException(
-            RpcErrorCodeProto.ERROR_RPC_SERVER, ioe);
+        if (header.hasAuthorizationHeader()) {
+          authHeader = header.getAuthorizationHeader().toByteArray();
+        }
+
+        RpcCall call = new RpcCall(this, header.getCallId(),
+            header.getRetryCount(), rpcRequest,
+            ProtoUtil.convert(header.getRpcKind()),
+            header.getClientId().toByteArray(), span, callerContext, authHeader);
+
+        // Save the priority level assignment by the scheduler
+        call.setPriorityLevel(callQueue.getPriorityLevel(call));
+        call.markCallCoordinated(false);
+        if (alignmentContext != null && call.rpcRequest != null &&
+            (call.rpcRequest instanceof ProtobufRpcEngine2.RpcProtobufRequest)) {
+          // if call.rpcRequest is not RpcProtobufRequest, will skip the following
+          // step and treat the call as uncoordinated. As currently only certain
+          // ClientProtocol methods request made through RPC protobuf needs to be
+          // coordinated.
+          String methodName;
+          String protoName;
+          ProtobufRpcEngine2.RpcProtobufRequest req =
+              (ProtobufRpcEngine2.RpcProtobufRequest) call.rpcRequest;
+          try {
+            methodName = req.getRequestHeader().getMethodName();
+            protoName = req.getRequestHeader().getDeclaringClassProtocolName();
+            if (alignmentContext.isCoordinatedCall(protoName, methodName)) {
+              call.markCallCoordinated(true);
+              long stateId;
+              stateId = alignmentContext.receiveRequestState(
+                  header, getMaxIdleTime());
+              call.setClientStateId(stateId);
+              if (header.hasRouterFederatedState()) {
+                call.setFederatedNamespaceState(header.getRouterFederatedState());
+              }
+            }
+          } catch (IOException ioe) {
+            throw new RpcServerException("Processing RPC request caught ", ioe);
+          }
+        }
+
+        try {
+          internalQueueCall(call);
+        } catch (RpcServerException rse) {
+          throw rse;
+        } catch (IOException ioe) {
+          throw new FatalRpcServerException(
+              RpcErrorCodeProto.ERROR_RPC_SERVER, ioe);
+        }
+        incRpcCount();  // Increment the rpc count
+      } finally {
+        AuthorizationContext.clear();
       }
-      incRpcCount();  // Increment the rpc count
     }
 
     /**
@@ -3245,6 +3289,7 @@ public abstract class Server {
           }
           // always update the current call context
           CallerContext.setCurrent(call.callerContext);
+          AuthorizationContext.setCurrentAuthorizationHeader(call.authHeader);
           UserGroupInformation remoteUser = call.getRemoteUser();
           connDropped = !call.isOpen();
           if (remoteUser != null) {
@@ -3614,6 +3659,8 @@ public abstract class Server {
     call.setResponse(ByteBuffer.wrap(response));
   }
 
+
+
   private byte[] setupResponseForWritable(
       RpcResponseHeaderProto header, Writable rv) throws IOException {
     ResponseBuffer buf = responseBuffer.get().reset();
@@ -3631,7 +3678,6 @@ public abstract class Server {
       }
     }
   }
-
 
   // writing to a pre-allocated array is the most efficient way to construct
   // a protobuf response.

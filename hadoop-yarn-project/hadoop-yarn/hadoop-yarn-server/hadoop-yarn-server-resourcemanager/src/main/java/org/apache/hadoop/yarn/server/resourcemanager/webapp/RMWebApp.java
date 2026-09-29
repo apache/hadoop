@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.util.RMHAUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -36,7 +37,6 @@ import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
 import javax.servlet.Filter;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 
 /**
@@ -54,14 +54,19 @@ public class RMWebApp extends WebApp implements YarnWebParams {
     this.rm = rm;
   }
 
-  public ResourceConfig resourceConfig() {
-    ResourceConfig config = new ResourceConfig();
-    config.packages("org.apache.hadoop.yarn.server.resourcemanager.webapp");
-    config.register(new JerseyBinder());
-    config.register(RMWebServices.class);
-    config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
-    return config;
+  public ResourceConfig resourceConfig(Configuration config) {
+    ResourceConfig resourceConfig = new ResourceConfig();
+    resourceConfig.register(new JerseyBinder());
+
+    Class webService = config.getClass(YarnConfiguration.YARN_WEBAPP_CUSTOM_WEBSERVICE_CLASS,
+        RMWebServices.class);
+    resourceConfig.register(webService);
+    LOG.debug("Registered webservice class is {}", webService.getName());
+
+    resourceConfig.register(GenericExceptionHandler.class);
+    resourceConfig.register(JsonProviderFeature.class);
+    resourceConfig.register(JAXBContextResolver.class);
+    return resourceConfig;
   }
 
   private class JerseyBinder extends AbstractBinder {

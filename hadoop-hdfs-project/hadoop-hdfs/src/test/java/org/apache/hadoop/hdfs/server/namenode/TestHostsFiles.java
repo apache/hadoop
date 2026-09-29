@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.management.ManagementFactory;
 import java.util.Arrays;
 
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -38,9 +40,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.CombinedHostFileManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.HostConfigManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.HostFileManager;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -49,7 +49,8 @@ import javax.management.ObjectName;
  * DFS_HOSTS and DFS_HOSTS_EXCLUDE tests
  * 
  */
-@RunWith(Parameterized.class)
+@MethodSource("data")
+@ParameterizedClass
 public class TestHostsFiles {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestHostsFiles.class.getName());
@@ -59,7 +60,6 @@ public class TestHostsFiles {
     this.hostFileMgrClass = hostFileMgrClass;
   }
 
-  @Parameterized.Parameters
   public static Iterable<Object[]> data() {
     return Arrays.asList(new Object[][]{
         {HostFileManager.class}, {CombinedHostFileManager.class}});
@@ -136,8 +136,8 @@ public class TestHostsFiles {
       ObjectName mxbeanName = new ObjectName(
               "Hadoop:service=NameNode,name=NameNodeInfo");
       String nodes = (String) mbs.getAttribute(mxbeanName, "LiveNodes");
-      assertTrue("Live nodes should contain the decommissioned node",
-              nodes.contains("Decommissioned"));
+      assertTrue(nodes.contains("Decommissioned"),
+          "Live nodes should contain the decommissioned node");
     } finally {
       if (cluster != null) {
         cluster.shutdown();

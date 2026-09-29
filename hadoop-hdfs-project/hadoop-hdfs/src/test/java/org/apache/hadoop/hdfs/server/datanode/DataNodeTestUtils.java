@@ -39,8 +39,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import java.util.function.Supplier;
 
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * DO NOT ADD MOCKITO IMPORTS HERE Or Downstream projects may not
@@ -220,11 +219,12 @@ public class DataNodeTestUtils {
       dnNewDataDirs.append(newVol.getAbsolutePath());
     }
     try {
-      assertThat(
+      assertEquals(
           dn.reconfigurePropertyImpl(
               DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
               dnNewDataDirs.toString()),
-          is(dn.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY)));
+          dn.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY)
+      );
     } catch (ReconfigurationException e) {
       // This can be thrown if reconfiguration tries to use a failed volume.
       // We need to swallow the exception, because some of our tests want to

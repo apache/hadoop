@@ -31,11 +31,9 @@ import org.mockito.Mockito;
 
 import java.util.List;
 
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.support.membermodification.MemberMatcher.method;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit test for AppCatalogSolrClient.
@@ -55,8 +53,7 @@ public class TestAppCatalogSolrClient {
     solrClient = EmbeddedSolrServerFactory.create(solrHome, CONFIGSET_DIR,
         "exampleCollection");
     spy = Mockito.spy(new AppCatalogSolrClient());
-    when(spy, method(AppCatalogSolrClient.class, "getSolrClient"))
-        .withNoArguments().thenReturn(solrClient);
+    when(spy.getSolrClient()).thenReturn(solrClient);
   }
 
   @AfterEach

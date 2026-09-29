@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.diagnostics;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
@@ -36,7 +36,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.M
 /**
  * Test configuration validators.
  */
-public class TestConfigurationValidators extends Assert {
+public class TestConfigurationValidators extends Assertions {
 
   private static final String FAKE_KEY = "FakeKey";
 
@@ -54,11 +54,14 @@ public class TestConfigurationValidators extends Assert {
     assertEquals(MAX_BUFFER_SIZE, (int) integerConfigurationValidator.validate("104857600"));
   }
 
-  @Test(expected = InvalidConfigurationValueException.class)
+  @Test
   public void testIntegerConfigValidatorThrowsIfMissingValidValue() throws Exception {
-    IntegerConfigurationBasicValidator integerConfigurationValidator = new IntegerConfigurationBasicValidator(
-        MIN_BUFFER_SIZE, MAX_BUFFER_SIZE, DEFAULT_READ_BUFFER_SIZE, FAKE_KEY, true);
-    integerConfigurationValidator.validate("3072");
+    assertThrows(InvalidConfigurationValueException.class, () -> {
+      IntegerConfigurationBasicValidator integerConfigurationValidator =
+          new IntegerConfigurationBasicValidator(
+          MIN_BUFFER_SIZE, MAX_BUFFER_SIZE, DEFAULT_READ_BUFFER_SIZE, FAKE_KEY, true);
+      integerConfigurationValidator.validate("3072");
+    });
   }
 
   @Test
@@ -73,12 +76,15 @@ public class TestConfigurationValidators extends Assert {
     assertEquals(MAX_LEASE_DURATION, (int) integerConfigurationValidator.validate("60"));
   }
 
-  @Test(expected = InvalidConfigurationValueException.class)
+  @Test
   public void testIntegerWithOutlierConfigValidatorThrowsIfMissingValidValue() throws Exception {
-    IntegerConfigurationBasicValidator integerConfigurationValidator = new IntegerConfigurationBasicValidator(
-        INFINITE_LEASE_DURATION, MIN_LEASE_DURATION, MAX_LEASE_DURATION, DEFAULT_LEASE_DURATION, FAKE_KEY,
-        true);
-    integerConfigurationValidator.validate("14");
+    assertThrows(InvalidConfigurationValueException.class, () -> {
+      IntegerConfigurationBasicValidator integerConfigurationValidator =
+          new IntegerConfigurationBasicValidator(
+          INFINITE_LEASE_DURATION, MIN_LEASE_DURATION, MAX_LEASE_DURATION, DEFAULT_LEASE_DURATION, FAKE_KEY,
+          true);
+      integerConfigurationValidator.validate("14");
+    });
   }
 
   @Test
@@ -91,11 +97,13 @@ public class TestConfigurationValidators extends Assert {
     assertEquals(MAX_BUFFER_SIZE, (long) longConfigurationValidator.validate("104857600"));
   }
 
-  @Test(expected = InvalidConfigurationValueException.class)
+  @Test
   public void testLongConfigValidatorThrowsIfMissingValidValue() throws Exception {
-    LongConfigurationBasicValidator longConfigurationValidator = new LongConfigurationBasicValidator(
-        MIN_BUFFER_SIZE, MAX_BUFFER_SIZE, DEFAULT_READ_BUFFER_SIZE, FAKE_KEY, true);
-    longConfigurationValidator.validate(null);
+    assertThrows(InvalidConfigurationValueException.class, () -> {
+      LongConfigurationBasicValidator longConfigurationValidator = new LongConfigurationBasicValidator(
+      MIN_BUFFER_SIZE, MAX_BUFFER_SIZE, DEFAULT_READ_BUFFER_SIZE, FAKE_KEY, true);
+      longConfigurationValidator.validate(null);
+    });
   }
 
   @Test
@@ -107,10 +115,13 @@ public class TestConfigurationValidators extends Assert {
     assertEquals(false, booleanConfigurationValidator.validate(null));
   }
 
-  @Test(expected = InvalidConfigurationValueException.class)
+  @Test
   public void testBooleanConfigValidatorThrowsIfMissingValidValue() throws Exception {
-    BooleanConfigurationBasicValidator booleanConfigurationValidator = new BooleanConfigurationBasicValidator(FAKE_KEY, false, true);
-    booleanConfigurationValidator.validate("almostTrue");
+    assertThrows(InvalidConfigurationValueException.class, () -> {
+      BooleanConfigurationBasicValidator booleanConfigurationValidator =
+          new BooleanConfigurationBasicValidator(FAKE_KEY, false, true);
+      booleanConfigurationValidator.validate("almostTrue");
+    });
   }
 
   @Test
@@ -121,10 +132,13 @@ public class TestConfigurationValidators extends Assert {
     assertEquals("someValue", stringConfigurationValidator.validate("someValue"));
   }
 
-  @Test(expected = InvalidConfigurationValueException.class)
+  @Test
   public void testStringConfigValidatorThrowsIfMissingValidValue() throws Exception {
-    StringConfigurationBasicValidator stringConfigurationValidator = new StringConfigurationBasicValidator(FAKE_KEY, "value", true);
-    stringConfigurationValidator.validate(null);
+    assertThrows(InvalidConfigurationValueException.class, () -> {
+      StringConfigurationBasicValidator stringConfigurationValidator =
+          new StringConfigurationBasicValidator(FAKE_KEY, "value", true);
+      stringConfigurationValidator.validate(null);
+    });
   }
 
   @Test
@@ -136,9 +150,12 @@ public class TestConfigurationValidators extends Assert {
     assertEquals(encodedVal, base64StringConfigurationValidator.validate(encodedVal));
   }
 
-  @Test(expected = InvalidConfigurationValueException.class)
+  @Test
   public void testBase64StringConfigValidatorThrowsIfMissingValidValue() throws Exception {
-    Base64StringConfigurationBasicValidator base64StringConfigurationValidator = new Base64StringConfigurationBasicValidator(FAKE_KEY, "value", true);
-    base64StringConfigurationValidator.validate("some&%Value");
+    assertThrows(InvalidConfigurationValueException.class, () -> {
+      Base64StringConfigurationBasicValidator base64StringConfigurationValidator =
+          new Base64StringConfigurationBasicValidator(FAKE_KEY, "value", true);
+      base64StringConfigurationValidator.validate("some&%Value");
+    });
   }
 }

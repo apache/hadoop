@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.TimeoutException;
 
@@ -34,7 +34,8 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.util.Time;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test if live nodes count per node is correct 
@@ -48,7 +49,8 @@ public class TestNodeCount {
   Block lastBlock = null;
   NumberReplicas lastNum = null;
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testNodeCount() throws Exception {
     final Configuration conf = new HdfsConfiguration();
 

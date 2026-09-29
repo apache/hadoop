@@ -28,10 +28,8 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 
 /**
@@ -49,14 +47,11 @@ public abstract class AbstractS3AMockTest {
               .build())
           .build();
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
   protected S3AFileSystem fs;
   protected S3Client s3;
   protected Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = createConfiguration();
     fs = new S3AFileSystem();
@@ -97,7 +92,7 @@ public abstract class AbstractS3AMockTest {
     return s3;
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     if (fs != null) {
       fs.close();

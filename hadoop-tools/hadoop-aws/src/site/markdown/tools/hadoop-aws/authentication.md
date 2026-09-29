@@ -184,6 +184,7 @@ There are also many in the Amazon SDKs, with the common ones being as follows
 | `software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider` | AWS Environment Variables    |
 | `software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider`     | EC2 Metadata Credentials     |
 | `software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider`           | EC2/k8s Metadata Credentials |
+| `software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider`| K8s Metadata Credentials     |
 
 
 

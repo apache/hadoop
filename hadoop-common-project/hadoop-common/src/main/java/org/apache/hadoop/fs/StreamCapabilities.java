@@ -87,6 +87,16 @@ public interface StreamCapabilities {
   String VECTOREDIO = "in:readvectored";
 
   /**
+   * Probe for vector IO implementation details: {@value}.
+   * When performing vectored IO operations, are the buffers returned by readVectored()
+   * potentially sliced subsets of buffers allocated by the allocate() function
+   * passed in the read requests?
+   * If true, this means that the returned buffers may be sliced subsets of the
+   * allocated buffers.
+   */
+  String VECTOREDIO_BUFFERS_SLICED = "fs.capability.vectoredio.sliced";
+
+  /**
    * Stream abort() capability implemented by {@link Abortable#abort()}.
    * This matches the Path Capability
    * {@link CommonPathCapabilities#ABORTABLE_STREAM}.

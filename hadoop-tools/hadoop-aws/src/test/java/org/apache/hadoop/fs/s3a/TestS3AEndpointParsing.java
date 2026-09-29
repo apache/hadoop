@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.regions.Region;
 
 public class TestS3AEndpointParsing extends AbstractS3AMockTest {

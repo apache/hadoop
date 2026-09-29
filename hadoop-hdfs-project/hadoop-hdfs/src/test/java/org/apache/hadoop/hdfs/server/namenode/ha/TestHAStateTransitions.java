@@ -43,8 +43,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.slf4j.event.Level;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 import java.io.DataOutputStream;
@@ -56,7 +56,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests state transition from active->standby, and manual failover
@@ -82,7 +85,8 @@ public class TestHAStateTransitions {
    * active and standby mode, making sure it doesn't
    * double-play any edits.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testTransitionActiveToStandby() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -138,7 +142,8 @@ public class TestHAStateTransitions {
    * Test that transitioning a service to the state that it is already
    * in is a nop, specifically, an exception is not thrown.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testTransitionToCurrentStateIsANop() throws Exception {
     Configuration conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS, 1L);
@@ -174,43 +179,43 @@ public class TestHAStateTransitions {
    * @param nsIndex namespace index starting from zero
    * @throws Exception
    */
-  private void testManualFailoverFailback(MiniDFSCluster cluster, 
+  private void testManualFailoverFailback(MiniDFSCluster cluster,
 		  Configuration conf, int nsIndex) throws Exception {
-      int nn0 = 2 * nsIndex, nn1 = 2 * nsIndex + 1;
+    int nn0 = 2 * nsIndex, nn1 = 2 * nsIndex + 1;
 
-      cluster.transitionToActive(nn0);
-      
-      LOG.info("Starting with NN 0 active in namespace " + nsIndex);
-      FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
-      fs.mkdirs(TEST_DIR);
+    cluster.transitionToActive(nn0);
 
-      LOG.info("Failing over to NN 1 in namespace " + nsIndex);
-      cluster.transitionToStandby(nn0);
-      cluster.transitionToActive(nn1);
-      assertTrue(fs.exists(TEST_DIR));
-      DFSTestUtil.writeFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
+    LOG.info("Starting with NN 0 active in namespace " + nsIndex);
+    FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
+    fs.mkdirs(TEST_DIR);
 
-      LOG.info("Failing over to NN 0 in namespace " + nsIndex);
-      cluster.transitionToStandby(nn1);
-      cluster.transitionToActive(nn0);
-      assertTrue(fs.exists(TEST_DIR));
-      assertEquals(TEST_FILE_DATA, 
-          DFSTestUtil.readFile(fs, TEST_FILE_PATH));
+    LOG.info("Failing over to NN 1 in namespace " + nsIndex);
+    cluster.transitionToStandby(nn0);
+    cluster.transitionToActive(nn1);
+    assertTrue(fs.exists(TEST_DIR));
+    DFSTestUtil.writeFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
 
-      LOG.info("Removing test file");
-      fs.delete(TEST_DIR, true);
-      assertFalse(fs.exists(TEST_DIR));
+    LOG.info("Failing over to NN 0 in namespace " + nsIndex);
+    cluster.transitionToStandby(nn1);
+    cluster.transitionToActive(nn0);
+    assertTrue(fs.exists(TEST_DIR));
+    assertEquals(TEST_FILE_DATA, DFSTestUtil.readFile(fs, TEST_FILE_PATH));
 
-      LOG.info("Failing over to NN 1 in namespace " + nsIndex);
-      cluster.transitionToStandby(nn0);
-      cluster.transitionToActive(nn1);
-      assertFalse(fs.exists(TEST_DIR));
+    LOG.info("Removing test file");
+    fs.delete(TEST_DIR, true);
+    assertFalse(fs.exists(TEST_DIR));
+
+    LOG.info("Failing over to NN 1 in namespace " + nsIndex);
+    cluster.transitionToStandby(nn0);
+    cluster.transitionToActive(nn1);
+    assertFalse(fs.exists(TEST_DIR));
   }
   
   /**
    * Tests manual failover back and forth between two NameNodes.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testManualFailoverAndFailback() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -233,7 +238,8 @@ public class TestHAStateTransitions {
    * This test case starts up several client threads which do mutation operations
    * while flipping a NN back and forth from active to standby.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testTransitionSynchronization() throws Exception {
     Configuration conf = new Configuration();
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -286,7 +292,8 @@ public class TestHAStateTransitions {
    * accidentally mark the leases as expired when the failover
    * proceeds.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testLeasesRenewedOnTransition() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
@@ -309,15 +316,13 @@ public class TestHAStateTransitions {
       long nn0t0 = NameNodeAdapter.getLeaseRenewalTime(nn0, TEST_FILE_STR);
       assertTrue(nn0t0 > 0);
       long nn1t0 = NameNodeAdapter.getLeaseRenewalTime(nn1, TEST_FILE_STR);
-      assertEquals("Lease should not yet exist on nn1",
-          -1, nn1t0);
+      assertEquals(-1, nn1t0, "Lease should not yet exist on nn1");
       
       Thread.sleep(5); // make sure time advances!
 
       HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
       long nn1t1 = NameNodeAdapter.getLeaseRenewalTime(nn1, TEST_FILE_STR);
-      assertTrue("Lease should have been created on standby. Time was: " +
-          nn1t1, nn1t1 > nn0t0);
+      assertTrue(nn1t1 > nn0t0, "Lease should have been created on standby. Time was: " + nn1t1);
           
       Thread.sleep(5); // make sure time advances!
       
@@ -325,8 +330,7 @@ public class TestHAStateTransitions {
       cluster.transitionToStandby(0);
       cluster.transitionToActive(1);
       long nn1t2 = NameNodeAdapter.getLeaseRenewalTime(nn1, TEST_FILE_STR);
-      assertTrue("Lease should have been renewed by failover process",
-          nn1t2 > nn1t1);
+      assertTrue(nn1t2 > nn1t1, "Lease should have been renewed by failover process");
     } finally {
       IOUtils.closeStream(stm);
       cluster.shutdown();
@@ -336,7 +340,8 @@ public class TestHAStateTransitions {
   /**
    * Test that delegation tokens continue to work after the failover.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testDelegationTokensAfterFailover() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(
@@ -363,7 +368,7 @@ public class TestHAStateTransitions {
       nn2.getRpcServer().renewDelegationToken(token);
       nn2.getRpcServer().cancelDelegationToken(token);
       token = nn2.getRpcServer().getDelegationToken(new Text(renewer));
-      Assert.assertTrue(token != null);
+      assertTrue(token != null);
     } finally {
       cluster.shutdown();
     }
@@ -373,7 +378,8 @@ public class TestHAStateTransitions {
    * Tests manual failover back and forth between two NameNodes
    * for federation cluster with two namespaces.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testManualFailoverFailbackFederationHA() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -393,12 +399,14 @@ public class TestHAStateTransitions {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testFailoverWithEmptyInProgressEditLog() throws Exception {
     testFailoverAfterCrashDuringLogRoll(false);
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testFailoverWithEmptyInProgressEditLogWithHeader()
       throws Exception {
     testFailoverAfterCrashDuringLogRoll(true);
@@ -434,8 +442,7 @@ public class TestHAStateTransitions {
     StorageDirectory storageDir = new StorageDirectory(sharedEditsDir);
     File inProgressFile = NameNodeAdapter.getInProgressEditsFile(storageDir,
         txid + 1);
-    assertTrue("Failed to create in-progress edits file",
-        inProgressFile.createNewFile());
+    assertTrue(inProgressFile.createNewFile(), "Failed to create in-progress edits file");
     
     if (writeHeader) {
       DataOutputStream out = new DataOutputStream(new FileOutputStream(
@@ -462,7 +469,8 @@ public class TestHAStateTransitions {
    * Active    3 <------> 4
    * </pre>
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testSecretManagerState() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(
@@ -560,7 +568,8 @@ public class TestHAStateTransitions {
    * by virtue of the fact that it wouldn't work properly if the proxies
    * returned were not for the correct NNs.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testIsAtLeastOneActive() throws Exception {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
         .nnTopology(MiniDFSNNTopology.simpleHATopology())

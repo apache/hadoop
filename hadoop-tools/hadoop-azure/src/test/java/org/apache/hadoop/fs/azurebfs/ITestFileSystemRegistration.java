@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.net.URI;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -43,8 +43,8 @@ public class ITestFileSystemRegistration extends AbstractAbfsIntegrationTest {
 
   private void assertConfigMatches(Configuration conf, String key, String expected) {
     String v = conf.get(key);
-    assertNotNull("No value for key " + key, v);
-    assertEquals("Wrong value for key " + key, expected, v);
+    assertNotNull(v, "No value for key " + key);
+    assertEquals(expected, v, "Wrong value for key " + key);
   }
 
   @Test
@@ -79,14 +79,14 @@ public class ITestFileSystemRegistration extends AbstractAbfsIntegrationTest {
   public void ensureAzureBlobFileSystemIsDefaultFileSystem() throws Exception {
     Configuration rawConfig = getRawConfiguration();
     AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.get(rawConfig);
-    assertNotNull("filesystem", fs);
+    assertNotNull(fs, "filesystem");
 
     if (this.getAuthType() == AuthType.OAuth) {
       Abfss afs = (Abfss) FileContext.getFileContext(rawConfig).getDefaultFileSystem();
-      assertNotNull("filecontext", afs);
+      assertNotNull(afs, "filecontext");
     } else {
       Abfs afs = (Abfs) FileContext.getFileContext(rawConfig).getDefaultFileSystem();
-      assertNotNull("filecontext", afs);
+      assertNotNull(afs, "filecontext");
     }
 
   }
@@ -106,8 +106,8 @@ public class ITestFileSystemRegistration extends AbstractAbfsIntegrationTest {
         defaultUri.toString());
 
     SecureAzureBlobFileSystem fs = (SecureAzureBlobFileSystem) FileSystem.get(rawConfig);
-    assertNotNull("filesystem", fs);
+    assertNotNull(fs, "filesystem");
     Abfss afs = (Abfss) FileContext.getFileContext(rawConfig).getDefaultFileSystem();
-    assertNotNull("filecontext", afs);
+    assertNotNull(afs, "filecontext");
   }
 }

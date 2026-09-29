@@ -25,16 +25,15 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouterTest {
 
@@ -117,7 +116,7 @@ public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouter
         new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
     dtId2.setSequenceNumber(sequenceNumber);
     RMDelegationTokenIdentifier dtId3 = secretManager.getTokenByRouterStoreToken(dtId2);
-    Assert.assertEquals(dtId1, dtId3);
+    assertEquals(dtId1, dtId3);
 
     // query rm-token2 not exists
     sequenceNumber++;

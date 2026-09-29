@@ -23,12 +23,13 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test Class that tests connectors.
@@ -39,14 +40,14 @@ public class TestConnectors {
   private final int volumeCount = 2; // default volumes in MiniDFSCluster.
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numDatanodes).build();
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -61,10 +62,10 @@ public class TestConnectors {
     DiskBalancerCluster diskBalancerCluster =
         new DiskBalancerCluster(nameNodeConnector);
     diskBalancerCluster.readClusterInfo();
-    Assert.assertEquals("Expected number of Datanodes not found.",
-        numDatanodes, diskBalancerCluster.getNodes().size());
-    Assert.assertEquals("Expected number of volumes not found.",
-        volumeCount, diskBalancerCluster.getNodes().get(0).getVolumeCount());
+    assertEquals(numDatanodes, diskBalancerCluster.getNodes().size(),
+        "Expected number of Datanodes not found.");
+    assertEquals(volumeCount, diskBalancerCluster.getNodes().get(0).getVolumeCount(),
+        "Expected number of volumes not found.");
   }
 
   @Test
@@ -78,8 +79,7 @@ public class TestConnectors {
     String diskBalancerJson = diskBalancerCluster.toJson();
     DiskBalancerCluster serializedCluster =
         DiskBalancerCluster.parseJson(diskBalancerJson);
-    Assert.assertEquals("Parsed cluster is not equal to persisted info.",
-        diskBalancerCluster.getNodes().size(),
-        serializedCluster.getNodes().size());
+    assertEquals(diskBalancerCluster.getNodes().size(),
+        serializedCluster.getNodes().size(), "Parsed cluster is not equal to persisted info.");
   }
 }

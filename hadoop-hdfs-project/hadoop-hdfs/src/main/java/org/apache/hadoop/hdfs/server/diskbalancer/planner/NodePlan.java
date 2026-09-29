@@ -18,14 +18,22 @@
 package org.apache.hadoop.hdfs.server.diskbalancer.planner;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.util.Preconditions;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.SUPPORTED_PACKAGES_CONFIG_NAME;
 
 /**
  * NodePlan is a set of volumeSetPlans.
@@ -43,6 +51,9 @@ public class NodePlan {
   private static final ObjectReader READER = MAPPER.readerFor(NodePlan.class);
   private static final ObjectWriter WRITER = MAPPER.writerFor(
       MAPPER.constructType(NodePlan.class));
+  private static final Configuration CONFIGURATION = new HdfsConfiguration();
+  private static final Collection<String> SUPPORTED_PACKAGES = getAllowedPackages();
+
   /**
    * returns timestamp when this plan was created.
    *
@@ -80,7 +91,7 @@ public class NodePlan {
   /**
    * Returns a Map of  VolumeSetIDs and volumeSetPlans.
    *
-   * @return Map
+   * @return List of Steps
    */
   public List<Step> getVolumeSetPlans() {
     return volumeSetPlans;
@@ -151,20 +162,55 @@ public class NodePlan {
   }
 
   /**
-   * Parses a Json string and converts to NodePlan.
+   * Parses a JSON string and converts to NodePlan.
    *
-   * @param json - Json String
+   * @param json - JSON String
    * @return NodePlan
    * @throws IOException
    */
   public static NodePlan parseJson(String json) throws IOException {
-    return READER.readValue(json);
+    JsonNode tree = READER.readTree(json);
+    checkNodes(tree);
+    return READER.readValue(tree);
   }
 
   /**
-   * Returns a Json representation of NodePlan.
+   * Iterate through the tree structure beginning at the input `node`. This includes
+   * checking arrays and within JSON object structures (allowing for nested structures)
    *
-   * @return - json String
+   * @param node a node representing the root of tree structure
+   * @throws IOException if any unexpected `@class` values are found - this is the
+   * pre-existing exception type exposed by the calling code
+   */
+  private static void checkNodes(JsonNode node) throws IOException {
+    if (node == null) {
+      return;
+    }
+
+    // Check Node and Recurse into child nodes
+    if (node.isObject()) {
+      Iterator<Map.Entry<String, JsonNode>> fieldsIterator = node.fields();
+      while (fieldsIterator.hasNext()) {
+        Map.Entry<String, JsonNode> entry = fieldsIterator.next();
+        if ("@class".equals(entry.getKey())) {
+          String textValue = entry.getValue().asText();
+          if (textValue != null && !textValue.isBlank() && !stepClassIsAllowed(textValue)) {
+            throw new IOException("Invalid @class value in NodePlan JSON: " + textValue);
+          }
+        }
+        checkNodes(entry.getValue());
+      }
+    } else if (node.isArray()) {
+      for (int i = 0; i < node.size(); i++) {
+        checkNodes(node.get(i));
+      }
+    }
+  }
+
+  /**
+   * Returns a JSON representation of NodePlan.
+   *
+   * @return - JSON String
    * @throws IOException
    */
   public String toJson() throws IOException {
@@ -187,5 +233,22 @@ public class NodePlan {
    */
   public void setNodeUUID(String nodeUUID) {
     this.nodeUUID = nodeUUID;
+  }
+
+  private static boolean stepClassIsAllowed(String className) {
+    for (String pkg : SUPPORTED_PACKAGES) {
+      if (className.startsWith(pkg)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static Collection<String> getAllowedPackages() {
+    return CONFIGURATION.getStringCollection(SUPPORTED_PACKAGES_CONFIG_NAME)
+        .stream()
+        .map(String::trim)
+        .filter(s -> !s.isEmpty())
+        .toList();
   }
 }

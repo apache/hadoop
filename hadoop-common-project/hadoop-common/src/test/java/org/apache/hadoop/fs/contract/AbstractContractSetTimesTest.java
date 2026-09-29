@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.contract;
 import java.io.FileNotFoundException;
 
 import org.apache.hadoop.fs.Path;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +37,7 @@ public abstract class AbstractContractSetTimesTest extends
   private Path testPath;
   private Path target;
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();

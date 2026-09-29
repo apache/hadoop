@@ -259,6 +259,18 @@ public final class CommitConstants {
       false;
 
   /**
+   * Should Magic committer cleanup all the staging dirs.
+   */
+  public static final String FS_S3A_COMMITTER_MAGIC_CLEANUP_ENABLED =
+      "fs.s3a.committer.magic.cleanup.enabled";
+
+  /**
+   * Default value for {@link #FS_S3A_COMMITTER_MAGIC_CLEANUP_ENABLED}: {@value}.
+   */
+  public static final boolean FS_S3A_COMMITTER_MAGIC_CLEANUP_ENABLED_DEFAULT =
+      true;
+
+  /**
    * Path  in the cluster filesystem for temporary data: {@value}.
    * This is for HDFS, not the local filesystem.
    * It is only for the summary data of each file, not the actual

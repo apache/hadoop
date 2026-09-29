@@ -1,0 +1,372 @@
+{
+  "property": [
+    {
+      "name": "yarn.scheduler.capacity.root.marketing.queues",
+      "value": "test"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod02.max-parallel-apps",
+      "value": "11970"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.development.capacity",
+      "value": "10"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.development.queues",
+      "value": "team1,team2"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.development.team1.accessible-node-labels",
+      "value": "gpu"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.development.team1.capacity",
+      "value": "70"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.marketing.capacity",
+      "value": "20"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.marketing.test.state",
+      "value": "RUNNING"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.accessible-node-labels.fpga.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.capacity",
+      "value": "90"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod02.maximum-applications",
+      "value": "6500"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.accessible-node-labels",
+      "value": "fpga,gpu"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod02.accessible-node-labels.fpga.capacity",
+      "value": "50"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.prodteam001.accessible-node-labels.fpga.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.accessible-node-labels.fpga.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.queues",
+      "value": "default,marketing,production,development"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.prodteam001.accessible-node-labels",
+      "value": "fpga,gpu"
+    },
+    {
+      "name": "yarn.webservice.mutation-api.version",
+      "value": "1749243183321"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.development.team2.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.accessible-node-labels.fpga.capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.prodteam001.accessible-node-labels.gpu.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.queues",
+      "value": "prodteam01"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.marketing.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.accessible-node-labels.fpga.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.accessible-node-labels.gpu.capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.development.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.prodteam001.state",
+      "value": "RUNNING"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.marketing.test.capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.accessible-node-labels.gpu.capacity",
+      "value": "50"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.default.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.prodteam001.accessible-node-labels.gpu.capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.marketing.test.leaf-queue-template.capacity",
+      "value": "15"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.prodteam001.capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.accessible-node-labels.fpga.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.marketing.state",
+      "value": "RUNNING"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.accessible-node-labels.fpga.capacity",
+      "value": "50"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.queues",
+      "value": "prod01,prod02"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod02.capacity",
+      "value": "10"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.maximum-capacity",
+      "value": "90"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.marketing.test.leaf-queue-template.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.capacity",
+      "value": "60"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.accessible-node-labels.gpu.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.state",
+      "value": "RUNNING"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.accessible-node-labels.gpu.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.marketing.test.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod02.accessible-node-labels.fpga.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.accessible-node-labels.gpu.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod02.default-application-lifetime",
+      "value": "0"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.queues",
+      "value": "prodteam001"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod02.maximum-capacity",
+      "value": "25"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.accessible-node-labels.gpu.capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod02.accessible-node-labels.gpu.capacity",
+      "value": "50"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.default.maximum-am-resource-percent",
+      "value": "0.2"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod02.maximum-am-resource-percent",
+      "value": "0.15"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.development.team2.capacity",
+      "value": "30"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.development.state",
+      "value": "RUNNING"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.accessible-node-labels",
+      "value": "*,gpu"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.prodteam001.accessible-node-labels.fpga.capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.accessible-node-labels.gpu.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod02.accessible-node-labels",
+      "value": "fpga,gpu"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.default.capacity",
+      "value": "10"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod02.accessible-node-labels.gpu.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.state",
+      "value": "RUNNING"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.prodteam001.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.accessible-node-labels.fpga.capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.accessible-node-labels",
+      "value": "fpga,gpu"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.state",
+      "value": "RUNNING"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.prodteam01.accessible-node-labels.fpga.capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.schedule-asynchronously.enable",
+      "value": "true"
+    },
+    {
+      "name": "yarn.scheduler.capacity.minimum-user-limit-percent",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.user-limit-factor",
+      "value": "1"
+    },
+    {
+      "name": "yarn.scheduler.capacity.maximum-am-resource-percent",
+      "value": "0.1"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.maximum-applications",
+      "value": "10000"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.disable_preemption",
+      "value": "true"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.marketing.test.auto-create-child-queue.enabled",
+      "value": "true"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.accessible-node-labels.gpu.capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.development.team1.state",
+      "value": "RUNNING"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.development.team1.maximum-capacity",
+      "value": "100"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.development.team1.accessible-node-labels.gpu.capacity",
+      "value": "40"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.development.team1.accessible-node-labels.gpu.maximum-capacity",
+      "value": "80"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.accessible-node-labels.gpu.capacity",
+      "value": "30"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.accessible-node-labels.gpu.maximum-capacity",
+      "value": "60"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.production.prod01.accessible-node-labels",
+      "value": "gpu,fpga"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.development.team2.accessible-node-labels",
+      "value": "*"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.development.team1.accessible-node-labels.gpu.maximum-am-resource-percent",
+      "value": "0.2"
+    },
+    {
+      "name": "yarn.scheduler.capacity.root.development.team1.default-node-label-expression",
+      "value": "gpu"
+    },
+    {
+      "name": "yarn.scheduler.capacity.queue-mappings",
+      "value": "u:user1:root.default,u:user2:root.production.prod02"
+    },
+    {
+      "name": "yarn.scheduler.capacity.global-queue-max-application",
+      "value": "5000"
+    }
+  ]
+}

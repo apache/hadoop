@@ -25,7 +25,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.opentest4j.AssertionFailedError;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 
 import org.apache.hadoop.conf.Configuration;
@@ -56,6 +58,7 @@ import static org.apache.hadoop.fs.s3a.MultipartTestUtils.assertNoUploadsAt;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.clearAnyUploads;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createMagicFile;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.magicPath;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.toPathList;
 import static org.apache.hadoop.fs.s3a.S3AUtils.HIDDEN_FILE_FILTER;
@@ -97,12 +100,14 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
     return conf;
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
     final S3AFileSystem fs = getFileSystem();
     final Path path = methodPath();
     assertHasPathCapabilities(fs, path, DIRECTORY_OPERATIONS_PURGE_UPLOADS);
+    assumeMultipartUploads(fs.getConf());
     listingInconsistent = fs.hasPathCapability(path, DIRECTORY_LISTING_INCONSISTENT);
     clearAnyUploads(fs, path);
   }
@@ -314,7 +319,7 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
           options, getConfiguration());
     } else {
       // distcp fails if uploads are visible
-      intercept(org.junit.ComparisonFailure.class, () -> {
+      intercept(AssertionFailedError.class, () -> {
         DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, src.toString(), dest.toString(),
             options, getConfiguration());
       });
@@ -337,7 +342,7 @@ public class ITestTreewalkProblems extends AbstractS3ACostTest {
           options, getConfiguration());
     } else {
       // distcp fails if uploads are visible
-      intercept(org.junit.ComparisonFailure.class, () -> {
+      intercept(AssertionFailedError.class, () -> {
         DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, src.toString(), dest.toString(),
             options, getConfiguration());
       });

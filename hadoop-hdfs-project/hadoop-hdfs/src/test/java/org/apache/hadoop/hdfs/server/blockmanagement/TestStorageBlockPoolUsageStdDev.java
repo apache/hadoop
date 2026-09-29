@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -29,15 +30,17 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
-import org.eclipse.jetty.util.ajax.JSON;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.hadoop.util.JsonUtils;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestStorageBlockPoolUsageStdDev {
   private final static int NUM_DATANODES = 5;
@@ -48,7 +51,7 @@ public class TestStorageBlockPoolUsageStdDev {
   private MiniDFSCluster cluster;
   private FileSystem fs;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
@@ -70,6 +73,14 @@ public class TestStorageBlockPoolUsageStdDev {
         .storageCapacities(capacities).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
+  }
+
+  @AfterEach
+  public void tearDown() {
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   /**
@@ -117,7 +128,8 @@ public class TestStorageBlockPoolUsageStdDev {
     // and Datanode are the same.
     String liveNodes = cluster.getNameNode().getNamesystem().getLiveNodes();
     Map<String, Map<String, Object>> info =
-        (Map<String, Map<String, Object>>) JSON.parse(liveNodes);
+        JsonUtils.parse(liveNodes,
+            new TypeReference<Map<String, Map<String, Object>>>() {});
 
     // Create storageReports for datanodes.
     FSNamesystem namesystem = cluster.getNamesystem();
@@ -137,23 +149,23 @@ public class TestStorageBlockPoolUsageStdDev {
     // When multiple values are operated on in different order,
     // the results may be inconsistent, so we only take two decimal
     // points to assert.
-    Assert.assertEquals(
+    assertEquals(
         Util.getBlockPoolUsedPercentStdDev(storageReportsDn0),
         (double) info.get(dn0.getDisplayName()).get("blockPoolUsedPercentStdDev"),
         0.01d);
-    Assert.assertEquals(
+    assertEquals(
         Util.getBlockPoolUsedPercentStdDev(storageReportsDn1),
         (double) info.get(dn1.getDisplayName()).get("blockPoolUsedPercentStdDev"),
         0.01d);
-    Assert.assertEquals(
+    assertEquals(
         Util.getBlockPoolUsedPercentStdDev(storageReportsDn2),
         (double) info.get(dn2.getDisplayName()).get("blockPoolUsedPercentStdDev"),
         0.01d);
-    Assert.assertEquals(
+    assertEquals(
         Util.getBlockPoolUsedPercentStdDev(storageReportsDn3),
         (double) info.get(dn3.getDisplayName()).get("blockPoolUsedPercentStdDev"),
         0.01d);
-    Assert.assertEquals(
+    assertEquals(
         Util.getBlockPoolUsedPercentStdDev(storageReportsDn4),
         (double) info.get(dn4.getDisplayName()).get("blockPoolUsedPercentStdDev"),
         0.01d);

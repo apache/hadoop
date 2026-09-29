@@ -18,11 +18,11 @@
 <parent>
    <groupId>org.apache.hadoop</groupId>
    <artifactId>hadoop-project</artifactId>
-   <version>3.5.0-SNAPSHOT</version>
+   <version>3.6.0-SNAPSHOT</version>
    <relativePath>../../hadoop-project</relativePath>
 </parent>
   <artifactId>hadoop-client-runtime</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <description>Apache Hadoop Client</description>
@@ -66,6 +66,11 @@
       <artifactId>snappy-java</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>com.github.luben</groupId>
+      <artifactId>zstd-jni</artifactId>
+      <scope>runtime</scope>
+    </dependency>
     <!-- This comes from our parent pom. If we don't expressly change it here to get included,
          downstream will get warnings at compile time. -->
     <dependency>
@@ -107,6 +112,12 @@
       <artifactId>reload4j</artifactId>
       <scope>runtime</scope>
       <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.jcraft</groupId>
+      <artifactId>jsch</artifactId>
+      <optional>true</optional>
+      <scope>runtime</scope>
     </dependency>
   </dependencies>
   <profiles>
@@ -157,6 +168,7 @@
                        so keeping it here leads to conflicts.
                       -->
                       <exclude>org.eclipse.jetty:jetty-util</exclude>
+                      <exclude>org.eclipse.jetty:jetty-util-ajax</exclude>
                       <exclude>org.eclipse.jetty:jetty-server</exclude>
                       <exclude>org.eclipse.jetty:jetty-continuation</exclude>
                       <exclude>org.ow2.asm:*</exclude>
@@ -164,6 +176,7 @@
                       <exclude>org.bouncycastle:*</exclude>
                       <!-- Leave snappy that includes native methods which cannot be relocated. -->
                       <exclude>org.xerial.snappy:*</exclude>
+                      <exclude>com.github.luben:zstd-jni</exclude>
                       <!-- leave out kotlin classes -->
                       <exclude>org.jetbrains.kotlin:*</exclude>
                       <exclude>org.glassfish.jersey.test-framework:*</exclude>
@@ -176,14 +189,11 @@
                       <exclude>org.glassfish.jersey.core:*</exclude>
                       <exclude>org.glassfish.hk2.external:*</exclude>
                       <exclude>org.glassfish.jaxb:*</exclude>
-                      <exclude>jakarta.ws.rs:*</exclude>
                       <exclude>jakarta.annotation:*</exclude>
                       <exclude>jakarta.validation:*</exclude>
-                      <exclude>jakarta.servlet:*</exclude>
-                      <exclude>javax.annotation:*</exclude>
                       <exclude>org.hamcrest:*</exclude>
+                      <exclude>org.javassist:*</exclude>
                       <exclude>aopalliance:*</exclude>
-                      <exclude>javassist:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
@@ -317,6 +327,9 @@
                         <exclude>com/sun/management/**/*</exclude>
                         <exclude>com/ibm/security/*</exclude>
                         <exclude>com/ibm/security/**/*</exclude>
+                        <!-- Exclude zstd-jni -->
+                        <exclude>com/github/luben/zstd/*</exclude>
+                        <exclude>com/github/luben/zstd/**/*</exclude>
                       </excludes>
                     </relocation>
                     <relocation>

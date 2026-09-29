@@ -25,14 +25,17 @@ Refer to [WASB Deprecation](./wasb.html) for more details.
 
 ## Azure Service Endpoints Used by ABFS Driver
 Azure Services offers two set of endpoints for interacting with storage accounts:
-1. [Azure Blob Storage](./blobEndpoint.md) referred as Blob Endpoint
+1. [Azure Blob Storage](./blobEndpoint.html) referred as Blob Endpoint
 2. [Azure Data Lake Storage](https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/operation-groups) referred as DFS Endpoint
 
 The ABFS Driver by default is designed to work with DFS Endpoint only which primarily
 supports HNS Enabled Accounts only.
 
-To enable ABFS Driver to work with FNS Accounts, Support for Blob Endpoint is being added.
+To enable ABFS Driver to work with FNS Accounts, support for Blob Endpoint is added.
 This is because Azure services do not recommend using DFS Endpoint for FNS Accounts.
+FNS over DFS endpoint is therefore **REMOVED**. All requests will be switched to Blob endpoint internally if
+account is detected as FNS.
+
 ABFS Driver will only allow FNS Accounts to be accessed using Blob Endpoint.
 HNS Enabled accounts will still use DFS Endpoint which continues to be the
 recommended stack based on performance and feature capabilities.
@@ -71,7 +74,7 @@ to blob for HNS Enabled Accounts, FS init will fail with InvalidConfiguration er
 type only for Ingress Related Operations like [Create](./blobEndpoint.html#put-blob),
 [Append](./blobEndpoint.html#put-block),
 and [Flush](./blobEndpoint.html#put-block-list). All other operations will still use the
-configured service type.
+configured service type. Choosing a separate ingress service is **only supported for HNS accounts**.
     ```xml
    <property>
         <name>fs.azure.ingress.service.type</name>
@@ -87,11 +90,11 @@ configured service type.
     </property>
     ```
     - How to configure Shared Key
-      auth: [Shared Key](./index.md#a-nameshared-key-autha-default-shared-key)
+      auth: [Shared Key](./index.html#a-nameshared-key-autha-default-shared-key)
     - How to configure
-      OAuth: [OAuth](./index.md#a-nameoauth-client-credentialsa-oauth-20-client-credentials)
+      OAuth: [OAuth](./index.html#a-nameoauth-client-credentialsa-oauth-20-client-credentials)
     - How to configure fixed
-      SAS: [Fixed SAS](./index.md#using-accountservice-sas-with-abfs)
+      SAS: [Fixed SAS](./index.html#using-accountservice-sas-with-abfs)
 
    OAuth is recommended auth type as it is more secure and flexible.
 
@@ -139,13 +142,7 @@ The following configs are related to rename and delete operations.
 
 ## Features currently not supported
 
-1. **User Delegation SAS** feature is currently not supported but we
-   plan to bring support for it in the future.
-   Jira to track this
-   workitem : https://issues.apache.org/jira/browse/HADOOP-19406.
-
-
-2. **Context Provider Key (CPK)** support is currently not available. It refers to the ability to use a
+1. **Context Provider Key (CPK)** support is currently not available. It refers to the ability to use a
 customer-provided encryption key to encrypt and decrypt data in Azure Blob
 Storage. This feature allows users to manage their own encryption keys,
 providing an additional layer of security and control over their data.

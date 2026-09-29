@@ -24,7 +24,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.util.RwLockMode;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -52,7 +53,8 @@ public class TestGetBlockLocations {
   private static final String RESERVED_PATH =
       "/.reserved/.inodes/" + MOCK_INODE_ID;
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testResolveReservedPath() throws IOException {
     FSNamesystem fsn = setupFileSystem();
     FSEditLog editlog = fsn.getEditLog();
@@ -61,7 +63,8 @@ public class TestGetBlockLocations {
     fsn.close();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testGetBlockLocationsRacingWithDelete() throws IOException {
     FSNamesystem fsn = spy(setupFileSystem());
     final FSDirectory fsd = fsn.getFSDirectory();
@@ -95,7 +98,8 @@ public class TestGetBlockLocations {
     fsn.close();
   }
 
-  @Test(timeout = 30000)
+  @Test
+  @Timeout(value = 30)
   public void testGetBlockLocationsRacingWithRename() throws IOException {
     FSNamesystem fsn = spy(setupFileSystem());
     final FSDirectory fsd = fsn.getFSDirectory();

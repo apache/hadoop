@@ -30,6 +30,10 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.protobuf.MiniRPCBenchmarkProtos.MiniDelegationTokenProto;
+import org.apache.hadoop.ipc.protobuf.MiniRPCBenchmarkProtos.MiniGetDelegationTokenRequestProto;
+import org.apache.hadoop.ipc.protobuf.MiniRPCBenchmarkProtos.MiniGetDelegationTokenResponseProto;
+import org.apache.hadoop.ipc.protobuf.MiniRPCBenchmarkProtos.MiniProtocolService;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SecurityUtil;
@@ -40,6 +44,10 @@ import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenSecretManager;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.util.Time;
 import org.slf4j.event.Level;
 
@@ -101,18 +109,19 @@ public class MiniRPCBenchmark {
       super(new Text("MY KIND"));
     }    
   }
-  
-  @KerberosInfo(
-      serverPrincipal=USER_NAME_KEY)
-  @TokenInfo(TestDelegationTokenSelector.class)
-  public static interface MiniProtocol extends VersionedProtocol {
-    public static final long versionID = 1L;
 
-    /**
-     * Get a Delegation Token.
-     */
-    public Token<TestDelegationTokenIdentifier> getDelegationToken(Text renewer) 
-        throws IOException;
+  /**
+   * Protobuf based MiniProtocol used by {@link MiniRPCBenchmark}.
+   * Replaces the legacy Writable based protocol now that
+   * {@code WritableRpcEngine} has been removed.
+   */
+  @KerberosInfo(serverPrincipal = USER_NAME_KEY)
+  @TokenInfo(TestDelegationTokenSelector.class)
+  @ProtocolInfo(
+      protocolName = "org.apache.hadoop.ipc.MiniRPCBenchmark$MiniProtocol",
+      protocolVersion = 1)
+  public interface MiniProtocol extends MiniProtocolService.BlockingInterface {
+    long versionID = 1L;
   }
 
   /**
@@ -125,34 +134,32 @@ public class MiniRPCBenchmark {
     private TestDelegationTokenSecretManager secretManager;
     private Server rpcServer;
 
-    @Override // VersionedProtocol
-    public long getProtocolVersion(String protocol, 
-                                   long clientVersion) throws IOException {
-      if (protocol.equals(MiniProtocol.class.getName()))
-        return versionID;
-      throw new IOException("Unknown protocol: " + protocol);
-    }
-
-    @Override // VersionedProtocol
-    public ProtocolSignature getProtocolSignature(String protocol, 
-                                   long clientVersion,
-                                   int clientMethodsHashCode) throws IOException {
-      if (protocol.equals(MiniProtocol.class.getName()))
-        return new ProtocolSignature(versionID, null);
-      throw new IOException("Unknown protocol: " + protocol);
-    }
-
     @Override // MiniProtocol
-    public Token<TestDelegationTokenIdentifier> getDelegationToken(Text renewer) 
-    throws IOException {
-      String owner = UserGroupInformation.getCurrentUser().getUserName();
-      String realUser = 
-        UserGroupInformation.getCurrentUser().getRealUser() == null ? "":
-        UserGroupInformation.getCurrentUser().getRealUser().getUserName();
-      TestDelegationTokenIdentifier tokenId = 
-        new TestDelegationTokenIdentifier(
-            new Text(owner), renewer, new Text(realUser));
-      return new Token<TestDelegationTokenIdentifier>(tokenId, secretManager);
+    public MiniGetDelegationTokenResponseProto getDelegationToken(
+        RpcController controller,
+        MiniGetDelegationTokenRequestProto request) throws ServiceException {
+      try {
+        Text renewer = new Text(request.getRenewer());
+        String owner = UserGroupInformation.getCurrentUser().getUserName();
+        String realUser =
+            UserGroupInformation.getCurrentUser().getRealUser() == null ? "" :
+                UserGroupInformation.getCurrentUser().getRealUser().getUserName();
+        TestDelegationTokenIdentifier tokenId =
+            new TestDelegationTokenIdentifier(
+                new Text(owner), renewer, new Text(realUser));
+        Token<TestDelegationTokenIdentifier> token =
+            new Token<>(tokenId, secretManager);
+        return MiniGetDelegationTokenResponseProto.newBuilder()
+            .setToken(MiniDelegationTokenProto.newBuilder()
+                .setIdentifier(ByteString.copyFrom(token.getIdentifier()))
+                .setPassword(ByteString.copyFrom(token.getPassword()))
+                .setKind(token.getKind().toString())
+                .setService(token.getService().toString())
+                .build())
+            .build();
+      } catch (IOException ioe) {
+        throw new ServiceException(ioe);
+      }
     }
 
     /** Start RPC server */
@@ -164,8 +171,11 @@ public class MiniRPCBenchmark {
         new TestDelegationTokenSecretManager(24*60*60*1000,
             7*24*60*60*1000,24*60*60*1000,3600000);
       secretManager.startThreads();
+      RPC.setProtocolEngine(conf, MiniProtocol.class, ProtobufRpcEngine2.class);
+      BlockingService service =
+          MiniProtocolService.newReflectiveBlockingService(this);
       rpcServer = new RPC.Builder(conf).setProtocol(MiniProtocol.class)
-          .setInstance(this).setBindAddress(DEFAULT_SERVER_ADDRESS).setPort(0)
+          .setInstance(service).setBindAddress(DEFAULT_SERVER_ADDRESS).setPort(0)
           .setNumHandlers(1).setVerbose(false).setSecretManager(secretManager)
           .build();
       rpcServer.start();
@@ -189,8 +199,8 @@ public class MiniRPCBenchmark {
     MiniProtocol client = null;
     try {
       long start = Time.now();
-      client = RPC.getProxy(MiniProtocol.class,
-          MiniProtocol.versionID, addr, conf);
+      RPC.setProtocolEngine(conf, MiniProtocol.class, ProtobufRpcEngine2.class);
+      client = RPC.getProxy(MiniProtocol.class, MiniProtocol.versionID, addr, conf);
       long end = Time.now();
       return end - start;
     } finally {
@@ -211,14 +221,28 @@ public class MiniRPCBenchmark {
         client =  proxyUserUgi.doAs(new PrivilegedExceptionAction<MiniProtocol>() {
           @Override
           public MiniProtocol run() throws IOException {
+            RPC.setProtocolEngine(conf, MiniProtocol.class,
+                ProtobufRpcEngine2.class);
             MiniProtocol p = RPC.getProxy(MiniProtocol.class,
                 MiniProtocol.versionID, addr, conf);
-            Token<TestDelegationTokenIdentifier> token;
-            token = p.getDelegationToken(new Text(RENEWER));
-            currentUgi = UserGroupInformation.createUserForTesting(MINI_USER, 
-                GROUP_NAMES);
-            SecurityUtil.setTokenService(token, addr);
-            currentUgi.addToken(token);
+            try {
+              MiniGetDelegationTokenResponseProto response =
+                  p.getDelegationToken(null,
+                      MiniGetDelegationTokenRequestProto.newBuilder()
+                          .setRenewer(RENEWER).build());
+              MiniDelegationTokenProto tokenProto = response.getToken();
+              Token<TestDelegationTokenIdentifier> token = new Token<>(
+                  tokenProto.getIdentifier().toByteArray(),
+                  tokenProto.getPassword().toByteArray(),
+                  new Text(tokenProto.getKind()),
+                  new Text(tokenProto.getService()));
+              currentUgi = UserGroupInformation.createUserForTesting(MINI_USER,
+                  GROUP_NAMES);
+              SecurityUtil.setTokenService(token, addr);
+              currentUgi.addToken(token);
+            } catch (ServiceException se) {
+              throw new IOException(se);
+            }
             return p;
           }
         });
@@ -239,6 +263,7 @@ public class MiniRPCBenchmark {
         client = currentUgi.doAs(new PrivilegedExceptionAction<MiniProtocol>() {
           @Override
           public MiniProtocol run() throws IOException {
+            RPC.setProtocolEngine(conf, MiniProtocol.class, ProtobufRpcEngine2.class);
             return RPC.getProxy(MiniProtocol.class,
                 MiniProtocol.versionID, addr, conf);
           }

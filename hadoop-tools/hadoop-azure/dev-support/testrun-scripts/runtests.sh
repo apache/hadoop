@@ -48,14 +48,6 @@ runHNSSharedKeyDFSTest()
   triggerRun "HNS-SharedKey-DFS" "$accountName"  "$runTest" $processCount "$cleanUpTestContainers"
 }
 
-runNonHNSSharedKeyDFSTest()
-{
-  accountName=$(xmlstarlet sel -t -v '//property[name = "fs.azure.nonHnsTestAccountName"]/value' -n $azureTestXmlPath)
-  PROPERTIES=("fs.azure.account.auth.type")
-  VALUES=("SharedKey")
-  triggerRun "NonHNS-SharedKey-DFS" "$accountName" "$runTest" $processCount "$cleanUpTestContainers"
-}
-
 runAppendBlobHNSOAuthDFSTest()
 {
   accountName=$(xmlstarlet sel -t -v '//property[name = "fs.azure.hnsTestAccountName"]/value' -n $azureTestXmlPath)
@@ -71,14 +63,6 @@ runNonHNSSharedKeyBlobTest()
   PROPERTIES=("fs.azure.account.auth.type")
   VALUES=("SharedKey")
   triggerRun "NonHNS-SharedKey-Blob" "${accountName}_blob" "$runTest" $processCount "$cleanUpTestContainers"
-}
-
-runNonHNSOAuthDFSTest()
-{
-  accountName=$(xmlstarlet sel -t -v '//property[name = "fs.azure.nonHnsTestAccountName"]/value' -n $azureTestXmlPath)
-  PROPERTIES=("fs.azure.account.auth.type")
-  VALUES=("OAuth")
-  triggerRun "NonHNS-OAuth-DFS" "$accountName" "$runTest" $processCount "$cleanUpTestContainers"
 }
 
 runNonHNSOAuthBlobTest()
@@ -105,14 +89,6 @@ runHNSOAuthDFSIngressBlobTest()
   PROPERTIES=("fs.azure.account.auth.type" "fs.azure.ingress.service.type")
   VALUES=("OAuth" "blob")
   triggerRun "HNS-Oauth-DFS-IngressBlob" "$accountName" "$runTest" $processCount "$cleanUpTestContainers"
-}
-
-runNonHNSOAuthDFSIngressBlobTest()
-{
-  accountName=$(xmlstarlet sel -t -v '//property[name = "fs.azure.nonHnsTestAccountName"]/value' -n $azureTestXmlPath)
-  PROPERTIES=("fs.azure.account.auth.type" "fs.azure.ingress.service.type")
-  VALUES=("OAuth" "blob")
-  triggerRun "NonHNS-OAuth-DFS-IngressBlob" "$accountName" "$runTest" $processCount "$cleanUpTestContainers"
 }
 
 runTest=false
@@ -181,7 +157,7 @@ done
 
 echo ' '
 echo 'Set the active test combination to run the action:'
-select combo in HNS-OAuth-DFS HNS-SharedKey-DFS NonHNS-SharedKey-DFS AppendBlob-HNS-OAuth-DFS NonHNS-SharedKey-Blob NonHNS-OAuth-DFS NonHNS-OAuth-Blob AppendBlob-NonHNS-OAuth-Blob HNS-Oauth-DFS-IngressBlob NonHNS-Oauth-DFS-IngressBlob AllCombinationsTestRun Quit
+select combo in HNS-OAuth-DFS HNS-SharedKey-DFS AppendBlob-HNS-OAuth-DFS NonHNS-SharedKey-Blob NonHNS-OAuth-Blob AppendBlob-NonHNS-OAuth-Blob HNS-Oauth-DFS-IngressBlob AllCombinationsTestRun Quit
 do
    case $combo in
       HNS-OAuth-DFS)
@@ -192,20 +168,12 @@ do
          runHNSSharedKeyDFSTest
          break
          ;;
-      NonHNS-SharedKey-DFS)
-         runNonHNSSharedKeyDFSTest
-         break
-         ;;
        AppendBlob-HNS-OAuth-DFS)
          runAppendBlobHNSOAuthDFSTest
          break
          ;;
        NonHNS-SharedKey-Blob)
          runNonHNSSharedKeyBlobTest
-         break
-         ;;
-        NonHNS-OAuth-DFS)
-         runNonHNSOAuthDFSTest
          break
          ;;
         NonHNS-OAuth-Blob)
@@ -220,10 +188,6 @@ do
          runHNSOAuthDFSIngressBlobTest
          break
          ;;
-        NonHNS-Oauth-DFS-IngressBlob)
-         runNonHNSOAuthDFSIngressBlobTest
-         break
-         ;;
       AllCombinationsTestRun)
         if [ $runTest == false ]
         then
@@ -232,14 +196,11 @@ do
         fi
         runHNSOAuthDFSTest
         runHNSSharedKeyDFSTest
-        runNonHNSSharedKeyDFSTest
         runAppendBlobHNSOAuthDFSTest
         runNonHNSSharedKeyBlobTest
-        runNonHNSOAuthDFSTest
         runNonHNSOAuthBlobTest
         runAppendBlobNonHNSOAuthBlobTest
         runHNSOAuthDFSIngressBlobTest
-        runNonHNSOAuthDFSIngressBlobTest
          break
          ;;
       Quit)

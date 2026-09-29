@@ -26,6 +26,8 @@ import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestRenameStageFailure;
+import org.junit.jupiter.api.BeforeEach;
+
 /**
  * Rename failure logic on ABFS.
  * This will go through the resilient rename operation.
@@ -48,6 +50,7 @@ public class ITestAbfsRenameStageFailure extends TestRenameStageFailure {
     return fs.getAbfsStore().getIsNamespaceEnabled(AbstractAbfsIntegrationTest.getSampleTracingContext(fs, false));
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     binding.setup();

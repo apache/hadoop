@@ -20,8 +20,10 @@ package org.apache.hadoop.fs.contract.hdfs;
 
 import java.io.IOException;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
@@ -30,6 +32,8 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 /**
  * Contract test for vectored reads through HDFS connector.
  */
+@ParameterizedClass(name="buffer-{0}")
+@MethodSource("params")
 public class TestHDFSContractVectoredRead
     extends AbstractContractVectoredReadTest {
 
@@ -37,12 +41,12 @@ public class TestHDFSContractVectoredRead
     super(bufferType);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void createCluster() throws IOException {
     HDFSContract.createCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() throws IOException {
     HDFSContract.destroyCluster();
   }

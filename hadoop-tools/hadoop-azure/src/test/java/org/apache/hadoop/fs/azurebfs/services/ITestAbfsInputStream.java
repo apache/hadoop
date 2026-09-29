@@ -28,11 +28,11 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamTestUtils.HUNDRED;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -52,8 +52,8 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       int fileSize = i * ONE_MB;
       final AzureBlobFileSystem fs = getFileSystem(false, false, fileSize);
       String fileName = methodName.getMethodName() + i;
-      byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
-      Path testFilePath = abfsInputStreamTestUtils.createFileWithContent(fs, fileName, fileContent);
+      byte[] fileContent = getRandomBytesArray(fileSize);
+      Path testFilePath = createFileWithContent(fs, fileName, fileContent);
       testWithNoOptimization(fs, testFilePath, HUNDRED, fileContent);
     }
   }
@@ -97,8 +97,8 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       int fileSize = i * ONE_MB;
       final AzureBlobFileSystem fs = getFileSystem(true, true, fileSize);
       String fileName = methodName.getMethodName() + i;
-      byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
-      Path testFilePath = abfsInputStreamTestUtils.createFileWithContent(fs, fileName, fileContent);
+      byte[] fileContent = getRandomBytesArray(fileSize);
+      Path testFilePath = createFileWithContent(fs, fileName, fileContent);
       testExceptionInOptimization(fs, testFilePath, fileSize - HUNDRED,
           fileSize / 4, fileContent);
     }
@@ -117,7 +117,7 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
         FSDataInputStream in = getFileSystem().open(path)) {
       AbfsInputStream abfsInputStream = (AbfsInputStream) in.getWrappedStream();
 
-      Assertions.assertThat(abfsInputStream.getFsBackRef().isNull())
+      assertThat(abfsInputStream.getFsBackRef().isNull())
           .describedAs("BackReference in input stream should not be null")
           .isFalse();
     }

@@ -20,11 +20,11 @@ package org.apache.hadoop.hdfs;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 public class TestParallelShortCircuitLegacyRead extends TestParallelReadUtil {
-  @BeforeClass
+  @BeforeAll
   static public void setupCluster() throws Exception {
     DFSInputStream.tcpReadsDisabledForTesting = true;
     HdfsConfiguration conf = new HdfsConfiguration();
@@ -40,7 +40,7 @@ public class TestParallelShortCircuitLegacyRead extends TestParallelReadUtil {
     setupCluster(1, conf);
   }
 
-  @AfterClass
+  @AfterAll
   static public void teardownCluster() throws Exception {
     TestParallelReadUtil.teardownCluster();
   }

@@ -67,9 +67,7 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
         requireNonNull(
             lookupS3ADelegationToken(submittedCredentials, uri),
             "No Token for " + uri);
-    assertEquals("Kind of token " + token,
-        kind,
-        token.getKind());
+    assertEquals(kind, token.getKind(), "Kind of token " + token);
     AbstractS3ATokenIdentifier tid
         = token.decodeIdentifier();
     LOG.info("Found for URI {}, token {}", uri, tid);
@@ -112,10 +110,10 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
   protected static void assertBoundToDT(final S3AFileSystem fs,
       final Text tokenKind) {
     final S3ADelegationTokens dtSupport = fs.getDelegationTokens().get();
-    assertTrue("Expected bound to a delegation token: " + dtSupport,
-        dtSupport.isBoundToDT());
-    assertEquals("Wrong token kind",
-        tokenKind, dtSupport.getBoundDT().get().getKind());
+    assertTrue(dtSupport.isBoundToDT(),
+        "Expected bound to a delegation token: " + dtSupport);
+    assertEquals(tokenKind, dtSupport.getBoundDT().get().getKind(),
+        "Wrong token kind");
   }
 
   /**
@@ -126,9 +124,8 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
    */
   protected static void assertTokenCreationCount(final S3AFileSystem fs,
       final int expected) {
-    assertEquals("DT creation count from " + fs.getDelegationTokens().get(),
-        expected,
-        getTokenCreationCount(fs));
+    assertEquals(expected, getTokenCreationCount(fs),
+        "DT creation count from " + fs.getDelegationTokens().get());
   }
 
   /**
@@ -173,7 +170,7 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
       Configuration config,
       String... providerClassnames) {
     removeBaseAndBucketOverrides(bucket, config, AWS_CREDENTIALS_PROVIDER);
-    assertTrue("No providers to bind to", providerClassnames.length > 0);
+    assertTrue(providerClassnames.length > 0, "No providers to bind to");
     config.setStrings(AWS_CREDENTIALS_PROVIDER, providerClassnames);
   }
 

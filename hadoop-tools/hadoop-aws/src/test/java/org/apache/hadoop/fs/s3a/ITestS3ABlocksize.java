@@ -22,7 +22,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,8 +43,8 @@ public class ITestS3ABlocksize extends AbstractS3ATestBase {
   public void testBlockSize() throws Exception {
     FileSystem fs = getFileSystem();
     long defaultBlockSize = fs.getDefaultBlockSize();
-    assertEquals("incorrect blocksize",
-        S3AFileSystem.DEFAULT_BLOCKSIZE, defaultBlockSize);
+    assertEquals(S3AFileSystem.DEFAULT_BLOCKSIZE, defaultBlockSize,
+        "incorrect blocksize");
     long newBlockSize = defaultBlockSize * 2;
     fs.getConf().setLong(Constants.FS_S3A_BLOCK_SIZE, newBlockSize);
 
@@ -52,9 +52,8 @@ public class ITestS3ABlocksize extends AbstractS3ATestBase {
     Path file = new Path(dir, "file");
     createFile(fs, file, true, dataset(1024, 'a', 'z' - 'a'));
     FileStatus fileStatus = fs.getFileStatus(file);
-    assertEquals("Double default block size in stat(): " + fileStatus,
-        newBlockSize,
-        fileStatus.getBlockSize());
+    assertEquals(newBlockSize, fileStatus.getBlockSize(),
+        "Double default block size in stat(): " + fileStatus);
 
     // check the listing  & assert that the block size is picked up by
     // this route too.
@@ -64,20 +63,18 @@ public class ITestS3ABlocksize extends AbstractS3ATestBase {
       LOG.info("entry: {}", stat);
       if (file.equals(stat.getPath())) {
         found = true;
-        assertEquals("Double default block size in ls(): " + stat,
-            newBlockSize,
-            stat.getBlockSize());
+        assertEquals(newBlockSize, stat.getBlockSize(),
+            "Double default block size in ls(): " + stat);
       }
     }
-    assertTrue("Did not find " + fileStatsToString(listing, ", "), found);
+    assertTrue(found, "Did not find " + fileStatsToString(listing, ", "));
   }
 
   @Test
   public void testRootFileStatusHasBlocksize() throws Throwable {
     FileSystem fs = getFileSystem();
     FileStatus status = fs.getFileStatus(new Path("/"));
-    assertTrue("Invalid root blocksize",
-        status.getBlockSize() >= 0);
+    assertTrue(status.getBlockSize() >= 0, "Invalid root blocksize");
   }
 
 }

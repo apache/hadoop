@@ -82,7 +82,9 @@ public class Submitter extends Configured implements Tool {
   public static final String IS_JAVA_REDUCE = "mapreduce.pipes.isjavareducer";
   public static final String PARTITIONER = "mapreduce.pipes.partitioner";
   public static final String INPUT_FORMAT = "mapreduce.pipes.inputformat";
-  public static final String PORT = "mapreduce.pipes.command.port";
+  // This is used as an environment variable, which doesn't allow dots.
+  // FIXME This also seems to be used only for tests
+  public static final String PORT = "mapreduce_pipes_command_port";
   
   public Submitter() {
     this(new Configuration());

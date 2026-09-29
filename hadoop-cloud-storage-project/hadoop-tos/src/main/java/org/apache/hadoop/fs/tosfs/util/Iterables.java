@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.tosfs.util;
 
 import org.apache.hadoop.util.Preconditions;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.apache.hadoop.thirdparty.org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;

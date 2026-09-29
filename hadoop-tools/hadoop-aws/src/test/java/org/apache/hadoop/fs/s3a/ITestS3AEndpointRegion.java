@@ -27,7 +27,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.awscore.AwsExecutionAttribute;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.interceptor.Context;
@@ -55,6 +56,7 @@ import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.ERROR_ENDPOINT_WITH_FIPS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeNotS3ExpressFileSystem;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeStoreAwsHosted;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.DEFAULT_REQUESTER_PAYS_BUCKET_NAME;
@@ -116,6 +118,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
    */
   private S3AFileSystem newFS;
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     closeStream(newFS);
@@ -360,7 +363,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   public void testWithOutCrossRegionAccess() throws Exception {
     describe("Verify cross region access fails when disabled");
     // skip the test if the region is sa-east-1
-    skipCrossRegionTest();
+    assumeCrossRegionTestSupported();
     final Configuration newConf = new Configuration(getConfiguration());
     removeBaseAndBucketOverrides(newConf,
         ENDPOINT,
@@ -381,7 +384,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   public void testWithCrossRegionAccess() throws Exception {
     describe("Verify cross region access succeed when enabled");
     // skip the test if the region is sa-east-1
-    skipCrossRegionTest();
+    assumeCrossRegionTestSupported();
     final Configuration newConf = new Configuration(getConfiguration());
     removeBaseAndBucketOverrides(newConf,
         ENDPOINT,
@@ -482,7 +485,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Access the test bucket using central endpoint and"
         + " null region, perform file system CRUD operations");
     final Configuration conf = getConfiguration();
-    assumeStoreAwsHosted(getFileSystem());
+    assumeCrossRegionTestSupported();
 
     final Configuration newConf = new Configuration(conf);
 
@@ -505,7 +508,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   public void testCentralEndpointAndNullRegionFipsWithCRUD() throws Throwable {
     describe("Access the test bucket using central endpoint and"
         + " null region and fips enabled, perform file system CRUD operations");
-    assumeStoreAwsHosted(getFileSystem());
+    assumeCrossRegionTestSupported();
 
     final String bucketLocation = getFileSystem().getBucketLocation();
     assume("FIPS can be enabled to access buckets from US or Canada endpoints only",
@@ -513,17 +516,19 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
             || bucketLocation.startsWith(CA_REGION_PREFIX)
             || bucketLocation.startsWith(US_DUAL_STACK_PREFIX));
 
-    final Configuration conf = getConfiguration();
+    final Configuration conf = getFileSystem().getConf();
     final Configuration newConf = new Configuration(conf);
 
     removeBaseAndBucketOverrides(
         newConf,
         ENDPOINT,
         AWS_REGION,
-        FIPS_ENDPOINT);
+        FIPS_ENDPOINT,
+        PATH_STYLE_ACCESS);
 
     newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
     newConf.setBoolean(FIPS_ENDPOINT, true);
+    newConf.setBoolean(PATH_STYLE_ACCESS, false);
 
     newFS = new S3AFileSystem();
     newFS.initialize(getFileSystem().getUri(), newConf);
@@ -532,10 +537,18 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   }
 
   /**
-   * Skip the test if the region is null or sa-east-1.
+   * Skip the test if the region is null,  sa-east-1, or otherwise
+   * not compatible with the test.
    */
-  private void skipCrossRegionTest() throws IOException {
-    String region = getFileSystem().getS3AInternals().getBucketMetadata().bucketRegion();
+  private void assumeCrossRegionTestSupported() throws IOException {
+    final S3AFileSystem fs = getFileSystem();
+
+    // not S3 as the store URLs may not resolve.
+    assumeNotS3ExpressFileSystem(fs);
+    // aws hosted.
+    assumeStoreAwsHosted(fs);
+
+    String region = fs.getS3AInternals().getBucketMetadata().bucketRegion();
     if (region == null || SA_EAST_1.equals(region)) {
       skip("Skipping test since region is null or it is set to sa-east-1");
     }
@@ -583,7 +596,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         .isFalse();
   }
 
-  private static final class RegionInterceptor implements ExecutionInterceptor {
+  private final class RegionInterceptor implements ExecutionInterceptor {
     private final String endpoint;
     private final String region;
     private final boolean isFips;

@@ -458,9 +458,21 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_ACTIVE_MEMORY_IN_USE,
       "Gauge of active memory in use",
       TYPE_GAUGE),
+  STREAM_READ_PREFETCH_BYTES(
+          StreamStatisticNames.STREAM_READ_PREFETCHED_BYTES,
+          "Bytes prefetched by AAL stream",
+          TYPE_COUNTER),
+  STREAM_READ_PARQUET_FOOTER_PARSING_FAILED(
+          StreamStatisticNames.STREAM_READ_PARQUET_FOOTER_PARSING_FAILED,
+          "Count of Parquet footer parsing failures encountered by AAL",
+          TYPE_COUNTER),
+  STREAM_READ_CACHE_HIT(
+          StreamStatisticNames.STREAM_READ_CACHE_HIT,
+          "Count of cache hits in AAL stream",
+          TYPE_COUNTER),
+
 
   /* Stream Write statistics */
-
   STREAM_WRITE_EXCEPTIONS(
       StreamStatisticNames.STREAM_WRITE_EXCEPTIONS,
       "Count of stream write failures reported",

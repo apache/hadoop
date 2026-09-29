@@ -23,7 +23,7 @@ import java.net.URI;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.junit.internal.AssumptionViolatedException;
+import org.opentest4j.TestAbortedException;
 
 /**
  * Utilities for the CosN tests.
@@ -52,7 +52,7 @@ public final class CosNTestUtils {
       testUri = URI.create(fsName);
       liveTest = testUri.getScheme().equals(CosNFileSystem.SCHEME);
     } else {
-      throw new AssumptionViolatedException("no test file system in " +
+      throw new TestAbortedException("no test file system in " +
           fsName);
     }
 

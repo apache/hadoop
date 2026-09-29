@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.IOUtils;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestUpdatePipelineWithSnapshots {
   

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.test;
 
-import org.junit.AssumptionViolatedException;
+import org.opentest4j.TestAbortedException;
 
 /**
  * JUnit assumptions for the environment (OS).
@@ -34,13 +34,13 @@ public final class PlatformAssumptions {
 
   public static void assumeNotWindows(String message) {
     if (WINDOWS) {
-      throw new AssumptionViolatedException(message);
+      throw new TestAbortedException(message);
     }
   }
 
   public static void assumeWindows() {
     if (!WINDOWS) {
-      throw new AssumptionViolatedException(
+      throw new TestAbortedException(
           "Expected Windows platform but got " + OS_NAME);
     }
   }

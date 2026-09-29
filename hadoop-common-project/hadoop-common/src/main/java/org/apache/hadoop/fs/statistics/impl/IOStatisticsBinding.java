@@ -170,9 +170,8 @@ public final class IOStatisticsBinding {
     // we have to clone the values so that they aren't
     // bound to the original values
     dest.clear();
-    source.entrySet()
-        .forEach(entry ->
-            dest.put(entry.getKey(), copyFn.apply(entry.getValue())));
+    source.forEach((key, current) ->
+            dest.put(key, copyFn.apply(current)));
     return dest;
   }
 

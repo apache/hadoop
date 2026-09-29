@@ -27,6 +27,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -43,8 +44,7 @@ public class FSConfigConverterTestCommons {
       new File(TEST_DIR, "test-yarn-site.xml").getAbsolutePath();
   public final static String CONVERSION_RULES_FILE =
       new File(TEST_DIR, "test-conversion-rules.properties").getAbsolutePath();
-  public final static String OUTPUT_DIR =
-      new File(TEST_DIR, "conversion-output").getAbsolutePath();
+  public static String OUTPUT_DIR;
 
   private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
   private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
@@ -57,7 +57,11 @@ public class FSConfigConverterTestCommons {
   }
 
   public void setUp() throws IOException {
-    File d = new File(TEST_DIR, "conversion-output");
+    String uuid = UUID.randomUUID().toString().trim();
+    OUTPUT_DIR =
+            new File(TEST_DIR, "conversion-output" + uuid).getAbsolutePath();
+    File d = new File(TEST_DIR, "conversion-output" + uuid);
+
     if (d.exists()) {
       FileUtils.deleteDirectory(d);
     }

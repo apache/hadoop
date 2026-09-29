@@ -19,6 +19,8 @@
 package org.apache.hadoop.hdfs.server.datanode.web.webhdfs;
 
 import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.KERBEROS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -52,10 +54,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestDataNodeUGIProvider {
   private final URI uri = URI.create(WebHdfsConstants.WEBHDFS_SCHEME + "://"
@@ -65,7 +65,8 @@ public class TestDataNodeUGIProvider {
   private final int LENGTH = 512;
   private final static int EXPIRE_AFTER_ACCESS = 5*1000;
   private Configuration conf;
-  @Before
+
+  @BeforeEach
   public void setUp(){
     conf = WebHdfsTestUtil.createConf();
     conf.setInt(DFSConfigKeys.DFS_WEBHDFS_UGI_EXPIRE_AFTER_ACCESS_KEY,
@@ -107,22 +108,19 @@ public class TestDataNodeUGIProvider {
     UserGroupInformation ugi11 = ugiProvider1.ugi();
     UserGroupInformation ugi12 = ugiProvider1.ugi();
 
-    Assert.assertEquals(
-        "With UGI cache, two UGIs returned by the same token should be same",
-        ugi11, ugi12);
+    assertEquals(ugi11, ugi12,
+        "With UGI cache, two UGIs returned by the same token should be same");
 
     DataNodeUGIProvider ugiProvider2 = new DataNodeUGIProvider(
         new ParameterParser(new QueryStringDecoder(URI.create(uri2)), conf));
     UserGroupInformation url21 = ugiProvider2.ugi();
     UserGroupInformation url22 = ugiProvider2.ugi();
 
-    Assert.assertEquals(
-        "With UGI cache, two UGIs returned by the same token should be same",
-        url21, url22);
+    assertEquals(url21, url22,
+        "With UGI cache, two UGIs returned by the same token should be same");
 
-    Assert.assertNotEquals(
-        "With UGI cache, two UGIs for the different token should not be same",
-        ugi11, url22);
+    assertNotEquals(ugi11, url22,
+        "With UGI cache, two UGIs for the different token should not be same");
 
     ugiProvider2.clearCache();
     awaitCacheEmptyDueToExpiration();
@@ -131,12 +129,11 @@ public class TestDataNodeUGIProvider {
 
     String msg = "With cache eviction, two UGIs returned" +
     " by the same token should not be same";
-    Assert.assertNotEquals(msg, ugi11, ugi12);
-    Assert.assertNotEquals(msg, url21, url22);
+    assertNotEquals(ugi11, ugi12, msg);
+    assertNotEquals(url21, url22, msg);
 
-    Assert.assertNotEquals(
-        "With UGI cache, two UGIs for the different token should not be same",
-        ugi11, url22);
+    assertNotEquals(ugi11, url22,
+        "With UGI cache, two UGIs for the different token should not be same");
   }
 
   @Test
@@ -158,22 +155,19 @@ public class TestDataNodeUGIProvider {
     UserGroupInformation ugi11 = ugiProvider1.ugi();
     UserGroupInformation ugi12 = ugiProvider1.ugi();
 
-    Assert.assertEquals(
-        "With UGI cache, two UGIs for the same user should be same", ugi11,
-        ugi12);
+    assertEquals(ugi11, ugi12,
+        "With UGI cache, two UGIs for the same user should be same");
 
     DataNodeUGIProvider ugiProvider2 = new DataNodeUGIProvider(
         new ParameterParser(new QueryStringDecoder(URI.create(uri2)), conf));
     UserGroupInformation url21 = ugiProvider2.ugi();
     UserGroupInformation url22 = ugiProvider2.ugi();
 
-    Assert.assertEquals(
-        "With UGI cache, two UGIs for the same user should be same", url21,
-        url22);
+    assertEquals(url21, url22,
+        "With UGI cache, two UGIs for the same user should be same");
 
-    Assert.assertNotEquals(
-        "With UGI cache, two UGIs for the different user should not be same",
-        ugi11, url22);
+    assertNotEquals(ugi11, url22,
+        "With UGI cache, two UGIs for the different user should not be same");
 
     awaitCacheEmptyDueToExpiration();
     ugi12 = ugiProvider1.ugi();
@@ -181,12 +175,11 @@ public class TestDataNodeUGIProvider {
 
     String msg = "With cache eviction, two UGIs returned by" +
     " the same user should not be same";
-    Assert.assertNotEquals(msg, ugi11, ugi12);
-    Assert.assertNotEquals(msg, url21, url22);
+    assertNotEquals(ugi11, ugi12, msg);
+    assertNotEquals(url21, url22, msg);
 
-    Assert.assertNotEquals(
-        "With UGI cache, two UGIs for the different user should not be same",
-        ugi11, url22);
+    assertNotEquals(ugi11, url22,
+        "With UGI cache, two UGIs for the different user should not be same");
   }
 
   @Test

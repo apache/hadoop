@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.aliyun.oss;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
-import org.junit.internal.AssumptionViolatedException;
+import org.opentest4j.TestAbortedException;
 
 import java.io.IOException;
 import java.net.URI;
@@ -68,7 +68,7 @@ public final class AliyunOSSTestUtils {
     }
 
     if (!liveTest) {
-      throw new AssumptionViolatedException("No test filesystem in "
+      throw new TestAbortedException("No test filesystem in "
           + TestAliyunOSSFileSystemContract.TEST_FS_OSS_NAME);
     }
     return testURI;

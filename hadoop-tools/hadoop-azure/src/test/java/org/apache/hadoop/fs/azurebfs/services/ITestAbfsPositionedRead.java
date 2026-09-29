@@ -21,9 +21,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 
-import org.junit.Rule;
-import org.junit.rules.TestName;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
@@ -39,9 +37,6 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
 
   private static final int TEST_FILE_DATA_SIZE = 100;
 
-  @Rule
-  public TestName methodName = new TestName();
-
   public ITestAbfsPositionedRead() throws Exception {
   }
 
@@ -55,10 +50,8 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
         TEST_FILE_DATA_SIZE, true);
     int bytesToRead = 10;
     try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
-      assertTrue(
-          "unexpected stream type "
-              + inputStream.getWrappedStream().getClass().getSimpleName(),
-          inputStream.getWrappedStream() instanceof AbfsInputStream);
+      assertTrue(inputStream.getWrappedStream() instanceof AbfsInputStream,
+          "unexpected stream type " + inputStream.getWrappedStream().getClass().getSimpleName());
       byte[] readBuffer = new byte[bytesToRead];
       int readPos = 0;
       Assertions
@@ -148,7 +141,7 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
           "Exception opening " + dest + " with FutureDataInputStreamBuilder",
           e);
     }
-    assertNotNull("Null InputStream over " + dest, inputStream);
+    assertNotNull(inputStream, "Null InputStream over " + dest);
     int bytesToRead = 10;
     try {
       AbfsInputStream abfsIs = (AbfsInputStream) inputStream.getWrappedStream();
@@ -167,8 +160,8 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
       // disabled, it will only read the exact bytes as requested and no data
       // will get read into the AbfsInputStream#buffer. Infact the buffer won't
       // even get initialized.
-      assertNull("AbfsInputStream pread caused the internal buffer creation",
-          abfsIs.getBuffer());
+      assertNull(
+         abfsIs.getBuffer(), "AbfsInputStream pread caused the internal buffer creation");
       // Check statistics
       assertStatistics(inputStream.getIOStatistics(), bytesToRead, 1, 1,
           bytesToRead);

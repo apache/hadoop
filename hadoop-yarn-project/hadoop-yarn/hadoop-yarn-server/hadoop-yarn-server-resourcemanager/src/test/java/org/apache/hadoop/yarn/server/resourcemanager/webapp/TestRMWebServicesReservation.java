@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.fromJson;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
@@ -28,7 +29,6 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.StringReader;
 import java.net.URL;
 import java.security.Principal;
 import java.util.Arrays;
@@ -45,7 +45,6 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.xml.bind.JAXBException;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -71,6 +70,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -82,9 +82,6 @@ import org.codehaus.jettison.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
-import org.glassfish.jersey.jettison.JettisonJaxbContext;
-import org.glassfish.jersey.jettison.JettisonUnmarshaller;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.TestProperties;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -111,17 +108,6 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
   private static final String LIST_RESERVATION_PATH = "reservation/list";
   private static final String GET_NEW_RESERVATION_PATH =
       "reservation/new-reservation";
-
-  private static JettisonUnmarshaller reservationSubmissionRequestInfoReader;
-  static {
-    try {
-      JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(
-          ReservationSubmissionRequestInfo.class);
-      reservationSubmissionRequestInfoReader = jettisonJaxbContext.createJsonUnmarshaller();
-    } catch (JAXBException e) {
-      throw new RuntimeException(e);
-    }
-  }
 
   private ResourceConfig config;
   private HttpServletRequest hsRequest = mock(HttpServletRequest.class);
@@ -162,7 +148,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     if (setAuthFilter) {
       config.register(TestRMCustomAuthFilter.class);
     }
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }
@@ -480,9 +467,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       return;
     }
 
-    JSONObject reservations = json.
-        getJSONObject("reservationListInfo").
-        getJSONObject("reservations");
+    JSONObject reservations = json.getJSONArray("reservations").getJSONObject(0);
 
     testRDLHelper(reservations);
 
@@ -530,8 +515,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       return;
     }
 
-    JSONObject reservations =
-        json.getJSONObject("reservationListInfo").getJSONObject("reservations");
+    JSONObject reservations = json.getJSONArray("reservations").getJSONObject(0);
 
     testRDLHelper(reservations);
 
@@ -573,9 +557,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       return;
     }
 
-    JSONArray reservations = json.
-        getJSONObject("reservationListInfo").
-        getJSONArray("reservations");
+    JSONArray reservations = json.getJSONArray("reservations");
 
     assertEquals(2, reservations.length());
 
@@ -619,8 +601,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     if (!enableRecurrence) {
       JSONObject reservations = json.
-          getJSONObject("reservationListInfo").
-          getJSONObject("reservations");
+          getJSONArray("reservations")
+          .getJSONObject(0);
 
       testRDLHelper(reservations);
 
@@ -633,7 +615,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       // picked up by the search interval since it is greater than the period
       // of the reservation.
       JSONArray reservations =
-          json.getJSONObject("reservationListInfo").getJSONArray("reservations");
+          json.getJSONArray("reservations");
       assertEquals(2, reservations.length());
     }
 
@@ -671,8 +653,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     }
 
     if (!enableRecurrence) {
-      JSONObject reservations = json.
-          getJSONObject("reservationListInfo").getJSONObject("reservations");
+      JSONObject reservations = json.getJSONArray("reservations").getJSONObject(0);
 
       testRDLHelper(reservations);
 
@@ -685,7 +666,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       // picked up by the search interval since it is greater than the period
       // of the reservation.
       JSONArray reservations =
-          json.getJSONObject("reservationListInfo").getJSONArray("reservations");
+          json.getJSONArray("reservations");
       assertEquals(2, reservations.length());
     }
 
@@ -724,9 +705,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       return;
     }
 
-    JSONObject reservations = json.
-        getJSONObject("reservationListInfo").
-        getJSONObject("reservations");
+    JSONObject reservations = json.getJSONArray("reservations").getJSONObject(0);
 
     testRDLHelper(reservations);
 
@@ -770,8 +749,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       return;
     }
 
-    JSONObject reservations = json.
-        getJSONObject("reservationListInfo").getJSONObject("reservations");
+    JSONObject reservations = json.getJSONArray("reservations").getJSONObject(0);
 
     testRDLHelper(reservations);
 
@@ -807,12 +785,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       return;
     }
 
-    assertThat(json.getJSONObject("reservationListInfo")
-        .getJSONArray("reservations").length()).isEqualTo(2);
-    testRDLHelper(json.getJSONObject("reservationListInfo")
-        .getJSONArray("reservations").getJSONObject(0));
-    testRDLHelper(json.getJSONObject("reservationListInfo")
-         .getJSONArray("reservations").getJSONObject(1));
+    assertThat(json.getJSONArray("reservations").length()).isEqualTo(2);
+    testRDLHelper(json.getJSONArray("reservations").getJSONObject(0));
+    testRDLHelper(json.getJSONArray("reservations").getJSONObject(1));
 
     rm.stop();
   }
@@ -895,9 +870,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       return;
     }
 
-    JSONObject reservations = json.
-        getJSONObject("reservationListInfo").
-        getJSONObject("reservations");
+    JSONObject reservations = json.getJSONArray("reservations").getJSONObject(0);
 
     testRDLHelper(reservations);
 
@@ -959,7 +932,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     }
 
     JSONObject reservations =
-        json.getJSONObject("reservationListInfo").getJSONObject("reservations");
+        json.getJSONArray("reservations").getJSONObject(0);
 
     testRDLHelper(reservations);
 
@@ -998,8 +971,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     }
 
     JSONObject reservations = json.
-        getJSONObject("reservationListInfo").
-        getJSONObject("reservations");
+        getJSONArray("reservations")
+        .getJSONObject(0);
 
     testRDLHelper(reservations);
 
@@ -1061,13 +1034,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       return ReservationId.newInstance(clock.getTime(), fallbackReservationId);
     }
 
-    System.out.println("RESPONSE:" + response);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + ";" + JettyUtils.UTF_8,
         response.getMediaType().toString());
-    JSONObject json =
-        response.
-        readEntity(JSONObject.class).
-        getJSONObject("new-reservation");
+    JSONObject json = response.readEntity(JSONObject.class).getJSONObject("new-reservation");
 
     assertEquals(1, json.length(), "incorrect number of elements");
     ReservationId rid = null;
@@ -1107,9 +1076,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
   private Response submitAndVerifyReservation(String path, String media,
       String reservationJson) throws Exception {
-    ReservationSubmissionRequestInfo rsci = reservationSubmissionRequestInfoReader.
-        unmarshalFromJSON(new StringReader(reservationJson),
-        ReservationSubmissionRequestInfo.class);
+    ReservationSubmissionRequestInfo rsci =
+        fromJson(reservationJson, ReservationSubmissionRequestInfo.class);
+
     Thread.sleep(1000);
     Response response = constructWebResource(path)
         .request(MediaType.APPLICATION_JSON)
@@ -1129,18 +1098,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     String reservationJson = loadJsonFile("update-reservation.json");
 
-    JettisonUnmarshaller reservationUpdateRequestInfoReader;
-    try {
-      JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(
-          ReservationUpdateRequestInfo.class);
-      reservationUpdateRequestInfoReader = jettisonJaxbContext.createJsonUnmarshaller();
-    } catch (JAXBException e) {
-      throw new RuntimeException(e);
-    }
-
-    ReservationUpdateRequestInfo rsci = reservationUpdateRequestInfoReader.
-        unmarshalFromJSON(new StringReader(reservationJson),
-        ReservationUpdateRequestInfo.class);
+    ReservationUpdateRequestInfo rsci =
+        fromJson(reservationJson, ReservationUpdateRequestInfo.class);
 
     if (this.isAuthenticationEnabled()) {
       // only works when previous submit worked
@@ -1187,18 +1146,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     String reservationJson = loadJsonFile("delete-reservation.json");
 
-    JettisonUnmarshaller reader;
-    try {
-      JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(
-          ReservationDeleteRequestInfo.class);
-      reader = jettisonJaxbContext.createJsonUnmarshaller();
-    } catch (JAXBException e) {
-      throw new RuntimeException(e);
-    }
-
-    ReservationDeleteRequestInfo rsci = reader.
-        unmarshalFromJSON(new StringReader(reservationJson),
-        ReservationDeleteRequestInfo.class);
+    ReservationDeleteRequestInfo rsci =
+        fromJson(reservationJson, ReservationDeleteRequestInfo.class);
 
     if (this.isAuthenticationEnabled()) {
       // only works when previous submit worked
@@ -1214,7 +1163,6 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
         .accept(media)
         .post(Entity.entity(toJson(rsci, ReservationDeleteRequestInfo.class),
         MediaType.APPLICATION_JSON_TYPE), Response.class);
-
     if (!this.isAuthenticationEnabled()) {
       assertResponseStatusCode(Response.Status.UNAUTHORIZED, response.getStatusInfo());
       return;
@@ -1244,7 +1192,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
   private JSONObject testListReservationHelper(WebTarget target, Response.Status
           status) throws Exception {
     Thread.sleep(1000);
-    Response response = target.request().get(Response.class);
+    Response response = target.request(MediaType.APPLICATION_JSON_TYPE).get(Response.class);
 
     if (!this.isAuthenticationEnabled()) {
       assertResponseStatusCode(Response.Status.UNAUTHORIZED, response.getStatusInfo());
@@ -1264,13 +1212,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     JSONObject json = testListReservationHelper(target);
 
-    if (count == 1) {
-      // If there are any number other than one reservation, this will throw.
-      json.getJSONObject("reservationListInfo").getJSONObject("reservations");
-    } else {
-      JSONArray reservations = json.getJSONArray("reservations");
-      assertTrue(reservations.length() == count);
-    }
+    JSONArray reservations = json.getJSONArray("reservations");
+    assertEquals(reservations.length(), count);
   }
 
   private boolean isHttpSuccessResponse(Response response) {

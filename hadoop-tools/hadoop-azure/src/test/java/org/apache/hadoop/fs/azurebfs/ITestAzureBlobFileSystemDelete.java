@@ -30,8 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -72,6 +71,7 @@ import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test delete operation.
@@ -106,7 +106,7 @@ public class ITestAzureBlobFileSystemDelete extends
 
     fs.delete(root, true);
     ls = fs.listStatus(root);
-    assertEquals("listing size", 0, ls.length);
+    assertEquals(0, ls.length, "listing size");
   }
 
   @Test()
@@ -180,7 +180,8 @@ public class ITestAzureBlobFileSystemDelete extends
 
   @Test
   public void testDeleteIdempotency() throws Exception {
-    Assume.assumeTrue(DEFAULT_DELETE_CONSIDERED_IDEMPOTENT);
+    assumeThat(DEFAULT_DELETE_CONSIDERED_IDEMPOTENT).isTrue();
+
     // Config to reduce the retry and maxBackoff time for test run
     AbfsConfiguration abfsConfig
         = TestAbfsConfigurationFieldsValidation.updateRetryConfigs(

@@ -148,6 +148,24 @@ public class KeyManager implements Closeable, DataEncryptionKeyFactory {
     }
   }
 
+  /**
+   * Clear the cached data encryption key, so that a new key will be generated
+   * on the next call to {@link #newDataEncryptionKey()}.
+   */
+  @Override
+  public synchronized void clearDataEncryptionKey() {
+    LOG.debug("Clearing data encryption key");
+    encryptionKey = null;
+  }
+
+  /** Update block keys from the NameNode. */
+  public void updateBlockKeys() throws IOException {
+    if (isBlockTokenEnabled) {
+      LOG.debug("Updating block keys from NameNode");
+      blockTokenSecretManager.addKeys(namenode.getBlockKeys());
+    }
+  }
+
   @Override
   public void close() {
     shouldRun = false;

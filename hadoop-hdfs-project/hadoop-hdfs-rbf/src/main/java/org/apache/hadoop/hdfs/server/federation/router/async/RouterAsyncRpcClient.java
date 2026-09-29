@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
 
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.Async.warpCompletionException;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.asyncApply;
@@ -176,10 +177,11 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
     // transfer threadLocalContext to worker threads of executor.
     ThreadLocalContext threadLocalContext = new ThreadLocalContext();
     asyncComplete(null);
+    // Returns a CompletableFuture with RejectedExecutionException if nsExecutor is full.
     asyncApplyUseExecutor((AsyncApplyFunction<Object, Object>) o -> {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Async invoke method : {}, {}, {}, {}", method.getName(), useObserver,
-            namenodes.toString(), params);
+        LOG.debug("Async invoke method : {}, {}, {}, {}", method.getName(), useObserver, namenodes,
+            params);
       }
       threadLocalContext.transfer();
       RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
@@ -190,8 +192,12 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
         releasePermit(nsid, ugi, method, controller);
         return object;
       });
-    }, router.getRpcServer().getAsyncRouterHandlerExecutors().getOrDefault(nsid,
-        router.getRpcServer().getRouterAsyncHandlerDefaultExecutor()));
+    }, router.getRpcServer().getAsyncExecutorForNamespace(nsid));
+
+    // Catch the RejectedExecutionException and convert it to StandbyException
+    asyncCatch((ret, e) -> {
+      throw new StandbyException("Namespace '" + nsid + "' async handler is busy.");
+    }, RejectedExecutionException.class);
     return null;
   }
 

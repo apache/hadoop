@@ -375,9 +375,11 @@ function hadoop_generic_columnprinter
 
   if [[ -n "${COLUMNS}" ]]; then
     numcols=${COLUMNS}
-  else
-    numcols=$(tput cols) 2>/dev/null
-    COLUMNS=${numcols}
+  elif command -v tput >/dev/null 2>&1; then
+    numcols=$(tput cols 2>/dev/null)
+    if [[ "${numcols}" =~ ^[0-9]+$ ]]; then
+      COLUMNS=${numcols}
+    fi
   fi
 
   if [[ -z "${numcols}"

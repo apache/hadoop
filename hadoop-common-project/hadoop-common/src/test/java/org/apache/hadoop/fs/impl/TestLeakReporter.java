@@ -20,8 +20,7 @@ package org.apache.hadoop.fs.impl;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +29,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.impl.LeakReporter.THREAD_FORMAT;
 import static org.apache.hadoop.test.GenericTestUtils.LogCapturer.captureLogs;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public final class TestLeakReporter extends AbstractHadoopTestBase {
 
@@ -74,7 +74,7 @@ public final class TestLeakReporter extends AbstractHadoopTestBase {
         oldName,
         Thread.currentThread().getId());
     // log auditing
-    Assertions.assertThat(output)
+    assertThat(output)
         .describedAs("output from the logs")
         .contains("WARN")
         .contains(message)
@@ -140,7 +140,7 @@ public final class TestLeakReporter extends AbstractHadoopTestBase {
         this::raiseNPE);
     reporter.close();
 
-    Assertions.assertThat(reporter.isClosed())
+    assertThat(reporter.isClosed())
         .describedAs("reporter closed)")
         .isTrue();
   }
@@ -158,7 +158,7 @@ public final class TestLeakReporter extends AbstractHadoopTestBase {
    * @param ex expected.
    */
   private void assertCloseCount(final int ex) {
-    Assertions.assertThat(closeCount.get())
+    assertThat(closeCount.get())
         .describedAs("close count")
         .isEqualTo(ex);
   }

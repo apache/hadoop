@@ -23,7 +23,8 @@ import java.io.FileNotFoundException;
 import java.util.Arrays;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,6 +64,7 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         "");
   }
 
+  @AfterEach
   @Override
   public void teardown() throws Exception {
     // do this ourselves to avoid audits teardown failing
@@ -95,14 +97,12 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
             FILESTATUS_FILE_PROBE_L + FILESTATUS_DIR_PROBE_L),
         with(DIRECTORIES_DELETED, 0),
         with(FILES_DELETED, 1),
-
         // a single DELETE call is made to delete the object
-        probe(bulkDelete, OBJECT_DELETE_REQUEST, DELETE_OBJECT_REQUEST),
-        probe(!bulkDelete, OBJECT_DELETE_REQUEST,
-            DELETE_OBJECT_REQUEST + DELETE_MARKER_REQUEST),
+        with(OBJECT_DELETE_REQUEST, DELETE_OBJECT_REQUEST),
 
         // create no parent dirs or delete parents
         with(DIRECTORIES_CREATED, 0),
+        // even when bulk delete is enabled, there is no use of this.
         with(OBJECT_BULK_DELETE_REQUEST, 0)
     );
 

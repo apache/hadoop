@@ -14,4 +14,3 @@
 # limitations under the License.
 
 org.apache.hadoop.fs.azurebfs.security.AbfsTokenRenewer
-org.apache.hadoop.fs.azure.security.WasbTokenRenewer

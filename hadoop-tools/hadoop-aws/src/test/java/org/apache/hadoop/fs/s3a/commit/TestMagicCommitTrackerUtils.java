@@ -26,10 +26,10 @@ import org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTrackerUtils;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static junit.framework.TestCase.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.apache.hadoop.fs.s3a.commit.AbstractCommitITest.randomJobId;
 
 /**
@@ -43,7 +43,7 @@ public final class TestMagicCommitTrackerUtils {
   private static final Path DEST_PATH = new Path("s3://dummyBucket/dummyTable");
 
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     jobId = randomJobId();
     attemptId = "attempt_" + jobId + "_m_000000_0";
@@ -57,8 +57,9 @@ public final class TestMagicCommitTrackerUtils {
         taskAttemptId);
     Path path = CommitUtilsWithMR
         .getBaseMagicTaskAttemptPath(taskAttemptContext, "00001", DEST_PATH);
-    assertEquals("TaskAttemptId didn't match", attemptId,
-        MagicCommitTrackerUtils.extractTaskAttemptIdFromPath(path));
+    assertEquals(attemptId,
+        MagicCommitTrackerUtils.extractTaskAttemptIdFromPath(path),
+        "TaskAttemptId didn't match");
 
   }
 }

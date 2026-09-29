@@ -204,7 +204,7 @@ public class BlobRenameHandler extends ListActionTaker {
       }
       throw e;
     } finally {
-      tracingContext.setOperatedBlobCount(null);
+      tracingContext.setOperatedBlobCount(0);
     }
   }
 

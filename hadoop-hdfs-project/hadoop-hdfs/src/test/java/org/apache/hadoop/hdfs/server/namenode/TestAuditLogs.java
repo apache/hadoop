@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -46,20 +46,20 @@ import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
 import org.apache.log4j.Logger;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.LoggerFactory;
 
 /**
  * A JUnit test that audit logs are generated
  */
-@RunWith(Parameterized.class)
+@MethodSource("data")
+@ParameterizedClass
 public class TestAuditLogs {
 
   private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(TestAuditLogs.class);
@@ -68,7 +68,6 @@ public class TestAuditLogs {
 
   private static LogCapturer auditLogCapture;
 
-  @Parameters
   public static Collection<Object[]> data() {
     Collection<Object[]> params = new ArrayList<>();
     params.add(new Object[]{Boolean.FALSE});
@@ -106,7 +105,7 @@ public class TestAuditLogs {
   Configuration conf;
   UserGroupInformation userGroupInfo;
 
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     // must configure prior to instantiating the namesystem because it
     // will reconfigure the logger if async is enabled
@@ -133,7 +132,7 @@ public class TestAuditLogs {
     userGroupInfo = UserGroupInformation.createUserForTesting(username, groups);
  }
 
-  @After
+  @AfterEach
   public void teardownCluster() throws Exception {
     util.cleanup(fs, "/srcdat");
     if (fs != null) {
@@ -146,12 +145,12 @@ public class TestAuditLogs {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     auditLogCapture = LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() {
     auditLogCapture.stopCapturing();
   }
@@ -167,7 +166,7 @@ public class TestAuditLogs {
     int val = istream.read();
     istream.close();
     verifySuccessCommandsAuditLogs(2, fnames[0], "cmd=open");
-    assertTrue("failed to read from file", val >= 0);
+    assertTrue(val >= 0, "failed to read from file");
   }
 
   /** test that allowed stat puts proper entry in audit log */
@@ -178,7 +177,7 @@ public class TestAuditLogs {
 
     FileStatus st = userfs.getFileStatus(file);
     verifySuccessCommandsAuditLogs(2, fnames[0], "cmd=getfileinfo");
-    assertTrue("failed to stat file", st != null && st.isFile());
+    assertTrue(st != null && st.isFile(), "failed to stat file");
   }
 
   /** test that denied operation puts proper entry in audit log */
@@ -213,7 +212,7 @@ public class TestAuditLogs {
     istream.close();
 
     verifySuccessCommandsAuditLogs(3, fnames[0], "cmd=open");
-    assertTrue("failed to read from file", val >= 0);
+    assertTrue(val >= 0, "failed to read from file");
   }
 
   /** test that stat via webhdfs puts proper entry in audit log */
@@ -228,7 +227,7 @@ public class TestAuditLogs {
     FileStatus st = webfs.getFileStatus(file);
 
     verifySuccessCommandsAuditLogs(2, fnames[0], "cmd=getfileinfo");
-    assertTrue("failed to stat file", st != null && st.isFile());
+    assertTrue(st != null && st.isFile(), "failed to stat file");
   }
 
   /** test that denied access via webhdfs puts proper entry in audit log */
@@ -282,8 +281,8 @@ public class TestAuditLogs {
       String line = "allowed=" + auditLogLine.split("allowed=")[1];
       LOG.info("Line: {}", line);
       if (SUCCESS_PATTERN.matcher(line).matches() && line.contains(file) && line.contains(cmd)) {
-        assertTrue("Expected audit event not found in audit log",
-            AUDIT_PATTERN.matcher(line).matches());
+        assertTrue(AUDIT_PATTERN.matcher(line).matches(),
+            "Expected audit event not found in audit log");
         LOG.info("Successful verification. Log line: {}", line);
         success++;
       }
@@ -305,14 +304,14 @@ public class TestAuditLogs {
       LOG.info("Line: {}", line);
       if (FAILURE_PATTERN.matcher(line).matches() && line.contains(file) && line.contains(
           cmd)) {
-        assertTrue("Expected audit event not found in audit log",
-            AUDIT_PATTERN.matcher(line).matches());
+        assertTrue(AUDIT_PATTERN.matcher(line).matches(),
+            "Expected audit event not found in audit log");
         LOG.info("Failure verification. Log line: {}", line);
         success++;
       }
     }
-    assertEquals("Expected: " + expected + ". Actual failure: " + success, expected,
-        success);
+    assertEquals(expected, success, "Expected: " + expected
+        + ". Actual failure: " + success);
   }
 
 }

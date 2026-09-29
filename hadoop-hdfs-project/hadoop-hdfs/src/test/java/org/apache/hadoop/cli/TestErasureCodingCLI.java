@@ -24,23 +24,20 @@ import org.apache.hadoop.cli.util.CommandExecutor.Result;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.xml.sax.SAXException;
 
+@Timeout(300)
 public class TestErasureCodingCLI extends CLITestHelper {
   private final int NUM_OF_DATANODES = 3;
   private MiniDFSCluster dfsCluster = null;
   private DistributedFileSystem fs = null;
   private String namenode = null;
 
-  @Rule
-  public Timeout globalTimeout = new Timeout(300000);
-
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -62,7 +59,7 @@ public class TestErasureCodingCLI extends CLITestHelper {
     return "testErasureCodingConf.xml";
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws Exception {
     if (fs != null) {

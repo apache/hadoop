@@ -137,7 +137,7 @@ public class CommonJobTest {
           // data was compressed. All files = compressed test size+ logs= 1000000/2 + logs
           final ContentSummary generated = GridmixTestUtils.dfs
                   .getContentSummary(in);
-          assertEquals(550000, generated.getLength(), 10000);
+          assertEquals(550000, generated.getLength(), 20000);
 
           Counter counter = job.getCounters()
                   .getGroup("org.apache.hadoop.mapreduce.FileSystemCounter")

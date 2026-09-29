@@ -17,10 +17,10 @@
  */
 
 /**
- * Implementation of compression/decompression based on the zStandard
+ * Implementation of compression/decompression based on the Zstandard
  * compression algorithm.
  *
- * @see <a href="https://github.com/facebook/zstd">zStandard</a>
+ * @see <a href="https://github.com/facebook/zstd">Zstandard</a>
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable

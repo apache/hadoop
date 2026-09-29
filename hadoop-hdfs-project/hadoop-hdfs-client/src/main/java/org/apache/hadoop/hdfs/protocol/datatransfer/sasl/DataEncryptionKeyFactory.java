@@ -35,4 +35,14 @@ public interface DataEncryptionKeyFactory {
    * @throws IOException for any error
    */
   DataEncryptionKey newDataEncryptionKey() throws IOException;
+
+  /**
+   * Clear the cached data encryption key, so that a new key will be
+   * generated on the next call to {@link #newDataEncryptionKey()}.
+   * This is called when an InvalidEncryptionKeyException is received
+   * to force a key refresh on retry.
+   */
+  default void clearDataEncryptionKey() {
+    // no-op by default
+  }
 }

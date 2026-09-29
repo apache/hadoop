@@ -24,9 +24,10 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.RemoteException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestSnapshotNameWithInvalidCharacters {
   private static final long SEED = 0;
@@ -42,7 +43,7 @@ public class TestSnapshotNameWithInvalidCharacters {
   private final String snapshot1 = "a:b:c";
   private final String snapshot2 = "a/b/c";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
                                               .build();
@@ -50,7 +51,7 @@ public class TestSnapshotNameWithInvalidCharacters {
     hdfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -58,7 +59,8 @@ public class TestSnapshotNameWithInvalidCharacters {
     }
   }
 
-  @Test (timeout = 600000)
+  @Test
+  @Timeout(value = 600)
   public void TestSnapshotWithInvalidName() throws Exception {
 
     Path file1 = new Path(dir1,file1Name);
@@ -71,7 +73,8 @@ public class TestSnapshotNameWithInvalidCharacters {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void TestSnapshotWithInvalidName1() throws Exception{
     Path file1 = new Path(dir1, file1Name);
     DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, SEED);

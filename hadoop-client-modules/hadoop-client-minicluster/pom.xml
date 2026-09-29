@@ -18,11 +18,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.5.0-SNAPSHOT</version>
+    <version>3.6.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-client-minicluster</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <description>Apache Hadoop Minicluster for Clients</description>
@@ -47,14 +47,13 @@
       <scope>runtime</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-client-runtime</artifactId>
+      <groupId>com.github.luben</groupId>
+      <artifactId>zstd-jni</artifactId>
       <scope>runtime</scope>
     </dependency>
-    <!-- Leave JUnit as a direct dependency -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client-runtime</artifactId>
       <scope>runtime</scope>
     </dependency>
     <!-- Adding hadoop-annotations so we can make it optional to remove from our transitive tree -->
@@ -123,6 +122,14 @@
         <exclusion>
           <groupId>javax.servlet</groupId>
           <artifactId>javax.servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.servlet</groupId>
+          <artifactId>jakarta.servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>javax.xml.bind</groupId>
@@ -223,10 +230,6 @@
         <exclusion>
           <groupId>commons-codec</groupId>
           <artifactId>commons-codec</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.servlet</groupId>
-          <artifactId>javax.servlet-api</artifactId>
         </exclusion>
 
         <!-- removing dependency jars from yarn-server-common, which are
@@ -415,22 +418,42 @@
       <optional>true</optional>
     </dependency>
     <!-- Add back in the transitive dependencies excluded from hadoop-common in client TODO remove once we have a filter for "is in these artifacts" -->
-    <!-- skip javax.servlet:servlet-api because it's in client -->
+    <!-- skip javax.servlet:javax.servlet-api because it's in client -->
+    <!-- skip jakarta.servlet:jakarta.servlet-api because it's in client -->
+    <!-- skip jakarta.ws.rs-api:jakarta.ws.rs because it's in client -->
     <!-- Skip commons-logging:commons-logging-api because it looks like nothing actually included it -->
     <!-- Skip jetty-util because it's in client -->
     <dependency>
       <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-common</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+      </exclusions>
       <optional>true</optional>
     </dependency>
     <dependency>
-       <groupId>org.glassfish.jersey.core</groupId>
-       <artifactId>jersey-client</artifactId>
+      <groupId>org.glassfish.jersey.core</groupId>
+      <artifactId>jersey-client</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+      </exclusions>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-server</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+      </exclusions>
       <optional>true</optional>
     </dependency>
     <!-- skip org.apache.avro:avro-ipc because it doesn't look like hadoop-common actually uses it -->
@@ -439,13 +462,10 @@
       <artifactId>kfs</artifactId>
       <optional>true</optional>
     </dependency>
-    <dependency>
-      <groupId>com.jcraft</groupId>
-      <artifactId>jsch</artifactId>
-      <optional>true</optional>
-    </dependency>
     <!-- add back in transitive dependencies of hadoop-mapreduce-client-app removed in client -->
-    <!-- Skipping javax.servlet:servlet-api because it's in client -->
+    <!-- Skipping javax.servlet:javax.servlet-api because it's in client -->
+    <!-- Skipping jakarta.servlet:jakarta.servlet-api because it's in client -->
+    <!-- Skipping jakarta.ws.rs-api:jakarta.ws.rs because it's in client -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-nodemanager</artifactId>
@@ -454,6 +474,14 @@
         <exclusion>
           <groupId>javax.servlet</groupId>
           <artifactId>javax.servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.servlet</groupId>
+          <artifactId>jakarta.servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
@@ -523,6 +551,14 @@
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>jakarta.servlet</groupId>
+          <artifactId>jakarta.servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-yarn-api</artifactId>
         </exclusion>
@@ -578,11 +614,35 @@
     <dependency>
       <groupId>org.glassfish.jersey.test-framework</groupId>
       <artifactId>jersey-test-framework-core</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.servlet</groupId>
+          <artifactId>jakarta.servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <artifactId>junit-jupiter</artifactId>
+          <groupId>org.junit.jupiter</groupId>
+        </exclusion>
+      </exclusions>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.test-framework.providers</groupId>
       <artifactId>jersey-test-framework-provider-jetty</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <artifactId>junit-jupiter</artifactId>
+          <groupId>org.junit.jupiter</groupId>
+        </exclusion>
+      </exclusions>
       <optional>true</optional>
     </dependency>
     <!-- skipping jersey-server because it's above -->
@@ -652,12 +712,10 @@
                       <!-- We need a filter that matches just those things that are included in the above artiacts -->
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>
-                      <!-- Leave snappy that includes native methods which cannot be relocated. -->
+                      <!-- Leave snappy/zstd-jni that includes native methods which cannot be relocated. -->
                       <exclude>org.xerial.snappy:*</exclude>
+                      <exclude>com.github.luben:zstd-jni</exclude>
                       <exclude>org.glassfish.jersey:*</exclude>
-                      <exclude>org.hamcrest:*</exclude>
-                      <exclude>aopalliance:*</exclude>
-                      <exclude>javassist:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
@@ -666,6 +724,13 @@
                       <artifact>*:*</artifact>
                       <excludes>
                         <exclude>**/*.java</exclude>
+                      </excludes>
+                    </filter>
+                    <!-- Some of our dependencies include html, so remove it. -->
+                    <filter>
+                      <artifact>*:*</artifact>
+                      <excludes>
+                        <exclude>**/*.html</exclude>
                       </excludes>
                     </filter>
                     <!-- We pull in several test jars; keep out the actual test classes -->
@@ -808,12 +873,6 @@
                       </excludes>
                     </filter>
                     <filter>
-                      <artifact>org.eclipse.jetty:jetty-util-ajax</artifact>
-                      <excludes>
-                        <exclude>*/**</exclude>
-                      </excludes>
-                    </filter>
-                    <filter>
                       <artifact>org.eclipse.jetty:jetty-server</artifact>
                       <excludes>
                         <exclude>jetty-dir.css</exclude>
@@ -888,6 +947,9 @@
                         <exclude>com/sun/management/**/*</exclude>
                         <exclude>com/ibm/security/*</exclude>
                         <exclude>com/ibm/security/**/*</exclude>
+                        <!-- Exclude zstd-jni -->
+                        <exclude>com/github/luben/zstd/*</exclude>
+                        <exclude>com/github/luben/zstd/**/*</exclude>
                       </excludes>
                     </relocation>
                     <relocation>

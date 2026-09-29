@@ -27,14 +27,18 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestCachedBlocksList {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestCachedBlocksList.class);
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testSingleList() {
     DatanodeDescriptor dn = new DatanodeDescriptor(
       new DatanodeID("127.0.0.1", "localhost", "abcd", 5000, 5001, 5002, 5003));
@@ -44,51 +48,50 @@ public class TestCachedBlocksList {
           new CachedBlock(2L, (short)1, true),
       };
     // check that lists are empty
-    Assert.assertTrue("expected pending cached list to start off empty.", 
-        !dn.getPendingCached().iterator().hasNext());
-    Assert.assertTrue("expected cached list to start off empty.", 
-        !dn.getCached().iterator().hasNext());
-    Assert.assertTrue("expected pending uncached list to start off empty.", 
-        !dn.getPendingUncached().iterator().hasNext());
+    assertTrue(!dn.getPendingCached().iterator().hasNext(),
+        "expected pending cached list to start off empty.");
+    assertTrue(!dn.getCached().iterator().hasNext(),
+        "expected cached list to start off empty.");
+    assertTrue(!dn.getPendingUncached().iterator().hasNext(),
+        "expected pending uncached list to start off empty.");
     // add a block to the back
-    Assert.assertTrue(dn.getCached().add(blocks[0]));
-    Assert.assertTrue("expected pending cached list to still be empty.", 
-        !dn.getPendingCached().iterator().hasNext());
-    Assert.assertEquals("failed to insert blocks[0]", blocks[0],
-        dn.getCached().iterator().next());
-    Assert.assertTrue("expected pending uncached list to still be empty.", 
-        !dn.getPendingUncached().iterator().hasNext());
+    assertTrue(dn.getCached().add(blocks[0]));
+    assertTrue(!dn.getPendingCached().iterator().hasNext(),
+        "expected pending cached list to still be empty.");
+    assertEquals(blocks[0], dn.getCached().iterator().next(),
+        "failed to insert blocks[0]");
+    assertTrue(!dn.getPendingUncached().iterator().hasNext(),
+        "expected pending uncached list to still be empty.");
     // add another block to the back
-    Assert.assertTrue(dn.getCached().add(blocks[1]));
+    assertTrue(dn.getCached().add(blocks[1]));
     Iterator<CachedBlock> iter = dn.getCached().iterator();
-    Assert.assertEquals(blocks[0], iter.next());
-    Assert.assertEquals(blocks[1], iter.next());
-    Assert.assertTrue(!iter.hasNext());
+    assertEquals(blocks[0], iter.next());
+    assertEquals(blocks[1], iter.next());
+    assertTrue(!iter.hasNext());
     // add a block to the front
-    Assert.assertTrue(dn.getCached().addFirst(blocks[2]));
+    assertTrue(dn.getCached().addFirst(blocks[2]));
     iter = dn.getCached().iterator();
-    Assert.assertEquals(blocks[2], iter.next());
-    Assert.assertEquals(blocks[0], iter.next());
-    Assert.assertEquals(blocks[1], iter.next());
-    Assert.assertTrue(!iter.hasNext());
+    assertEquals(blocks[2], iter.next());
+    assertEquals(blocks[0], iter.next());
+    assertEquals(blocks[1], iter.next());
+    assertTrue(!iter.hasNext());
     // remove a block from the middle
-    Assert.assertTrue(dn.getCached().remove(blocks[0]));
+    assertTrue(dn.getCached().remove(blocks[0]));
     iter = dn.getCached().iterator();
-    Assert.assertEquals(blocks[2], iter.next());
-    Assert.assertEquals(blocks[1], iter.next());
-    Assert.assertTrue(!iter.hasNext());
+    assertEquals(blocks[2], iter.next());
+    assertEquals(blocks[1], iter.next());
+    assertTrue(!iter.hasNext());
     // remove all blocks
     dn.getCached().clear();
-    Assert.assertTrue("expected cached list to be empty after clear.", 
-        !dn.getPendingCached().iterator().hasNext());
+    assertTrue(!dn.getPendingCached().iterator().hasNext(),
+        "expected cached list to be empty after clear.");
   }
 
   private void testAddElementsToList(CachedBlocksList list,
       CachedBlock[] blocks) {
-    Assert.assertTrue("expected list to start off empty.", 
-        !list.iterator().hasNext());
+    assertTrue(!list.iterator().hasNext(), "expected list to start off empty.");
     for (CachedBlock block : blocks) {
-      Assert.assertTrue(list.add(block));
+      assertTrue(list.add(block));
     }
   }
 
@@ -96,7 +99,7 @@ public class TestCachedBlocksList {
       CachedBlocksList list, CachedBlock[] blocks) {
     int i = 0;
     for (Iterator<CachedBlock> iter = list.iterator(); iter.hasNext(); ) {
-      Assert.assertEquals(blocks[i], iter.next());
+      assertEquals(blocks[i], iter.next());
       i++;
     }
     if (r.nextBoolean()) {
@@ -111,17 +114,18 @@ public class TestCachedBlocksList {
       for (int removed = 0; removed < remainingBlocks.length; ) {
         int toRemove = r.nextInt(remainingBlocks.length);
         if (remainingBlocks[toRemove] != null) {
-          Assert.assertTrue(list.remove(remainingBlocks[toRemove]));
+          assertTrue(list.remove(remainingBlocks[toRemove]));
           remainingBlocks[toRemove] = null;
           removed++;
         }
       }
     }
-    Assert.assertTrue("expected list to be empty after everything " +
-        "was removed.", !list.iterator().hasNext());
+    assertTrue(!list.iterator().hasNext(),
+        "expected list to be empty after everything " + "was removed.");
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testMultipleLists() {
     DatanodeDescriptor[] datanodes = new DatanodeDescriptor[] {
       new DatanodeDescriptor(

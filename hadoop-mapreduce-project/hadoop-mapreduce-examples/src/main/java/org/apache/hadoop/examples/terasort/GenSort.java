@@ -22,11 +22,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.math.BigInteger;
+import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
-import org.apache.hadoop.util.PureJavaCrc32;
-
-/** 
+/**
  * A single process data generator for the terasort data. Based on gensort.c 
  * version 1.1 (3 Mar 2009) from Chris Nyberg &lt;chris.nyberg@ordinal.com&gt;.
  */
@@ -180,7 +179,7 @@ public class GenSort {
     byte[] row = new byte[100];
     Unsigned16 recordNumber = new Unsigned16(firstRecordNumber);
     Unsigned16 lastRecordNumber = new Unsigned16(firstRecordNumber);
-    Checksum crc = new PureJavaCrc32();
+    Checksum crc = new CRC32();
     Unsigned16 tmp = new Unsigned16();
     lastRecordNumber.add(recordsToGenerate);
     Unsigned16 ONE = new Unsigned16(1);

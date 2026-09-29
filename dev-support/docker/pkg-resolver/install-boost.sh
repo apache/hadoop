@@ -41,11 +41,11 @@ fi
 if [ "$version_to_install" == "1.86.0" ]; then
   # hadolint ignore=DL3003
   mkdir -p /opt/boost-library &&
-    curl -L https://sourceforge.net/projects/boost/files/boost/1.86.0/boost_1_86_0.tar.bz2/download >boost_1_86_0.tar.bz2 &&
-    mv boost_1_86_0.tar.bz2 /opt/boost-library &&
+    curl -L https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz > boost-1.86.0.tar.gz &&
+    mv boost-1.86.0.tar.gz /opt/boost-library &&
     cd /opt/boost-library &&
-    tar --bzip2 -xf boost_1_86_0.tar.bz2 &&
-    cd /opt/boost-library/boost_1_86_0 &&
+    tar -xzf boost-1.86.0.tar.gz &&
+    cd /opt/boost-library/boost-1.86.0 &&
     ./bootstrap.sh --prefix=/usr/ &&
     ./b2 --without-python install &&
     cd /root &&

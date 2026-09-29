@@ -85,6 +85,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY =
           FEDERATION_ROUTER_ASYNC_RPC_PREFIX + "handler.count";
   public static final int DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_DEFAULT = 10;
+  public static final String DFS_ROUTER_ASYNC_RPC_QUEUE_SIZE =
+      FEDERATION_ROUTER_ASYNC_RPC_PREFIX + "queue.size";
+  public static final int DFS_ROUTER_ASYNC_RPC_QUEUE_SIZE_DEFAULT = 1000;
   public static final String DFS_ROUTER_ASYNC_RPC_RESPONDER_COUNT_KEY =
           FEDERATION_ROUTER_ASYNC_RPC_PREFIX + "responder.count";
   public static final int DFS_ROUTER_ASYNCRPC_RESPONDER_COUNT_DEFAULT = 10;

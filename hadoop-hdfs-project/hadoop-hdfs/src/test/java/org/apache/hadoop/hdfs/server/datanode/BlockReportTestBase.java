@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 
@@ -69,10 +70,10 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.slf4j.event.Level;
@@ -112,14 +113,14 @@ public abstract class BlockReportTestBase {
     resetConfiguration();
   }
 
-  @Before
+  @BeforeEach
   public void startUpCluster() throws IOException {
     REPL_FACTOR = 1; //Reset if case a test has modified the value
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL_FACTOR).build();
     fs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void shutDownCluster() throws IOException {
     if (fs != null) {
       fs.close();
@@ -209,7 +210,8 @@ public abstract class BlockReportTestBase {
    *
    * @throws java.io.IOException on an error
    */
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void blockReport_01() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
@@ -255,8 +257,7 @@ public abstract class BlockReportTestBase {
 
     for (int i = 0; i < blocksAfterReport.size(); i++) {
       ExtendedBlock b = blocksAfterReport.get(i).getBlock();
-      assertEquals("Length of " + i + "th block is incorrect",
-        oldLengths[i], b.getNumBytes());
+      assertEquals(oldLengths[i], b.getNumBytes(), "Length of " + i + "th block is incorrect");
     }
   }
 
@@ -269,7 +270,8 @@ public abstract class BlockReportTestBase {
    *
    * @throws IOException in case of errors
    */
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void blockReport_02() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     LOG.info("Running test " + METHOD_NAME);
@@ -332,10 +334,10 @@ public abstract class BlockReportTestBase {
 
     printStats();
 
-    assertEquals("Wrong number of MissingBlocks is found",
-      blocks2Remove.size(), cluster.getNamesystem().getMissingBlocksCount());
-    assertEquals("Wrong number of UnderReplicatedBlocks is found",
-      blocks2Remove.size(), cluster.getNamesystem().getUnderReplicatedBlocks());
+    assertEquals(blocks2Remove.size(), cluster.getNamesystem().getMissingBlocksCount(),
+        "Wrong number of MissingBlocks is found");
+    assertEquals(blocks2Remove.size(), cluster.getNamesystem().getUnderReplicatedBlocks(),
+        "Wrong number of UnderReplicatedBlocks is found");
   }
 
 
@@ -346,7 +348,8 @@ public abstract class BlockReportTestBase {
    *
    * @throws IOException in case of an error
    */
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void blockReport_03() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
@@ -360,10 +363,12 @@ public abstract class BlockReportTestBase {
     sendBlockReports(dnR, poolId, reports);
     printStats();
 
-    assertThat("Wrong number of corrupt blocks",
-               cluster.getNamesystem().getCorruptReplicaBlocks(), is(1L));
-    assertThat("Wrong number of PendingDeletion blocks",
-               cluster.getNamesystem().getPendingDeletionBlocks(), is(0L));
+    assertThat(cluster.getNamesystem().getCorruptReplicaBlocks())
+        .as("Wrong number of corrupt blocks")
+        .isEqualTo((1L));
+    assertThat(cluster.getNamesystem().getPendingDeletionBlocks())
+        .as("Wrong number of PendingDeletion blocks")
+        .isEqualTo(0L);
   }
 
   /**
@@ -374,7 +379,8 @@ public abstract class BlockReportTestBase {
    *
    * @throws IOException in case of an error
    */
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void blockReport_04() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
@@ -396,10 +402,12 @@ public abstract class BlockReportTestBase {
     sendBlockReports(dnR, poolId, reports);
     printStats();
 
-    assertThat("Wrong number of corrupt blocks",
-               cluster.getNamesystem().getCorruptReplicaBlocks(), is(0L));
-    assertThat("Wrong number of PendingDeletion blocks",
-               cluster.getNamesystem().getPendingDeletionBlocks(), is(1L));
+    assertThat(cluster.getNamesystem().getCorruptReplicaBlocks())
+        .as("Wrong number of corrupt blocks")
+            .isEqualTo(0L);
+    assertThat(cluster.getNamesystem().getPendingDeletionBlocks())
+        .as("Wrong number of PendingDeletion blocks")
+            .isEqualTo(1L);
   }
 
   /**
@@ -410,7 +418,8 @@ public abstract class BlockReportTestBase {
    *
    * @throws IOException in case of an error
    */
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void blockReport_06() throws Exception {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
@@ -426,8 +435,8 @@ public abstract class BlockReportTestBase {
     StorageBlockReport[] reports = getBlockReports(dn, poolId, false, false);
     sendBlockReports(dnR, poolId, reports);
     printStats();
-    assertEquals("Wrong number of PendingReplication Blocks",
-      0, cluster.getNamesystem().getUnderReplicatedBlocks());
+    assertEquals(0, cluster.getNamesystem().getUnderReplicatedBlocks(),
+        "Wrong number of PendingReplication Blocks");
   }
 
   /**
@@ -444,7 +453,8 @@ public abstract class BlockReportTestBase {
    *
    * @throws IOException in case of an error
    */
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void blockReport_07() throws Exception {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
@@ -462,23 +472,29 @@ public abstract class BlockReportTestBase {
     sendBlockReports(dnR, poolId, reports);
     printStats();
 
-    assertThat("Wrong number of corrupt blocks",
-               cluster.getNamesystem().getCorruptReplicaBlocks(), is(0L));
-    assertThat("Wrong number of PendingDeletion blocks",
-               cluster.getNamesystem().getPendingDeletionBlocks(), is(1L));
-    assertThat("Wrong number of PendingReplication blocks",
-               cluster.getNamesystem().getPendingReplicationBlocks(), is(0L));
+    assertThat(cluster.getNamesystem().getCorruptReplicaBlocks())
+        .as("Wrong number of corrupt blocks")
+        .isEqualTo(0L);
+    assertThat(cluster.getNamesystem().getPendingDeletionBlocks())
+        .as("Wrong number of PendingDeletion blocks")
+        .isEqualTo(1L);
+    assertThat(cluster.getNamesystem().getPendingReplicationBlocks())
+        .as("Wrong number of PendingReplication blocks")
+        .isEqualTo(0L);
 
     reports = getBlockReports(dn, poolId, false, true);
     sendBlockReports(dnR, poolId, reports);
     printStats();
 
-    assertThat("Wrong number of corrupt blocks",
-               cluster.getNamesystem().getCorruptReplicaBlocks(), is(1L));
-    assertThat("Wrong number of PendingDeletion blocks",
-               cluster.getNamesystem().getPendingDeletionBlocks(), is(1L));
-    assertThat("Wrong number of PendingReplication blocks",
-               cluster.getNamesystem().getPendingReplicationBlocks(), is(0L));
+    assertThat(cluster.getNamesystem().getCorruptReplicaBlocks())
+        .as("Wrong number of corrupt blocks")
+        .isEqualTo(1L);
+    assertThat(cluster.getNamesystem().getPendingDeletionBlocks())
+        .as("Wrong number of PendingDeletion blocks")
+        .isEqualTo(1L);
+    assertThat(cluster.getNamesystem().getPendingReplicationBlocks())
+        .as("Wrong number of PendingReplication blocks")
+        .isEqualTo(0L);
 
     printStats();
 
@@ -496,7 +512,8 @@ public abstract class BlockReportTestBase {
    *
    * @throws IOException in case of an error
    */
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void blockReport_08() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
@@ -524,8 +541,8 @@ public abstract class BlockReportTestBase {
       StorageBlockReport[] reports = getBlockReports(dn, poolId, false, false);
       sendBlockReports(dnR, poolId, reports);
       printStats();
-      assertEquals("Wrong number of PendingReplication blocks",
-        blocks.size(), cluster.getNamesystem().getPendingReplicationBlocks());
+      assertEquals(blocks.size(), cluster.getNamesystem().getPendingReplicationBlocks(),
+          "Wrong number of PendingReplication blocks");
 
       try {
         bc.join();
@@ -538,7 +555,8 @@ public abstract class BlockReportTestBase {
   // Similar to BlockReport_08 but corrupts GS and len of the TEMPORARY's
   // replica block. Expect the same behaviour: NN should simply ignore this
   // block
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void blockReport_09() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
@@ -567,8 +585,8 @@ public abstract class BlockReportTestBase {
       StorageBlockReport[] reports = getBlockReports(dn, poolId, true, true);
       sendBlockReports(dnR, poolId, reports);
       printStats();
-      assertEquals("Wrong number of PendingReplication blocks",
-        2, cluster.getNamesystem().getPendingReplicationBlocks());
+      assertEquals(2, cluster.getNamesystem().getPendingReplicationBlocks(),
+          "Wrong number of PendingReplication blocks");
 
       try {
         bc.join();
@@ -587,7 +605,8 @@ public abstract class BlockReportTestBase {
    * corrupt.
    * This is a regression test for HDFS-2791.
    */
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testOneReplicaRbwReportArrivesAfterBlockCompleted() throws Exception {
     final CountDownLatch brFinished = new CountDownLatch(1);
     DelayAnswer delayer = new GenericTestUtils.DelayAnswer(LOG) {
@@ -658,7 +677,8 @@ public abstract class BlockReportTestBase {
   }
 
   // See HDFS-10301
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testInterleavedBlockReports()
       throws IOException, ExecutionException, InterruptedException {
     int numConcurrentBlockReports = 3;
@@ -696,7 +716,7 @@ public abstract class BlockReportTestBase {
     executorService.shutdown();
 
     // Verify that the storages match before and after the test
-    Assert.assertArrayEquals(storageInfos, dnDescriptor.getStorageInfos());
+    assertArrayEquals(storageInfos, dnDescriptor.getStorageInfos());
   }
 
   private void waitForTempReplica(Block bl, int DN_N1) throws IOException {
@@ -729,8 +749,7 @@ public abstract class BlockReportTestBase {
           LOG.debug("Has been waiting for " + waiting_period + " ms.");
         }
       if (waiting_period > TIMEOUT)
-        assertTrue("Was waiting too long to get ReplicaInfo from a datanode",
-          tooLongWait);
+          assertTrue(tooLongWait, "Was waiting too long to get ReplicaInfo from a datanode");
     }
 
     HdfsServerConstants.ReplicaState state = r.getState();
@@ -746,8 +765,7 @@ public abstract class BlockReportTestBase {
             " is in state " + state.getValue());
       }
       if (Time.monotonicNow() - start > TIMEOUT)
-        assertTrue("Was waiting too long for a replica to become TEMPORARY",
-          tooLongWait);
+          assertTrue(tooLongWait, "Was waiting too long for a replica to become TEMPORARY");
     }
     if(LOG.isDebugEnabled()) {
       LOG.debug("Replica state after the loop " + state.getValue());
@@ -910,7 +928,7 @@ public abstract class BlockReportTestBase {
         startDNandWait(filePath, true);
       } catch (Exception e) {
         e.printStackTrace();
-        Assert.fail("Failed to start BlockChecker: " + e);
+        fail("Failed to start BlockChecker: " + e);
       }
     }
   }

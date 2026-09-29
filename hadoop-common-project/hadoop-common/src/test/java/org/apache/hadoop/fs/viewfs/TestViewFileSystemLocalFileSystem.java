@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-
 import java.io.IOException;
 import java.net.URI;
 
@@ -37,7 +36,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

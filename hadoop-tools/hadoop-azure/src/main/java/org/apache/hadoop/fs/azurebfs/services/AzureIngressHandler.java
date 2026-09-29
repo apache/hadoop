@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.util.Base64;
 import java.util.Objects;
 
 import org.slf4j.Logger;
@@ -206,4 +208,32 @@ public abstract class AzureIngressHandler {
    * @return the block manager
    */
   public abstract AbfsClient getClient();
+
+  /**
+   * Computes the Base64-encoded MD5 hash of the full blob content.
+   *
+   * <p>This method clones the current state of the {@link MessageDigest} instance
+   * associated with the blob content to avoid resetting its original state. It then
+   * calculates the MD5 digest and encodes it into a Base64 string.</p>
+   *
+   * @return A Base64-encoded string representing the MD5 hash of the full blob content,
+   *         or {@code null} if the digest could not be computed.
+   */
+  protected String computeFullBlobMd5() {
+    byte[] digest = null;
+    String fullBlobMd5 = null;
+    try {
+      // Clone the MessageDigest to avoid resetting the original state
+      MessageDigest clonedMd5
+          = (MessageDigest) getAbfsOutputStream().getFullBlobContentMd5()
+          .clone();
+      digest = clonedMd5.digest();
+    } catch (CloneNotSupportedException e) {
+      LOG.warn("Failed to clone MessageDigest instance", e);
+    }
+    if (digest != null && digest.length != 0) {
+      fullBlobMd5 = Base64.getEncoder().encodeToString(digest);
+    }
+    return fullBlobMd5;
+  }
 }

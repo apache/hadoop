@@ -21,8 +21,8 @@ package org.apache.hadoop.fs.contract.router;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractSeekTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 import java.io.IOException;
 
@@ -31,12 +31,12 @@ import java.io.IOException;
  */
 public class TestRouterHDFSContractSeek extends AbstractContractSeekTest {
 
-  @BeforeClass
+  @BeforeAll
   public static void createCluster() throws IOException {
     RouterHDFSContract.createCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() throws IOException {
     RouterHDFSContract.destroyCluster();
   }

@@ -19,7 +19,8 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -42,8 +43,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This test ensures the all types of data node report work correctly.
@@ -167,7 +167,7 @@ public class TestDatanodeReport {
       cluster.corruptBlockOnDataNodesByDeletingBlockFile(b);
       try {
         DFSTestUtil.readFile(fs, p);
-        Assert.fail("Must throw exception as the block doesn't exists on disk");
+        fail("Must throw exception as the block doesn't exists on disk");
       } catch (IOException e) {
         // all bad datanodes
       }

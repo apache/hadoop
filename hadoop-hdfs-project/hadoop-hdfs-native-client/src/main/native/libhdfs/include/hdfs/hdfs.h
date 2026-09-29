@@ -685,11 +685,27 @@ extern  "C" {
     int hdfsCloseFile(hdfsFS fs, hdfsFile file);
 
 
-    /** 
-     * hdfsExists - Checks if a given path exsits on the filesystem 
+    /**
+     * hdfsCloneFile - Create a new independent file handle for the same file
+     * as an existing handle, reusing cached block locations to avoid a
+     * NameNode RPC. The cloned handle has its own read position and buffers.
+     * Only works for input (read) streams on a DistributedFileSystem.
+     *
+     * @param fs The configured filesystem handle.
+     * @param file An open input file handle to clone.
+     * @return Returns a new file handle on success, NULL on error.
+     *         On error, errno will be set appropriately.
+     *         The returned handle must be closed with hdfsCloseFile.
+     */
+    LIBHDFS_EXTERNAL
+    hdfsFile hdfsCloneFile(hdfsFS fs, hdfsFile file);
+
+
+    /**
+     * hdfsExists - Checks if a given path exists on the filesystem
      * @param fs The configured filesystem handle.
      * @param path The path to look for
-     * @return Returns 0 on success, -1 on error.  
+     * @return Returns 0 on success, -1 on error.
      */
     LIBHDFS_EXTERNAL
     int hdfsExists(hdfsFS fs, const char *path);

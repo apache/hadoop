@@ -20,12 +20,12 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Arrays;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsDirectory;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
@@ -37,20 +37,17 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcom
 /**
  * Parameterized test of rename operations of unicode paths.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("params")
 public class ITestAzureBlobFileSystemRenameUnicode extends
     AbstractAbfsIntegrationTest {
 
-  @Parameterized.Parameter
   public String srcDir;
 
-  @Parameterized.Parameter(1)
   public String destDir;
 
-  @Parameterized.Parameter(2)
   public String filename;
 
-  @Parameterized.Parameters
   public static Iterable<Object[]> params() {
     return Arrays.asList(
         new Object[][]{
@@ -66,7 +63,11 @@ public class ITestAzureBlobFileSystemRenameUnicode extends
         });
   }
 
-  public ITestAzureBlobFileSystemRenameUnicode() throws Exception {
+  public ITestAzureBlobFileSystemRenameUnicode(String pSrcDir,
+    String pDestDir, String pFilename) throws Exception {
+    this.srcDir = pSrcDir;
+    this.destDir = pDestDir;
+    this.filename = pFilename;
   }
 
   /**
@@ -92,9 +93,8 @@ public class ITestAzureBlobFileSystemRenameUnicode extends
 
     FileStatus[] fileStatus = fs.listStatus(folderPath2);
     assertNotNull(fileStatus);
-    assertTrue(
-        "Empty listing returned from listStatus(\"" + folderPath2 + "\")",
-        fileStatus.length > 0);
+    assertTrue(fileStatus.length > 0,
+        "Empty listing returned from listStatus(\"" + folderPath2 + "\")");
     assertEquals(fileStatus[0].getPath().getName(), filename);
   }
 }

@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
-import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -184,7 +183,8 @@ public class TestAppManager extends AppManagerTestBase{
     for (RMApp app : apps) {
       map.put(app.getApplicationId(), app);
     }
-    Dispatcher rmDispatcher = new AsyncDispatcher();
+    AsyncDispatcher rmDispatcher = new AsyncDispatcher();
+    rmDispatcher.disableExitOnDispatchException();
     ContainerAllocationExpirer containerAllocationExpirer = new ContainerAllocationExpirer(
             rmDispatcher);
     AMLivelinessMonitor amLivelinessMonitor = new AMLivelinessMonitor(
@@ -200,7 +200,7 @@ public class TestAppManager extends AppManagerTestBase{
         return map;
       }
     };
-    ((RMContextImpl)context).setStateStore(mock(RMStateStore.class));
+    ((RMContextImpl) context).setStateStore(mock(RMStateStore.class));
     metricsPublisher = mock(SystemMetricsPublisher.class);
     context.setSystemMetricsPublisher(metricsPublisher);
     context.setRMApplicationHistoryWriter(writer);

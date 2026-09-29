@@ -18,8 +18,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -44,11 +45,10 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.event.Level;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestFavoredNodesEndToEnd {
   {
@@ -64,7 +64,7 @@ public class TestFavoredNodesEndToEnd {
   private static DistributedFileSystem dfs;
   private static ArrayList<DataNode> datanodes;
   
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES)
@@ -74,14 +74,15 @@ public class TestFavoredNodesEndToEnd {
     datanodes = cluster.getDataNodes();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (cluster != null) { 
       cluster.shutdown();
     }
   }
 
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testFavoredNodesEndToEnd() throws Exception {
     //create 10 files with random preferred nodes
     for (int i = 0; i < NUM_FILES; i++) {
@@ -104,7 +105,8 @@ public class TestFavoredNodesEndToEnd {
     }
   }
 
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testWhenFavoredNodesNotPresent() throws Exception {
     //when we ask for favored nodes but the nodes are not there, we should
     //get some other nodes. In other words, the write to hdfs should not fail
@@ -122,7 +124,8 @@ public class TestFavoredNodesEndToEnd {
     getBlockLocations(p);
   }
 
-  @Test(timeout=180000)
+  @Test
+  @Timeout(value = 180)
   public void testWhenSomeNodesAreNotGood() throws Exception {
     // 4 favored nodes
     final InetSocketAddress addrs[] = new InetSocketAddress[4];
@@ -150,19 +153,20 @@ public class TestFavoredNodesEndToEnd {
     d.stopDecommission();
 
     BlockLocation[] locations = getBlockLocations(p);
-    Assert.assertEquals(replication, locations[0].getNames().length);
+    assertEquals(replication, locations[0].getNames().length);
     //also make sure that the datanode[0] is not in the list of hosts
     for (int i = 0; i < replication; i++) {
       final String loc = locations[0].getNames()[i];
       int j = 0;
       for(; j < hosts.length && !loc.equals(hosts[j]); j++);
-      Assert.assertTrue("j=" + j, j > 0);
-      Assert.assertTrue("loc=" + loc + " not in host list "
-          + Arrays.asList(hosts) + ", j=" + j, j < hosts.length);
+      assertTrue(j > 0, "j=" + j);
+      assertTrue(j < hosts.length,
+          "loc=" + loc + " not in host list " + Arrays.asList(hosts) + ", j=" + j);
     }
   }
 
-  @Test(timeout = 180000)
+  @Test
+  @Timeout(value = 180)
   public void testFavoredNodesEndToEndForAppend() throws Exception {
     // create 10 files with random preferred nodes
     for (int i = 0; i < NUM_FILES; i++) {
@@ -189,7 +193,8 @@ public class TestFavoredNodesEndToEnd {
     }
   }
 
-  @Test(timeout = 180000)
+  @Test
+  @Timeout(value = 180)
   public void testCreateStreamBuilderFavoredNodesEndToEnd() throws Exception {
     //create 10 files with random preferred nodes
     for (int i = 0; i < NUM_FILES; i++) {

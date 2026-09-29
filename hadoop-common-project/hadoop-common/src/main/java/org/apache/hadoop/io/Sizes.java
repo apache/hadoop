@@ -31,6 +31,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public final class Sizes {
 
+  /** 0 bytes: {@value}. Here to make it easy to find use of zero in constants. */
+  public static final int S_0 = 0;
+
   /** 2^8 bytes: {@value}. */
   public static final int S_256 = 256;
 

@@ -32,11 +32,9 @@ import org.apache.hadoop.hdfs.server.federation.FederationTestUtils;
 import org.apache.hadoop.hdfs.server.federation.metrics.RouterMBean;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test to verify router contracts for delegation token operations.
@@ -44,12 +42,12 @@ import org.junit.rules.ExpectedException;
 public class TestRouterHDFSContractDelegationToken
     extends AbstractFSContractTestBase {
 
-  @BeforeClass
+  @BeforeAll
   public static void createCluster() throws Exception {
     RouterHDFSContract.createCluster(false, 1, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() throws IOException {
     RouterHDFSContract.destroyCluster();
   }
@@ -58,9 +56,6 @@ public class TestRouterHDFSContractDelegationToken
   protected AbstractFSContract createContract(Configuration conf) {
     return new RouterHDFSContract(conf);
   }
-
-  @Rule
-  public ExpectedException exceptionRule = ExpectedException.none();
 
   @Test
   public void testRouterDelegationToken() throws Exception {
@@ -109,7 +104,8 @@ public class TestRouterHDFSContractDelegationToken
     assertEquals(0, bean.getCurrentTokensCount());
 
     // Renew a cancelled token
-    exceptionRule.expect(SecretManager.InvalidToken.class);
-    token.renew(initSecurity());
+    assertThrows(SecretManager.InvalidToken.class, () -> {
+      token.renew(initSecurity());
+    });
   }
 }

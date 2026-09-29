@@ -20,30 +20,34 @@ package org.apache.hadoop.hdfs.server.balancer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestBalancerWithEncryptedTransfer {
   
   private final Configuration conf = new HdfsConfiguration();
   
-  @Before
+  @BeforeEach
   public void setUpConf() {
     conf.setBoolean(DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
   }
   
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testEncryptedBalancer0() throws Exception {
     new TestBalancer().testBalancer0Internal(conf);
   }
   
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testEncryptedBalancer1() throws Exception {
     new TestBalancer().testBalancer1Internal(conf);
   }
   
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testEncryptedBalancer2() throws Exception {
     new TestBalancer().testBalancer2Internal(conf);
   }

@@ -887,6 +887,27 @@
 </property>
 
 <property>
+  <name>dfs.blockreport.reject.invalid.lease</name>
+  <value>true</value>
+  <description>
+    NameNode-side configuration. When set to true (default), the NameNode
+    throws an InvalidBlockReportLeaseException back to the DataNode if a
+    block report is rejected due to an invalid or expired lease. This allows
+    DataNodes that include HDFS-16942 to immediately reset their lease state
+    and retry.
+
+    During a rolling upgrade where the NameNode has been upgraded but
+    DataNodes are still running an older version without HDFS-16942, set
+    this to false. Old DataNodes cannot handle InvalidBlockReportLeaseException
+    and will get stuck in an infinite loop of rejected block reports, unable
+    to ever send a successful full block report. Setting this to false
+    reverts to the pre-HDFS-16942 behavior of silently skipping the rejected
+    report. Once all DataNodes have been upgraded, this should be set back
+    to true (or removed to use the default).
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.directoryscan.interval</name>
   <value>21600</value>
   <description>Interval in seconds for Datanode to scan data directories and
@@ -1394,6 +1415,17 @@
   <description>The SecondaryNameNode retries failed checkpointing. If the 
   failure occurs while loading fsimage or replaying edits, the number of
   retries is limited by this variable. 
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.checkpoint.parallel.upload.enabled</name>
+  <value>false</value>
+  <description>
+  If true, the CheckpointNode will upload the checkpoint image to multiple other
+  NameNodes in parallel, in the cluster with observer namenodes. You should
+  make sure the network bandwidth is sufficient.
+  If false, the fsimage will be uploaded serially to multiple namenodes.
   </description>
 </property>
 
@@ -1916,6 +1948,16 @@
     Support multiple time unit suffix(case insensitive), as described
     in dfs.heartbeat.interval.If no time unit is specified then seconds
     is assumed.
+    Only works if dfs.ha.log-roll.enabled is set to true.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.log-roll.enabled</name>
+  <value>true</value>
+  <description>
+    Whether Standby/Observer Namenodes are allowed to ask Active to roll edit logs.
+    Takes priority over dfs.ha.log-roll.period.
   </description>
 </property>
 
@@ -3129,6 +3171,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.edit.log.autoroll.max.interval.ms</name>
+  <value>0</value>
+  <description>
+    How long can an active namenode go before rolling its edit log (if there is something to roll),
+    in milliseconds. Disabled by default.
+  </description>
+</property>
+
+<property>
   <name>dfs.webhdfs.user.provider.user.pattern</name>
   <value>^[A-Za-z_][A-Za-z0-9._-]*[$]?$</value>
   <description>
@@ -3924,6 +3975,19 @@
 </property>
 
 <property>
+  <name>dfs.client.ec.write.failed.blocks.tolerated</name>
+  <value>-1</value>
+  <description>
+    Provide extra tolerated failed streamer for ec policy to prevent
+    the potential data loss. For example, if we use RS-6-3-1024K ec policy.
+    We can write successfully when there are 3 failure streamers. But if one of the six
+    replicas lost during reconstruction, we may lose the data forever.
+    It should better configured between [0, numParityBlocks], the default value is -1 which
+    means the parity block number of the specified ec policy we are using.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.quota.init-threads</name>
   <value>12</value>
   <description>
@@ -4441,6 +4505,21 @@
   <description>
     If set to a positive integer, the value in ms to wait between sending
     incremental block reports from the Datanode to the Namenode.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.ibr.max.pending.blocks</name>
+  <value>1000000</value>
+  <description>
+    Maximum number of pending block entries allowed in the IBR
+    (Incremental Block Report) queue per NameNode. When this limit is
+    reached, the queue is cleared to bound the DataNode's heap footprint,
+    and a Full Block Report is scheduled to resync with the NameNode. This
+    protects against unbounded memory growth (and eventual OOM) when a
+    NameNode is unreachable, for example a NameNode id listed in
+    dfs.ha.namenodes.&lt;nsId&gt; whose RPC address is not configured.
+    Set to 0 to disable.
   </description>
 </property>
 
@@ -6686,6 +6765,21 @@
     <value>false</value>
     <description>
       Enables observer reads for clients. This should only be enabled when clients are using routers.
+    </description>
+  </property>
+  <property>
+    <name>dfs.nodeplan.steps.supported.packages</name>
+    <value>org.apache.hadoop.hdfs.server.diskbalancer.planner</value>
+    <description>
+      Only Step implementations in the named packages will be accepted when deserializing.
+      If you have more than one package, separate the packages using commas.
+    </description>
+  </property>
+  <property>
+    <name>nfs.server.bind.host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The host address that the NFS and mountd server will bind to.
     </description>
   </property>
 </configuration>

@@ -38,8 +38,8 @@ import org.apache.hadoop.tools.fedbalance.DistCpProcedure.Stage;
 import org.apache.hadoop.tools.fedbalance.FedBalanceContext;
 import org.apache.hadoop.tools.fedbalance.TestDistCpProcedure;
 import org.apache.hadoop.util.Time;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -47,8 +47,7 @@ import java.util.Collections;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createNamenodeReport;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestRouterDistCpProcedure extends TestDistCpProcedure {
   private static StateStoreDFSCluster cluster;
@@ -56,7 +55,7 @@ public class TestRouterDistCpProcedure extends TestDistCpProcedure {
   private static Configuration routerConf;
   private static StateStoreService stateStore;
 
-  @BeforeClass
+  @BeforeAll
   public static void globalSetUp() throws Exception {
     cluster = new StateStoreDFSCluster(false, 1);
     // Build and start a router with State Store + admin + RPC
@@ -113,7 +112,7 @@ public class TestRouterDistCpProcedure extends TestDistCpProcedure {
         .mkdirs(mount + "/dir", new FsPermission(020), false));
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     cluster.stopRouter(routerContext);
   }

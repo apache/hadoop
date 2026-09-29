@@ -30,15 +30,16 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.net.URL;
 import java.util.Optional;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Test for aliasmap bootstrap.
@@ -47,7 +48,7 @@ public class TestBootstrapAliasmap {
 
   private MiniDFSCluster cluster;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster.setupNamenodeProvidedConfiguration(conf);
@@ -58,6 +59,14 @@ public class TestBootstrapAliasmap {
         .numDataNodes(1)
         .build();
     cluster.waitActive();
+  }
+
+  @AfterEach
+  public void tearDown() {
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   @Test

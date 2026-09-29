@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.AbortedException;
 import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
@@ -240,8 +241,13 @@ public final class S3AUtils {
           ? (S3Exception) ase
           : null;
       int status = ase.statusCode();
-      if (ase.awsErrorDetails() != null) {
-        message = message + ":" + ase.awsErrorDetails().errorCode();
+      // error details, may be null
+      final AwsErrorDetails errorDetails = ase.awsErrorDetails();
+      // error code, will be null if errorDetails is null
+      String errorCode = "";
+      if (errorDetails != null) {
+        errorCode = errorDetails.errorCode();
+        message = message + ":" + errorCode;
       }
 
       // big switch on the HTTP status code.
@@ -308,6 +314,8 @@ public final class S3AUtils {
       // precondition failure: the object is there, but the precondition
       // (e.g. etag) didn't match. Assume remote file change during
       // rename or status passed in to openfile had an etag which didn't match.
+      // See the SC_200 handler for the treatment of the S3 Express failure
+      // variant.
       case SC_412_PRECONDITION_FAILED:
         ioe = new RemoteFileChangedException(path, message, "", ase);
         break;
@@ -351,6 +359,16 @@ public final class S3AUtils {
           // failure during a bulk delete
           return ((MultiObjectDeleteException) exception)
               .translateException(message);
+        }
+        if (PRECONDITION_FAILED.equals(errorCode)) {
+          // S3 Express stores report conflict in conditional writes
+          // as a 200 + an error code of "PreconditionFailed".
+          // This is mapped to RemoteFileChangedException for consistency
+          // with SC_412_PRECONDITION_FAILED handling.
+          return new RemoteFileChangedException(path,
+              operation,
+              exception.getMessage(),
+              exception);
         }
         // other 200: FALL THROUGH
 
@@ -621,6 +639,10 @@ public final class S3AUtils {
    * <li>a public default constructor.</li>
    * </ol>
    *
+   * Uses the configuration's class loader, to respect the setting of
+   * {@link Constants#AWS_S3_CLASSLOADER_ISOLATION}. For backwards
+   * compatibility, if configuration is null, a default classloader is used.
+   *
    * @param className name of class for which instance is to be created
    * @param conf configuration
    * @param uri URI of the FS
@@ -639,7 +661,18 @@ public final class S3AUtils {
       String methodName,
       String configKey) throws IOException {
     try {
-      Class<?> instanceClass = S3AUtils.class.getClassLoader().loadClass(className);
+      ClassLoader classLoader;
+      if (conf != null) {
+        classLoader = conf.getClassLoader();
+        LOG.debug("Loading class {} with Configuration classloader {}",
+              className, classLoader);
+      } else {
+        classLoader = S3AUtils.class.getClassLoader();
+        LOG.debug("Loading class {} with default classloader {}",
+              className, classLoader);
+      }
+
+      Class<?> instanceClass = classLoader.loadClass(className);
       if (Modifier.isAbstract(instanceClass.getModifiers())) {
         throw isAbstract(uri, className, configKey);
       }

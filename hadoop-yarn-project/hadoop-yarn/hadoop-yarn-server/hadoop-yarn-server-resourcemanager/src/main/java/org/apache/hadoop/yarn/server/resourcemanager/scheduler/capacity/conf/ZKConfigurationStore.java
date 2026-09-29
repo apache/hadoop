@@ -41,6 +41,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A Zookeeper-based implementation of {@link YarnConfigurationStore}.
@@ -265,8 +266,36 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
 
   @VisibleForTesting
   protected byte[] getZkData(String path) throws Exception {
-    return zkManager.getData(path);
+    // If the 'yarn resourcemanager -format-conf-store' command is issued
+    // while one of the RMs is in a starting state, the RM may fail. This
+    // occurs because the /confstore/CONF_STORE path may not yet exist.
+    // Alternatively, if the confstore is in the process of being written,
+    // the getZkData method returns a null value, causing the crash.
+    //To prevent this, added a re-try mechanism before giving up.
+    int maxRetries = 6;
+    int attempt = 1;
+    int sleepBetweenRetries = conf.getInt(
+        YarnConfiguration.RM_SCHEDCONF_STORE_ZK_READ_RETRY_SECS,
+        YarnConfiguration.DEFAULT_RM_SCHEDCONF_STORE_ZK_READ_RETRY_SECS);
+
+    while (attempt < maxRetries) {
+      if(zkManager.exists(path)) {
+        LOG.debug("zkManager.exists(path) {} exists.", path);
+        byte[] zkData = zkManager.getData(path);
+        if (zkData != null && zkData.length > 0) {
+          LOG.debug("We are returning the zkData OK!");
+          return zkData;
+        }
+      }
+      LOG.warn("The ZK CONFSTORE path or the ZkData was null. Retrying in {} "
+              + "seconds... (Attempt {})", sleepBetweenRetries, attempt);
+      TimeUnit.SECONDS.sleep(sleepBetweenRetries);
+      attempt++;
+    }
+    LOG.error("The ZK CONFSTORE path or the ZkData was null. Giving up.");
+    return new byte[0];
   }
+
 
   @VisibleForTesting
   protected void setZkData(String path, byte[] data) throws Exception {

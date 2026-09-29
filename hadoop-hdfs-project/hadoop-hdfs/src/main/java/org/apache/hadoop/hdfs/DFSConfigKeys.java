@@ -259,6 +259,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long    DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT = 1000000;
   public static final String  DFS_NAMENODE_CHECKPOINT_MAX_RETRIES_KEY = "dfs.namenode.checkpoint.max-retries";
   public static final int     DFS_NAMENODE_CHECKPOINT_MAX_RETRIES_DEFAULT = 3;
+  public static final String  DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_ENABLED_KEY =
+      "dfs.namenode.checkpoint.parallel.upload.enabled";
+  public static final boolean DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_ENABLED_DEFAULT = false;
   public static final String  DFS_NAMENODE_MISSING_CHECKPOINT_PERIODS_BEFORE_SHUTDOWN_KEY = "dfs.namenode.missing.checkpoint.periods.before.shutdown";
   public static final int     DFS_NAMENODE_MISSING_CHECKPOINT_PERIODS_BEFORE_SHUTDOWN_DEFAULT = 3;
   public static final String  DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY =
@@ -421,6 +424,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD_DEFAULT = 0.5f;
   public static final String  DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS = "dfs.namenode.edit.log.autoroll.check.interval.ms";
   public static final int     DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS_DEFAULT = 5*60*1000;
+  public static final String DFS_NAMENODE_EDIT_LOG_AUTOROLL_MAX_INTERVAL_MS =
+      "dfs.namenode.edit.log.autoroll.max.interval.ms";
+  public static final long DFS_NAMENODE_EDIT_LOG_AUTOROLL_MAX_INTERVAL_MS_DEFAULT = 0;
 
   public static final String  DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC = "dfs.namenode.lazypersist.file.scrub.interval.sec";
   public static final int     DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC_DEFAULT = 5 * 60;
@@ -1106,6 +1112,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       = "dfs.blockreport.incremental.intervalMsec";
   public static final long    DFS_BLOCKREPORT_INCREMENTAL_INTERVAL_MSEC_DEFAULT
       = 0;
+  public static final String  DFS_DATANODE_IBR_MAX_PENDING_BLOCKS_KEY
+      = "dfs.datanode.ibr.max.pending.blocks";
+  public static final long    DFS_DATANODE_IBR_MAX_PENDING_BLOCKS_DEFAULT
+      = 1000000;
   public static final String  DFS_BLOCKREPORT_INTERVAL_MSEC_KEY = "dfs.blockreport.intervalMsec";
   public static final long    DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT = 6 * 60 * 60 * 1000;
   public static final String  DFS_BLOCKREPORT_INITIAL_DELAY_KEY = "dfs.blockreport.initialDelay";
@@ -1116,6 +1126,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_NAMENODE_MAX_FULL_BLOCK_REPORT_LEASES_DEFAULT = 6;
   public static final String  DFS_NAMENODE_FULL_BLOCK_REPORT_LEASE_LENGTH_MS = "dfs.namenode.full.block.report.lease.length.ms";
   public static final long    DFS_NAMENODE_FULL_BLOCK_REPORT_LEASE_LENGTH_MS_DEFAULT = 5L * 60L * 1000L;
+  public static final String  DFS_BLOCKREPORT_REJECT_INVALID_LEASE_KEY
+      = "dfs.blockreport.reject.invalid.lease";
+  public static final boolean DFS_BLOCKREPORT_REJECT_INVALID_LEASE_DEFAULT = true;
   public static final String  DFS_CACHEREPORT_INTERVAL_MSEC_KEY = "dfs.cachereport.intervalMsec";
   public static final long    DFS_CACHEREPORT_INTERVAL_MSEC_DEFAULT = 10 * 1000;
   public static final String  DFS_BLOCK_INVALIDATE_LIMIT_KEY = "dfs.block.invalidate.limit";
@@ -1370,6 +1383,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_HA_STANDBY_CHECKPOINTS_DEFAULT = true;
   public static final String DFS_HA_LOGROLL_PERIOD_KEY = "dfs.ha.log-roll.period";
   public static final int DFS_HA_LOGROLL_PERIOD_DEFAULT = 2 * 60; // 2m
+  public static final String DFS_HA_LOG_ROLL_ENABLED_KEY = "dfs.ha.log-roll.enabled";
+  public static final boolean DFS_HA_LOG_ROLL_ENABLED_DEFAULT = true;
   public static final String DFS_HA_TAILEDITS_PERIOD_KEY = "dfs.ha.tail-edits.period";
   public static final int DFS_HA_TAILEDITS_PERIOD_DEFAULT = 60; // 1m
   public static final String DFS_HA_TAILEDITS_PERIOD_BACKOFF_MAX_KEY = "dfs.ha.tail-edits.period.backoff-max";
@@ -2107,4 +2122,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_LEASE_HARDLIMIT_DEFAULT =
       HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT;
 
+  /**
+   * List of packages from which Step implementations will be loaded when deserializing
+   * Node Plans: {@value}.
+   */
+  public static final String SUPPORTED_PACKAGES_CONFIG_NAME =
+      "dfs.nodeplan.steps.supported.packages";
 }

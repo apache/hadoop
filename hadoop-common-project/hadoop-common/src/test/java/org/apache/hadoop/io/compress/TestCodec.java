@@ -165,6 +165,23 @@ public class TestCodec {
   }
 
   @Test
+  public void testLzoBufferSizeDefault() {
+    // HADOOP-19255: Verify the default LZO buffer size matches the
+    // hadoop-lzo native library's own default (256KB), not the
+    // previously mismatched 64KB value which caused
+    // "Corrupted uncompressed block" errors during decompression
+    // when native lzo compresses with a 256KB buffer but Hadoop's
+    // config default a smaller 64KB buffer for decompression.
+    assertEquals(256 * 1024,
+        CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_DEFAULT);
+
+    Configuration conf = new Configuration();
+    assertEquals(256 * 1024,
+        conf.getInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY,
+            CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_DEFAULT));
+  }
+
+  @Test
   public void testDeflateCodec() throws IOException {
     codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.DeflateCodec");
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.DeflateCodec");
@@ -526,7 +543,6 @@ public class TestCodec {
   @Test
   @Timeout(value = 20)
   public void testSequenceFileZStandardCodec() throws Exception {
-    assumeTrue(ZStandardCodec.isNativeCodeLoaded());
     Configuration conf = new Configuration();
     sequenceFileCodecTest(conf, 0,
         "org.apache.hadoop.io.compress.ZStandardCodec", 100);

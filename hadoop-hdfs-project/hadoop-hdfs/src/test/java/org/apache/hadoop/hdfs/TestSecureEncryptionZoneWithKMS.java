@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.KMS_CLIENT_ENC_KEY_CACHE_LOW_WATERMARK;
@@ -64,13 +64,12 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,6 +78,7 @@ import org.slf4j.LoggerFactory;
  * Kerby-based MiniKDC, MiniKMS and MiniDFSCluster. This provides additional
  * unit test coverage on Secure(Kerberos) KMS + HDFS.
  */
+@Timeout(120)
 public class TestSecureEncryptionZoneWithKMS {
   public static final Logger LOG = LoggerFactory.getLogger(
       TestSecureEncryptionZoneWithKMS.class);
@@ -129,10 +129,7 @@ public class TestSecureEncryptionZoneWithKMS {
     return file;
   }
 
-  @Rule
-  public Timeout timeout = new Timeout(120000);
-
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     baseDir = getTestDir();
     FileUtil.fullyDelete(baseDir);
@@ -146,8 +143,8 @@ public class TestSecureEncryptionZoneWithKMS {
     SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS,
         baseConf);
     UserGroupInformation.setConfiguration(baseConf);
-    assertTrue("Expected configuration to enable security",
-        UserGroupInformation.isSecurityEnabled());
+    assertTrue(UserGroupInformation.isSecurityEnabled(),
+        "Expected configuration to enable security");
 
     File keytabFile = new File(baseDir, "test.keytab");
     keytab = keytabFile.getAbsolutePath();
@@ -231,7 +228,7 @@ public class TestSecureEncryptionZoneWithKMS {
     miniKMS.start();
   }
 
-  @AfterClass
+  @AfterAll
   public static void destroy() throws Exception {
     if (kdc != null) {
       kdc.stop();
@@ -243,7 +240,7 @@ public class TestSecureEncryptionZoneWithKMS {
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     // Start MiniDFS Cluster
     baseConf
@@ -271,7 +268,7 @@ public class TestSecureEncryptionZoneWithKMS {
     }
   }
 
-  @After
+  @AfterEach
   public void shutdown() throws IOException {
     IOUtils.cleanupWithLogger(null, fs);
     if (cluster != null) {

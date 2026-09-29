@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.Closeable;
+import java.io.IOException;
+
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -34,7 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.util.Time.now;
 
-class AbfsClientThrottlingAnalyzer {
+class AbfsClientThrottlingAnalyzer implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsClientThrottlingAnalyzer.class);
   private static final int MIN_ANALYSIS_PERIOD_MS = 1000;
@@ -95,7 +98,7 @@ class AbfsClientThrottlingAnalyzer {
   }
 
   /**
-   * Resumes the timer if it was stopped.
+   * Resumes the timer if it was stopped previously.
    */
   private void resumeTimer() {
     blobMetrics = new AtomicReference<AbfsOperationMetrics>(
@@ -171,6 +174,21 @@ class AbfsClientThrottlingAnalyzer {
     }
     return false;
   }
+
+  /**
+ * Closes the throttling analyzer and releases associated resources.
+ * This method cancels the internal timer and cleans up any pending timer tasks.
+ * It is safe to call this method multiple times.
+ * @throws IOException if an I/O error occurs during cleanup
+ */
+@Override
+public void close() throws IOException {
+  if (timer != null) {
+    timer.cancel();
+    timer.purge();
+    timer = null;
+  }
+}
 
   @VisibleForTesting
   int getSleepDuration() {

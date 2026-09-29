@@ -22,7 +22,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement
     .DatanodeAdminBackoffMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement
     .DatanodeAdminMonitorInterface;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -32,9 +34,11 @@ import java.io.IOException;
  * config to enable the alternative monitor version.
  */
 
+@Tag("slow")
 public class TestDecommissionWithBackoffMonitor extends TestDecommission {
 
   @Override
+  @BeforeEach
   public void setup() throws IOException {
     super.setup();
     Configuration conf = getConf();

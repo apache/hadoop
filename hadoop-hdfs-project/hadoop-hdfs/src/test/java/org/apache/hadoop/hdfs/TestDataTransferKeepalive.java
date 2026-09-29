@@ -23,10 +23,10 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCK
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.InputStream;
 
@@ -40,9 +40,10 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.function.Supplier;
 
@@ -55,7 +56,7 @@ public class TestDataTransferKeepalive {
   private static final int KEEPALIVE_TIMEOUT = 1000;
   private static final int WRITE_TIMEOUT = 3000;
   
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf.setInt(DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_KEY,
         KEEPALIVE_TIMEOUT);
@@ -67,7 +68,7 @@ public class TestDataTransferKeepalive {
     dn = cluster.getDataNodes().get(0);
   }
   
-  @After
+  @AfterEach
   public void teardown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -79,7 +80,8 @@ public class TestDataTransferKeepalive {
    * Regression test for HDFS-3357. Check that the datanode is respecting
    * its configured keepalive timeout.
    */
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testDatanodeRespectsKeepAliveTimeout() throws Exception {
     Configuration clientConf = new Configuration(conf);
     // Set a client socket cache expiry time much longer than 
@@ -124,7 +126,8 @@ public class TestDataTransferKeepalive {
   /**
    * Test that the client respects its keepalive timeout.
    */
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testClientResponsesKeepAliveTimeout() throws Exception {
     Configuration clientConf = new Configuration(conf);
     // Set a client socket cache expiry time much shorter than 
@@ -165,7 +168,8 @@ public class TestDataTransferKeepalive {
    * read bytes off the stream quickly. The datanode should time out sending the
    * chunks and the transceiver should die, even if it has a long keepalive.
    */
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testSlowReader() throws Exception {
     // Set a client socket cache expiry time much longer than 
     // the datanode-side expiration time.
@@ -204,7 +208,8 @@ public class TestDataTransferKeepalive {
     IOUtils.closeStream(stm);
   }
   
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testManyClosedSocketsInCache() throws Exception {
     // Make a small file
     Configuration clientConf = new Configuration(conf);

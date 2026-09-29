@@ -32,10 +32,13 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 
-import org.junit.Test;
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Basic functional tests on a fuse-dfs mount.
@@ -135,7 +138,7 @@ public class TestFuseDFS {
       fi.close(); // NB: leaving f unclosed prevents unmount
     }
     String s = new String(b, 0, len);
-    assertEquals("File content differs", expectedContents, s);
+    assertEquals(expectedContents, s, "File content differs");
   }
 
   private static class RedirectToStdoutThread extends Thread {
@@ -227,13 +230,14 @@ public class TestFuseDFS {
   private static void teardownMount() throws IOException {
     execWaitRet("fusermount -u " + mountPoint);
     try {
-      assertEquals(0, fuseProcess.waitFor()); // fuse_dfs should exit cleanly
+      assertEquals(0,
+          fuseProcess.waitFor()); // fuse_dfs should exit cleanly
     } catch (InterruptedException e) {
       fail("interrupted while waiting for fuse_dfs process to exit.");
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void startUp() throws IOException {
     Configuration conf = new HdfsConfiguration();
     r = Runtime.getRuntime();
@@ -245,7 +249,7 @@ public class TestFuseDFS {
     fuseProcess = establishMount(fs.getUri());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     // Unmount before taking down the mini cluster
     // so no outstanding operations hang.

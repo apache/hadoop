@@ -24,9 +24,9 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -50,14 +50,14 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Tests of storage class.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name="-{0}")
+@MethodSource("params")
 public class ITestS3AStorageClass extends AbstractS3ATestBase {
 
   /**
    * HADOOP-18339. Parameterized the test for different fast upload buffer types
    * to ensure the storage class configuration works with all of them.
    */
-  @Parameterized.Parameters(name = "fast-upload-buffer-{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {FAST_UPLOAD_BUFFER_DISK},

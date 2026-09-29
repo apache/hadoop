@@ -26,9 +26,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.slf4j.Logger;
@@ -73,7 +73,7 @@ public class TestEntryFileIO extends AbstractManifestCommitterTest {
   /**
    * Create an entry file during setup.
    */
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     entryFileIO = new EntryFileIO(new Configuration());
     createEntryFile();
@@ -83,7 +83,7 @@ public class TestEntryFileIO extends AbstractManifestCommitterTest {
    * Teardown deletes any entry file.
    * @throws Exception on any failure
    */
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     Thread.currentThread().setName("teardown");
     if (getEntryFile() != null) {

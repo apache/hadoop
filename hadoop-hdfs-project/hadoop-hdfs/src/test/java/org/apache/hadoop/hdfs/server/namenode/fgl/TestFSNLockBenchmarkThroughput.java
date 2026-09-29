@@ -25,12 +25,15 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * To test {@link FSNLockBenchmarkThroughput}.
  */
+@Tag("slow")
 public class TestFSNLockBenchmarkThroughput {
 
   @Test
@@ -93,8 +96,8 @@ public class TestFSNLockBenchmarkThroughput {
           String.valueOf(readWriteRatio), String.valueOf(testingCount),
           String.valueOf(numClients)};
 
-      Assert.assertEquals(0, ToolRunner.run(conf,
-          new FSNLockBenchmarkThroughput(fileSystem), args));
+      assertEquals(0,
+          ToolRunner.run(conf, new FSNLockBenchmarkThroughput(fileSystem), args));
     } finally {
       if (qjmhaCluster != null) {
         qjmhaCluster.shutdown();

@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.s3a.scale;
 import java.io.File;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +37,7 @@ import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.auth.ProgressCounter;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
+import org.apache.hadoop.test.tags.ScaleTest;
 
 import static org.apache.hadoop.fs.StreamCapabilities.ABORTABLE_STREAM;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
@@ -43,6 +45,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_ABORT;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_ABORTED;
@@ -57,6 +60,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Testing S3 multipart upload for s3.
  */
+@ScaleTest
 public class ITestS3AMultipartUploadSizeLimits extends S3AScaleTestBase {
 
   public static final int MPU_SIZE = 5 * _1MB;
@@ -72,6 +76,13 @@ public class ITestS3AMultipartUploadSizeLimits extends S3AScaleTestBase {
     // failures.
     configuration.setLong(UPLOAD_PART_COUNT_LIMIT, 2);
     return configuration;
+  }
+
+  @Override
+  @BeforeEach
+  public void setup() throws Exception {
+    super.setup();
+    assumeMultipartUploads(getFileSystem().getConf());
   }
 
   /**

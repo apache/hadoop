@@ -18,13 +18,15 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -34,9 +36,10 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Tests if a data-node can startup depending on configuration parameters.
@@ -47,7 +50,7 @@ public class TestDatanodeConfig {
 
   private static MiniDFSCluster cluster;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     clearBaseDir();
     Configuration conf = new HdfsConfiguration();
@@ -59,7 +62,7 @@ public class TestDatanodeConfig {
     cluster.waitActive();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if(cluster != null)
       cluster.shutdown();
@@ -95,7 +98,7 @@ public class TestDatanodeConfig {
         dn.shutdown();
       }
     }
-    assertNull("Data-node startup should have failed.", dn);
+    assertNull(dn, "Data-node startup should have failed.");
 
     // 2. Test "file:" ecPolicy and no ecPolicy (path-only). Both should work.
     String dnDir1 = fileAsURI(dataDir).toString() + "1";
@@ -106,7 +109,7 @@ public class TestDatanodeConfig {
                 dnDir1 + "," + dnDir2 + "," + dnDir3);
     try {
       cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
-      assertTrue("Data-node should startup.", cluster.isDataNodeUp());
+      assertTrue(cluster.isDataNodeUp(), "Data-node should startup.");
     } finally {
       if (cluster != null) {
         cluster.shutdownDataNodes();
@@ -124,7 +127,8 @@ public class TestDatanodeConfig {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testMemlockLimit() throws Exception {
     assumeTrue(NativeIO.isAvailable());
     final long memlockLimit =
@@ -163,6 +167,27 @@ public class TestDatanodeConfig {
       }
       conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
           prevLimit);
+    }
+  }
+
+  @Test
+  public void testDataNodeIpcAndHttpSeverConf() throws Exception {
+    Configuration conf = cluster.getConfiguration(0);
+    DataNode dn = null;
+    try {
+      dn = DataNode.createDataNode(new String[] {}, conf);
+      Configuration dnConf = dn.getConf();
+      InetSocketAddress listenerAddress = dn.ipcServer.getListenerAddress();
+      assertThat(listenerAddress.getHostName() + ":" + listenerAddress.getPort())
+          .describedAs("IPC Address is inconsistent")
+          .isEqualTo(dnConf.get(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY));
+      assertThat(listenerAddress.getHostName() + ":" + dn.getHttpPort())
+          .describedAs("HTTP Address is inconsistent")
+          .isEqualTo(dnConf.get(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY));
+    } finally {
+      if (dn != null) {
+        dn.shutdown();
+      }
     }
   }
 }

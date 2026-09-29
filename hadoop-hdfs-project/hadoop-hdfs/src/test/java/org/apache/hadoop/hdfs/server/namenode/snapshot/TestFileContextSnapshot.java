@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -31,9 +31,10 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestFileContextSnapshot {
 
@@ -49,7 +50,7 @@ public class TestFileContextSnapshot {
   private final Path filePath = new Path(snapshotRoot, "file1");
   private Path snapRootPath;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCKSIZE);
@@ -63,7 +64,7 @@ public class TestFileContextSnapshot {
     dfs.mkdirs(snapRootPath);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -71,7 +72,8 @@ public class TestFileContextSnapshot {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testCreateAndDeleteSnapshot() throws Exception {
     DFSTestUtil.createFile(dfs, filePath, BLOCKSIZE, REPLICATION, SEED);
     // disallow snapshot on dir
@@ -86,40 +88,41 @@ public class TestFileContextSnapshot {
     // allow snapshot on dir
     dfs.allowSnapshot(snapRootPath);
     Path ssPath = fileContext.createSnapshot(snapRootPath, "s1");
-    assertTrue("Failed to create snapshot", dfs.exists(ssPath));
+    assertTrue(dfs.exists(ssPath), "Failed to create snapshot");
     fileContext.deleteSnapshot(snapRootPath, "s1");
-    assertFalse("Failed to delete snapshot", dfs.exists(ssPath));
+    assertFalse(dfs.exists(ssPath), "Failed to delete snapshot");
   }
 
   /**
    * Test FileStatus of snapshot file before/after rename
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testRenameSnapshot() throws Exception {
     DFSTestUtil.createFile(dfs, filePath, BLOCKSIZE, REPLICATION, SEED);
     dfs.allowSnapshot(snapRootPath);
     // Create snapshot for sub1
     Path snapPath1 = fileContext.createSnapshot(snapRootPath, "s1");
     Path ssPath = new Path(snapPath1, filePath.getName());
-    assertTrue("Failed to create snapshot", dfs.exists(ssPath));
+    assertTrue(dfs.exists(ssPath), "Failed to create snapshot");
     FileStatus statusBeforeRename = dfs.getFileStatus(ssPath);
 
     // Rename the snapshot
     fileContext.renameSnapshot(snapRootPath, "s1", "s2");
     // <sub1>/.snapshot/s1/file1 should no longer exist
-    assertFalse("Old snapshot still exists after rename!", dfs.exists(ssPath));
+    assertFalse(dfs.exists(ssPath), "Old snapshot still exists after rename!");
     Path snapshotRoot = SnapshotTestHelper.getSnapshotRoot(snapRootPath, "s2");
     ssPath = new Path(snapshotRoot, filePath.getName());
 
     // Instead, <sub1>/.snapshot/s2/file1 should exist
-    assertTrue("Snapshot doesn't exists!", dfs.exists(ssPath));
+    assertTrue(dfs.exists(ssPath), "Snapshot doesn't exists!");
     FileStatus statusAfterRename = dfs.getFileStatus(ssPath);
 
     // FileStatus of the snapshot should not change except the path
-    assertFalse("Filestatus of the snapshot matches",
-        statusBeforeRename.equals(statusAfterRename));
+    assertFalse(statusBeforeRename.equals(statusAfterRename),
+        "Filestatus of the snapshot matches");
     statusBeforeRename.setPath(statusAfterRename.getPath());
-    assertEquals("FileStatus of the snapshot mismatches!",
-        statusBeforeRename.toString(), statusAfterRename.toString());
+    assertEquals(statusBeforeRename.toString(), statusAfterRename.toString(),
+        "FileStatus of the snapshot mismatches!");
   }
 }

@@ -19,13 +19,22 @@
 package org.apache.hadoop.yarn.conf;
 
 import java.net.InetSocketAddress;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.lang3.math.NumberUtils;
 import org.junit.jupiter.api.Test;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -265,5 +274,32 @@ public class TestYarnConfiguration {
     String rmAmExpiryIntervalMS1 = conf.get(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS);
     assertTrue(NumberUtils.isDigits(rmAmExpiryIntervalMS1));
     assertEquals(600000, Long.parseLong(rmAmExpiryIntervalMS1));
+  }
+
+  @Test
+  public void testNoDeprecationsByDefault() throws Exception {
+    // Force initialization to make sure deprecations are recorded for later calls to isDeprecated.
+    new YarnConfiguration();
+
+    // This test directly parses the default XML configuration file to check for deprecated
+    // properties, bypassing normalization logic in the Configuration class that might hide them.
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilder db = dbf.newDocumentBuilder();
+    List<String> deprecatedProps = new ArrayList<>();
+
+    try (InputStream is = getClass().getResourceAsStream("/yarn-default.xml")) {
+      Document doc = db.parse(is);
+      NodeList props = doc.getElementsByTagName("name");
+      for (int i = 0; i < props.getLength(); ++i) {
+        String prop = props.item(i).getTextContent();
+        if (YarnConfiguration.isDeprecated(prop)) {
+          deprecatedProps.add(prop);
+        }
+      }
+    }
+
+    assertThat(deprecatedProps)
+        .as("By default, deprecated properties should be empty: %s", deprecatedProps)
+        .isEmpty();
   }
 }

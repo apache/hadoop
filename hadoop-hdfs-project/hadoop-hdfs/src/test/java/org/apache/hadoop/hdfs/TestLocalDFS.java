@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -28,7 +28,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * This class tests the DFS class via the FileSystem interface in a single node
@@ -66,7 +67,8 @@ public class TestLocalDFS {
   /**
    * Tests get/set working directory in DFS.
    */
-  @Test(timeout=20000)
+  @Test
+  @Timeout(value = 20)
   public void testWorkingDirectory() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -106,7 +108,8 @@ public class TestLocalDFS {
   /**
    * Tests get/set working directory in DFS.
    */
-  @Test(timeout=30000)
+  @Test
+  @Timeout(value = 30)
   public void testHomeDirectory() throws IOException {
     final String[] homeBases = new String[] {"/home", "/home/user"};
     Configuration conf = new HdfsConfiguration();

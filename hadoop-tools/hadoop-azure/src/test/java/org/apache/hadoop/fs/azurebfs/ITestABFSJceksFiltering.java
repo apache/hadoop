@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,7 +35,7 @@ public class ITestABFSJceksFiltering extends AbstractAbfsIntegrationTest {
     rawConfig.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
         "jceks://abfs@a@b.c.d/tmp/a.jceks,jceks://file/tmp/secret.jceks");
     try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.get(rawConfig)) {
-      assertNotNull("filesystem", fs);
+      assertNotNull(fs, "filesystem");
       String providers = fs.getConf().get(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH);
       assertEquals("jceks://file/tmp/secret.jceks", providers);
     }

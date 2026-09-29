@@ -32,6 +32,7 @@ import static org.mockito.Mockito.spy;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -76,11 +77,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.Candida
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleCandidateNodeSet;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.contrib.java.lang.system.internal.NoExitSecurityManager;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -1104,17 +1103,7 @@ public class TestCapacitySchedulerAsyncScheduling {
   @Test
   @Timeout(value = 30)
   public void testAsyncScheduleThreadExit() throws Exception {
-
-    // Set no exit security manager to catch System.exit
-    SecurityManager originalSecurityManager = System.getSecurityManager();
-    NoExitSecurityManager noExitSecurityManager =
-        new NoExitSecurityManager(originalSecurityManager);
-    try {
-      System.setSecurityManager(noExitSecurityManager);
-    } catch (UnsupportedOperationException e) {
-      Assumptions.assumeTrue(false,
-          "Test is skipped because SecurityManager cannot be set (JEP411)");
-    }
+    ExitUtil.disableSystemExit();
 
     // init RM & NM
     final MockRM rm = new MockRM(conf);
@@ -1131,11 +1120,14 @@ public class TestCapacitySchedulerAsyncScheduling {
       cs.setResourceCalculator(null);
 
       // wait for RM to be shutdown until timeout
-      GenericTestUtils.waitFor(noExitSecurityManager::isCheckExitCalled,
+      GenericTestUtils.waitFor(() -> ExitUtil.getFirstExitException() != null,
           100, 5000);
     } finally {
-      System.setSecurityManager(originalSecurityManager);
-      rm.stop();
+      ExitUtil.enableSystemExit();
+      ExitUtil.resetFirstExitException();
+      if (rm != null) {
+        rm.stop();
+      }
     }
   }
 

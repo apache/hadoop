@@ -278,9 +278,27 @@
         for (var i = 0, e = nodes.length; i < e; ++i) {
           var n = nodes[i];
           n.usedPercentage = Math.round((n.used + n.nonDfsUsedSpace) * 1.0 / n.capacity * 100);
-          var port = n.infoAddr.split(":")[1];
-          var securePort = n.infoSecureAddr.split(":")[1];
+
+          var infoAddrParts = n.infoAddr.split("]:");
           var dnHost = n.name.split(":")[0];
+          var port;
+          if (infoAddrParts.length > 1) {
+            // IPv6 url [xxxx:xxxx:...]:port
+            port = infoAddrParts[1];
+          } else {
+            // IPv4 url  host:port
+            port = n.infoAddr.split(":")[1];
+          }
+
+          var securePort = "0";
+          if (n.infoSecureAddr) {
+            var secureAddrParts = n.infoSecureAddr.split("]:");
+            if (secureAddrParts.length > 1) {
+              securePort = secureAddrParts[1];
+            } else {
+            securePort = n.infoSecureAddr.split(":")[1];
+            }
+          }
           n.dnWebAddress = "http://" + dnHost + ":" + port;
           if (securePort != 0) {
             n.dnWebAddress = "https://" + dnHost + ":" + securePort;

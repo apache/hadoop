@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.audit;
 import java.util.List;
 
 import software.amazon.awssdk.core.SdkRequest;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
@@ -50,6 +51,8 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_DELETE_
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_PUT_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.STORE_EXISTS_PROBE;
+import static software.amazon.s3.analyticsaccelerator.request.Constants.OPERATION_NAME;
+import static software.amazon.s3.analyticsaccelerator.request.Constants.SPAN_ID;
 
 /**
  * Extract information from a request.
@@ -191,6 +194,18 @@ public class AWSRequestAnalyzer {
         || request instanceof CompleteMultipartUploadRequest
         || request instanceof GetBucketLocationRequest
         || request instanceof CreateSessionRequest;
+  }
+
+  /**
+   * If spanId and operation name are set by dependencies such as AAL, then this returns true. Allows for auditing
+   * of requests which are made outside S3A's requestFactory.
+   *
+   * @param executionAttributes request execution attributes
+   * @return true if request is audited outside of current span
+   */
+  public static boolean isRequestAuditedOutsideOfCurrentSpan(ExecutionAttributes executionAttributes) {
+   return executionAttributes.getAttribute(SPAN_ID) != null
+            && executionAttributes.getAttribute(OPERATION_NAME) != null;
   }
 
   /**
