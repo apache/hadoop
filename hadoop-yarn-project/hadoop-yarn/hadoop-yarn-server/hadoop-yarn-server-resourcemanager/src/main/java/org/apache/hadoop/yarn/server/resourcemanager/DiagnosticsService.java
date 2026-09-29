@@ -66,8 +66,6 @@ public final class DiagnosticsService {
 
     List<String> result = executeCommand(pb);
 
-    System.out.println("-----------------------------Common Issue Result: " + result);
-
     for (String line : result) {
       issueTypes.add(parseIssueType(line));
     }
