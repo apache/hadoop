@@ -116,22 +116,29 @@ public interface RMWebServiceProtocol {
 
   /**
    * This method retrieves the common diagnosable issue list, and it is
-   * reachable by using {@link RMWSConsts#COMMON_ISSUE_LIST}.
+   * reachable by using {@link RMWSConsts#COMMON_ISSUE_LIST}. Only admins
+   * can call it.
    *
+   * @param hsr the servlet request
    * @return the list of available diagnostic cases
+   * @throws IOException when the caller is not authorized
    */
-  CommonIssues getCommonIssueList();
+  CommonIssues getCommonIssueList(HttpServletRequest hsr) throws IOException;
 
   /**
    * This method retrieves the diagnostic information for the selected issue,
    * and it is reachable by using {@link RMWSConsts#COMMON_ISSUE_COLLECT}.
+   * Only admins can call it.
    *
    * @param issueId the selected issue's ID. It is a QueryParam.
    * @param args the necessary arguments for diagnosing the issue.
    * It is a QueryParam.
+   * @param hsr the servlet request
    * @return the associated diagnostic information to the selected issue
+   * @throws IOException when the caller is not authorized
    */
-  Response getCommonIssueData(String issueId, List<String> args);
+  Response getCommonIssueData(String issueId, List<String> args,
+      HttpServletRequest hsr) throws IOException;
 
   /**
    * This method retrieves the current scheduler status, and it is reachable by

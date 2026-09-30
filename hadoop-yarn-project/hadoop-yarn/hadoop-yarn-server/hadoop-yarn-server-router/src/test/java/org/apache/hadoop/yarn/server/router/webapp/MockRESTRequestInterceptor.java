@@ -99,13 +99,14 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
     return new ClusterMetricsInfo();
   }
 
-  @Override // TODO these may need to be edited for testing purposes
-  public CommonIssues getCommonIssueList() {
+  @Override
+  public CommonIssues getCommonIssueList(HttpServletRequest hsr) {
     return new CommonIssues();
   }
 
-  @Override // TODO these may need to be edited for testing purposes
-  public Response getCommonIssueData(String issueId, List<String> args) {
+  @Override
+  public Response getCommonIssueData(String issueId, List<String> args,
+      HttpServletRequest hsr) {
     return Response.ok().build();
   }
 

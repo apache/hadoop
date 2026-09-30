@@ -307,10 +307,11 @@ public class RouterWebServices implements RMWebServiceProtocol {
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
-  public CommonIssues getCommonIssueList() {
+  public CommonIssues getCommonIssueList(@Context HttpServletRequest hsr)
+      throws IOException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain(null);
-    return pipeline.getRootInterceptor().getCommonIssueList();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
+    return pipeline.getRootInterceptor().getCommonIssueList(hsr);
   }
 
   @GET
@@ -320,10 +321,12 @@ public class RouterWebServices implements RMWebServiceProtocol {
   @Override
   public Response getCommonIssueData(
       @QueryParam(RMWSConsts.ISSUEID) String issueId,
-      @QueryParam(RMWSConsts.ISSUEARGS) List<String> args) {
+      @QueryParam(RMWSConsts.ISSUEARGS) List<String> args,
+      @Context HttpServletRequest hsr) throws IOException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain(null);
-    return pipeline.getRootInterceptor().getCommonIssueData(issueId, args);
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
+    return pipeline.getRootInterceptor().getCommonIssueData(issueId, args,
+        hsr);
   }
 
   @GET

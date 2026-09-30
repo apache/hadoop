@@ -416,8 +416,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
-  public CommonIssues getCommonIssueList() {
-    initForReadableEndpoints();
+  public CommonIssues getCommonIssueList(@Context HttpServletRequest hsr)
+      throws IOException {
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, true);
     try {
       return DiagnosticsService.listCommonIssues();
     } catch (Exception e) {
@@ -434,8 +436,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public Response getCommonIssueData(
       @QueryParam(RMWSConsts.ISSUEID) String issueId,
-      @QueryParam(RMWSConsts.ISSUEARGS) List<String> args) {
-    initForReadableEndpoints();
+      @QueryParam(RMWSConsts.ISSUEARGS) List<String> args,
+      @Context HttpServletRequest hsr) throws IOException {
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, true);
     try {
       return Response.status(Status.OK)
           .entity(DiagnosticsService.collectIssueData(issueId, args))

@@ -1146,12 +1146,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   @Override
-  public CommonIssues getCommonIssueList() {
+  public CommonIssues getCommonIssueList(HttpServletRequest hsr) {
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
-  public Response getCommonIssueData(String issueId, List<String> args) {
+  public Response getCommonIssueData(String issueId, List<String> args,
+      HttpServletRequest hsr) {
     throw new NotImplementedException("Code is not implemented");
   }
 

@@ -45,7 +45,7 @@ public final class DiagnosticsService {
   private static final String PYTHON_COMMAND = "python3";
   private static final String COLON = ":";
   private static final String COMMA = ",";
-  private static final String OUT_DIR_PREFIX = "/tmp";
+  private static final String OUTPUT_DIR_PREFIX = "OUTPUT_DIR:";
   private static final String EXECUTION_ERROR_MESSAGE = "Error occurred " +
       "during the execution of the diagnostic script with the command '{}'.";
   private static final String INCORRECT_NUMBER_OF_PARAMETERS_MESSAGE =
@@ -85,7 +85,9 @@ public final class DiagnosticsService {
 
     List<String> result = executeCommand(pb);
     Optional<String> outputDirectory = result.stream()
-        .filter(e -> e.contains(OUT_DIR_PREFIX))
+        .filter(e -> e.startsWith(OUTPUT_DIR_PREFIX))
+        .map(e -> e.substring(OUTPUT_DIR_PREFIX.length()).trim())
+        .filter(e -> !e.isEmpty())
         .findFirst();
 
     if (!outputDirectory.isPresent()) {

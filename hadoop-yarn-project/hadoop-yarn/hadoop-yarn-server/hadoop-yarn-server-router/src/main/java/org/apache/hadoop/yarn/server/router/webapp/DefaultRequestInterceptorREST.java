@@ -140,16 +140,17 @@ public class DefaultRequestInterceptorREST
   }
 
   @Override
-  public CommonIssues getCommonIssueList() {
-    return RouterWebServiceUtil.genericForward(webAppAddress, null,
+  public CommonIssues getCommonIssueList(HttpServletRequest hsr) {
+    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         CommonIssues.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.COMMON_ISSUE_LIST,
         null, null, getConf(), client);
   }
 
   @Override
-  public Response getCommonIssueData(String issueId, List<String> args) {
-    return RouterWebServiceUtil.genericForward(webAppAddress, null,
+  public Response getCommonIssueData(String issueId, List<String> args,
+      HttpServletRequest hsr) {
+    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.COMMON_ISSUE_COLLECT,
         null, null, getConf(), client);

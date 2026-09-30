@@ -125,13 +125,15 @@ public class PassThroughRESTRequestInterceptor
   }
 
   @Override
-  public CommonIssues getCommonIssueList() {
-    return getNextInterceptor().getCommonIssueList();
+  public CommonIssues getCommonIssueList(HttpServletRequest hsr)
+      throws IOException {
+    return getNextInterceptor().getCommonIssueList(hsr);
   }
 
   @Override
-  public Response getCommonIssueData(String issueId, List<String> args) {
-    return getNextInterceptor().getCommonIssueData(issueId, args);
+  public Response getCommonIssueData(String issueId, List<String> args,
+      HttpServletRequest hsr) throws IOException {
+    return getNextInterceptor().getCommonIssueData(issueId, args, hsr);
   }
 
   @Override
