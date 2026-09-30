@@ -36,6 +36,7 @@ import type {
   ValidationResponse,
   BulkActivitiesResponse,
 } from '~/types';
+import { HTTP_AUTH_PROPERTY, READ_ONLY_PROPERTY } from '~/config';
 
 /** Matches RMWebServices DEFAULT_ACTIVITIES_COUNT. */
 export const DEFAULT_DIAGNOSTIC_BULK_ACTIVITIES_COUNT = 10;
@@ -48,8 +49,6 @@ export const DEFAULT_DIAGNOSTIC_RM_JSTACK_COUNT = 2;
 
 /** Upper bound for RM jstack iterations in the diagnostics UI. */
 export const MAX_DIAGNOSTIC_RM_JSTACK_COUNT = 10;
-
-import { READ_ONLY_PROPERTY } from '~/config';
 
 export class YarnApiClient {
   private readonly baseUrl: string;
@@ -278,11 +277,13 @@ export class YarnApiClient {
   }
 
   /**
-   * Detect YARN security mode by checking hadoop.security.authentication
+   * Detect YARN security mode by checking the HTTP authentication type.
+   * This governs the REST API layer, which may differ from the cluster-wide
+   * hadoop.security.authentication setting (e.g. Kerberos RPC + simple HTTP).
    */
   private async detectSecurityMode(): Promise<void> {
     try {
-      const authMode = await this.getConfiguration('hadoop.security.authentication');
+      const authMode = await this.getConfiguration(HTTP_AUTH_PROPERTY);
       this.securityMode = authMode.toLowerCase() === 'simple' ? 'simple' : 'kerberos';
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -362,6 +363,7 @@ export class YarnApiClient {
       await this.initPromise;
     }
 
+    // Build URL by appending path to baseUrl
     const { skipAuth, expectJson = true, responseFormat = 'json', ...fetchOptions } = options;
     let url = `${this.baseUrl}${path}`;
 

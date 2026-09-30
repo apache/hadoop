@@ -134,9 +134,7 @@ describe('DiagnosticsDialog', () => {
     try {
       await user.click(downloadButton);
 
-      await waitFor(() => {
-        expect(createObjectURLMock).toHaveBeenCalledTimes(1);
-      });
+      expect(createObjectURLMock).toHaveBeenCalledTimes(1);
       const firstCall = createObjectURLMock.mock.calls[0] as unknown[] | undefined;
       expect(firstCall).toBeDefined();
       const blobArg = firstCall?.[0];
@@ -203,12 +201,9 @@ describe('DiagnosticsDialog', () => {
         expect(createObjectURLMock).toHaveBeenCalledTimes(1);
       });
 
-      const blobArg = createObjectURLMock.mock.calls[0]?.[0] as Blob;
+      const blobArg = (createObjectURLMock.mock.calls[0] as unknown[])[0] as Blob;
       const payload = JSON.parse(await blobArg.text());
       expect(payload.datasets.bulkActivities).toEqual(bulkActivities);
-      expect(payload.requestParams).toEqual({
-        bulkActivities: { activitiesCount: 5 },
-      });
     } finally {
       createElementMock.mockRestore();
       Object.assign(URL, {
@@ -255,12 +250,9 @@ describe('DiagnosticsDialog', () => {
         expect(createObjectURLMock).toHaveBeenCalledTimes(1);
       });
 
-      const blobArg = createObjectURLMock.mock.calls[0]?.[0] as Blob;
+      const blobArg = (createObjectURLMock.mock.calls[0] as unknown[])[0] as Blob;
       const payload = JSON.parse(await blobArg.text());
       expect(payload.datasets.rmJstack).toBe(threadDump);
-      expect(payload.requestParams).toEqual({
-        rmJstack: { numberOfJStack: 2 },
-      });
     } finally {
       createElementMock.mockRestore();
       Object.assign(URL, {

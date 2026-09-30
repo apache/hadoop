@@ -52,74 +52,19 @@ type DiagnosticDatasetId =
   | 'bulkActivities'
   | 'rmJstack';
 
-interface StoreDiagnosticOption {
+interface DiagnosticOption {
   id: DiagnosticDatasetId;
   label: string;
   description: string;
-  source: 'store';
-  data: unknown;
+  data?: unknown;
+  live?: {
+    countLabel: string;
+    maxCount: number;
+    fetch: (count: number) => Promise<unknown>;
+  };
 }
-
-interface RemoteDiagnosticOption {
-  id: DiagnosticDatasetId;
-  label: string;
-  description: string;
-  source: 'remote';
-  countLabel: string;
-  countAriaLabel: string;
-  requestParamKey: string;
-  min: number;
-  max: number;
-  defaultCount: number;
-}
-
-type DiagnosticOption = StoreDiagnosticOption | RemoteDiagnosticOption;
 
 const DEFAULT_SELECTED: DiagnosticDatasetId[] = ['schedulerConf', 'schedulerInfo'];
-
-const REMOTE_DATASET_OPTIONS: RemoteDiagnosticOption[] = [
-  {
-    id: 'bulkActivities',
-    label: 'Scheduler Bulk Activities',
-    description: 'Live response from /scheduler/bulk-activities.',
-    source: 'remote',
-    countLabel: 'Scheduling cycles to record',
-    countAriaLabel: 'Bulk activities count',
-    requestParamKey: 'activitiesCount',
-    min: 1,
-    max: MAX_DIAGNOSTIC_BULK_ACTIVITIES_COUNT,
-    defaultCount: DEFAULT_DIAGNOSTIC_BULK_ACTIVITIES_COUNT,
-  },
-  {
-    id: 'rmJstack',
-    label: 'ResourceManager JStack',
-    description: 'Live thread dump from /jstack (ResourceManager JVM).',
-    source: 'remote',
-    countLabel: 'JStack iterations to collect',
-    countAriaLabel: 'ResourceManager jstack count',
-    requestParamKey: 'numberOfJStack',
-    min: 1,
-    max: MAX_DIAGNOSTIC_RM_JSTACK_COUNT,
-    defaultCount: DEFAULT_DIAGNOSTIC_RM_JSTACK_COUNT,
-  },
-];
-
-function parseCountInput(
-  rawValue: string,
-  bounds: { min: number; max: number; label: string },
-): number | null {
-  const trimmed = rawValue.trim();
-  if (trimmed.length === 0) {
-    return null;
-  }
-
-  const value = Number(trimmed);
-  if (!Number.isInteger(value) || value < bounds.min || value > bounds.max) {
-    return null;
-  }
-
-  return value;
-}
 
 export function DiagnosticsDialog() {
   const configData = useSchedulerStore((state) => state.configData);
@@ -133,13 +78,10 @@ export function DiagnosticsDialog() {
   const [open, setOpen] = useState(false);
   const [selectedDatasets, setSelectedDatasets] = useState<DiagnosticDatasetId[]>(DEFAULT_SELECTED);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [remoteCountInputs, setRemoteCountInputs] = useState<
-    Record<DiagnosticDatasetId, string>
-  >(() =>
-    Object.fromEntries(
-      REMOTE_DATASET_OPTIONS.map((option) => [option.id, String(option.defaultCount)]),
-    ) as Record<DiagnosticDatasetId, string>,
-  );
+  const [counts, setCounts] = useState<Partial<Record<DiagnosticDatasetId, string>>>({
+    bulkActivities: String(DEFAULT_DIAGNOSTIC_BULK_ACTIVITIES_COUNT),
+    rmJstack: String(DEFAULT_DIAGNOSTIC_RM_JSTACK_COUNT),
+  });
 
   const entries = Array.from(configData.entries()).sort(([a], [b]) => a.localeCompare(b));
   const schedulerConfiguration = {
@@ -147,51 +89,62 @@ export function DiagnosticsDialog() {
     properties: Object.fromEntries(entries),
   };
 
-  const storeDatasetOptions: StoreDiagnosticOption[] = [
+  const datasetOptions: DiagnosticOption[] = [
     {
       id: 'schedulerConf',
       label: 'Scheduler Configuration',
       description: 'Key/value pairs returned by /scheduler-conf (including version metadata).',
-      source: 'store',
       data: schedulerConfiguration,
     },
     {
       id: 'schedulerInfo',
       label: 'Scheduler Info',
       description: 'Current scheduler metrics returned by /scheduler.',
-      source: 'store',
       data: schedulerData,
     },
     {
       id: 'nodeLabels',
       label: 'Node Labels',
       description: 'Label definitions from /node-labels.',
-      source: 'store',
       data: nodeLabels,
     },
     {
       id: 'nodeToLabels',
       label: 'Node-to-Labels Mapping',
       description: 'Assignments from /node-to-labels.',
-      source: 'store',
       data: nodeToLabels,
     },
     {
       id: 'nodes',
       label: 'Nodes',
       description: 'Node metadata returned by /nodes.',
-      source: 'store',
       data: nodes,
+    },
+    {
+      id: 'bulkActivities',
+      label: 'Scheduler Bulk Activities',
+      description: 'Live response from /scheduler/bulk-activities.',
+      live: {
+        countLabel: 'Bulk activities count',
+        maxCount: MAX_DIAGNOSTIC_BULK_ACTIVITIES_COUNT,
+        fetch: (count) => apiClient.getBulkSchedulerActivities(count),
+      },
+    },
+    {
+      id: 'rmJstack',
+      label: 'ResourceManager JStack',
+      description: 'Live thread dump from /jstack (ResourceManager JVM).',
+      live: {
+        countLabel: 'ResourceManager jstack count',
+        maxCount: MAX_DIAGNOSTIC_RM_JSTACK_COUNT,
+        fetch: (count) => apiClient.getResourceManagerJstack(count),
+      },
     },
   ];
 
-  const datasetOptions: DiagnosticOption[] = [...storeDatasetOptions, ...REMOTE_DATASET_OPTIONS];
-
-  const getCountInput = (datasetId: DiagnosticDatasetId): string =>
-    remoteCountInputs[datasetId] ?? '';
-
-  const setCountInput = (datasetId: DiagnosticDatasetId, value: string) => {
-    setRemoteCountInputs((prev) => ({ ...prev, [datasetId]: value }));
+  const isValidCount = (option: DiagnosticOption) => {
+    const count = Number(counts[option.id]);
+    return Number.isInteger(count) && count >= 1 && count <= (option.live?.maxCount ?? 0);
   };
 
   const toggleDataset = (datasetId: DiagnosticDatasetId, checked: boolean) => {
@@ -203,102 +156,53 @@ export function DiagnosticsDialog() {
     });
   };
 
-  const resolveRemoteCount = (option: RemoteDiagnosticOption): number | null => {
-    return parseCountInput(getCountInput(option.id), {
-      min: option.min,
-      max: option.max,
-      label: option.label,
-    });
-  };
-
-  const fetchRemoteDataset = async (
-    datasetId: DiagnosticDatasetId,
-    count: number,
-  ): Promise<unknown> => {
-    if (datasetId === 'bulkActivities') {
-      return apiClient.getBulkSchedulerActivities(count);
-    }
-    if (datasetId === 'rmJstack') {
-      return apiClient.getResourceManagerJstack(count);
-    }
-    throw new Error(`Unsupported remote diagnostic dataset: ${datasetId}`);
-  };
-
-  const hasInvalidSelectedRemoteCounts = REMOTE_DATASET_OPTIONS.some(
-    (option) => selectedDatasets.includes(option.id) && resolveRemoteCount(option) === null,
-  );
-
   const handleDownload = async () => {
-    if (selectedDatasets.length === 0 || isDownloading || hasInvalidSelectedRemoteCounts) {
+    if (selectedDatasets.length === 0) {
       return;
     }
 
-    setIsDownloading(true);
+    const timestamp = new Date().toISOString();
+    const payload: Record<string, unknown> = {
+      generatedAt: timestamp,
+      datasets: {},
+    };
 
-    try {
-      const timestamp = new Date().toISOString();
-      const payload: Record<string, unknown> = {
-        generatedAt: timestamp,
-        datasets: {},
-        requestParams: {},
-      };
-
-      for (const option of storeDatasetOptions) {
-        if (selectedDatasets.includes(option.id)) {
-          (payload.datasets as Record<string, unknown>)[option.id] = option.data;
-        }
+    for (const option of datasetOptions) {
+      if (selectedDatasets.includes(option.id)) {
+        (payload.datasets as Record<string, unknown>)[option.id] = option.live
+          ? await option.live.fetch(Number(counts[option.id]))
+          : option.data;
       }
-
-      for (const option of REMOTE_DATASET_OPTIONS) {
-        if (!selectedDatasets.includes(option.id)) {
-          continue;
-        }
-
-        const count = resolveRemoteCount(option);
-        if (count === null) {
-          toast.error(
-            `${option.label}: enter a whole number from ${option.min} to ${option.max}.`,
-          );
-          return;
-        }
-
-        (payload.requestParams as Record<string, unknown>)[option.id] = {
-          [option.requestParamKey]: count,
-        };
-
-        try {
-          (payload.datasets as Record<string, unknown>)[option.id] = await fetchRemoteDataset(
-            option.id,
-            count,
-          );
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          toast.error(`Failed to fetch ${option.label}: ${message}`);
-          return;
-        }
-      }
-
-      if (Object.keys(payload.requestParams as Record<string, unknown>).length === 0) {
-        delete payload.requestParams;
-      }
-
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `yarn-diagnostics-${timestamp.replace(/[:.]/g, '-')}.json`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-      URL.revokeObjectURL(url);
-      setOpen(false);
-    } finally {
-      setIsDownloading(false);
     }
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `yarn-diagnostics-${timestamp.replace(/[:.]/g, '-')}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+    setOpen(false);
+  };
+
+  const handleDownloadClick = () => {
+    setIsDownloading(true);
+    handleDownload()
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        toast.error(`Failed to download diagnostics: ${message}`);
+      })
+      .finally(() => setIsDownloading(false));
   };
 
   const isDownloadDisabled =
-    selectedDatasets.length === 0 || isDownloading || hasInvalidSelectedRemoteCounts;
+    selectedDatasets.length === 0 ||
+    isDownloading ||
+    datasetOptions.some(
+      (option) => option.live && selectedDatasets.includes(option.id) && !isValidCount(option),
+    );
 
   return (
     <TooltipProvider>
@@ -338,31 +242,24 @@ export function DiagnosticsDialog() {
                     checked={isChecked}
                     onCheckedChange={(value) => toggleDataset(option.id, value === true)}
                   />
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="space-y-1">
-                      <Label htmlFor={checkboxId} className="text-sm font-medium leading-none">
-                        {option.label}
-                      </Label>
-                      <p className="text-sm text-muted-foreground">{option.description}</p>
-                    </div>
-                    {option.source === 'remote' && isChecked ? (
-                      <div className="space-y-1">
-                        <Label htmlFor={`${checkboxId}-count`} className="text-xs font-medium">
-                          {option.countLabel} ({option.min}–{option.max})
-                        </Label>
-                        <Input
-                          id={`${checkboxId}-count`}
-                          type="number"
-                          min={option.min}
-                          max={option.max}
-                          step={1}
-                          inputMode="numeric"
-                          aria-label={option.countAriaLabel}
-                          value={getCountInput(option.id)}
-                          onChange={(event) => setCountInput(option.id, event.target.value)}
-                          className="h-8 w-32"
-                        />
-                      </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={checkboxId} className="text-sm font-medium leading-none">
+                      {option.label}
+                    </Label>
+                    <p className="text-sm text-muted-foreground">{option.description}</p>
+                    {option.live && isChecked ? (
+                      <Input
+                        type="number"
+                        min={1}
+                        max={option.live.maxCount}
+                        step={1}
+                        aria-label={option.live.countLabel}
+                        value={counts[option.id] ?? ''}
+                        onChange={(event) =>
+                          setCounts((prev) => ({ ...prev, [option.id]: event.target.value }))
+                        }
+                        className="h-8 w-32"
+                      />
                     ) : null}
                   </div>
                 </div>
@@ -372,10 +269,10 @@ export function DiagnosticsDialog() {
 
           <DialogFooter className="sm:justify-between">
             <p className="text-xs text-muted-foreground">
-              Store-backed datasets reflect current in-memory values; bulk activities and RM jstack
-              are fetched live when you download.
+              Data reflects the current in-memory store values; bulk activities and RM jstack are
+              fetched live.
             </p>
-            <Button onClick={() => void handleDownload()} disabled={isDownloadDisabled}>
+            <Button onClick={handleDownloadClick} disabled={isDownloadDisabled}>
               {isDownloading ? 'Downloading…' : 'Download'}
             </Button>
           </DialogFooter>
