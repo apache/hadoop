@@ -21,9 +21,8 @@ import re
 import socket
 import subprocess
 import sys
-import time
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -47,7 +46,7 @@ args = None
 
 
 def list_issues() -> None:
-    print("application_diagnostic:appId", "scheduler_related_issue", sep="\n")
+    print("application_diagnostic:appId", sep="\n")
 
 
 def application_diagnostic() -> str:
@@ -105,45 +104,6 @@ def application_diagnostic() -> str:
     return output_path
 
 
-def scheduler_related_issue() -> str:
-    """
-    ResourceManager Scheduler Logs with DEBUG enabled for 2 minutes.
-    Multiple Jstack of ResourceManager
-    YARN-SITE.XML
-    Scheduler Activities /ws/v1/cluster/scheduler/bulk-activities response
-    """
-    logger.info("Collecting scheduler-related diagnostics")
-    output_path = _create_output_dir(
-        os.path.join(_TEMP_DIR, "scheduler_related_issue" + str(time.time()).split(".")[0]))
-
-    rm_jstack = _create_request(_rm_url("ws/v1/cluster/jstack/{}".format(_NUMBER_OF_JSTACK)), False)
-    _write_output(output_path, "rm_{}_jstack".format(_RM_ADDRESS), rm_jstack)
-
-
-    scheduler_activities = _create_request(_rm_url("ws/v1/cluster/scheduler/bulk-activities"))
-    _write_output(output_path, "scheduler_activities", scheduler_activities)
-
-    yarn_conf = _run_command("cat", os.path.join(_HADOOP_CONF_DIR, _YARN_SITE_XML))
-    _write_output(output_path, "yarn_site", yarn_conf)
-
-    try:
-        enable_debug_log = _set_rm_scheduler_log_level("DEBUG")
-        logger.info("Set RM scheduler log level to DEBUG: %s", enable_debug_log)
-        log_address = _get_node_log_address(_RM_ADDRESS, _RM_LOG_REGEX, _NODE_SCHEME)
-        start_time, end_time = (_format_datetime_no_seconds(datetime.now()),
-                                (_format_datetime_no_seconds(datetime.now()) + timedelta(seconds=120)))
-        logger.info("Waiting for 2 minutes to collect RM DEBUG logs")
-        time.sleep(120)
-        rm_debug_log = _filter_node_log(log_address, start_time, end_time, _NODE_SCHEME)
-        _write_output(output_path, "rm_debug_log_2min", rm_debug_log)
-    finally:
-        enable_info_log = _set_rm_scheduler_log_level("INFO")
-        logger.info("Restored RM scheduler log level to INFO: %s", enable_info_log)
-
-    logger.info("Scheduler diagnostics written to %s", output_path)
-    return output_path
-
-
 def _web_url(scheme: str, address: str, path: str = "") -> str:
     if path:
         return "{}://{}/{}".format(scheme, address, path.lstrip("/"))
@@ -154,12 +114,29 @@ def _rm_url(path: str) -> str:
     return _web_url(_NODE_SCHEME, _RM_ADDRESS, path)
 
 
+def _resolve_rm_webapp_address() -> str:
+    global _NODE_SCHEME
+    for property_prefix, scheme in (
+            (_RM_WEBAPP_HTTPS_ADDRESS_KEY, "https"),
+            (_RM_WEBAPP_HTTP_ADDRESS_KEY, "http"),
+    ):
+        matches = _parse_property_from_conf(_YARN_SITE_XML, property_prefix)
+        address = _get_current_rm_address(matches)
+        if address:
+            _NODE_SCHEME = scheme
+            return address
+
+    logger.error("RM webapp address not found in %s", _YARN_SITE_XML)
+    sys.exit(1)
+
+
 def _parse_property_from_conf(conf_file: str, property_prefix: str) -> List[Tuple[str, str]]:
     root = ET.parse(os.path.join(_HADOOP_CONF_DIR, conf_file))
     matches = []
     for prop in root.findall("property"):
         prop_name = prop.find("name").text
-        if prop_name == property_prefix or prop_name.startswith(property_prefix + "."):  # Handle both HA and non-HA cases
+        # Handle both HA and non-HA cases for yarn.resourcemanager.webapp.https.address.rm*
+        if prop_name == property_prefix or prop_name.startswith(property_prefix + "."):
             value_elem = prop.find("value")
             if value_elem is not None and value_elem.text:
                 matches.append((prop_name, value_elem.text.strip()))
@@ -182,22 +159,6 @@ def _get_current_rm_address(matches: List[Tuple[str, str]]) -> Optional[str]:
     prop_name, value = matches[0]
     logger.warning("Multiple RM webapp addresses found; using %s (%s)", prop_name, value)
     return value
-
-
-def _resolve_rm_webapp_address() -> str:
-    global _NODE_SCHEME
-    for property_prefix, scheme in (
-            (_RM_WEBAPP_HTTPS_ADDRESS_KEY, "https"),
-            (_RM_WEBAPP_HTTP_ADDRESS_KEY, "http"),
-    ):
-        matches = _parse_property_from_conf(_YARN_SITE_XML, property_prefix)
-        address = _get_current_rm_address(matches)
-        if address:
-            _NODE_SCHEME = scheme
-            return address
-
-    logger.error("RM webapp address not found in %s", _YARN_SITE_XML)
-    sys.exit(1)
 
 
 def _resolve_hadoop_conf_dir() -> str:
@@ -233,6 +194,7 @@ def _run_command(*argv: str) -> str:
     except Exception as e:
         logger.warning("Exception occurred while running command: %s", e)
     return ""
+
 
 def _run_cmd_and_save_output(output_path: str, out_filename: str, *argv: str) -> subprocess.Popen:
     file_path = os.path.join(_create_output_dir(output_path), out_filename)
@@ -312,24 +274,11 @@ def _get_application_time(app_info_string: str) -> Tuple[str, str]:
     return start_time_str, finish_time_str
 
 
-def _set_rm_scheduler_log_level(log_level: str) -> str:
-    cmd = ["yarn", "daemonlog", "-setlevel", _RM_ADDRESS,
-           "org.apache.hadoop.yarn.server.resourcemanager.scheduler", log_level]
-    if _NODE_SCHEME == "https":
-        cmd.extend(["-protocol", "https"])
-    return _run_command(*cmd)
-
-
-def _format_datetime_no_seconds(datetime_obj: datetime) -> str:
-    return datetime_obj.strftime(_OUTPUT_TIME_FORMAT_WITHOUT_SECOND)
-
-
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     issue_map = {
         "application_diagnostic": application_diagnostic,
-        "scheduler_related_issue": scheduler_related_issue,
     }
 
     parser = argparse.ArgumentParser()
