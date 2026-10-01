@@ -101,7 +101,7 @@ public class KMSAuthenticationFilter
     public String msg;
     private final ServletRequest request;
 
-    public KMSResponse(ServletRequest request, ServletResponse response) {
+    KMSResponse(ServletRequest request, ServletResponse response) {
       super((HttpServletResponse)response);
       this.request = request;
     }
