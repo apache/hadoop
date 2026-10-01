@@ -63,11 +63,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.util.Sets;
@@ -166,6 +163,7 @@ import org.mockito.Mockito;
 import org.mockito.internal.matchers.VarargMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.LoggerFactory;
 
 public class TestResourceLocalizationService {
 
@@ -2683,40 +2681,41 @@ public class TestResourceLocalizationService {
     service.init(conf);
 
     PublicLocalizer publicLocalizer = service.getPublicLocalizer();
+    GenericTestUtils.LogCapturer logs =
+        GenericTestUtils.LogCapturer.captureLogs(
+            LoggerFactory.getLogger(ResourceLocalizationService.class));
     try {
       publicLocalizer.start();
 
       // Submit straight to the completion queue so the Future is never
       // recorded in pending. That is exactly the state in which
       // pending.remove(completed) returns null.
-      final CountDownLatch downloaded = new CountDownLatch(1);
-      final Path unknown = new Path(basedir, "unknown");
-      publicLocalizer.queue.submit(() -> {
-        downloaded.countDown();
-        return unknown;
-      });
-      assertTrue(downloaded.await(10, TimeUnit.SECONDS),
-          "public download never ran");
+      publicLocalizer.queue.submit(() -> new Path(basedir, "unknown1"));
+      GenericTestUtils.waitFor(
+          () -> countUnknownResourceLogs(logs.getOutput()) >= 1, 20, 10000);
       assertEquals(0, publicLocalizer.pending.size());
 
-      // The localizer should log the unknown resource and carry on. If it
-      // exits instead, run()'s finally block shuts the download pool down.
-      try {
-        GenericTestUtils.waitFor(() -> !publicLocalizer.isAlive()
-            || publicLocalizer.threadPool.isShutdown(), 20, 5000);
-        fail("Public Localizer exited after taking an unknown resource");
-      } catch (TimeoutException expected) {
-        // The localizer stayed up, which is what YARN-11993 fixed.
-      }
-
-      assertTrue(publicLocalizer.isAlive(), "Public Localizer thread died");
-      assertFalse(publicLocalizer.threadPool.isShutdown(),
-          "Public Localizer shut its download pool down");
+      // The old code logged this line too, then exited. Only a localizer
+      // that is still taking from the queue can log a second one.
+      publicLocalizer.queue.submit(() -> new Path(basedir, "unknown2"));
+      GenericTestUtils.waitFor(
+          () -> countUnknownResourceLogs(logs.getOutput()) >= 2, 20, 10000);
     } finally {
+      logs.stopCapturing();
       publicLocalizer.interrupt();
       service.stop();
       dispatcher.stop();
     }
+  }
+
+  private static int countUnknownResourceLogs(String output) {
+    final String message = "Localized unknown resource";
+    int count = 0;
+    for (int i = output.indexOf(message); i >= 0;
+        i = output.indexOf(message, i + message.length())) {
+      count++;
+    }
+    return count;
   }
 
   private boolean waitForPrivateDownloadToStart(
