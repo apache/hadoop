@@ -61,6 +61,9 @@ public class ContainerMetricsConstants {
   public static final String ALLOCATED_VCORE_INFO =
       "YARN_CONTAINER_ALLOCATED_VCORE";
 
+  public static final String ALLOCATED_RESOURCES_INFO =
+      "YARN_CONTAINER_ALLOCATED_RESOURCES";
+
   public static final String ALLOCATED_HOST_INFO =
       "YARN_CONTAINER_ALLOCATED_HOST";
 

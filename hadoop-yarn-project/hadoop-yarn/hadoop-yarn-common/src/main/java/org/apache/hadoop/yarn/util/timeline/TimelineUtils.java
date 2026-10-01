@@ -20,12 +20,15 @@ package org.apache.hadoop.yarn.util.timeline;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
@@ -33,10 +36,17 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The helper class for the timeline module.
@@ -45,6 +55,8 @@ import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 @Public
 @Evolving
 public class TimelineUtils {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TimelineUtils.class);
 
   public static final String FLOW_NAME_TAG_PREFIX = "TIMELINE_FLOW_NAME_TAG";
   public static final String FLOW_VERSION_TAG_PREFIX =
@@ -58,6 +70,57 @@ public class TimelineUtils {
   static {
     mapper = new ObjectMapper();
     YarnJacksonJaxbJsonProvider.configObjectMapper(mapper);
+  }
+
+  @Private
+  public static Map<String, Map<String, Object>> getCustomResourceInfo(
+      Resource resource) {
+    Map<String, Map<String, Object>> resources = new HashMap<>();
+    for (ResourceInformation information : resource.getResources()) {
+      String name = information.getName();
+      if (!ResourceInformation.MEMORY_URI.equals(name)
+          && !ResourceInformation.VCORES_URI.equals(name)) {
+        Map<String, Object> allocation = new HashMap<>();
+        allocation.put("value", information.getValue());
+        allocation.put("units", information.getUnits());
+        resources.put(name, allocation);
+      }
+    }
+    return resources;
+  }
+
+  @Private
+  public static Resource getContainerResource(Map<String, Object> entityInfo) {
+    if (entityInfo == null) {
+      return Resource.newInstance(0, 0);
+    }
+    long memory = ((Number) entityInfo.getOrDefault(
+        ContainerMetricsConstants.ALLOCATED_MEMORY_INFO, 0L)).longValue();
+    int vcores = ((Number) entityInfo.getOrDefault(
+        ContainerMetricsConstants.ALLOCATED_VCORE_INFO, 0)).intValue();
+    Resource resource = Resource.newInstance(memory, vcores);
+    Map<?, ?> allocations = (Map<?, ?>) entityInfo.get(
+        ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO);
+    if (allocations != null) {
+      for (Map.Entry<?, ?> entry : allocations.entrySet()) {
+        String name = (String) entry.getKey();
+        if (ResourceInformation.MEMORY_URI.equals(name)
+            || ResourceInformation.VCORES_URI.equals(name)) {
+          continue;
+        }
+        if (!ResourceUtils.getResourceTypes().containsKey(name)) {
+          LOG.warn("Skipping unknown resource type {} in container history", name);
+          continue;
+        }
+        Map<?, ?> allocation = (Map<?, ?>) entry.getValue();
+        long value = ((Number) allocation.get("value")).longValue();
+        String units = (String) allocation.get("units");
+        String defaultUnits = resource.getResourceInformation(name).getUnits();
+        resource.setResourceValue(name,
+            UnitsConversionUtil.convert(units, defaultUnits, value));
+      }
+    }
+    return resource;
   }
 
   /**

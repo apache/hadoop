@@ -68,6 +68,8 @@ import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.MemoryTimelineStateStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.TimelineStateStore;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -130,6 +132,7 @@ public class TestSystemMetricsPublisher {
     if (timelineServer != null) {
       timelineServer.stop();
     }
+    ResourceUtils.resetResourceTypes(new YarnConfiguration());
   }
 
   @ParameterizedTest
@@ -478,7 +481,11 @@ public class TestSystemMetricsPublisher {
     ContainerId containerId =
         ContainerId.newContainerId(ApplicationAttemptId.newInstance(
             ApplicationId.newInstance(0, 1), 1), 1);
+    YarnConfiguration resourceConf = new YarnConfiguration();
+    resourceConf.set(YarnConfiguration.RESOURCE_TYPES, "yarn.io/gpu");
+    ResourceUtils.resetResourceTypes(resourceConf);
     RMContainer container = createRMContainer(containerId);
+    container.getAllocatedResource().setResourceValue("yarn.io/gpu", 2);
     metricsPublisher.containerCreated(container, container.getCreationTime());
     metricsPublisher.containerFinished(container, container.getFinishTime());
     TimelineEntity entity = null;
@@ -516,6 +523,12 @@ public class TestSystemMetricsPublisher {
         container.getAllocatedResource().getVirtualCores(),
         entity.getOtherInfo().get(
             ContainerMetricsConstants.ALLOCATED_VCORE_INFO));
+    Map<?, ?> allocations = (Map<?, ?>) entity.getOtherInfo().get(
+        ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO);
+    assertEquals(2, ((Number) ((Map<?, ?>) allocations.get("yarn.io/gpu"))
+        .get("value")).longValue());
+    assertEquals(container.getAllocatedResource(),
+        TimelineUtils.getContainerResource(entity.getOtherInfo()));
     assertEquals(
         container.getAllocatedPriority().getPriority(),
         entity.getOtherInfo().get(
