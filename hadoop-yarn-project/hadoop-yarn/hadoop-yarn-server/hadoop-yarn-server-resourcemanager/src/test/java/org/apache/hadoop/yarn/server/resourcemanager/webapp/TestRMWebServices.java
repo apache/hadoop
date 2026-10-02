@@ -22,6 +22,7 @@ import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseS
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -762,6 +763,25 @@ public class TestRMWebServices extends JerseyTestBase {
     webSvc.dumpSchedulerLogs("1", mockHsr);
     waitforLogDump(50);
     checkSchedulerLogFileAndCleanup();
+  }
+
+  @Test
+  public void testCommonIssuesRequireAdmin() {
+    ResourceManager mockRM = mock(ResourceManager.class);
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    conf.setStrings(YarnConfiguration.YARN_ADMIN_ACL, "admin");
+    when(mockRM.getApplicationACLsManager())
+        .thenReturn(new ApplicationACLsManager(conf));
+    RMWebServices webSvc =
+        new RMWebServices(mockRM, conf, mock(HttpServletResponse.class));
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName("non-admin");
+
+    assertThrows(ForbiddenException.class,
+        () -> webSvc.getCommonIssueList(mockHsr));
+    assertThrows(ForbiddenException.class,
+        () -> webSvc.getCommonIssueData("application_diagnostic",
+            Collections.singletonList("application_1_0001"), mockHsr));
   }
 
   private void checkSchedulerLogFileAndCleanup() {
