@@ -33,12 +33,17 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Queue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.zip.Checksum;
 
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSPacket;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -149,6 +154,17 @@ class BlockReceiver implements Closeable {
   private final AtomicLong lastSentTime = new AtomicLong(0L);
   private long maxSendIdleTime;
 
+  // Timeout for receiving the last packet of a block transfer. When enabled
+  // (> 0), a stalled transfer (no packet received within timeoutMs/2) is
+  // safely terminated so the DataNode can reclaim the transfer thread.
+  private final long lastPacketReceiveTimeoutMs;
+  private volatile ScheduledFuture<?> timeoutTask;
+  private volatile long lastPacketReceivedTime = Time.monotonicNow();
+
+  private static final AtomicLongFieldUpdater<BlockReceiver>
+      LAST_PACKET_RECEIVED_TIME_UPDATER = AtomicLongFieldUpdater.newUpdater(
+          BlockReceiver.class, "lastPacketReceivedTime");
+
   BlockReceiver(final ExtendedBlock block, final StorageType storageType,
       final DataInputStream in,
       final String inAddr, final String myAddr,
@@ -192,6 +208,22 @@ class BlockReceiver implements Closeable {
       // the interval of 0.5*readTimeout. Here, we set 0.9*readTimeout to be
       // the threshold for detecting congestion.
       this.maxSendIdleTime = (long) (readTimeout * 0.9);
+      this.lastPacketReceiveTimeoutMs = datanode.getConf().getLong(
+          DFSConfigKeys.DFS_DATANODE_LAST_PACKET_RECEIVE_TIMEOUT_MS,
+          DFSConfigKeys.DFS_DATANODE_LAST_PACKET_RECEIVE_TIMEOUT_MS_DEFAULT);
+      // A healthy but idle client (hflush/hsync then wait) still sends heartbeat
+      // packets about every 0.5*readTimeout. Since a stall is declared after no
+      // packet for timeoutMs/2, the timeout must be comfortably larger than the
+      // socket read timeout or those healthy idle streams could be aborted.
+      if (this.lastPacketReceiveTimeoutMs > 0
+          && this.lastPacketReceiveTimeoutMs <= readTimeout) {
+        LOG.warn("{} ({} ms) is <= the DataNode socket read timeout ({} ms); "
+            + "healthy idle hflush/hsync streams that only send periodic "
+            + "heartbeats (about every {} ms) may be aborted. Configure it "
+            + "well above the socket read timeout (e.g. >= 2x).",
+            DFSConfigKeys.DFS_DATANODE_LAST_PACKET_RECEIVE_TIMEOUT_MS,
+            this.lastPacketReceiveTimeoutMs, readTimeout, readTimeout / 2);
+      }
       if (LOG.isDebugEnabled()) {
         LOG.debug(getClass().getSimpleName() + ": " + block
             + "\n storageType=" + storageType + ", inAddr=" + inAddr
@@ -205,6 +237,7 @@ class BlockReceiver implements Closeable {
             + "\n allowLazyPersist=" + allowLazyPersist + ", pinning=" + pinning
             + ", isClient=" + isClient + ", isDatanode=" + isDatanode
             + ", responseInterval=" + responseInterval
+            + ", lastPacketReceiveTimeoutMs=" + lastPacketReceiveTimeoutMs
             + ", storageID=" + (storageId != null ? storageId : "null")
         );
       }
@@ -279,7 +312,10 @@ class BlockReceiver implements Closeable {
       // write data chunk header if creating a new replica
       if (isCreate) {
         BlockMetadataHeader.writeHeader(checksumOut, diskChecksum);
-      } 
+      }
+
+      // Start the block transfer timer for the entire block transfer
+      startBlockTransferTimer();
     } catch (ReplicaAlreadyExistsException | ReplicaNotFoundException
         | DiskOutOfSpaceException e) {
       throw e;
@@ -323,10 +359,127 @@ class BlockReceiver implements Closeable {
   }
 
   /**
+   * Starts the timeout task for the block transfer using the DataNode's shared
+   * ScheduledExecutorService. If the timeout is not configured (&lt;= 0), this
+   * method does nothing. This timer covers the entire block transfer and is not
+   * reset per packet; instead {@link #handleBlockTransferTimeout()} inspects the
+   * last-packet timestamp when it fires.
+   */
+  private synchronized void startBlockTransferTimer() {
+    if (lastPacketReceiveTimeoutMs <= 0) {
+      return; // Timeout not enabled
+    }
+
+    ScheduledExecutorService executorService =
+        datanode.getBlockTransferTimeoutService();
+    if (executorService == null) {
+      LOG.warn("Block transfer timeout is configured ({} ms) but executor "
+          + "service is not initialized for block {} from client {}. Timeout "
+          + "will not be enforced.", lastPacketReceiveTimeoutMs,
+          block.getBlockName(), clientname);
+      return;
+    }
+
+    timeoutTask = executorService.schedule(this::handleBlockTransferTimeout,
+        timeoutPollIntervalMs(), TimeUnit.MILLISECONDS);
+
+    LOG.info("Scheduled block transfer timeout task (timeout {} ms, polling "
+        + "every {} ms) for block {} from client {}", lastPacketReceiveTimeoutMs,
+        timeoutPollIntervalMs(), block.getBlockName(), clientname);
+  }
+
+  /**
+   * Poll interval for the stall check. A stall is declared when no packet has
+   * arrived for {@code timeout/2}, so polling every {@code timeout/2} bounds the
+   * detection latency to between {@code timeout/2} and {@code timeout} after the
+   * client stops sending.
+   */
+  private long timeoutPollIntervalMs() {
+    return Math.max(1L, lastPacketReceiveTimeoutMs / 2);
+  }
+
+  /** Cancels the block transfer timeout task if it exists. */
+  private synchronized void cancelBlockTransferTimer() {
+    if (timeoutTask != null) {
+      timeoutTask.cancel(false);
+      timeoutTask = null;
+    }
+  }
+
+  /**
+   * Handles a scheduled stall check for the block transfer. If a packet was
+   * received within the last {@code timeout/2} the stream is considered active
+   * and the check is scheduled again. Otherwise the transfer is treated as
+   * stalled and aborted by closing the input stream, which unblocks the receive
+   * thread's blocked socket read so it unwinds and runs its own cleanup.
+   *
+   * <p>This runs on the shared DataNode scheduler thread, so it deliberately
+   * does <em>no</em> disk I/O: the on-disk streams ({@code out}/
+   * {@code checksumOut}) are written by the receive thread <em>without</em>
+   * holding this monitor, so flushing them from here would race those writes and
+   * could corrupt the replica. Data that was already acknowledged to the client
+   * is already durable on disk, and the replica is left in RBW state so the
+   * NameNode's lease recovery can finalize it without data loss.
+   */
+  private synchronized void handleBlockTransferTimeout() {
+    // block already closed successfully; timeout task was cancelled/nulled.
+    if (timeoutTask == null) {
+      return;
+    }
+    long timeSinceLastPacket =
+        Time.monotonicNow() - LAST_PACKET_RECEIVED_TIME_UPDATER.get(this);
+    long halfTimeout = lastPacketReceiveTimeoutMs / 2;
+
+    if (timeSinceLastPacket < halfTimeout) {
+      // Packet was received recently, stream is active - schedule next check.
+      LOG.debug("Block transfer timer fired for block {}, but packet was "
+          + "received {} ms ago (threshold is {} ms). Rescheduling check.",
+          block.getBlockName(), timeSinceLastPacket, halfTimeout);
+
+      ScheduledExecutorService executorService =
+          datanode.getBlockTransferTimeoutService();
+      if (executorService == null) {
+        LOG.warn("Cannot reschedule timeout task for block {} - executor "
+            + "service not available", block.getBlockName());
+        timeoutTask = null;
+        return;
+      }
+
+      timeoutTask = executorService.schedule(this::handleBlockTransferTimeout,
+          timeoutPollIntervalMs(), TimeUnit.MILLISECONDS);
+      return;
+    }
+
+    // No packet received within timeout/2 - abort the stalled transfer. Mark it
+    // handled first so a concurrent close() sees nothing left to cancel.
+    timeoutTask = null;
+    LOG.warn("Block transfer timeout ({} ms) occurred for block {}. Client {} "
+        + "did not send a packet for {} ms (threshold {} ms). Aborting the "
+        + "stalled transfer.", lastPacketReceiveTimeoutMs, block.getBlockName(),
+        clientname, timeSinceLastPacket, halfTimeout);
+
+    // Close input stream to interrupt the blocked socket read; the receive
+    // thread then unwinds and performs its own (single-threaded) disk cleanup.
+    try {
+      if (in != null) {
+        in.close();
+        LOG.info("Closed input stream for block {} to abort stalled transfer",
+            block.getBlockName());
+      }
+    } catch (IOException e) {
+      LOG.warn("Failed to close input stream during timeout for block {}",
+          block.getBlockName(), e);
+    }
+  }
+
+  /**
    * close files and release volume reference.
    */
   @Override
   public void close() throws IOException {
+    // Cancel the block transfer timer if it's still running.
+    cancelBlockTransferTimer();
+
     Span span = Tracer.getCurrentSpan();
     if (span != null) {
       span.addKVAnnotation("maxWriteToDiskMs",
@@ -552,6 +705,12 @@ class BlockReceiver implements Closeable {
   private int receivePacket() throws IOException {
     // read the next packet
     packetReceiver.receiveNextPacket(in);
+
+    // Update timestamp for last packet received (for timeout tracking). Only
+    // update when the timeout is configured to avoid unnecessary atomic writes.
+    if (lastPacketReceiveTimeoutMs > 0) {
+      LAST_PACKET_RECEIVED_TIME_UPDATER.set(this, Time.monotonicNow());
+    }
 
     PacketHeader header = packetReceiver.getHeader();
     long seqno = header.getSeqno();
