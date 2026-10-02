@@ -264,6 +264,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         GenericTestUtils.waitFor(() -> !f.exists(), 1000, 1000 * 50);
         assertFalse(f.exists(), "File [" + f + "] was not deleted");
       }
+      // File deletion can finish before the asynchronous app directory deletion.
+      GenericTestUtils.waitFor(() -> !app1LogDir.exists(), 1000, 1000 * 50);
       assertFalse(app1LogDir.exists(), "Directory [" + app1LogDir + "] was not deleted");
     } else {
       List<Path> dirList = new ArrayList<>();
