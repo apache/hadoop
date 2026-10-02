@@ -58,19 +58,16 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
 
   private final List<String> totalJiffiesKeys;
   private final String rssMemoryKey;
-  private final String virtualMemoryKey;
 
   protected AbstractCGroupsResourceCalculator(
       String pid,
       List<String> totalJiffiesKeys,
-      String rssMemoryKey,
-      String virtualMemoryKey
+      String rssMemoryKey
   ) {
     super(pid);
     this.pid = pid;
     this.totalJiffiesKeys = totalJiffiesKeys;
     this.rssMemoryKey = rssMemoryKey;
-    this.virtualMemoryKey = virtualMemoryKey;
   }
 
   @Override
@@ -92,10 +89,16 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
     return 1 < olderThanAge ? UNAVAILABLE : getStat(rssMemoryKey);
   }
 
+ /**
+ * @return memory + swap in bytes, or {@link #UNAVAILABLE} if not readable.
+ * Reads the stats loaded by the last {@code updateProcessTree()}.
+ */
   @Override
   public long getVirtualMemorySize(int olderThanAge) {
-    return 1 < olderThanAge ? UNAVAILABLE : getStat(virtualMemoryKey);
+    return 1 < olderThanAge ? UNAVAILABLE : calculateVirtualMemory();
   }
+
+  protected abstract long calculateVirtualMemory();
 
   @Override
   public String getProcessTreeDump() {
@@ -157,7 +160,7 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
     return reduce == 0 ? UNAVAILABLE : reduce;
   }
 
-  private long getStat(String key) {
+  protected long getStat(String key) {
     return Long.parseLong(stats.getOrDefault(key, String.valueOf(UNAVAILABLE)));
   }
 
