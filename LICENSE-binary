@@ -480,7 +480,7 @@ com.thoughtworks.paranamer:paranamer:2.3
 jakarta.activation:jakarta.activation-api:1.2.1
 org.checkerframework:checker-qual:3.49.0
 org.fusesource.leveldbjni:leveldbjni-all:1.8
-org.jline:jline:3.9.0
+org.jline:jline:3.30.14
 org.hamcrest:hamcrest-core:1.3
 org.ow2.asm:asm:5.0.4
 org.ow2.asm:asm-commons:6.0
