@@ -80,19 +80,13 @@ public class CGroupsV2ResourceCalculator extends AbstractCGroupsResourceCalculat
    * <a href="https://docs.kernel.org/admin-guide/cgroup-v2.html#memory-interface-files">DOC</a>
    *
    * ...
-   * memory.stat
-   *  A read-only flat-keyed file which exists on non-root cgroups.
-   *  This breaks down the cgroup’s memory footprint into different types of memory,
-   *  type-specific details, and other information on the state
-   *  and past events of the memory management system.
-   *  All memory amounts are in bytes.
-   *  ...
-   *  anon
-   *   Amount of memory used in anonymous mappings such as brk(), sbrk(), and mmap(MAP_ANONYMOUS)
+   * memory.current
+   *  A read-only single value file which exists on non-root cgroups.
+   *  The total amount of memory currently being used by the cgroup and its descendants.
    * ...
    *
    */
-  private static final String MEM_STAT = "memory.stat#anon";
+  private static final String MEM_STAT = "memory.current";
 
   /**
    * <a href="https://docs.kernel.org/admin-guide/cgroup-v2.html#memory-interface-files">DOC</a>
@@ -110,9 +104,21 @@ public class CGroupsV2ResourceCalculator extends AbstractCGroupsResourceCalculat
     super(
         pid,
         Collections.singletonList(CPU_STAT),
-        MEM_STAT,
-        MEMSW_STAT
+        MEM_STAT
     );
+  }
+
+  @Override
+  protected long calculateVirtualMemory() {
+    // Unlike cgroup v1, cgroup v2 does not expose a combined memory+swap
+    // counter. The virtual memory has to be derived by adding the swap usage
+    // (memory.swap.current) to the current memory (memory.current).
+    long mem = getStat(MEM_STAT);
+    long swap = getStat(MEMSW_STAT);
+    if (mem == UNAVAILABLE || swap == UNAVAILABLE) {
+      return UNAVAILABLE;
+    }
+    return mem + swap;
   }
 
   @Override
