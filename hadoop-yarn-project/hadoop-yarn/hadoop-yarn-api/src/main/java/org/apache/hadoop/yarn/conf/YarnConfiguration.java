@@ -2254,6 +2254,15 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_ENABLED =
       false;
 
+  /**
+   * Maximum depth below each node manager directory that the content
+   * accessibility validation descends into.
+   */
+  public static final String NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH =
+          NM_DISK_HEALTH_CHECK_PREFIX + "working-dir-content-accessibility-validation.max-depth";
+
+  public static final int DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH = 3;
+
   /** The health checker scripts. */
   public static final String NM_HEALTH_CHECK_SCRIPTS =
       NM_PREFIX + "health-checker.scripts";

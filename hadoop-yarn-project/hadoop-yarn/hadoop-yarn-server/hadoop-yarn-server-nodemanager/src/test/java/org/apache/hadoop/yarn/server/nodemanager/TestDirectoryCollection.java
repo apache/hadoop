@@ -20,12 +20,16 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -541,6 +545,87 @@ public class TestDirectoryCollection {
     assertEquals(1, diskErrorInformationMap.size());
     assertTrue(diskErrorInformationMap.values().iterator().next()
         .message.contains(testFile.getName()));
+  }
+
+  @Test
+  public void testSubAccessibilityToleratesEntryDeletedDuringWalk() throws IOException {
+    java.nio.file.Path gone = testFile.toPath();
+    BasicFileAttributes attrs = Files.readAttributes(gone, BasicFileAttributes.class);
+    Files.delete(gone);
+    DirectoryCollection.SubAccessibilityVisitor visitor =
+        new DirectoryCollection.SubAccessibilityVisitor();
+    assertEquals(FileVisitResult.CONTINUE, visitor.visitFile(gone, attrs));
+    assertEquals(FileVisitResult.CONTINUE,
+        visitor.preVisitDirectory(new File(testDir, "missingDir").toPath(), attrs));
+    assertEquals(FileVisitResult.CONTINUE,
+        visitor.visitFileFailed(gone, new NoSuchFileException(gone.toString())));
+  }
+
+  @Test
+  public void testSubAccessibilityIgnoresBrokenSymlink() throws IOException {
+    Files.createSymbolicLink(new File(testDir, "link").toPath(),
+        new File(testDir, "missing").toPath());
+    DirectoryCollection dc = new DirectoryCollection(new String[]{testDir.toString()});
+    dc.setSubAccessibilityValidationEnabled(true);
+    assertTrue(dc.testDirs(Collections.singletonList(testDir.toString()),
+        Collections.emptySet()).isEmpty());
+  }
+
+  @Test
+  public void testSubAccessibilityRespectsMaxDepth() throws IOException {
+    File appDir = new File(testDir, "usercache/user/appcache/app_1");
+    assertTrue(appDir.mkdirs());
+    File unreadable = new File(appDir, "data");
+    assertTrue(unreadable.createNewFile());
+    Files.setPosixFilePermissions(unreadable.toPath(),
+        PosixFilePermissions.fromString("-w--w--w-"));
+    DirectoryCollection dc = new DirectoryCollection(new String[]{testDir.toString()});
+    dc.setSubAccessibilityValidationEnabled(true);
+
+    dc.setSubAccessibilityValidationMaxDepth(3);
+    assertTrue(dc.testDirs(Collections.singletonList(testDir.toString()),
+        Collections.emptySet()).isEmpty());
+
+    dc.setSubAccessibilityValidationMaxDepth(5);
+    assertEquals(1, dc.testDirs(Collections.singletonList(testDir.toString()),
+        Collections.emptySet()).size());
+  }
+
+  @Test
+  public void testSubAccessibilityUnderConcurrentChurn() throws Exception {
+    File cache = new File(testDir, "filecache");
+    AtomicBoolean stop = new AtomicBoolean();
+    Thread churn = new Thread(() -> {
+      int i = 0;
+      while (!stop.get()) {
+        File entry = new File(cache, (i++) + "_tmp");
+        File deep = new File(entry, "a/b/c");
+        deep.mkdirs();
+        for (int f = 0; f < 50; f++) {
+          try {
+            new File(deep, "f" + f).createNewFile();
+          } catch (IOException ignored) {
+          }
+        }
+        FileUtil.fullyDelete(entry);
+      }
+    });
+    churn.start();
+    try {
+      DirectoryCollection dc = new DirectoryCollection(new String[]{testDir.toString()});
+      dc.setSubAccessibilityValidationEnabled(true);
+      dc.setSubAccessibilityValidationMaxDepth(Integer.MAX_VALUE);
+      for (int i = 0; i < 500; i++) {
+        final int iteration = i;
+        Map<String, DirectoryCollection.DiskErrorInformation> errors =
+            dc.testDirs(Collections.singletonList(testDir.toString()), Collections.emptySet());
+        assertTrue(errors.isEmpty(), () -> "Iteration " + iteration + ": " +
+            errors.values().iterator().next().message);
+      }
+    } finally {
+      stop.set(true);
+      churn.join();
+    }
   }
 
   static class DirsChangeListenerTest implements DirsChangeListener {
