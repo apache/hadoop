@@ -65,6 +65,7 @@ import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.util.RwLockMode;
+import org.apache.hadoop.net.CachedDNSToSwitchMapping;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.Shell;
@@ -358,7 +359,106 @@ public class TestDatanodeManager {
     }
 
     @Override
-    public void reloadCachedMappings(List<String> names) {  
+    public void reloadCachedMappings(List<String> names) {
+    }
+  }
+
+  /**
+   * Test that after a DataNode rack is changed in the topology script
+   * and the DN restarts, the NameNode uses the new rack information.
+   *
+   * Test flow:
+   * 1. First registration -> resolver returns /rack1, result is cached
+   * 2. Remove the DN (simulating decommission)
+   * 3. Change resolver to return /rack2
+   * 4. Register same DN again (simulating restart)
+   *    This triggers reloadCachedMappings to clear the cache, then resolver returns /rack2
+   * 5. Verify DN now uses /rack2
+   */
+  @Test
+  public void testDatanodeRackChangeAfterRestart() throws IOException {
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+
+    Configuration conf = new Configuration();
+    // Use TestCachedDNSToSwitchMapping
+    conf.setClass(
+        CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+        TestCachedDNSToSwitchMapping.class, DNSToSwitchMapping.class);
+
+    DatanodeManager dm = mockDatanodeManager(fsn, conf);
+
+    // Get the dnsToSwitchMapping which is TestCachedDNSToSwitchMapping
+    DNSToSwitchMapping mapping = (DNSToSwitchMapping) Whitebox.getInternalState(dm, "dnsToSwitchMapping");
+    TestCachedDNSToSwitchMapping cachedMapping = (TestCachedDNSToSwitchMapping) mapping;
+
+    String storageID = "someStorageID-123";
+    String ipAddr = "192.168.1.100";
+
+    // Step 1: First registration - resolver returns /rack1
+    cachedMapping.setRack("/rack1");
+
+    DatanodeRegistration dr = Mockito.mock(DatanodeRegistration.class);
+    Mockito.when(dr.getDatanodeUuid()).thenReturn(storageID);
+    Mockito.when(dr.getIpAddr()).thenReturn(ipAddr);
+    Mockito.when(dr.getHostName()).thenReturn("host1.example.com");
+    Mockito.when(dr.getPeerHostName()).thenReturn("peer1.example.com");
+    Mockito.when(dr.getXferAddr()).thenReturn(ipAddr + ":9000");
+    Mockito.when(dr.getXferPort()).thenReturn(9000);
+    Mockito.when(dr.getSoftwareVersion()).thenReturn("version1");
+
+    dm.registerDatanode(dr);
+
+    // Verify DN is on rack1
+    DatanodeDescriptor node1 = dm.getDatanode(storageID);
+    assertEquals("/rack1", node1.getNetworkLocation());
+
+    // Step 2: Remove the DN (simulating decommission)
+    dm.removeDatanode(dr);
+
+    // Step 3: Change the rack value that resolver will return
+    cachedMapping.setRack("/rack2");
+
+    // Step 4: Register same DN again (simulating restart)
+    // registerDatanode() calls reloadCachedMappings to clear cache,
+    // then resolve() returns /rack2 with the new value
+    dm.registerDatanode(dr);
+
+    // Step 5: Verify DN is now on rack2
+    DatanodeDescriptor node2 = dm.getDatanode(storageID);
+    assertEquals("/rack2", node2.getNetworkLocation());
+  }
+
+  /**
+   * A test subclass of CachedDNSToSwitchMapping that allows changing the rack
+   * response at runtime to simulate rack changes.
+   */
+  public static class TestCachedDNSToSwitchMapping extends CachedDNSToSwitchMapping {
+    private static String currentRack = NetworkTopology.DEFAULT_RACK;
+
+    public TestCachedDNSToSwitchMapping() {
+      super(new DNSToSwitchMapping() {
+        @Override
+        public List<String> resolve(List<String> names) {
+          List<String> result = new ArrayList<>();
+          for (int i = 0; i < names.size(); i++) {
+            result.add(currentRack);
+          }
+          return result;
+        }
+
+        @Override
+        public void reloadCachedMappings() {
+        }
+
+        @Override
+        public void reloadCachedMappings(List<String> names) {
+        }
+      });
+    }
+
+    public void setRack(String rack) {
+      currentRack = rack;
     }
   }
 

@@ -1216,7 +1216,15 @@ public class DatanodeManager {
         
       NameNode.stateChangeLog.info("BLOCK* registerDatanode: from "
           + nodeReg + " storage " + nodeReg.getDatanodeUuid());
-  
+
+      // Clear cache for this node's IP, hostname, and peer hostname
+      // so that the topology mapping will be re-resolved
+      List<String> newDN = new ArrayList<>(3);
+      newDN.add(nodeReg.getIpAddr());
+      newDN.add(nodeReg.getHostName());
+      newDN.add(nodeReg.getPeerHostName());
+      dnsToSwitchMapping.reloadCachedMappings(newDN);
+
       DatanodeDescriptor nodeS = getDatanode(nodeReg.getDatanodeUuid());
       DatanodeDescriptor nodeN = host2DatanodeMap.getDatanodeByXferAddr(
           nodeReg.getIpAddr(), nodeReg.getXferPort());
