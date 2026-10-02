@@ -80,6 +80,15 @@ load hadoop-functions_test_helper
   [ "${CLASSPATH}" = "/tmp:${TMP}/*" ]
 }
 
+@test "hadoop_add_classpath (duplicate before moves to front)" {
+  mkdir "${TMP}/first" "${TMP}/second"
+  hadoop_add_classpath "${TMP}/first"
+  hadoop_add_classpath "${TMP}/second"
+  hadoop_add_classpath "${TMP}/second" before
+  echo ">${CLASSPATH}<"
+  [ "${CLASSPATH}" = "${TMP}/second:${TMP}/first" ]
+}
+
 @test "hadoop_add_classpath (complex ordering)" {
   local j
   local style="after"
