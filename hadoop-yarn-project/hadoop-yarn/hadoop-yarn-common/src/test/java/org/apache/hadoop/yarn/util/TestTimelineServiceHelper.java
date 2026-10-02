@@ -23,6 +23,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,6 +38,74 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestTimelineServiceHelper {
+
+  @AfterEach
+  void resetResourceTypes() {
+    ResourceUtils.resetResourceTypes(new YarnConfiguration());
+  }
+
+  @Test
+  void testContainerResourceRoundTrip() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RESOURCE_TYPES,
+        "yarn.io/gpu,example.com/bandwidth,example.com/unused");
+    conf.set("yarn.resource-types.example.com/bandwidth.units", "M");
+    ResourceUtils.resetResourceTypes(conf);
+    Resource allocated = Resource.newInstance(Integer.MAX_VALUE + 1L, 4);
+    allocated.setResourceValue("yarn.io/gpu", 2);
+    allocated.getResourceInformation("example.com/bandwidth").setUnits("G");
+    allocated.setResourceValue("example.com/bandwidth", Integer.MAX_VALUE + 1L);
+    Map<String, Object> info = new HashMap<>();
+    info.put(ContainerMetricsConstants.ALLOCATED_MEMORY_INFO,
+        allocated.getMemorySize());
+    info.put(ContainerMetricsConstants.ALLOCATED_VCORE_INFO, 4);
+    info.put(ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO,
+        TimelineUtils.getCustomResourceInfo(allocated));
+    allocated.setResourceValue("yarn.io/gpu", 0);
+
+    Map<String, Object> stored = new ObjectMapper().readValue(
+        TimelineUtils.dumpTimelineRecordtoJSON(info),
+        new TypeReference<Map<String, Object>>() { });
+    Map<?, ?> custom = (Map<?, ?>) stored.get(
+        ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO);
+    assertEquals(3, custom.size());
+    assertEquals(2, ((Map<?, ?>) custom.get("yarn.io/gpu")).get("value"));
+    assertEquals(0, ((Map<?, ?>) custom.get("example.com/unused")).get("value"));
+    Resource restored = TimelineUtils.getContainerResource(stored);
+    assertEquals(Integer.MAX_VALUE + 1L, restored.getMemorySize());
+    assertEquals(4, restored.getVirtualCores());
+    assertEquals(2, restored.getResourceValue("yarn.io/gpu"));
+    assertEquals((Integer.MAX_VALUE + 1L) * 1000,
+        restored.getResourceValue("example.com/bandwidth"));
+    assertEquals("M",
+        restored.getResourceInformation("example.com/bandwidth").getUnits());
+    assertEquals(0, restored.getResourceValue("example.com/unused"));
+
+    ResourceUtils.resetResourceTypes(new YarnConfiguration());
+    Resource withoutCustomTypes = TimelineUtils.getContainerResource(stored);
+    assertEquals(Integer.MAX_VALUE + 1L, withoutCustomTypes.getMemorySize());
+    assertEquals(4, withoutCustomTypes.getVirtualCores());
+    assertEquals(2, withoutCustomTypes.getResources().length);
+    assertEquals(3, custom.size());
+  }
+
+  @Test
+  void testLegacyContainerResources() {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RESOURCE_TYPES, "yarn.io/gpu");
+    ResourceUtils.resetResourceTypes(conf);
+    Map<String, Object> info = new HashMap<>();
+    info.put(ContainerMetricsConstants.ALLOCATED_MEMORY_INFO, 1024);
+    info.put(ContainerMetricsConstants.ALLOCATED_VCORE_INFO, 2);
+    Resource restored = TimelineUtils.getContainerResource(info);
+    assertEquals(1024, restored.getMemorySize());
+    assertEquals(2, restored.getVirtualCores());
+    assertEquals(0, restored.getResourceValue("yarn.io/gpu"));
+    assertEquals(Resource.newInstance(0, 0),
+        TimelineUtils.getContainerResource(null));
+    assertEquals(Resource.newInstance(0, 0),
+        TimelineUtils.getContainerResource(new HashMap<>()));
+  }
 
   @Test
   void testMapCastToHashMap() {

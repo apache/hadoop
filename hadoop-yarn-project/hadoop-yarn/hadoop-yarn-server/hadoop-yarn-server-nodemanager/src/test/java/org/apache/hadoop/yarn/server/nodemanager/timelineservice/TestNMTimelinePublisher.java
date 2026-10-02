@@ -39,6 +39,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.timelineservice.ContainerEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
@@ -53,11 +55,14 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerPauseEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResumeEvent;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.timeline.TimelineEntityV2Converter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,6 +80,8 @@ public class TestNMTimelinePublisher {
   @BeforeEach
   public void setup() throws Exception {
     conf = new Configuration();
+    conf.set(YarnConfiguration.RESOURCE_TYPES, "yarn.io/gpu");
+    ResourceUtils.resetResourceTypes(conf);
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
     conf.setLong(YarnConfiguration.ATS_APP_COLLECTOR_LINGER_PERIOD_IN_MS,
@@ -113,6 +120,10 @@ public class TestNMTimelinePublisher {
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId cId = ContainerId.newContainerId(appAttemptId, 1);
     Container container = mock(Container.class);
+    Resource allocated = Resource.newInstance(1024, 4);
+    allocated.setResourceValue("yarn.io/gpu", 2);
+    when(container.getResource()).thenReturn(allocated);
+    when(container.getPriority()).thenReturn(Priority.newInstance(1));
     when(container.getContainerStartTime())
         .thenReturn(System.currentTimeMillis());
     containers.putIfAbsent(cId, container);
@@ -129,6 +140,29 @@ public class TestNMTimelinePublisher {
     if (timelineClient != null) {
       timelineClient.stop();
     }
+    ResourceUtils.resetResourceTypes(new YarnConfiguration());
+  }
+
+  @Test
+  public void testPublishContainerCreated() {
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ContainerId containerId = ContainerId.newContainerId(
+        ApplicationAttemptId.newInstance(appId, 1), 1);
+    publisher.createTimelineClient(appId);
+    publisher.publishContainerEvent(
+        new ContainerEvent(containerId, ContainerEventType.INIT_CONTAINER));
+    dispatcher.await();
+    TimelineEntity[] entities = timelineClient.getLastPublishedEntities();
+    assertNotNull(entities);
+    assertEquals(1, entities.length);
+    Map<?, ?> allocations = (Map<?, ?>) entities[0].getInfo().get(
+        ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO);
+    assertEquals(2L, ((Map<?, ?>) allocations.get("yarn.io/gpu")).get("value"));
+    Resource restored = TimelineEntityV2Converter
+        .convertToContainerReport(entities[0], null, null).getAllocatedResource();
+    assertEquals(2, restored.getResourceValue("yarn.io/gpu"));
+    assertEquals(1024, restored.getMemorySize());
+    assertEquals(4, restored.getVirtualCores());
   }
 
   @Test public void testPublishContainerFinish() throws Exception {
