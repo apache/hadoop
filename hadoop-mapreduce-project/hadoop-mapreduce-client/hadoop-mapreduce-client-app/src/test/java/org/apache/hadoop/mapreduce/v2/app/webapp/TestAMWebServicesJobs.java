@@ -269,7 +269,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringMatch("exception message",
-          "job, job_0_1234, is not found", message);
+          "java.lang.Exception: job, job_0_1234, is not found", message);
       WebServicesTestUtils.checkStringMatch("exception type",
           "NotFoundException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",
@@ -356,7 +356,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
 
   private void verifyJobIdInvalid(String message, String type, String classname) {
     WebServicesTestUtils.checkStringMatch("exception message",
-        "JobId string : job_foo is not properly formed",
+        "java.lang.Exception: JobId string : job_foo is not properly formed",
         message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "NotFoundException", type);
@@ -385,7 +385,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringMatch(
           "exception message",
-          "JobId string : bogusfoo is not properly formed",
+          "java.lang.Exception: JobId string : bogusfoo is not properly formed",
           message);
       WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",
