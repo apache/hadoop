@@ -783,15 +783,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           break;
         }
         if (!context.getContainers().containsKey(cid)) {
-          ApplicationId appId =
-              cid.getApplicationAttemptId().getApplicationId();
-          if (isApplicationStopped(appId)) {
-            i.remove();
-            try {
-              context.getNMStateStore().removeContainer(cid);
-            } catch (IOException e) {
-              LOG.error("Unable to remove container {} in store.", cid, e);
-            }
+          i.remove();
+          try {
+            context.getNMStateStore().removeContainer(cid);
+          } catch (IOException e) {
+            LOG.error("Unable to remove container {} in store.", cid, e);
           }
         }
       }

@@ -60,6 +60,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.Log
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerRecoveredEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEvent;
 
 
@@ -336,6 +337,22 @@ public class LogAggregationService extends AbstractService implements
         new ContainerLogContext(containerId, containerType, exitCode));
   }
 
+  private void recoverContainer(ContainerId containerId) {
+    AppLogAggregator aggregator = this.appLogAggregators.get(
+        containerId.getApplicationAttemptId().getApplicationId());
+    if (aggregator == null) {
+      LOG.warn("Log aggregation is not initialized for " + containerId
+          + " during recovery, removing from store.");
+      try {
+        context.getNMStateStore().removeLogAggregator(containerId);
+      } catch (IOException e) {
+        LOG.error("Unable to remove log aggregator {} from store.", containerId, e);
+      }
+      return;
+    }
+    aggregator.recoverContainerLogAggregation(containerId);
+  }
+
   @SuppressWarnings("unchecked")
   private void stopApp(ApplicationId appId) {
 
@@ -380,6 +397,11 @@ public class LogAggregationService extends AbstractService implements
         LogHandlerAppFinishedEvent appFinishedEvent =
             (LogHandlerAppFinishedEvent) event;
         stopApp(appFinishedEvent.getApplicationId());
+        break;
+      case CONTAINER_RECOVERED:
+        LogHandlerContainerRecoveredEvent containerRecoveredEvent =
+            (LogHandlerContainerRecoveredEvent) event;
+        recoverContainer(containerRecoveredEvent.getContainerId());
         break;
       case LOG_AGG_TOKEN_UPDATE:
         checkAndEnableAppAggregators();
