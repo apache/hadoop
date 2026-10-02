@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -58,6 +59,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -89,6 +91,10 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_DOCKER_DEFAULT_RO_MOUNTS;
@@ -119,6 +125,8 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime.RUN_PRIVILEGED_CONTAINER_SUFFIX;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime.formatOciEnvKey;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -694,6 +702,147 @@ public class TestDockerContainerRuntime {
     assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
     assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
+  }
+
+  @Test
+  public void testConcurrentPullsForSameImageAreSerialized()
+      throws Exception {
+    initHttps(false);
+    DockerLinuxContainerRuntime runtime =
+        new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, nmContext);
+
+    CountDownLatch firstPullStarted = new CountDownLatch(1);
+    CountDownLatch releaseFirstPull = new CountDownLatch(1);
+    AtomicInteger pullInvocations = new AtomicInteger();
+    AtomicReference<Throwable> firstFailure = new AtomicReference<>();
+    AtomicReference<Throwable> secondFailure = new AtomicReference<>();
+
+    Mockito.doAnswer(invocation -> {
+      int count = pullInvocations.incrementAndGet();
+      if (count == 1) {
+        firstPullStarted.countDown();
+        if (!releaseFirstPull.await(5, TimeUnit.SECONDS)) {
+          throw new AssertionError("Timed out waiting to release first pull");
+        }
+      }
+      return "";
+    }).when(mockExecutor).executePrivilegedOperation(any(),
+        any(PrivilegedOperation.class), any(), any(), anyBoolean(),
+        anyBoolean());
+
+    Thread firstPullThread = new Thread(() -> {
+      try {
+        runtime.pullImageFromRemote(containerIdStr, image);
+      } catch (Throwable t) {
+        firstFailure.set(t);
+      }
+    });
+    Thread secondPullThread = new Thread(() -> {
+      try {
+        runtime.pullImageFromRemote(containerIdStr, image);
+      } catch (Throwable t) {
+        secondFailure.set(t);
+      }
+    });
+
+    firstPullThread.start();
+    assertTrue(firstPullStarted.await(5, TimeUnit.SECONDS));
+    secondPullThread.start();
+    GenericTestUtils.waitFor(
+        () -> secondPullThread.getState() == Thread.State.BLOCKED,
+        10, 5000);
+    assertEquals(1, pullInvocations.get());
+
+    releaseFirstPull.countDown();
+    firstPullThread.join(5000);
+    secondPullThread.join(5000);
+
+    assertFalse(firstPullThread.isAlive());
+    assertFalse(secondPullThread.isAlive());
+    assertNull(firstFailure.get());
+    assertNull(secondFailure.get());
+    assertEquals(2, pullInvocations.get());
+    assertEquals(0, runtime.getImagePullLockCount());
+  }
+
+  @Test
+  public void testConcurrentPullsForDifferentImagesRunInParallel()
+      throws Exception {
+    initHttps(false);
+    DockerLinuxContainerRuntime runtime =
+        new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, nmContext);
+
+    CountDownLatch firstPullStarted = new CountDownLatch(1);
+    CountDownLatch releaseFirstPull = new CountDownLatch(1);
+    CountDownLatch secondPullInvoked = new CountDownLatch(1);
+    AtomicInteger pullInvocations = new AtomicInteger();
+    AtomicReference<Throwable> firstFailure = new AtomicReference<>();
+    AtomicReference<Throwable> secondFailure = new AtomicReference<>();
+
+    Mockito.doAnswer(invocation -> {
+      int count = pullInvocations.incrementAndGet();
+      if (count == 1) {
+        firstPullStarted.countDown();
+        if (!releaseFirstPull.await(5, TimeUnit.SECONDS)) {
+          throw new AssertionError("Timed out waiting to release first pull");
+        }
+      } else if (count == 2) {
+        secondPullInvoked.countDown();
+      }
+      return "";
+    }).when(mockExecutor).executePrivilegedOperation(any(),
+        any(PrivilegedOperation.class), any(), any(), anyBoolean(),
+        anyBoolean());
+
+    Thread firstPullThread = new Thread(() -> {
+      try {
+        runtime.pullImageFromRemote(containerIdStr, image);
+      } catch (Throwable t) {
+        firstFailure.set(t);
+      }
+    });
+    Thread secondPullThread = new Thread(() -> {
+      try {
+        runtime.pullImageFromRemote(containerIdStr, "alpine:latest");
+      } catch (Throwable t) {
+        secondFailure.set(t);
+      }
+    });
+
+    firstPullThread.start();
+    assertTrue(firstPullStarted.await(5, TimeUnit.SECONDS));
+    secondPullThread.start();
+    assertTrue(secondPullInvoked.await(5, TimeUnit.SECONDS));
+    assertEquals(2, pullInvocations.get());
+
+    releaseFirstPull.countDown();
+    firstPullThread.join(5000);
+    secondPullThread.join(5000);
+
+    assertFalse(firstPullThread.isAlive());
+    assertFalse(secondPullThread.isAlive());
+    assertNull(firstFailure.get());
+    assertNull(secondFailure.get());
+    assertEquals(0, runtime.getImagePullLockCount());
+  }
+
+  @Test
+  public void testImagePullLockIsReleasedAfterFailure() throws Exception {
+    initHttps(false);
+    DockerLinuxContainerRuntime runtime =
+        new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, nmContext);
+
+    Mockito.doThrow(new PrivilegedOperationException("pull failed"))
+        .when(mockExecutor).executePrivilegedOperation(any(),
+            any(PrivilegedOperation.class), any(), any(), anyBoolean(),
+            anyBoolean());
+
+    assertThrows(ContainerExecutionException.class,
+        () -> runtime.pullImageFromRemote(containerIdStr, image));
+    assertEquals(0, runtime.getImagePullLockCount());
   }
 
   @ParameterizedTest(name = "https={0}")
