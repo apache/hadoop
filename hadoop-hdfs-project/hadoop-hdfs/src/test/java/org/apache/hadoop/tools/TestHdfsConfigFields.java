@@ -45,6 +45,7 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
         HdfsClientConfigKeys.StripedRead.class, DFSConfigKeys.class,
         HdfsClientConfigKeys.BlockWrite.class, HdfsClientConfigKeys.Write.class,
         HdfsClientConfigKeys.Read.class, HdfsClientConfigKeys.HedgedRead.class,
+        HdfsClientConfigKeys.Prefetch.class,
         HdfsClientConfigKeys.ShortCircuit.class,
         HdfsClientConfigKeys.Retry.class, HdfsClientConfigKeys.Mmap.class,
         HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.class,
