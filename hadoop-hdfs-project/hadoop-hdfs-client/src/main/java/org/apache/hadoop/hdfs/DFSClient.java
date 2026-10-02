@@ -154,6 +154,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.hdfs.protocol.datatransfer.PacketReceiver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
@@ -324,6 +325,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.tracer = FsTracer.get(conf);
     this.dfsClientConf = new DfsClientConf(conf);
     this.conf = conf;
+    // Apply the configured max packet size so PacketReceiver uses the right
+    // value; must be done here rather than in PacketReceiver's static
+    // initializer to avoid a circular class-loading deadlock (HDFS-17630).
+    PacketReceiver.setMaxPacketSize(conf);
     this.stats = stats;
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
