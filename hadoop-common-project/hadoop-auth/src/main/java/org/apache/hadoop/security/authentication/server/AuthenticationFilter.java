@@ -649,6 +649,7 @@ public class AuthenticationFilter implements Filter {
    */
   protected void doFilter(FilterChain filterChain, HttpServletRequest request,
       HttpServletResponse response) throws IOException, ServletException {
+    JettyAuthenticationHelper.publishRemoteUser(request);
     filterChain.doFilter(request, response);
   }
 
