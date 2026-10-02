@@ -110,9 +110,18 @@ public class CGroupsV2ResourceCalculator extends AbstractCGroupsResourceCalculat
     super(
         pid,
         Collections.singletonList(CPU_STAT),
-        MEM_STAT,
-        MEMSW_STAT
+        MEM_STAT
     );
+  }
+
+  @Override
+  protected long calculateVirtualMemory() {
+    long anon = getStat(MEM_STAT);
+    long swap = getStat(MEMSW_STAT);
+    if (anon == UNAVAILABLE || swap == UNAVAILABLE) {
+      return UNAVAILABLE;
+    }
+    return anon + swap;
   }
 
   @Override
