@@ -170,6 +170,11 @@ public class TestAbsoluteResourceConfiguration {
 
   private CapacitySchedulerConfiguration setupLabeledConfiguration(
       CapacitySchedulerConfiguration csConf) {
+    csConf.setAccessibleNodeLabels(QUEUEA_FULL, Set.of(X_LABEL, Y_LABEL));
+    csConf.setAccessibleNodeLabels(QUEUEB_FULL, Set.of(X_LABEL, Y_LABEL));
+    csConf.setAccessibleNodeLabels(QUEUEC_FULL, Set.of(X_LABEL, Y_LABEL));
+    csConf.setAccessibleNodeLabels(QUEUED_FULL, Set.of(X_LABEL, Y_LABEL));
+
     csConf.setMinimumResourceRequirement("", QUEUEA_FULL, Resource.newInstance(20 * GB, 8));
     csConf.setMinimumResourceRequirement("", QUEUEB_FULL, Resource.newInstance(10 * GB, 3));
     csConf.setMinimumResourceRequirement("", QUEUEC_FULL, Resource.newInstance(10 * GB, 2));

@@ -48,6 +48,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CyclicBarrier;
@@ -5248,6 +5249,7 @@ public class TestLeafQueue {
     when(cs.getClusterResource()).thenReturn(
         Resources.createResource(2 * 16 * GB, 2 * 32));
 
+    conf.setAccessibleNodeLabels(new QueuePath(rootChild), Set.of(RMNodeLabelsManager.ANY));
     conf.setCapacityByLabel(ROOT, "test", 100);
     conf.setCapacityByLabel(new QueuePath(rootChild), "test", 100);
     conf.setCapacityByLabel(new QueuePath(rootChild, A), "test", 20);
@@ -5285,6 +5287,7 @@ public class TestLeafQueue {
     CapacitySchedulerConfiguration conf = csConf;
     String rootChild = root.getChildQueues().get(0).getQueuePath();
 
+    conf.setAccessibleNodeLabels(new QueuePath(rootChild), Set.of(RMNodeLabelsManager.ANY));
     conf.setCapacityByLabel(new QueuePath(rootChild), "test", 100);
     conf.setCapacityByLabel(new QueuePath(rootChild, A), "test", 20);
     conf.setCapacityByLabel(new QueuePath(rootChild, B), "test", 40);

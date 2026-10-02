@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,11 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.getQueuePrefix;
 
 public final class CapacitySchedulerConfigValidator {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -112,6 +118,68 @@ public final class CapacitySchedulerConfigValidator {
               + "=" + maxVcores + ", min and max should be greater than 0"
               + ", max should be no smaller than min.");
     }
+  }
+
+  /**
+   * Validates that queue's partition capacity.
+   * It could only be configured if the queue is accessible by that label and vice versa,
+   * the label that is accessible by the queue could not be removed if
+   * it has capacity or max-capacity configured in queue's partition
+   *
+   * @param conf Capacity Scheduler configuration to validate
+   * @throws IOException when the above rules have been violated
+   */
+  public static void validateQueueAccessibleLabels(Configuration conf) throws IOException {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(conf);
+
+    for (String queuePath : csConf.getConfiguredNodeLabelsByQueue().keySet()) {
+      QueuePath queue = new QueuePath(queuePath);
+      if (queue.isRoot()) {
+        continue;
+      }
+
+      for (String label : csConf.getConfiguredNodeLabels(queue)) {
+        if (RMNodeLabelsManager.NO_LABEL.equals(label)
+            || !hasQueuePartitionCapacity(csConf, queue, label)
+            || isLabelAccessibleByQueue(csConf, queue, label)) {
+          continue;
+        }
+
+        throw new IOException("Queue: " + queuePath +
+          " must have accessible-node-labels and its capacity together");
+      }
+    }
+  }
+
+  private static boolean hasQueuePartitionCapacity(
+      CapacitySchedulerConfiguration conf, QueuePath queue, String label) {
+    String labelPrefix = QueuePrefixes.getNodeLabelPrefix(queue, label);
+    String capacity = conf.get(labelPrefix + CAPACITY);
+    if (capacity != null && !capacity.trim().isEmpty()) {
+      return true;
+    }
+    String maxCapacity = conf.get(labelPrefix + MAXIMUM_CAPACITY);
+    return maxCapacity != null && !maxCapacity.trim().isEmpty();
+  }
+
+  /**
+   * Requires queue in the queue-path to declare accessible-node-labels explicitly.
+   * The inheritance from root’s implicit * label is not accepted here.
+   */
+  private static boolean isLabelAccessibleByQueue(
+          CapacitySchedulerConfiguration conf, QueuePath queue, String label) {
+    QueuePath currentQueue = queue;
+    while (currentQueue != null && !currentQueue.isRoot()) {
+      String accessibleNodeLabelsKey = getQueuePrefix(currentQueue) + ACCESSIBLE_NODE_LABELS;
+      if (conf.get(accessibleNodeLabelsKey) != null) {
+        Set<String> accessibleLabels = conf.getAccessibleNodeLabels(currentQueue);
+        return accessibleLabels.contains(RMNodeLabelsManager.ANY)
+                || accessibleLabels.contains(label);
+      }
+      currentQueue = currentQueue.getParentObject();
+    }
+
+    return false;
   }
 
   /**
