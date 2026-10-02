@@ -19,12 +19,40 @@
 import Ember from 'ember';
 
 export default Ember.Controller.extend({
+  applicationDiagnostic: Ember.inject.service('application-diagnostic'),
+
   queryParams: ["service"],
   service: undefined,
   isLoading: false,
   actionResponse: null,
+  isCollectingApplicationDiagnostic: false,
+  diagnosticCollectError: null,
 
   actions: {
+    collectApplicationDiagnostic() {
+      const appId = this.get('model.appId') || this.get('model.app.id');
+      if (!appId) {
+        this.set('diagnosticCollectError', 'Application id is not available.');
+        return;
+      }
+
+      const self = this;
+      this.set('diagnosticCollectError', null);
+      this.set('isCollectingApplicationDiagnostic', true);
+
+      this.get('applicationDiagnostic').collectApplicationDiagnostic(appId).then(function(issueData) {
+        self.get('applicationDiagnostic').downloadDiagnosticArchive(appId, issueData);
+      }, function(error) {
+        const message = error && error.message ? error.message : String(error);
+        self.set('diagnosticCollectError', message);
+      }).finally(function() {
+        self.set('isCollectingApplicationDiagnostic', false);
+      });
+    },
+
+    dismissDiagnosticCollectError() {
+      this.set('diagnosticCollectError', null);
+    },
     showStopServiceConfirm() {
       this.set('actionResponse', null);
       Ember.$("#stopServiceConfirmDialog").modal('show');
