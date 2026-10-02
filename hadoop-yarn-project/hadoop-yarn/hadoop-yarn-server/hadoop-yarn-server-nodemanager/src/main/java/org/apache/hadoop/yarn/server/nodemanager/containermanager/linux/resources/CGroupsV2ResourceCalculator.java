@@ -115,7 +115,7 @@ public class CGroupsV2ResourceCalculator extends AbstractCGroupsResourceCalculat
   }
 
   @Override
-  protected long calculateVirtualMemory() {
+  protected long getVirtualMemorySize0() {
     long anon = getStat(MEM_STAT);
     long swap = getStat(MEMSW_STAT);
     if (anon == UNAVAILABLE || swap == UNAVAILABLE) {

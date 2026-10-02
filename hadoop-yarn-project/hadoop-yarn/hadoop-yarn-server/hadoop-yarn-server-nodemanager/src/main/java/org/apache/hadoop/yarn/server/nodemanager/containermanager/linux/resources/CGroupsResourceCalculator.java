@@ -113,7 +113,7 @@ public class CGroupsResourceCalculator extends AbstractCGroupsResourceCalculator
     );
   }
   @Override
-  protected long calculateVirtualMemory() {
+  protected long getVirtualMemorySize0() {
     // cgroup v1 already provides memory + swap in one counter.
     return getStat(MEMSW_STAT);
   }

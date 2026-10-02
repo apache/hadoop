@@ -95,6 +95,36 @@ public class TestCGroupsV2ResourceCalculator {
     assertEquals(-1L, calculator.getVirtualMemorySize(2), 0L);
   }
 
+  @Test
+  public void testVirtualMemoryUnavailableWhenSwapFileMissing()
+      throws IOException {
+    Files.createDirectories(root.resolve("proc/42"));
+    Files.createDirectories(root.resolve("mount/cgroup2/yarn/container_1"));
+
+    writeToFile("proc/42/cgroup",
+        "0::/container_1");
+    writeToFile("mount/cgroup2/yarn/container_1/memory.stat",
+        "anon 22000",
+        "slab 1774128");
+
+    // memory.swap.current is intentionally missing.
+    writeToFile("mount/cgroup2/yarn/container_1/cpu.stat",
+        "usage_usec 333",
+        "meaning_of_life 42");
+
+    CGroupsV2ResourceCalculator calculator = createCalculator();
+    when(calculator.getcGroupsHandler().getCGroupV2MountPath())
+        .thenReturn(root.resolve("mount/cgroup2/yarn").toString());
+    when(calculator.getcGroupsHandler().getRelativePathForCGroup(
+        eq("/container_1")))
+        .thenReturn("container_1");
+
+    calculator.updateProcessTree();
+
+    assertEquals(22000L, calculator.getRssMemorySize(), 0L);
+    assertEquals(-1L, calculator.getVirtualMemorySize(), 0L);
+  }
+
   private CGroupsV2ResourceCalculator createCalculator() {
     CGroupsV2ResourceCalculator calculator = new CGroupsV2ResourceCalculator("42");
     calculator.setCpuTimeTracker(mock(CpuTimeTracker.class));

@@ -95,10 +95,10 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
  */
   @Override
   public long getVirtualMemorySize(int olderThanAge) {
-    return 1 < olderThanAge ? UNAVAILABLE : calculateVirtualMemory();
+    return 1 < olderThanAge ? UNAVAILABLE : getVirtualMemorySize0();
   }
 
-  protected abstract long calculateVirtualMemory();
+  protected abstract long getVirtualMemorySize0();
 
   @Override
   public String getProcessTreeDump() {
