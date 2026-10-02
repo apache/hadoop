@@ -48,6 +48,7 @@ public class QueueCapacitiesInfo {
       return;
     }
     QueueCapacityVectorInfo queueCapacityVectorInfo;
+    QueueCapacityVectorInfo maximumQueueCapacityVectorInfo;
     float capacity;
     float usedCapacity;
     float maxCapacity;
@@ -62,6 +63,11 @@ public class QueueCapacitiesInfo {
       queueCapacityVectorInfo = queueCapacityVector == null ?
               new QueueCapacityVectorInfo(new QueueCapacityVector()) :
               new QueueCapacityVectorInfo(queue.getConfiguredCapacityVector(partitionName));
+      QueueCapacityVector maximumQueueCapacityVector =
+          queue.getConfiguredMaxCapacityVector(partitionName);
+      maximumQueueCapacityVectorInfo = maximumQueueCapacityVector == null ?
+          new QueueCapacityVectorInfo(new QueueCapacityVector()) :
+          new QueueCapacityVectorInfo(maximumQueueCapacityVector);
       usedCapacity = capacities.getUsedCapacity(partitionName) * 100;
       capacity = capacities.getCapacity(partitionName) * 100;
       maxCapacity = capacities.getMaximumCapacity(partitionName);
@@ -79,7 +85,8 @@ public class QueueCapacitiesInfo {
       weight = capacities.getWeight(partitionName);
       normalizedWeight = capacities.getNormalizedWeight(partitionName);
       queueCapacitiesByPartition.add(new PartitionQueueCapacitiesInfo(
-          partitionName, queueCapacityVectorInfo, capacity, usedCapacity, maxCapacity, absCapacity,
+          partitionName, queueCapacityVectorInfo, maximumQueueCapacityVectorInfo,
+          capacity, usedCapacity, maxCapacity, absCapacity,
           absUsedCapacity, absMaxCapacity,
           considerAMUsage ? maxAMLimitPercentage : 0f,
           weight, normalizedWeight,

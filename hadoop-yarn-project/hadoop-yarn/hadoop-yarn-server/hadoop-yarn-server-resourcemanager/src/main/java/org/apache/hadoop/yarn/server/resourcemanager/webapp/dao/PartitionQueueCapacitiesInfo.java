@@ -33,6 +33,7 @@ public class PartitionQueueCapacitiesInfo {
   private String partitionName;
 
   private QueueCapacityVectorInfo queueCapacityVectorInfo;
+  private QueueCapacityVectorInfo maximumQueueCapacityVectorInfo;
   private float capacity;
   private float usedCapacity;
   private float maxCapacity = 100;
@@ -52,6 +53,7 @@ public class PartitionQueueCapacitiesInfo {
 
   public PartitionQueueCapacitiesInfo(String partitionName,
       QueueCapacityVectorInfo queueCapacityVectorInfo,
+      QueueCapacityVectorInfo maximumQueueCapacityVectorInfo,
       float capacity, float usedCapacity, float maxCapacity, float absCapacity,
       float absUsedCapacity, float absMaxCapacity, float maxAMLimitPercentage,
       float weight, float normalizedWeight,
@@ -59,6 +61,7 @@ public class PartitionQueueCapacitiesInfo {
       Resource effMaxRes) {
     super();
     this.queueCapacityVectorInfo = queueCapacityVectorInfo;
+    this.maximumQueueCapacityVectorInfo = maximumQueueCapacityVectorInfo;
     this.partitionName = partitionName;
     this.capacity = capacity;
     this.usedCapacity = usedCapacity;
@@ -81,6 +84,15 @@ public class PartitionQueueCapacitiesInfo {
 
   public void setQueueCapacityVectorInfo(QueueCapacityVectorInfo queueCapacityVectorInfo) {
     this.queueCapacityVectorInfo = queueCapacityVectorInfo;
+  }
+
+  public QueueCapacityVectorInfo getMaximumQueueCapacityVectorInfo() {
+    return maximumQueueCapacityVectorInfo;
+  }
+
+  public void setMaximumQueueCapacityVectorInfo(
+      QueueCapacityVectorInfo maximumQueueCapacityVectorInfo) {
+    this.maximumQueueCapacityVectorInfo = maximumQueueCapacityVectorInfo;
   }
 
   public float getCapacity() {
