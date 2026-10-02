@@ -296,8 +296,14 @@ public class TestBalancerWithHANameNodes {
    * the results should be the same.
    */
   @Test
-  @Timeout(value = 60)
+  @Timeout(value = 180)
   public void testGetLiveDatanodeStorageReport() throws Exception {
+    // 180s, not 60s: standing up the HA topology and its datanodes is the
+    // dominant cost here and is what stalls on a loaded CI agent, and 60s
+    // left no margin for that bring-up alone. 180s is the largest budget
+    // already used by the observer tests in this class, which do
+    // comparable cluster work; it is a precautionary ceiling, not a
+    // measured requirement.
     Configuration conf = new HdfsConfiguration();
     TestBalancer.initConf(conf);
     assertEquals(TEST_CAPACITIES.length, TEST_RACKS.length);
