@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.conf.Configuration;
@@ -48,7 +51,10 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.TestInterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
@@ -60,6 +66,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestLeaseRecovery {
   static final int BLOCK_SIZE = 1024;
@@ -240,6 +247,79 @@ public class TestLeaseRecovery {
     final long expectedNewFileLen = FILE_SIZE - bytesPerChecksum;
     final long newFileLen = newdfs.getFileStatus(file).getLen();
     assertEquals(newFileLen, expectedNewFileLen);
+  }
+
+  /**
+   * A packet write that fails after its data reached the block file but
+   * before bytesOnDisk was updated leaves an RBW replica whose block file is
+   * longer than bytesOnDisk. Lease recovery must drop the unacknowledged tail
+   * and recover the replica instead of rejecting it with
+   * "Block length mismatch".
+   */
+  @Test
+  @Timeout(120)
+  public void testLeaseRecoveryAfterInterruptedPacketWrite() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    // A failed block recovery is only retried after 30 heartbeat intervals,
+    // well after this test stops waiting for the lease to be recovered.
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    Path file = new Path("/testLeaseRecoveryAfterInterruptedPacketWrite");
+    byte[] acked = AppendTestUtil.randomBytes(0xFEEDL, 4096);
+    byte[] unacked = AppendTestUtil.randomBytes(0xBEEFL, 1024);
+
+    FSDataOutputStream out = dfs.create(file, (short) 1);
+    out.write(acked);
+    out.hsync();
+
+    AtomicBoolean interruptNextWrite = new AtomicBoolean(true);
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+    DataNodeFaultInjector.set(new DataNodeFaultInjector() {
+      @Override
+      public void delayWriteToDisk() {
+        // The packet data is in the block file. Interrupt the receiver, as the
+        // PacketResponder does on an ack failure, so the following fsync fails
+        // with ClosedByInterruptException before bytesOnDisk is updated.
+        if (interruptNextWrite.getAndSet(false)) {
+          Thread.currentThread().interrupt();
+        }
+      }
+    });
+    try {
+      out.write(unacked);
+      out.hsync();
+      fail("hsync should fail after the interrupted packet write");
+    } catch (IOException expected) {
+      // the only datanode in the pipeline failed the write
+    } finally {
+      DataNodeFaultInjector.set(oldInjector);
+    }
+    assertFalse(interruptNextWrite.get(), "packet write was not interrupted");
+    ((DFSOutputStream) out.getWrappedStream()).abort();
+
+    ExtendedBlock block = cluster.getNameNodeRpc()
+        .getBlockLocations(file.toString(), 0, Long.MAX_VALUE).get(0)
+        .getBlock();
+    ReplicaInfo rbw = FsDatasetTestUtil.fetchReplicaInfo(
+        DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0)),
+        block.getBlockPoolId(), block.getBlockId());
+    assertEquals(acked.length, rbw.getBytesOnDisk());
+    assertEquals(acked.length + unacked.length, rbw.getBlockDataLength(),
+        "block file should contain the unacknowledged packet");
+
+    DistributedFileSystem newDfs = (DistributedFileSystem) FileSystem
+        .newInstance(cluster.getConfiguration(0));
+    GenericTestUtils.waitFor(() -> {
+      try {
+        return newDfs.recoverLease(file);
+      } catch (IOException e) {
+        return false;
+      }
+    }, 500, 15000);
+    assertEquals(acked.length, newDfs.getFileStatus(file).getLen());
+    assertArrayEquals(acked, DFSTestUtil.readFileAsBytes(newDfs, file));
   }
 
   /**
