@@ -547,6 +547,29 @@ public class TestSSLFactory {
     }
   }
 
+  /**
+   * Verify that SSLFactory in CLIENT mode loads the keystore when
+   * ssl.client.keystore.location is set, even if
+   * hadoop.ssl.require.client.cert is false (the default).
+   */
+  @Test
+  public void testClientKeystoreLoadedWhenLocationSet() throws Exception {
+    Configuration conf = createConfiguration(true, true);
+    conf.setBoolean(SSL_REQUIRE_CLIENT_CERT_KEY, false);
+    SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+    try {
+      sslFactory.init();
+      javax.net.ssl.KeyManager[] kms =
+          ((FileBasedKeyStoresFactory) sslFactory.getKeystoresFactory())
+              .getKeyManagers();
+      assertNotNull(kms, "KeyManagers must be loaded when keystore location"
+          + " is set in CLIENT mode");
+      assertTrue(kms.length > 0, "At least one KeyManager expected");
+    } finally {
+      sslFactory.destroy();
+    }
+  }
+
   @Test
   public void testNoClientCertsInitialization() throws Exception {
     Configuration conf = createConfiguration(false, true);

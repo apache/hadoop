@@ -29,6 +29,7 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManager;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -268,8 +269,32 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
         conf.get(resolvePropertyName(mode, SSL_KEYSTORE_TYPE_TPL_KEY),
                  DEFAULT_KEYSTORE_TYPE);
 
+    String keystoreLocationProperty =
+        resolvePropertyName(mode, SSL_KEYSTORE_LOCATION_TPL_KEY);
+    String keystoreLocation = conf.get(keystoreLocationProperty, "");
+    boolean keystoreFilePresent = !keystoreLocation.isEmpty()
+        && Files.exists(Paths.get(keystoreLocation));
+    boolean keystoreFileReadable = keystoreFilePresent
+        && Files.isReadable(Paths.get(keystoreLocation));
+    if (!keystoreLocation.isEmpty() && !keystoreFilePresent) {
+      LOG.warn("The property '" + keystoreLocationProperty + "' is set to '"
+          + keystoreLocation + "', but the keystore file does not exist.");
+    }
+
     if (requireClientCert || mode == SSLFactory.Mode.SERVER) {
       createKeyManagersFromConfiguration(mode, keystoreType, storesReloadInterval);
+    } else if (keystoreFileReadable) {
+      createKeyManagersFromConfiguration(mode, keystoreType, storesReloadInterval);
+    } else if (keystoreFilePresent) {
+      LOG.warn("Client keystore '{}' is not readable by user '{}'. " +
+          "Proceeding without client certificate.",
+          keystoreLocation, System.getProperty("user.name"));
+      KeyStore keystore = KeyStore.getInstance(keystoreType);
+      keystore.load(null, null);
+      KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance(
+          SSLFactory.KEY_MANAGER_SSLCERTIFICATE);
+      keyMgrFactory.init(keystore, null);
+      keyManagers = keyMgrFactory.getKeyManagers();
     } else {
       KeyStore keystore = KeyStore.getInstance(keystoreType);
       keystore.load(null, null);
@@ -289,7 +314,21 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       resolvePropertyName(mode, SSL_TRUSTSTORE_LOCATION_TPL_KEY);
     String truststoreLocation = conf.get(locationProperty, "");
     if (!truststoreLocation.isEmpty()) {
-      createTrustManagersFromConfiguration(mode, truststoreType, truststoreLocation, storesReloadInterval);
+      boolean truststoreFilePresent = Files.exists(Paths.get(truststoreLocation));
+      boolean truststoreFileReadable = truststoreFilePresent
+          && Files.isReadable(Paths.get(truststoreLocation));
+      if (mode == SSLFactory.Mode.SERVER || truststoreFileReadable) {
+        createTrustManagersFromConfiguration(mode, truststoreType, truststoreLocation, storesReloadInterval);
+      } else if (truststoreFilePresent) {
+        LOG.warn("Client truststore '{}' is not readable by user '{}'. " +
+            "Falling back to JVM default truststore.",
+            truststoreLocation, System.getProperty("user.name"));
+        trustManagers = null;
+      } else {
+        LOG.warn("Client truststore '{}' does not exist. " +
+            "Falling back to JVM default truststore.", truststoreLocation);
+        trustManagers = null;
+      }
     } else {
       if (LOG.isDebugEnabled()) {
         LOG.debug("The property '" + locationProperty + "' has not been set, " +
@@ -308,8 +347,13 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       }
     }
     catch (IOException ioe) {
-      LOG.warn("Exception while trying to get password for alias " + alias +
-          ": " + ioe.getMessage());
+      // Credential provider unavailable; fall back to the config value.
+      LOG.warn("Could not read password for alias '{}' from credential provider: {}. " +
+          "Falling back to config value.", alias, ioe.getMessage());
+      String configValue = conf.get(alias);
+      if (configValue != null && !configValue.isEmpty()) {
+        password = configValue;
+      }
     }
     return password;
   }
@@ -322,11 +366,9 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
     if (fileMonitoringTimer != null) {
       fileMonitoringTimer.cancel();
     }
-    if (trustManager != null) {
-      trustManager = null;
-      keyManagers = null;
-      trustManagers = null;
-    }
+    trustManager = null;
+    keyManagers = null;
+    trustManagers = null;
   }
 
   /**
