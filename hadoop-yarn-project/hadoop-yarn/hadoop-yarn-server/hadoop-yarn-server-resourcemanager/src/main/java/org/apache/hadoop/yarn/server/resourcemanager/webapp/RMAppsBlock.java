@@ -210,7 +210,9 @@ public class RMAppsBlock extends AppsBlock {
               || app.getAppState() == YarnApplicationState.NEW ? "Unassigned"
               : Apps.isApplicationFinalState(app.getAppState()) ?
               "History" : "ApplicationMaster";
-      appsTableData.append(trackingURL == null ? "#" : "href='" + trackingURL)
+      appsTableData.append(trackingURL == null ? "#" : "href='"
+          + StringEscapeUtils.escapeEcmaScript(
+              StringEscapeUtils.escapeHtml4(trackingURL)))
         .append("'>").append(trackingUI).append("</a>\",").append("\"")
         .append(blacklistedNodesCount).append("\"],\n");
 
