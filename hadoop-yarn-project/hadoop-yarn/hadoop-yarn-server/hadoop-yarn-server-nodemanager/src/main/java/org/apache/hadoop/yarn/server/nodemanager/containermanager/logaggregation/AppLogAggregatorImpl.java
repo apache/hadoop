@@ -332,7 +332,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     LOG.debug("Cycle #{} of log aggregator", logAggregationTimes);
     String diagnosticMessage = "";
     boolean logAggregationSucceedInThisCycle = true;
-    DeletionTask deletionTask = null;
+    List<DeletionTask> deletionTasks = new ArrayList<>();
     try {
       try {
         logAggregationFileController.initializeWriter(logControllerContext);
@@ -374,8 +374,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
                 }
               }
             }
-            deletionTask = new FileDeletionTask(delService, this.userUgi.getShortUserName(), null,
-                uploadedFilePathsInThisCycleList);
+            deletionTasks.add(new FileDeletionTask(delService,
+                this.userUgi.getShortUserName(), null,
+                uploadedFilePathsInThisCycleList));
           }
         }
 
@@ -411,8 +412,10 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         logAggregationSucceedInThisCycle = false;
         exc = e;
       }
-      if (logAggregationSucceedInThisCycle && deletionTask != null) {
-        delService.delete(deletionTask);
+      if (logAggregationSucceedInThisCycle) {
+        for (DeletionTask deletionTask : deletionTasks) {
+          delService.delete(deletionTask);
+        }
       }
       if (diagnosticMessage != null && !diagnosticMessage.isEmpty()) {
         LOG.debug("Sending log aggregation report along with the " +
