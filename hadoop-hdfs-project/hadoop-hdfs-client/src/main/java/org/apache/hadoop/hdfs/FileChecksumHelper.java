@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
 import org.apache.hadoop.fs.Options.ChecksumCombineMode;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.hdfs.protocol.BlockChecksumOptions;
 import org.apache.hadoop.hdfs.protocol.BlockChecksumType;
@@ -240,14 +241,24 @@ final class FileChecksumHelper {
        * magic entry that matches what previous hdfs versions return.
        */
       if (locatedBlocks == null || locatedBlocks.isEmpty()) {
-        // Explicitly specified here in case the default DataOutputBuffer
-        // buffer length value is changed in future. This matters because the
-        // fixed value 32 has to be used to repeat the magic value for previous
-        // HDFS version.
-        final int lenOfZeroBytes = 32;
-        byte[] emptyBlockMd5 = new byte[lenOfZeroBytes];
-        MD5Hash fileMD5 = MD5Hash.digest(emptyBlockMd5);
-        fileChecksum =  new MD5MD5CRC32GzipFileChecksum(0, 0, fileMD5);
+        if (combineMode == ChecksumCombineMode.COMPOSITE_CRC) {
+          // For COMPOSITE_CRC mode return a zero CRC with the client's
+          // configured checksum type rather than a legacy MD5MD5CRC value.
+          ChecksumOpt checksumOpt = client.getConf().getDefaultChecksumOpt();
+          fileChecksum = new CompositeCrcFileChecksum(
+              0, checksumOpt.getChecksumType(), checksumOpt.getBytesPerChecksum());
+        } else {
+          // MD5MD5CRC mode: return the magic empty entry that matches what
+          // previous HDFS versions return for backward compatibility.
+          // Explicitly specified here in case the default DataOutputBuffer
+          // buffer length value is changed in future. This matters because the
+          // fixed value 32 has to be used to repeat the magic value for previous
+          // HDFS version.
+          final int lenOfZeroBytes = 32;
+          byte[] emptyBlockMd5 = new byte[lenOfZeroBytes];
+          MD5Hash fileMD5 = MD5Hash.digest(emptyBlockMd5);
+          fileChecksum = new MD5MD5CRC32GzipFileChecksum(0, 0, fileMD5);
+        }
       } else {
         checksumBlocks();
         fileChecksum = makeFinalResult();
