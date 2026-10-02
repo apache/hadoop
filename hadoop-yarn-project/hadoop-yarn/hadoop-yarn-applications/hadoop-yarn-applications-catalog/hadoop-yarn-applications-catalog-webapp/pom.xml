@@ -541,6 +541,54 @@
 
     <profiles>
       <profile>
+        <id>phantomjs-openssl-compat</id>
+        <activation>
+          <os>
+            <family>unix</family>
+          </os>
+        </activation>
+        <build>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-antrun-plugin</artifactId>
+              <executions>
+                <execution>
+                  <id>create-phantomjs-openssl-wrapper</id>
+                  <phase>process-test-sources</phase>
+                  <goals>
+                    <goal>run</goal>
+                  </goals>
+                  <configuration>
+                    <target>
+                      <!-- PhantomJS 2.1.1 cannot parse an OpenSSL 3 configuration.
+                           Limit the workaround to the PhantomJS child process. -->
+                      <echo file="${project.build.directory}/phantomjs-openssl-wrapper">#!/bin/sh
+export OPENSSL_CONF=/dev/null
+exec "${phantomjs.binary}" "$@"</echo>
+                      <chmod file="${project.build.directory}/phantomjs-openssl-wrapper"
+                          perm="755"/>
+                    </target>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
+            <plugin>
+              <groupId>com.github.searls</groupId>
+              <artifactId>jasmine-maven-plugin</artifactId>
+              <configuration>
+                <webDriverCapabilities combine.self="override">
+                  <capability>
+                    <name>phantomjs.binary.path</name>
+                    <value>${project.build.directory}/phantomjs-openssl-wrapper</value>
+                  </capability>
+                </webDriverCapabilities>
+              </configuration>
+            </plugin>
+          </plugins>
+        </build>
+      </profile>
+      <profile>
         <id>parallel-tests</id>
         <build>
           <plugins>
