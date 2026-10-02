@@ -86,7 +86,7 @@ public class DFSck extends Configured implements Tool {
       + "[-files [-blocks [-locations | -racks | -replicaDetails | " +
           "-upgradedomains]]]] "
       + "[-includeSnapshots] [-showprogress] "
-      + "[-storagepolicies] [-maintenance] "
+      + "[-storagepolicies] [-maintenance] [-favored-nodes] "
       + "[-blockId <blk_Id>] [-replicate]\n"
       + "\t<path>\tstart checking from this path\n"
       + "\t-move\tmove corrupted files to /lost+found\n"
@@ -107,6 +107,8 @@ public class DFSck extends Configured implements Tool {
           "every block\n"
       + "\t-storagepolicies\tprint out storage policy summary for the blocks\n"
       + "\t-maintenance\tprint out maintenance state node details\n"
+      + "\t-favored-nodes\tprint out affinity-based favored datanodes for each"
+      + " file\n"
       + "\t-showprogress\tDeprecated. Progress is now shown by default\n"
       + "\t-blockId\tprint out which file this blockId belongs to, locations"
       + " (nodes, racks) of this block, and other diagnostics info"
@@ -290,6 +292,7 @@ public class DFSck extends Configured implements Tool {
     url.append("/fsck?ugi=").append(ugi.getShortUserName());
     String dir = null;
     boolean doListCorruptFileBlocks = false;
+    boolean findFavoredNodes = false;
     for (int idx = 0; idx < args.length; idx++) {
       if (args[idx].equals("-move")) { url.append("&move=1"); }
       else if (args[idx].equals("-delete")) { url.append("&delete=1"); }
@@ -324,6 +327,9 @@ public class DFSck extends Configured implements Tool {
         url.append("&blockId=").append(URLEncoder.encode(sb.toString(), "UTF-8"));
       } else if (args[idx].equals("-replicate")) {
         url.append("&replicate=1");
+      } else if (args[idx].equals("-favored-nodes")) {
+        url.append("&favorednodes=1");
+        findFavoredNodes = true;
       } else if (!args[idx].startsWith("-")) {
         if (null == dir) {
           dir = args[idx];
@@ -347,7 +353,20 @@ public class DFSck extends Configured implements Tool {
     Path dirpath = null;
     URI namenodeAddress = null;
     try {
-      dirpath = getResolvedPath(dir);
+      // Resolve mount points / symlinks so the correct NameNode is discovered
+      // even for a viewfs-mounted HDFS path. In -favored-nodes mode the target
+      // path is not required to exist (it is a dry-run that reports which
+      // DataNodes WOULD be favored), and resolvePath() fails for a non-existent
+      // path, so fall back to the raw input path only in that case.
+      try {
+        dirpath = getResolvedPath(dir);
+      } catch (IOException resolveEx) {
+        if (findFavoredNodes) {
+          dirpath = new Path(dir);
+        } else {
+          throw resolveEx;
+        }
+      }
       namenodeAddress = getCurrentNamenodeAddress(dirpath);
     } catch (IOException ioe) {
       System.err.println("FileSystem is inaccessible due to:\n"
