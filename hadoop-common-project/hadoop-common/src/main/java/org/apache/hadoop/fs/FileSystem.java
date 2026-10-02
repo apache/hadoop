@@ -820,8 +820,42 @@ public abstract class FileSystem extends Configured
           return;
       }
     }
-    throw new IllegalArgumentException("Wrong FS: " + path +
-                                       ", expected: " + this.getUri());
+    throw new IllegalArgumentException(getWrongFsErrorMsg(path));
+  }
+
+  /**
+   * Build the "Wrong FS" error message thrown by {@link #checkPath(Path)},
+   * appending a diagnostic hint when the path's URI has an unexpectedly
+   * missing authority component while this FileSystem has one.
+   *
+   * <p>This situation is typically caused by a stray {@code "//"} in the
+   * input, which {@link java.net.URI} reinterprets as an authority
+   * delimiter (see HADOOP-8087). For example, {@code "scheme:////file"}
+   * parses to a URI with a {@code null} authority, and joining
+   * {@code "scheme://host/"} with a child path beginning with {@code "//"}
+   * promotes the child's leading segment into the authority position and
+   * silently drops the intended host. In either case, the resulting
+   * {@code Path.toString()} no longer contains the host/bucket the caller
+   * supplied, which makes the plain "Wrong FS" message misleading.
+   *
+   * @param path the path that failed the check
+   * @return an error message suitable for {@link IllegalArgumentException}
+   */
+  private String getWrongFsErrorMsg(Path path) {
+    StringBuilder msg = new StringBuilder("Wrong FS: ")
+        .append(path).append(", expected: ").append(this.getUri());
+    URI pathUri = path.toUri();
+    URI fsUri = this.getUri();
+    if (pathUri.getScheme() != null
+        && pathUri.getAuthority() == null
+        && fsUri.getAuthority() != null) {
+      msg.append(" (the path's URI has no authority; this is often caused"
+          + " by a stray '//' in the input, e.g. 'scheme:////file' or a"
+          + " child path beginning with '//', which java.net.URI treats"
+          + " as an authority delimiter and drops the intended"
+          + " host/bucket - see HADOOP-8087)");
+    }
+    return msg.toString();
   }
 
   /**
