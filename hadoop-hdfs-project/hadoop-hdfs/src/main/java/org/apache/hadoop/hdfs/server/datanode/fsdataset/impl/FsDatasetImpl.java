@@ -3091,6 +3091,22 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             + replica);
       }
 
+      // A packet write that fails after its data reached the block file but
+      // before bytesOnDisk was updated (e.g. ClosedByInterruptException while
+      // syncing) leaves an unacknowledged tail in the block file. Drop it, as
+      // recoverRbwImpl does for pipeline recovery (HDFS-11472), instead of
+      // failing checkReplicaFiles and excluding the replica from recovery.
+      final long bytesOnDisk = replica.getBytesOnDisk();
+      final long blockDataLength = replica.getBlockDataLength();
+      if (blockDataLength > bytesOnDisk) {
+        LOG.warn("initReplicaRecovery: truncating {} from block file length {}"
+            + " to bytesOnDisk {}", replica, blockDataLength, bytesOnDisk);
+        replica.breakHardLinksIfNeeded();
+        replica.truncateBlock(bytesOnDisk);
+        replica.setNumBytes(bytesOnDisk);
+        rip.setLastChecksumAndDataLen(bytesOnDisk, null);
+      }
+
       //check the replica's files
       checkReplicaFiles(replica);
     }
