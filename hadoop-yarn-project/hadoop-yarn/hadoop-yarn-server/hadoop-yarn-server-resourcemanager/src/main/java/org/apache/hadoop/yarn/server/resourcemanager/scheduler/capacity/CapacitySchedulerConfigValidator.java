@@ -24,6 +24,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueHierarchyTransitionChecks.QueueKind;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueHierarchyTransitionChecks.QueueSnapshot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,15 +68,13 @@ public final class CapacitySchedulerConfigValidator {
 
   public static Set<String> validatePlacementRules(
           Collection<String> placementRuleStrs) throws IOException {
-    Set<String> distinguishRuleSet = new LinkedHashSet<>();
     // fail the case if we get duplicate placementRule add in
-    for (String pls : placementRuleStrs) {
-      if (!distinguishRuleSet.add(pls)) {
-        throw new IOException("Invalid PlacementRule inputs which "
-                + "contains duplicate rule strings");
-      }
+    String error = PlacementRuleChecks.checkDuplicatePlacementRules(
+            new PlacementRuleChecks.PlacementRuleNames(placementRuleStrs));
+    if (error != null) {
+      throw new IOException(error);
     }
-    return distinguishRuleSet;
+    return new LinkedHashSet<>(placementRuleStrs);
   }
 
   public static void validateMemoryAllocation(Configuration conf) {
@@ -85,14 +85,10 @@ public final class CapacitySchedulerConfigValidator {
             YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
 
-    if (minMem <= 0 || minMem > maxMem) {
-      throw new YarnRuntimeException("Invalid resource scheduler memory"
-              + " allocation configuration"
-              + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB
-              + "=" + minMem
-              + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-              + "=" + maxMem + ", min and max should be greater than 0"
-              + ", max should be no smaller than min.");
+    String error = QueueAllocationChecks.checkMemoryAllocation(
+            new QueueAllocationChecks.AllocationRange(minMem, maxMem));
+    if (error != null) {
+      throw new YarnRuntimeException(error);
     }
   }
   public static void validateVCores(Configuration conf) {
@@ -103,14 +99,10 @@ public final class CapacitySchedulerConfigValidator {
             YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
 
-    if (minVcores <= 0 || minVcores > maxVcores) {
-      throw new YarnRuntimeException("Invalid resource scheduler vcores"
-              + " allocation configuration"
-              + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES
-              + "=" + minVcores
-              + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
-              + "=" + maxVcores + ", min and max should be greater than 0"
-              + ", max should be no smaller than min.");
+    String error = QueueAllocationChecks.checkVcoresAllocation(
+            new QueueAllocationChecks.AllocationRange(minVcores, maxVcores));
+    if (error != null) {
+      throw new YarnRuntimeException(error);
     }
   }
 
@@ -138,92 +130,78 @@ public final class CapacitySchedulerConfigValidator {
       final String queuePath = oldQueue.getQueuePath();
       final String configPrefix = QueuePrefixes.getQueuePrefix(
           oldQueue.getQueuePathObject());
-      final QueueState newQueueState = createQueueState(newConf.get(configPrefix + "state"),
-          queuePath);
+      final QueueState newQueueState = QueueHierarchyTransitionChecks.parseConfiguredState(
+          newConf.get(configPrefix + "state"), queuePath);
       final CSQueue newQueue = newQueues.get(queuePath);
+      final QueueSnapshot oldSnapshot = toSnapshot(oldQueue);
 
       if (null == newQueue) {
         // old queue doesn't exist in the new XML
+        String removalError = QueueHierarchyTransitionChecks.checkQueueRemoval(
+            oldSnapshot, newQueueState);
+        if (removalError != null) {
+          throw new IOException(removalError);
+        }
         if (isEitherQueueStopped(oldQueue.getState(), newQueueState)) {
           LOG.info("Deleting Queue {}, as it is not present in the modified capacity " +
               "configuration xml", queuePath);
-        } else {
-          if (!isDynamicQueue(oldQueue)) {
-            throw new IOException(oldQueue.getQueuePath() + " cannot be"
-                + " deleted from the capacity scheduler configuration, as the"
-                + " queue is not yet in stopped state. Current State : "
-                + oldQueue.getState());
-          }
         }
       } else {
-        validateSameQueuePath(oldQueue, newQueue);
-        validateParentQueueConversion(oldQueue, newQueue);
-        validateLeafQueueConversion(oldQueue, newQueue);
+        QueueSnapshot newSnapshot = toSnapshot(newQueue);
+        validateSameQueuePath(oldSnapshot, newSnapshot);
+        validateParentQueueConversion(oldSnapshot, newSnapshot);
+        validateLeafQueueConversion(oldSnapshot, newSnapshot);
       }
     }
   }
 
-  private static void validateSameQueuePath(CSQueue oldQueue, CSQueue newQueue) throws IOException {
-    if (!oldQueue.getQueuePath().equals(newQueue.getQueuePath())) {
+  private static void validateSameQueuePath(QueueSnapshot oldQueue, QueueSnapshot newQueue)
+      throws IOException {
+    String error = QueueHierarchyTransitionChecks.checkSameQueuePath(oldQueue, newQueue);
+    if (error != null) {
       // Queues cannot be moved from one hierarchy to another
-      throw new IOException(
-          oldQueue.getQueuePath() + " is moved from:" + oldQueue.getQueuePath() + " to:"
-              + newQueue.getQueuePath()
-              + " after refresh, which is not allowed.");
+      throw new IOException(error);
     }
   }
 
-  private static void validateParentQueueConversion(CSQueue oldQueue,
-                                                    CSQueue newQueue) throws IOException {
-    if (oldQueue instanceof AbstractParentQueue) {
-      if (!(oldQueue instanceof ManagedParentQueue) && newQueue instanceof ManagedParentQueue) {
-        throw new IOException(
-            "Can not convert parent queue: " + oldQueue.getQueuePath()
-                + " to auto create enabled parent queue since "
-                + "it could have other pre-configured queues which is not "
-                + "supported");
-      }
+  private static void validateParentQueueConversion(QueueSnapshot oldQueue,
+                                                    QueueSnapshot newQueue) throws IOException {
+    String error = QueueHierarchyTransitionChecks.checkParentQueueConversion(oldQueue, newQueue);
+    if (error != null) {
+      throw new IOException(error);
+    }
 
-      if (oldQueue instanceof ManagedParentQueue
-          && !(newQueue instanceof ManagedParentQueue)) {
-        throw new IOException(
-            "Cannot convert auto create enabled parent queue: "
-                + oldQueue.getQueuePath() + " to leaf queue. Please check "
-                + " parent queue's configuration "
-                + CapacitySchedulerConfiguration.AUTO_CREATE_CHILD_QUEUE_ENABLED
-                + " is set to true");
-      }
-
-      if (newQueue instanceof AbstractLeafQueue) {
-        LOG.info("Converting the parent queue: {} to leaf queue.", oldQueue.getQueuePath());
-      }
+    if (QueueHierarchyTransitionChecks.isParent(oldQueue.getKind())
+        && newQueue.getKind() == QueueKind.LEAF) {
+      LOG.info("Converting the parent queue: {} to leaf queue.", oldQueue.getQueuePath());
     }
   }
 
-  private static void validateLeafQueueConversion(CSQueue oldQueue,
-                                                  CSQueue newQueue) throws IOException {
-    if (oldQueue instanceof AbstractLeafQueue && newQueue instanceof AbstractParentQueue) {
-      if (isEitherQueueStopped(oldQueue.getState(), newQueue.getState())) {
-        LOG.info("Converting the leaf queue: {} to parent queue.", oldQueue.getQueuePath());
-      } else {
-        throw new IOException(
-            "Can not convert the leaf queue: " + oldQueue.getQueuePath()
-                + " to parent queue since "
-                + "it is not yet in stopped state. Current State : "
-                + oldQueue.getState());
-      }
+  private static void validateLeafQueueConversion(QueueSnapshot oldQueue,
+                                                  QueueSnapshot newQueue) throws IOException {
+    String error = QueueHierarchyTransitionChecks.checkLeafQueueConversion(oldQueue, newQueue);
+    if (error != null) {
+      throw new IOException(error);
+    }
+
+    if (QueueHierarchyTransitionChecks.isLeafToParentConversion(oldQueue, newQueue)) {
+      LOG.info("Converting the leaf queue: {} to parent queue.", oldQueue.getQueuePath());
     }
   }
 
-  private static QueueState createQueueState(String state, String queuePath) {
-    if (state != null) {
-      try {
-        return QueueState.valueOf(state);
-      } catch (Exception ex) {
-        LOG.warn("Not a valid queue state for queue: {}, state: {}", queuePath, state);
-      }
+  private static QueueSnapshot toSnapshot(CSQueue queue) {
+    QueueKind kind;
+    if (queue instanceof ManagedParentQueue) {
+      kind = QueueKind.MANAGED_PARENT;
+    } else if (queue instanceof AbstractParentQueue) {
+      kind = QueueKind.PARENT;
+    } else if (queue instanceof AbstractLeafQueue) {
+      kind = QueueKind.LEAF;
+    } else {
+      kind = QueueKind.OTHER;
     }
-    return null;
+    return new QueueSnapshot(queue.getQueuePath(), kind, queue.getState(),
+        isDynamicQueue(queue));
   }
 
   private static boolean isDynamicQueue(CSQueue csQueue) {
@@ -231,6 +209,6 @@ public final class CapacitySchedulerConfigValidator {
   }
 
   private static boolean isEitherQueueStopped(QueueState a, QueueState b) {
-    return a == QueueState.STOPPED || b == QueueState.STOPPED;
+    return QueueHierarchyTransitionChecks.isEitherQueueStopped(a, b);
   }
 }

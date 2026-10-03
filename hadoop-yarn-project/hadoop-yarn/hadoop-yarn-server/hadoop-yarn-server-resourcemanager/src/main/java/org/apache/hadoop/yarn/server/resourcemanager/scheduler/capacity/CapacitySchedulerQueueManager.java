@@ -251,8 +251,12 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     boolean isAutoQueueCreationEnabledParent = isDynamicParent || conf.isAutoQueueCreationV2Enabled(
         queueToParse) || isAutoCreateEnabled;
 
-    if (childQueueNames.size() == 0 && !isAutoQueueCreationEnabledParent) {
-      validateParent(parent, queueName);
+    QueueStructureChecks.QueueStructureInput structure =
+        new QueueStructureChecks.QueueStructureInput(queueToParse.getFullPath(), queueName,
+            parent == null, childQueueNames.size(), isReservableQueue,
+            isAutoQueueCreationEnabledParent);
+    if (!QueueStructureChecks.isParent(structure)) {
+      validateParent(structure);
       // Check if the queue will be dynamically managed by the Reservation system
       if (isReservableQueue) {
         queue = new PlanQueue(queueContext, queueName, parent,
@@ -266,9 +270,9 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
 
       queue = hook.hook(queue);
     } else {
-      if (isReservableQueue) {
-        throw new IllegalStateException("Only Leaf Queues can be reservable for " +
-            queueToParse.getFullPath());
+      String reservableError = QueueStructureChecks.checkReservable(structure);
+      if (reservableError != null) {
+        throw new IllegalStateException(reservableError);
       }
 
       AbstractParentQueue parentQueue;
@@ -736,10 +740,10 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     return !isDynamicQueue(parent);
   }
 
-  private static void validateParent(CSQueue parent, String queueName) {
-    if (parent == null) {
-      throw new IllegalStateException("Queue configuration missing child queue names for "
-          + queueName);
+  private static void validateParent(QueueStructureChecks.QueueStructureInput structure) {
+    String error = QueueStructureChecks.checkRootHasChildQueues(structure);
+    if (error != null) {
+      throw new IllegalStateException(error);
     }
   }
 }

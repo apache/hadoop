@@ -100,10 +100,10 @@ public class PlanQueue extends AbstractManagedParentQueue {
 
       PlanQueue newlyParsedParentQueue = (PlanQueue) newlyParsedQueue;
 
-      if (newlyParsedParentQueue.getChildQueues().size() != 1) {
-        throw new IOException(
-            "Reservable Queue should not have sub-queues in the"
-                + "configuration expect the default reservation queue");
+      String childQueuesError = QueueStructureChecks.checkPlanQueueChildren(
+          newlyParsedParentQueue.getChildQueues().size());
+      if (childQueuesError != null) {
+        throw new IOException(childQueuesError);
       }
 
       // Set new configs

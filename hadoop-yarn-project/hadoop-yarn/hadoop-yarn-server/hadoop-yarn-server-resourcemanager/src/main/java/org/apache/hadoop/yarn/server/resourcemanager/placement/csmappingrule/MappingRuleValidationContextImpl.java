@@ -17,15 +17,16 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks.QueueIndex;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks.QueueKind;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks.QueueRef;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 
 import java.util.*;
 
@@ -44,13 +45,18 @@ public class MappingRuleValidationContextImpl
   private Set<String> immutableVariables = Sets.newHashSet();
 
   /**
-   * For queue path validations we need an instance of the queue manager
+   * For queue path validations we need a queue index
    * to look up queues and their parents.
    */
-  private final CapacitySchedulerQueueManager queueManager;
+  private final QueueIndex queueIndex;
 
   public MappingRuleValidationContextImpl(CapacitySchedulerQueueManager qm) {
-    queueManager = qm;
+    this(PlacementRuleChecks.queueIndexOf(qm));
+  }
+
+  @InterfaceAudience.Private
+  public MappingRuleValidationContextImpl(QueueIndex queueIndex) {
+    this.queueIndex = queueIndex;
   }
 
   /**
@@ -65,10 +71,10 @@ public class MappingRuleValidationContextImpl
   private boolean validateStaticQueuePath(QueuePath path)
       throws YarnException {
     String normalizedPath = MappingRuleValidationHelper.normalizeQueuePathRoot(
-        queueManager, path.getFullPath());
+        queueIndex, path.getFullPath());
     MappingRuleValidationHelper.ValidationResult validity =
         MappingRuleValidationHelper.validateQueuePathAutoCreation(
-            queueManager, normalizedPath);
+            queueIndex, normalizedPath);
 
     switch (validity) {
     case AMBIGUOUS_PARENT:
@@ -90,8 +96,8 @@ public class MappingRuleValidationContextImpl
           "and no queue exists with name '" + path.getLeafName() +
           "' under it.");
     case QUEUE_EXISTS:
-      CSQueue queue = queueManager.getQueue(normalizedPath);
-      if (!(queue instanceof AbstractLeafQueue)) {
+      QueueRef queue = queueIndex.getQueue(normalizedPath);
+      if (queue == null || !queue.isLeaf()) {
         throw new YarnException("Target queue '" + path.getFullPath() +
             "' but it's not a leaf queue.");
       }
@@ -152,12 +158,12 @@ public class MappingRuleValidationContextImpl
 
     String normalizedStaticPart =
         MappingRuleValidationHelper.normalizeQueuePathRoot(
-            queueManager, staticPart);
-    CSQueue queue = queueManager.getQueue(normalizedStaticPart);
+            queueIndex, staticPart);
+    QueueRef queue = queueIndex.getQueue(normalizedStaticPart);
     //if the static part of our queue exists, and it's not a leaf queue,
     //we cannot do any deeper validation
     if (queue != null) {
-      if (queue instanceof AbstractLeafQueue) {
+      if (queue.isLeaf()) {
         throw new YarnException("Queue path '" + path +"' is invalid " +
             "because '" + normalizedStaticPart + "' is a leaf queue, " +
             "which can have no other queues under it.");
@@ -168,8 +174,8 @@ public class MappingRuleValidationContextImpl
     if (staticPartParent != null) {
       String normalizedStaticPartParent
           = MappingRuleValidationHelper.normalizeQueuePathRoot(
-              queueManager, staticPartParent);
-      queue = queueManager.getQueue(normalizedStaticPartParent);
+              queueIndex, staticPartParent);
+      queue = queueIndex.getQueue(normalizedStaticPartParent);
       //if the parent of our static part is eligible for creation, we validate
       //this rule
       if (isDynamicParent(queue)) {
@@ -185,20 +191,20 @@ public class MappingRuleValidationContextImpl
   /**
    * This method determines if a queue is eligible for being a parent queue.
    * Since YARN-10506 not only managed parent queues can have child queues.
-   * @param queue The queue object
+   * @param queue The queue reference
    * @return true if queues can be created under this queue otherwise false
    */
-  private boolean isDynamicParent(CSQueue queue) {
+  private boolean isDynamicParent(QueueRef queue) {
     if (queue == null) {
       return false;
     }
 
-    if (queue instanceof ManagedParentQueue) {
+    if (queue.getKind() == QueueKind.MANAGED_PARENT) {
       return true;
     }
 
-    if (queue instanceof ParentQueue) {
-      return ((ParentQueue)queue).isEligibleForAutoQueueCreation();
+    if (queue.getKind() == QueueKind.PARENT) {
+      return queue.isEligibleForAutoQueueCreation();
     }
 
     return false;

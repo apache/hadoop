@@ -125,11 +125,10 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     float rawCapacity = queueContext.getConfiguration()
           .getNonLabeledQueueCapacity(this.queuePath);
 
-    if (rootQueue &&
-          (rawCapacity != CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE)) {
-      throw new IllegalArgumentException("Illegal " +
-            "capacity of " + rawCapacity + " for queue " + queueName +
-            ". Must be " + CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE);
+    String rootCapacityError =
+        QueueCapacityChecks.checkRootCapacity(queueName, rootQueue, rawCapacity);
+    if (rootCapacityError != null) {
+      throw new IllegalArgumentException(rootCapacityError);
     }
 
     this.childQueues = new ArrayList<>();
@@ -199,79 +198,34 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     }
   }
 
-  private static float PRECISION = 0.0005f; // 0.05% precision
-
   // Check weight configuration, throw exception when configuration is invalid
   // return true when all children use weight mode.
   public QueueCapacityType getCapacityConfigurationTypeForQueues(
       Collection<CSQueue> queues) throws IOException {
-    // Do we have ANY queue set capacity in any labels?
-    boolean percentageIsSet = false;
+    Collection<String> labels = queueCapacities.getExistingNodeLabels();
+    List<QueueCapacityChecks.QueueCapacityInput> inputs = getCapacityInputs(queues, labels);
+    String error = QueueCapacityChecks.checkCapacityTypesNotMixed(getQueuePath(), labels,
+        inputs);
+    if (error != null) {
+      throw new IOException(error);
+    }
+    return QueueCapacityChecks.getCapacityConfigurationType(labels, inputs);
+  }
 
-    // Do we have ANY queue set weight in any labels?
-    boolean weightIsSet = false;
-
-    // Do we have ANY queue set absolute in any labels?
-    boolean absoluteMinResSet = false;
-
-    StringBuilder diagMsg = new StringBuilder();
-
+  private List<QueueCapacityChecks.QueueCapacityInput> getCapacityInputs(
+      Collection<CSQueue> queues, Collection<String> labels) {
+    List<QueueCapacityChecks.QueueCapacityInput> inputs = new ArrayList<>(queues.size());
     for (CSQueue queue : queues) {
-      for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
-        float capacityByLabel = queue.getQueueCapacities().getCapacity(nodeLabel);
-        if (capacityByLabel > 0) {
-          percentageIsSet = true;
-        }
-        float weightByLabel = queue.getQueueCapacities().getWeight(nodeLabel);
-        // By default weight is set to -1, so >= 0 is enough.
-        if (weightByLabel >= 0) {
-          weightIsSet = true;
-          diagMsg.append(
-              "{Queue=" + queue.getQueuePath() + ", label=" + nodeLabel
-                  + " uses weight mode}. ");
-        }
-        if (checkConfigTypeIsAbsoluteResource(queue.getQueuePathObject(), nodeLabel)) {
-          absoluteMinResSet = true;
-          // There's a special handling: when absolute resource is configured,
-          // capacity will be calculated (and set) for UI/metrics purposes, so
-          // when asboluteMinResource is set, unset percentage
-          percentageIsSet = false;
-          diagMsg.append(
-              "{Queue=" + queue.getQueuePath() + ", label=" + nodeLabel
-                  + " uses absolute mode}. ");
-        }
-        if (percentageIsSet) {
-          diagMsg.append(
-              "{Queue=" + queue.getQueuePath() + ", label=" + nodeLabel
-                  + " uses percentage mode}. ");
-        }
+      Map<String, QueueCapacityChecks.LabelCapacity> byLabel = new HashMap<>();
+      for (String nodeLabel : labels) {
+        byLabel.put(nodeLabel, new QueueCapacityChecks.LabelCapacity(
+            queue.getQueueCapacities().getCapacity(nodeLabel),
+            queue.getQueueCapacities().getWeight(nodeLabel),
+            checkConfigTypeIsAbsoluteResource(queue.getQueuePathObject(), nodeLabel)));
       }
+      inputs.add(new QueueCapacityChecks.QueueCapacityInput(queue.getQueuePath(), byLabel));
     }
-    // If we have mixed capacity, weight or absolute resource (any of the two)
-    // We will throw exception
-    // Root queue is an exception here, because by default root queue returns
-    // 100 as capacity no matter what. We should look into this case in the
-    // future. To avoid impact too many code paths, we don;t check root queue's
-    // config.
-    if (queues.iterator().hasNext() &&
-        !queues.iterator().next().getQueuePath().equals(
-        CapacitySchedulerConfiguration.ROOT) &&
-        (percentageIsSet ? 1 : 0) + (weightIsSet ? 1 : 0) + (absoluteMinResSet ?
-            1 :
-            0) > 1) {
-      throw new IOException("Parent queue '" + getQueuePath()
-          + "' have children queue used mixed of "
-          + " weight mode, percentage and absolute mode, it is not allowed, please "
-          + "double check, details:" + diagMsg.toString());
-    }
-
-    if (weightIsSet || queues.isEmpty()) {
-      return QueueCapacityType.WEIGHT;
-    } else if (absoluteMinResSet) {
-      return QueueCapacityType.ABSOLUTE_RESOURCE;
-    } else {
-      return QueueCapacityType.PERCENT;
-    }
+    return inputs;
   }
 
   public enum QueueCapacityType {
@@ -310,86 +264,46 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
             || parentCapacityType == QueueCapacityType.ABSOLUTE_RESOURCE) {
           // We don't allow any mixed absolute + {weight, percentage} between
           // children and parent
-          if (childrenCapacityType != parentCapacityType && !this.getQueuePath()
-              .equals(CapacitySchedulerConfiguration.ROOT)) {
-            throw new IOException("Parent=" + this.getQueuePath()
-                + ": When absolute minResource is used, we must make sure both "
-                + "parent and child all use absolute minResource");
+          String mixedError =
+              QueueCapacityChecks.checkAbsoluteResourceUsedByParentAndChildren(
+                  getQueuePath(), parentCapacityType, childrenCapacityType);
+          if (mixedError != null) {
+            throw new IOException(mixedError);
           }
 
           // Ensure that for each parent queue: parent.min-resource >=
           // Σ(child.min-resource).
           for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
-            Resource minRes = Resources.createResource(0, 0);
+            List<Resource> childrenMinResources = new ArrayList<>(childQueues.size());
             for (CSQueue queue : childQueues) {
-              // Accumulate all min/max resource configured for all child queues.
-              Resources.addTo(minRes, queue.getQueueResourceQuotas()
+              childrenMinResources.add(queue.getQueueResourceQuotas()
                   .getConfiguredMinResource(nodeLabel));
             }
             Resource resourceByLabel = labelManager.getResourceByLabel(nodeLabel,
                 queueContext.getClusterResource());
             Resource parentMinResource =
                 usageTracker.getQueueResourceQuotas().getConfiguredMinResource(nodeLabel);
-            if (!parentMinResource.equals(Resources.none()) && Resources.lessThan(
-                resourceCalculator, resourceByLabel, parentMinResource, minRes)) {
-              throw new IOException(
-                  "Parent Queues" + " capacity: " + parentMinResource
-                      + " is less than" + " to its children:" + minRes
-                      + " for queue:" + getQueueName());
+            String minResourceError = QueueCapacityChecks.checkChildrenMinResourceWithinParent(
+                getQueueName(), parentMinResource, childrenMinResources, resourceByLabel,
+                resourceCalculator);
+            if (minResourceError != null) {
+              throw new IOException(minResourceError);
             }
           }
         }
 
         // When child uses percent
         if (childrenCapacityType == QueueCapacityType.PERCENT) {
-          float childrenPctSum = 0;
+          Collection<String> labels = queueCapacities.getExistingNodeLabels();
+          List<QueueCapacityChecks.QueueCapacityInput> children =
+              getCapacityInputs(childQueues, labels);
           // check label capacities
-          for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
-            // check children's labels
-            childrenPctSum = 0;
-            for (CSQueue queue : childQueues) {
-              childrenPctSum += queue.getQueueCapacities().getCapacity(nodeLabel);
-            }
-
-            if (Math.abs(1 - childrenPctSum) > PRECISION) {
-              // When children's percent sum != 100%
-              if (Math.abs(childrenPctSum) > PRECISION) {
-                // It is wrong when percent sum != {0, 1}
-                throw new IOException(
-                    "Illegal" + " capacity sum of " + childrenPctSum
-                        + " for children of queue " + getQueueName() + " for label="
-                        + nodeLabel + ". It should be either 0 or 1.0");
-              } else {
-                // We also allow children's percent sum = 0 under the following
-                // conditions
-                // - Parent uses weight mode
-                // - Parent uses percent mode, and parent has
-                //   (capacity=0 OR allowZero)
-                if (parentCapacityType == QueueCapacityType.PERCENT) {
-                  if ((Math.abs(queueCapacities.getCapacity(nodeLabel))
-                      > PRECISION) && (!allowZeroCapacitySum)) {
-                    throw new IOException(
-                        "Illegal" + " capacity sum of " + childrenPctSum
-                            + " for children of queue " + getQueueName()
-                            + " for label=" + nodeLabel
-                            + ". It is set to 0, but parent percent != 0, and "
-                            + "doesn't allow children capacity to set to 0");
-                  }
-                }
-              }
-            } else {
-              // Even if child pct sum == 1.0, we will make sure parent has
-              // positive percent.
-              if (parentCapacityType == QueueCapacityType.PERCENT && Math.abs(
-                  queueCapacities.getCapacity(nodeLabel)) <= 0f
-                  && !allowZeroCapacitySum) {
-                throw new IOException(
-                    "Illegal" + " capacity sum of " + childrenPctSum
-                        + " for children of queue " + getQueueName() + " for label="
-                        + nodeLabel + ". queue=" + getQueueName()
-                        + " has zero capacity, but child"
-                        + "queues have positive capacities");
-              }
+          for (String nodeLabel : labels) {
+            String sumError = QueueCapacityChecks.checkChildrenCapacitySum(getQueueName(),
+                nodeLabel, parentCapacityType, queueCapacities.getCapacity(nodeLabel),
+                allowZeroCapacitySum, children);
+            if (sumError != null) {
+              throw new IOException(sumError);
             }
           }
         }
