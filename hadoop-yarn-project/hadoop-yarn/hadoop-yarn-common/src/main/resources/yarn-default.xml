@@ -4763,7 +4763,7 @@
 
   <property>
     <description>
-      Specify docker command plugin for GPU. By default uses Nvidia docker V1.
+      Specify docker command plugin for GPU. By default uses NVIDIA docker V1.
     </description>
     <name>yarn.nodemanager.resource-plugins.gpu.docker-plugin</name>
     <value>nvidia-docker-v1</value>
