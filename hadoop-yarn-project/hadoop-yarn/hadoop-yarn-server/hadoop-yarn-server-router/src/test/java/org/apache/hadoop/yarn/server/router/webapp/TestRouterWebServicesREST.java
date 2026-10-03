@@ -70,6 +70,7 @@ import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getNMWebAppURLWitho
 import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getRMWebAppURLWithScheme;
 import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getRouterWebAppURLWithScheme;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -77,18 +78,24 @@ import java.io.File;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -128,6 +135,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInf
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
 import org.apache.hadoop.yarn.server.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -160,6 +168,17 @@ public class TestRouterWebServicesREST {
 
   /** The number of concurrent submissions for multi-thread test. */
   private static final int NUM_THREADS_TESTS = 100;
+
+  /** How long to wait for the RM's asynchronous application lifecycle. */
+  private static final int APP_STATE_TIMEOUT_MS = 10 * 1000;
+
+  /**
+   * How many times Router may disagree with an RM that looked stable around
+   * the Router read before {@link #assertRouterMatchesRM} fails without
+   * retrying. More than one, because a value can change and change back
+   * within a single Router round trip.
+   */
+  private static final int STABLE_MISMATCHES_TO_FAIL = 2;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRouterWebServicesREST.class);
@@ -252,40 +271,83 @@ public class TestRouterWebServicesREST {
   private static <T> List<T> performGetCalls(final String path,
       final Class<T> returnType, final String queryName,
       final String queryValue) throws IOException, InterruptedException {
-    Client clientToRouter = ClientBuilder.newClient();
-    WebTarget toRouter = clientToRouter.target(routerAddress).path(path);
+    List<T> responses = new ArrayList<>();
+    responses.add(performGetCall(
+        routerAddress, path, returnType, queryName, queryValue));
+    responses.add(performGetCall(
+        rmAddress, path, returnType, queryName, queryValue));
+    return responses;
+  }
 
-    Client clientToRM = ClientBuilder.newClient();
-    WebTarget toRM = clientToRM.target(rmAddress).path(path);
-
-    final Builder toRouterBuilder;
-    final Builder toRMBuilder;
-
-    if (queryValue != null && queryName != null) {
-      toRouterBuilder = toRouter.
-          queryParam(queryName, queryValue).
-          resolveTemplate("appid", queryValue).
-          request(APPLICATION_XML);
-      toRMBuilder = toRM.
-          queryParam(queryName, queryValue).
-          resolveTemplate("appid", queryValue).
-          request(APPLICATION_XML);
-    } else {
-      toRouterBuilder = toRouter.request(APPLICATION_XML);
-      toRMBuilder = toRM.request(APPLICATION_XML);
+  /**
+   * Performs a GET call to {@code address}. In positive case, it returns the
+   * answer.
+   */
+  private static <T> T performGetCall(final String address, final String path,
+      final Class<T> returnType, final String queryName,
+      final String queryValue) throws IOException, InterruptedException {
+    Client client = ClientBuilder.newClient();
+    try {
+      WebTarget target = client.target(address).path(path);
+      if (queryValue != null && queryName != null) {
+        target = target.
+            queryParam(queryName, queryValue).
+            resolveTemplate("appid", queryValue);
+      }
+      Builder builder = target.request(APPLICATION_XML);
+      return UserGroupInformation.createRemoteUser(userName)
+          .doAs((PrivilegedExceptionAction<T>) () -> {
+            Response response = builder.get(Response.class);
+            assertEquals(SC_OK, response.getStatus());
+            return response.readEntity(returnType);
+          });
+    } finally {
+      client.close();
     }
+  }
 
-    return UserGroupInformation.createRemoteUser(userName)
-        .doAs((PrivilegedExceptionAction<List<T>>) () -> {
-          Response response = toRouterBuilder.get(Response.class);
-          Response response2 = toRMBuilder.get(Response.class);
-          assertEquals(SC_OK, response.getStatus());
-          assertEquals(SC_OK, response2.getStatus());
-          List<T> responses = new ArrayList<>();
-          responses.add(response.readEntity(returnType));
-          responses.add(response2.readEntity(returnType));
-          return responses;
-        });
+  /**
+   * Checks that Router answers the GET on {@code path} as the RM does,
+   * comparing the {@code key} of both answers. The RM keeps changing a newly
+   * submitted application (state, attempts, AM container) while we query it,
+   * so each try reads the RM, then Router, then the RM again, and retries if
+   * the RM changed in between. A Router that disagrees with an RM that was
+   * stable around the read fails after {@link #STABLE_MISMATCHES_TO_FAIL}
+   * tries, rather than being retried until the RM happens to reach whatever
+   * Router says. {@code key} should extract values that cannot return to an
+   * earlier state (IDs rather than counts), so that a change and its reversal
+   * between the two RM reads is seen as a change.
+   */
+  private static <T> void assertRouterMatchesRM(final String path,
+      final Class<T> returnType, final Function<T, ?> key) throws Exception {
+    assertRouterMatchesRM(path, returnType, key, STABLE_MISMATCHES_TO_FAIL);
+  }
+
+  /**
+   * As {@link #assertRouterMatchesRM(String, Class, Function)}, failing after
+   * {@code stableMismatchesToFail} mismatches with a stable RM.
+   */
+  private static <T> void assertRouterMatchesRM(final String path,
+      final Class<T> returnType, final Function<T, ?> key,
+      final int stableMismatchesToFail) throws Exception {
+    AtomicInteger stableMismatches = new AtomicInteger();
+    LambdaTestUtils.eventually(APP_STATE_TIMEOUT_MS, 20, () -> {
+      Object rmBefore = key.apply(
+          performGetCall(rmAddress, path, returnType, null, null));
+      Object routerValue = key.apply(
+          performGetCall(routerAddress, path, returnType, null, null));
+      Object rmAfter = key.apply(
+          performGetCall(rmAddress, path, returnType, null, null));
+
+      assertEquals(rmBefore, rmAfter, "RM changed while Router was being read");
+      if (!Objects.equals(rmAfter, routerValue)
+          && stableMismatches.incrementAndGet() >= stableMismatchesToFail) {
+        throw new LambdaTestUtils.FailFastException(String.format(
+            "Router answered %s where the RM, stable around the read, answered"
+            + " %s (%d times)", routerValue, rmAfter, stableMismatches.get()));
+      }
+      assertEquals(rmAfter, routerValue, "Router does not match the RM");
+    });
   }
 
   /**
@@ -694,24 +756,17 @@ public class TestRouterWebServicesREST {
    * {@link RMWebServiceProtocol#getApp} inside Router.
    */
   @Test
-  @Timeout(value = 2)
+  @Timeout(value = 30)
   public void testAppXML() throws Exception {
 
     String appId = submitApplication();
 
-    List<AppInfo> responses = performGetCalls(
+    // The AM host is the same for every attempt on a single node; the log URL
+    // names the AM container, so it also tells attempts apart.
+    assertRouterMatchesRM(
         RM_WEB_SERVICE_PATH + format(APPS_APPID, appId),
-        AppInfo.class, null, null);
-
-    AppInfo routerResponse = responses.get(0);
-    AppInfo rmResponse = responses.get(1);
-
-    assertNotNull(routerResponse);
-    assertNotNull(rmResponse);
-
-    assertEquals(
-        rmResponse.getAMHostHttpAddress(),
-        routerResponse.getAMHostHttpAddress());
+        AppInfo.class, app -> Arrays.asList(
+            app.getAMHostHttpAddress(), app.getAMContainerLogs()));
   }
 
   /**
@@ -719,24 +774,14 @@ public class TestRouterWebServicesREST {
    * {@link RMWebServiceProtocol#getAppAttempts} inside Router.
    */
   @Test
-  @Timeout(value = 2)
+  @Timeout(value = 30)
   public void testAppAttemptXML() throws Exception {
 
     String appId = submitApplication();
 
-    List<AppAttemptsInfo> responses = performGetCalls(
+    assertRouterMatchesRM(
         RM_WEB_SERVICE_PATH + format(APPS_APPID_APPATTEMPTS, appId),
-        AppAttemptsInfo.class, null, null);
-
-    AppAttemptsInfo routerResponse = responses.get(0);
-    AppAttemptsInfo rmResponse = responses.get(1);
-
-    assertNotNull(routerResponse);
-    assertNotNull(rmResponse);
-
-    assertEquals(
-        rmResponse.getAttempts().size(),
-        routerResponse.getAttempts().size());
+        AppAttemptsInfo.class, attempts -> attempts.getAttempts().size());
   }
 
   /**
@@ -744,24 +789,14 @@ public class TestRouterWebServicesREST {
    * {@link RMWebServiceProtocol#getAppState} inside Router.
    */
   @Test
-  @Timeout(value = 2)
+  @Timeout(value = 30)
   public void testAppStateXML() throws Exception {
 
     String appId = submitApplication();
 
-    List<AppState> responses = performGetCalls(
+    assertRouterMatchesRM(
         RM_WEB_SERVICE_PATH + format(APPS_APPID_STATE, appId),
-        AppState.class, null, null);
-
-    AppState routerResponse = responses.get(0);
-    AppState rmResponse = responses.get(1);
-
-    assertNotNull(routerResponse);
-    assertNotNull(rmResponse);
-
-    assertEquals(
-        rmResponse.getState(),
-        routerResponse.getState());
+        AppState.class, AppState::getState);
   }
 
   /**
@@ -1321,7 +1356,7 @@ public class TestRouterWebServicesREST {
    * inside Router.
    */
   @Test
-  @Timeout(value = 2)
+  @Timeout(value = 30)
   public void testGetAppAttemptXML() throws Exception {
 
     String appId = submitApplication();
@@ -1346,25 +1381,26 @@ public class TestRouterWebServicesREST {
    * inside Router.
    */
   @Test
-  @Timeout(value = 2)
+  @Timeout(value = 30)
   public void testGetContainersXML() throws Exception {
 
     String appId = submitApplication();
     String pathAttempts = RM_WEB_SERVICE_PATH + format(
         APPS_APPID_APPATTEMPTS_APPATTEMPTID_CONTAINERS,
         appId, getAppAttempt(appId));
-    List<ContainersInfo> responses = performGetCalls(
-        pathAttempts, ContainersInfo.class, null, null);
 
-    ContainersInfo routerResponse = responses.get(0);
-    ContainersInfo rmResponse = responses.get(1);
-
-    assertNotNull(routerResponse);
-    assertNotNull(rmResponse);
-
-    assertEquals(
-        rmResponse.getContainers().size(),
-        routerResponse.getContainers().size());
+    // The RM reports the live containers of the current attempt, which here is
+    // only each attempt's AM container, for the few tens of milliseconds before
+    // it exits: none, then the first, none, the next, none. Compare IDs rather
+    // than counts so that one AM container replacing another is a change. An
+    // AM container can still come and go within the Router read, once per
+    // attempt, so a stable-looking mismatch is retried rather than failed.
+    assertRouterMatchesRM(pathAttempts, ContainersInfo.class,
+        containers -> containers.getContainers().stream()
+            .map(ContainerInfo::getContainerId)
+            .sorted()
+            .collect(Collectors.toList()),
+        Integer.MAX_VALUE);
   }
 
   @Test
@@ -1483,17 +1519,17 @@ public class TestRouterWebServicesREST {
     return response.readEntity(String.class);
   }
 
-  private String getAppAttempt(String appId) {
-    Client clientToRM = ClientBuilder.newClient();
+  private String getAppAttempt(String appId) throws Exception {
     String pathAppAttempt = RM_WEB_SERVICE_PATH + format(APPS_APPID_APPATTEMPTS, appId);
-    WebTarget toRM = clientToRM.
-        target(rmAddress).
-        path(pathAppAttempt);
-    Response response = toRM.
-        request(APPLICATION_XML).
-        get(Response.class);
-    AppAttemptsInfo ci = response.readEntity(AppAttemptsInfo.class);
-    return ci.getAttempts().get(0).getAppAttemptId();
+    // The RM creates the first attempt asynchronously after the submission
+    // returns, so wait for it to appear.
+    return LambdaTestUtils.eventually(APP_STATE_TIMEOUT_MS, 50, () -> {
+      AppAttemptsInfo ci = performGetCall(
+          rmAddress, pathAppAttempt, AppAttemptsInfo.class, null, null);
+      assertFalse(ci.getAttempts().isEmpty(),
+          "No attempt yet for application " + appId);
+      return ci.getAttempts().get(0).getAppAttemptId();
+    });
   }
 
   /**
