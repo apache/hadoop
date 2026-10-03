@@ -28,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.channels.ServerSocketChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -89,7 +90,18 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
+import org.eclipse.jetty.ee8.nested.Request;
+import org.eclipse.jetty.ee8.nested.SessionHandler;
+import org.eclipse.jetty.ee8.servlet.ErrorPageErrorHandler;
+import org.eclipse.jetty.ee8.servlet.FilterHolder;
+import org.eclipse.jetty.ee8.servlet.FilterMapping;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHolder;
+import org.eclipse.jetty.ee8.servlet.ServletMapping;
+import org.eclipse.jetty.ee8.webapp.WebAppContext;
 import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.http.UriCompliance;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
@@ -102,21 +114,11 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.SymlinkAllowedResourceAliasChecker;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
-import org.eclipse.jetty.server.handler.HandlerCollection;
-import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
-import org.eclipse.jetty.server.session.SessionHandler;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.FilterMapping;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlet.ServletMapping;
 import org.eclipse.jetty.util.ArrayUtil;
-import org.eclipse.jetty.util.MultiException;
+import org.eclipse.jetty.util.ExceptionUtil;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -173,6 +175,42 @@ public final class HttpServer2 implements FilterContainer {
       = "hadoop.http.sni.host.check.enabled";
   public static final boolean HTTP_SNI_HOST_CHECK_ENABLED_DEFAULT = false;
 
+  /**
+   * The Jetty {@link UriCompliance.Violation}s the server lets through to
+   * the servlet rather than refusing at the connector. The default is the set
+   * Hadoop's own paths need; an empty value refuses everything Jetty's
+   * DEFAULT mode refuses.
+   */
+  public static final String HTTP_URI_COMPLIANCE_VIOLATIONS_KEY =
+      "hadoop.http.uri.compliance.violations";
+  public static final String HTTP_URI_COMPLIANCE_VIOLATIONS_DEFAULT =
+      "AMBIGUOUS_EMPTY_SEGMENT,AMBIGUOUS_PATH_ENCODING,"
+          + "SUSPICIOUS_PATH_CHARACTERS";
+
+  /**
+   * Whether an HTTPS client may renegotiate the TLS 1.2 session it opened.
+   * Jetty 9.4 allowed it by default; Jetty 12 refuses it and closes the
+   * connection, which also closes off the renegotiation denial of service of
+   * CVE-2011-1473. The default keeps Jetty 12's refusal. TLS 1.3 has no
+   * renegotiation, so the setting does not affect it.
+   */
+  public static final String HTTP_SSL_RENEGOTIATION_ALLOWED_KEY =
+      "hadoop.http.ssl.renegotiation.allowed";
+  public static final boolean HTTP_SSL_RENEGOTIATION_ALLOWED_DEFAULT = false;
+
+  /**
+   * Prefix under which a context init parameter reaches Jetty's DefaultServlet.
+   * <p>
+   * This is not the package the servlet lives in: ee8 moved the class to
+   * org.eclipse.jetty.ee8.servlet but DefaultServlet#getInitParameter still
+   * reads the 9.4 name. Spelling it the other way costs nothing at startup and
+   * silently drops the setting - dirAllowed then falls back to its default of
+   * true and /static starts listing directories - so the prefix is written
+   * once here rather than at each call site.
+   */
+  private static final String DEFAULT_SERVLET_INIT_PREFIX =
+      "org.eclipse.jetty.servlet.Default.";
+
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
   public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
@@ -186,7 +224,7 @@ public final class HttpServer2 implements FilterContainer {
 
   protected final Server webServer;
 
-  private final HandlerCollection handlers;
+  private final Handler.Sequence handlers;
 
   private final List<ServerConnector> listeners = Lists.newArrayList();
 
@@ -538,6 +576,47 @@ public final class HttpServer2 implements FilterContainer {
       httpConfig.setRequestHeaderSize(requestHeaderSize);
       httpConfig.setResponseHeaderSize(responseHeaderSize);
       httpConfig.setSendServerVersion(false);
+      // Set it either way: Jetty 9.4 defaults this to false and Jetty 12 to
+      // true. At Jetty 12's default, sendRedirect stops resolving the location
+      // against the request and Location carries the bare path the servlet
+      // passed - "/target" rather than "http://host:port/target". Hadoop
+      // redirects through sendRedirect in the YARN proxy (ProxyUtils,
+      // WebAppProxyServlet), AmIpFilter, the webapp Dispatcher, WebServlet and
+      // the JWT login handler, and reads a Location header back with
+      // new URL(...) - WebHdfsFileSystem does - which a relative value does
+      // not parse. Nothing in Jetty 12 forces the change, so keep trunk's.
+      httpConfig.setRelativeRedirectAllowed(false);
+      // Jetty 12 rejects three kinds of path at the connector that 9.4 handed to
+      // the servlet, with a bare 400 and no body, so the request never reaches
+      // the code that knows what a Hadoop path is:
+      //
+      //  - an empty segment, //tmp//file. WebHDFS takes those and answers with
+      //    its own JSON RemoteException, which is what its clients parse.
+      //  - an encoded percent, %25, which is how a file whose name contains a
+      //    '%' is written on the wire. Names like that are ordinary in HDFS
+      //    and YARN routes carry them too.
+      //  - an encoded backslash, %5C. Jetty treats it as suspicious because
+      //    it separates paths on Windows; on HDFS it is just a character in a
+      //    name, and TestWebHdfsUrl creates files containing one. Measured
+      //    rather than assumed: of every character in that test's filename,
+      //    %5C is the only one this violation gates. The same violation also
+      //    covers the encoded control characters, %00 to %1F and %7F (Jetty's
+      //    HttpURI), so those are let through as well. Jetty 9.4 let all of
+      //    them through too: its default compliance mode, RFC7230, checked
+      //    none of the ambiguous or suspicious path rules.
+      //
+      // All three are allowed back by default so that Hadoop keeps deciding
+      // what a path means. The ambiguities that let a request read as one
+      // path to a filter and another to a servlet stay rejected: an encoded
+      // separator (a%2Fb) and an encoded dot-segment (a%2E%2E%2Fb) are still
+      // refused, .. still cannot climb out of the context, and a%252Fb still
+      // decodes once, to the literal a%2Fb rather than to a separator.
+      //
+      // SUSPICIOUS_PATH_CHARACTERS is wider than %5C: it also admits the
+      // encoded control characters %00, %09, %0A, %0D and %7F. The set is
+      // configurable so that a deployment which does not need them can refuse
+      // them at the connector.
+      httpConfig.setUriCompliance(getUriCompliance(conf));
 
       int backlogSize = conf.getInt(HTTP_SOCKET_BACKLOG_SIZE_KEY,
           HTTP_SOCKET_BACKLOG_SIZE_DEFAULT);
@@ -599,7 +678,7 @@ public final class HttpServer2 implements FilterContainer {
 
     private ServerConnector createHttpChannelConnector(
         Server server, HttpConfiguration httpConfig) {
-      ServerConnector conn = new ServerConnector(server,
+      ServerConnector conn = new ReopenableServerConnector(server,
           conf.getInt(HTTP_ACCEPTOR_COUNT_KEY, HTTP_ACCEPTOR_COUNT_DEFAULT),
           conf.getInt(HTTP_SELECTOR_COUNT_KEY, HTTP_SELECTOR_COUNT_DEFAULT));
       ConnectionFactory connFactory = new HttpConnectionFactory(httpConfig);
@@ -655,6 +734,11 @@ public final class HttpServer2 implements FilterContainer {
       }
 
       setEnabledProtocols(sslContextFactory);
+
+      // Set it either way: Jetty 9.4 and Jetty 12 disagree on the default.
+      sslContextFactory.setRenegotiationAllowed(conf.getBoolean(
+          HTTP_SSL_RENEGOTIATION_ALLOWED_KEY,
+          HTTP_SSL_RENEGOTIATION_ALLOWED_DEFAULT));
 
       long storesReloadInterval =
           conf.getLong(FileBasedKeyStoresFactory.SSL_STORES_RELOAD_INTERVAL_TPL_KEY,
@@ -739,7 +823,7 @@ public final class HttpServer2 implements FilterContainer {
     final String appDir = getWebAppsPath(b.name);
     this.webServer = new Server();
     this.adminsAcl = b.adminsAcl;
-    this.handlers = new HandlerCollection();
+    this.handlers = new Handler.Sequence();
     this.webAppContext = createWebAppContext(b, adminsAcl, appDir);
     this.xFrameOptionIsEnabled = b.xFrameEnabled;
     this.xFrameOption = b.xFrameOption;
@@ -762,12 +846,51 @@ public final class HttpServer2 implements FilterContainer {
     initializeWebServer(b.name, b.hostName, b.conf, b.pathSpecs);
   }
 
+  /**
+   * Build the URI compliance mode from
+   * {@link #HTTP_URI_COMPLIANCE_VIOLATIONS_KEY}: Jetty's DEFAULT mode, with
+   * the listed violations allowed.
+   *
+   * @param conf configuration to read.
+   * @return the compliance mode for the server's connectors.
+   * @throws IllegalArgumentException if a listed name is not a violation
+   *     Jetty knows.
+   */
+  @VisibleForTesting
+  static UriCompliance getUriCompliance(Configuration conf) {
+    // Split the default too: getTrimmedStrings(name, default) hands back an
+    // unset key's default unsplit, and a Configuration built without
+    // core-default.xml leaves the key unset.
+    String[] names = StringUtils.getTrimmedStrings(conf.get(
+        HTTP_URI_COMPLIANCE_VIOLATIONS_KEY,
+        HTTP_URI_COMPLIANCE_VIOLATIONS_DEFAULT));
+    List<UriCompliance.Violation> allowed = new ArrayList<>();
+    for (String name : names) {
+      try {
+        allowed.add(
+            UriCompliance.Violation.valueOf(StringUtils.toUpperCase(name)));
+      } catch (IllegalArgumentException e) {
+        throw new IllegalArgumentException("Unknown URI compliance violation '"
+            + name + "' in " + HTTP_URI_COMPLIANCE_VIOLATIONS_KEY
+            + "; expected any of "
+            + Arrays.toString(UriCompliance.Violation.values()), e);
+      }
+    }
+    if (allowed.isEmpty()) {
+      return UriCompliance.DEFAULT;
+    }
+    return UriCompliance.DEFAULT.with("hadoop",
+        allowed.toArray(new UriCompliance.Violation[0]));
+  }
+
   private void initializeWebServer(String name, String hostName,
       Configuration conf, String[] pathSpecs)
       throws IOException {
 
     Preconditions.checkNotNull(webAppContext);
-    webAppContext.getErrorHandler().setShowStacks(LOG.isTraceEnabled());
+    ErrorPageErrorHandler errorHandler = new ReasonBodyErrorHandler();
+    errorHandler.setShowStacks(LOG.isTraceEnabled());
+    webAppContext.setErrorHandler(errorHandler);
 
     int maxThreads = conf.getInt(HTTP_MAX_THREADS_KEY, -1);
     // If HTTP_MAX_THREADS is not configured, QueueThreadPool() will use the
@@ -788,10 +911,13 @@ public final class HttpServer2 implements FilterContainer {
 
     handlers.addHandler(contexts);
     if (requestLog != null) {
-      RequestLogHandler requestLogHandler = new RequestLogHandler();
-      requestLogHandler.setRequestLog(requestLog);
-      handlers.addHandler(requestLogHandler);
+      // Jetty 12 removed RequestLogHandler. A request log is now a property of
+      // the server and covers every request it handles, which is what wrapping
+      // the whole handler list amounted to before.
+      webServer.setRequestLog(requestLog);
     }
+    // An ee8 context is not a core Handler; it supplies one. Handler.Collection
+    // takes the Supplier directly and adds the core handler behind it.
     handlers.addHandler(webAppContext);
     final String appDir = getWebAppsPath(name);
     addDefaultApps(contexts, appDir, conf);
@@ -804,9 +930,8 @@ public final class HttpServer2 implements FilterContainer {
       // The tree might look like this:
       //
       // - StatisticsHandler (for all requests)
-      //   - HandlerList
+      //   - Handler.Sequence
       //     - ContextHandlerCollection
-      //     - RequestLogHandler (if enabled)
       //     - WebAppContext
       //       - SessionHandler
       //       - Servlets
@@ -974,21 +1099,36 @@ public final class HttpServer2 implements FilterContainer {
     if (logDir != null && logsEnabled) {
       ServletContextHandler logContext =
           new ServletContextHandler(parent, "/logs");
-      logContext.setResourceBase(logDir);
-      logContext.addServlet(AdminAuthorizedServlet.class, "/*");
+      if (new File(logDir).isDirectory()) {
+        logContext.setResourceBase(logDir);
+        logContext.addServlet(AdminAuthorizedServlet.class, "/*");
+      } else {
+        // Jetty 9.4 let a context start on a base resource that was not there
+        // and served 404s from it, behind the same admin check. Jetty 12
+        // rejects a missing base resource in ContextHandler#doStart, which
+        // would stop the daemon coming up at all. So the context keeps its
+        // place, its filters and its admin check, and only the resource base
+        // is left out: a non-admin is still refused and an admin still gets
+        // a 404, as before.
+        LOG.warn("hadoop.log.dir is set to {}, which is not a directory;"
+            + " /logs will answer 404.", logDir);
+        logContext.addServlet(MissingLogDirServlet.class, "/*");
+      }
       if (conf.getBoolean(
           CommonConfigurationKeys.HADOOP_JETTY_LOGS_SERVE_ALIASES,
           CommonConfigurationKeys.DEFAULT_HADOOP_JETTY_LOGS_SERVE_ALIASES)) {
         @SuppressWarnings("unchecked")
         Map<String, String> params = logContext.getInitParams();
-        params.put("org.eclipse.jetty.servlet.Default.aliases", "true");
+        params.put(DEFAULT_SERVLET_INIT_PREFIX + "aliases", "true");
       }
       logContext.setDisplayName("logs");
       SessionHandler handler = new SessionHandler();
       handler.setHttpOnly(true);
       handler.getSessionCookieConfig().setSecure(true);
       logContext.setSessionHandler(handler);
-      logContext.addAliasCheck(new SymlinkAllowedResourceAliasChecker(logContext));
+      logContext.addAliasCheck(
+          new SymlinkAllowedResourceAliasChecker(logContext.getCoreContextHandler()));
+      logContext.setErrorHandler(new ReasonBodyErrorHandler());
       setContextAttributes(logContext, conf);
       addNoCacheFilter(logContext);
       defaultContexts.put(logContext, true);
@@ -1001,13 +1141,15 @@ public final class HttpServer2 implements FilterContainer {
     staticContext.setDisplayName("static");
     @SuppressWarnings("unchecked")
     Map<String, String> params = staticContext.getInitParams();
-    params.put("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
-    params.put("org.eclipse.jetty.servlet.Default.gzip", "true");
+    params.put(DEFAULT_SERVLET_INIT_PREFIX + "dirAllowed", "false");
+    params.put(DEFAULT_SERVLET_INIT_PREFIX + "gzip", "true");
     SessionHandler handler = new SessionHandler();
     handler.setHttpOnly(true);
     handler.getSessionCookieConfig().setSecure(true);
     staticContext.setSessionHandler(handler);
-    staticContext.addAliasCheck(new SymlinkAllowedResourceAliasChecker(staticContext));
+    staticContext.addAliasCheck(new SymlinkAllowedResourceAliasChecker(
+        staticContext.getCoreContextHandler()));
+    staticContext.setErrorHandler(new ReasonBodyErrorHandler());
     setContextAttributes(staticContext, conf);
     defaultContexts.put(staticContext, true);
   }
@@ -1208,8 +1350,8 @@ public final class HttpServer2 implements FilterContainer {
    * @param handler The handler to add
    */
   public void addHandlerAtFront(Handler handler) {
-    Handler[] h = ArrayUtil.prependToArray(
-        handler, this.handlers.getHandlers(), Handler.class);
+    List<Handler> h = new ArrayList<>(this.handlers.getHandlers());
+    h.add(0, handler);
     handlers.setHandlers(h);
   }
 
@@ -1464,13 +1606,9 @@ public final class HttpServer2 implements FilterContainer {
       } catch (IOException ex) {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);
         throw ex;
-      } catch (MultiException ex) {
-        LOG.info("HttpServer.start() threw a MultiException", ex);
-        throw ex;
       }
       // Make sure there is no handler failures.
-      Handler[] hs = webServer.getHandlers();
-      for (Handler handler : hs) {
+      for (Handler handler : webServer.getHandlers()) {
         if (handler.isFailed()) {
           throw new IOException(
               "Problem in starting http server. Server handlers failed");
@@ -1511,7 +1649,146 @@ public final class HttpServer2 implements FilterContainer {
     // failed to open w/o issuing a close first, even if the port is changed
     listener.close();
     listener.open();
+    if (listener.getLocalPort() < 0) {
+      // open() came back without an exception and without a socket. That is
+      // not a port conflict, so it must not be retried on the next port: the
+      // retry would no-op in exactly the same way, forever. See
+      // ReopenableServerConnector for the one case that used to get here.
+      throw new IllegalStateException(
+          "Jetty reported no error but did not bind " + listener);
+    }
     LOG.info("Jetty bound to port " + listener.getLocalPort());
+  }
+
+  /**
+   * The error handler for every context HttpServer2 sets up.
+   * <p>
+   * Jetty writes an error page only for GET, POST and HEAD; an error on any
+   * other method goes back with no body, on 9.4 and on 12 alike. On 9.4 that
+   * did not lose anything that mattered, because the few places whose message
+   * a caller acts on - the authentication and CSRF filters - also put it in
+   * the reason phrase, which every response has. Jetty 12 sends no custom
+   * reason phrase, so those places mark their errors with
+   * {@link AuthenticationFilter#ERROR_MESSAGE_FOR_ANY_METHOD_ATTRIBUTE}, and
+   * this handler writes the error page for a marked error whatever the method.
+   * Every other error is answered as Jetty 9.4 answered it: no body, and no
+   * error-page dispatch, for methods other than GET, POST and HEAD.
+   * <p>
+   * Extends the handler a WebAppContext installs for itself, so that
+   * &lt;error-page&gt; and &lt;exception-type&gt; mappings from a webapp's
+   * web.xml keep working; a plain ErrorHandler would silently drop them.
+   */
+  static final class ReasonBodyErrorHandler extends ErrorPageErrorHandler {
+
+    @Override
+    public boolean errorPageForMethod(String method) {
+      // Whether the error is marked is only known in handle, which Jetty only
+      // calls when this says yes. handle keeps to Jetty's own choice for
+      // unmarked errors.
+      return true;
+    }
+
+    @Override
+    public void handle(String target, Request baseRequest,
+        HttpServletRequest request, HttpServletResponse response)
+        throws IOException, ServletException {
+      if (super.errorPageForMethod(request.getMethod())
+          || request.getAttribute(
+              AuthenticationFilter.ERROR_MESSAGE_FOR_ANY_METHOD_ATTRIBUTE)
+              != null) {
+        super.handle(target, baseRequest, request, response);
+      } else {
+        baseRequest.setHandled(true);
+      }
+    }
+  }
+
+  /**
+   * Serves /logs when hadoop.log.dir is not a directory: the admin check
+   * {@link AdminAuthorizedServlet} makes, then the 404 its DefaultServlet
+   * would have answered with for a resource that is not there. Public only so
+   * that the container can instantiate it.
+   */
+  @InterfaceAudience.Private
+  public static class MissingLogDirServlet extends HttpServlet {
+    private static final long serialVersionUID = 1L;
+
+    @Override
+    protected void doGet(HttpServletRequest request,
+        HttpServletResponse response) throws IOException {
+      if (hasAdministratorAccess(getServletContext(), request, response)) {
+        response.sendError(HttpServletResponse.SC_NOT_FOUND);
+      }
+    }
+
+    /**
+     * Jetty's DefaultServlet, which serves /logs when the directory is there,
+     * answers a POST as a GET, so the admin check and the 404 apply to it too
+     * rather than HttpServlet's 405.
+     */
+    @Override
+    protected void doPost(HttpServletRequest request,
+        HttpServletResponse response) throws IOException {
+      doGet(request, response);
+    }
+  }
+
+  /**
+   * A ServerConnector whose listen socket can be reopened after it is closed.
+   * <p>
+   * Jetty 9.4's ServerConnector#close released the accept channel as well as
+   * closing it, so a close/open pair rebound the same port. Jetty 12 closes
+   * the channel but keeps the reference, and ServerConnector#open does nothing
+   * at all while that reference is set - it neither rebinds nor complains, and
+   * getLocalPort stays at -2. Only doStop clears it.
+   * <p>
+   * That is enough for a server that is started, because stopping it clears
+   * the channel on the way down. It is not enough here: openListeners binds
+   * before the Server is started, so a caller that opens listeners, stops, and
+   * opens them again gets a connector that silently never comes back.
+   * <p>
+   * The public open(ServerSocketChannel) overload assigns the channel
+   * unconditionally, so handing it a fresh one restores the 9.4 behaviour
+   * without reaching into Jetty's internals. That is done only after Jetty's
+   * own open() has been given the first go and turned out to be a no-op, so
+   * the ordinary first bind runs the stock path unchanged; the replacement
+   * path does not fire the connector's open callbacks, which is a step up
+   * from the nothing it does today and the reason to keep it to that one
+   * case.
+   */
+  private static final class ReopenableServerConnector extends ServerConnector {
+
+    private ReopenableServerConnector(Server server, int acceptors,
+        int selectors) {
+      super(server, acceptors, selectors);
+    }
+
+    @Override
+    public void open() throws IOException {
+      // Always give Jetty the first go, so a connector that has never been
+      // opened takes the stock path and nothing - the open callbacks it fires
+      // among them - is skipped.
+      super.open();
+      if (isStarted() || getLocalPort() != -2 || isOpen()) {
+        return;
+      }
+      // super.open() returned having bound nothing: the connector is holding
+      // a channel it closed. isOpen() being false is what says the channel is
+      // spent - Jetty only closes it from close() when the connector has
+      // acceptors, and binding a second channel to a port the first one still
+      // holds would fail and leak the first.
+      ServerSocketChannel channel = openAcceptChannel();
+      try {
+        open(channel);
+      } catch (Throwable t) {
+        try {
+          channel.close();
+        } catch (IOException suppressed) {
+          t.addSuppressed(suppressed);
+        }
+        throw t;
+      }
+    }
   }
 
   /**
@@ -1619,7 +1896,7 @@ public final class HttpServer2 implements FilterContainer {
    * @throws Exception exception.
    */
   public void stop() throws Exception {
-    MultiException exception = null;
+    ExceptionUtil.MultiException exception = null;
     if (this.configurationChangeMonitor.isPresent()) {
       try {
         this.configurationChangeMonitor.get().cancel();
@@ -1670,9 +1947,10 @@ public final class HttpServer2 implements FilterContainer {
 
   }
 
-  private MultiException addMultiException(MultiException exception, Exception e) {
+  private ExceptionUtil.MultiException addMultiException(
+      ExceptionUtil.MultiException exception, Exception e) {
     if(exception == null){
-      exception = new MultiException();
+      exception = new ExceptionUtil.MultiException();
     }
     exception.add(e);
     return exception;
@@ -1960,9 +2238,7 @@ public final class HttpServer2 implements FilterContainer {
      */
     private String inferMimeType(ServletRequest request) {
       String path = ((HttpServletRequest)request).getRequestURI();
-      ServletContextHandler.Context sContext =
-          (ServletContextHandler.Context)config.getServletContext();
-      String mime = sContext.getMimeType(path);
+      String mime = config.getServletContext().getMimeType(path);
       return (mime == null) ? null : mime;
     }
 

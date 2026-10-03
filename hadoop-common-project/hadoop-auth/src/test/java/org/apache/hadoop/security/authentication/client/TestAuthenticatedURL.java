@@ -26,8 +26,10 @@ import static org.mockito.Mockito.when;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.io.ByteArrayInputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -95,6 +97,37 @@ public class TestAuthenticatedURL {
       assertFalse(token.isSet());
     } catch (Exception ex) {
       fail();
+    }
+  }
+
+  /**
+   * A refusal reports the MESSAGE row of Jetty's error page, which is what the
+   * reason phrase carried before Jetty 12, not the whole page.
+   */
+  @Test
+  public void testExtractTokenFailReportsTheErrorPageMessage()
+      throws Exception {
+    String page = "<html>\n<head>\n<title>Error 401 Authentication required"
+        + "</title>\n</head>\n<body><h2>HTTP ERROR 401 Authentication required"
+        + "</h2>\n<table>\n<tr><th>URI:</th><td>/kms/v1/keys/names</td></tr>\n"
+        + "<tr><th>STATUS:</th><td>401</td></tr>\n"
+        + "<tr><th>MESSAGE:</th><td>Authentication required</td></tr>\n"
+        + "<tr><th>SERVLET:</th><td>webservices-driver</td></tr>\n"
+        + "</table>\n\n</body>\n</html>\n";
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getResponseCode())
+        .thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
+    when(conn.getResponseMessage()).thenReturn("Unauthorized");
+    when(conn.getContentType()).thenReturn("text/html;charset=iso-8859-1");
+    when(conn.getErrorStream()).thenReturn(new ByteArrayInputStream(
+        page.getBytes(StandardCharsets.ISO_8859_1)));
+    when(conn.getHeaderFields()).thenReturn(new HashMap<>());
+    try {
+      AuthenticatedURL.extractToken(conn, new AuthenticatedURL.Token());
+      fail();
+    } catch (AuthenticationException ex) {
+      assertTrue(ex.getMessage().endsWith(
+          "status: 401, message: Authentication required"), ex.getMessage());
     }
   }
 

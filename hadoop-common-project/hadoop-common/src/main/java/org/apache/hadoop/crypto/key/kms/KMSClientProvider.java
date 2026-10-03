@@ -18,7 +18,6 @@
 package org.apache.hadoop.crypto.key.kms;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
@@ -564,9 +563,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     }
 
     if ((conn.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN
-        && (!StringUtils.isEmpty(conn.getResponseMessage())
-            && (conn.getResponseMessage().equals(ANONYMOUS_REQUESTS_DISALLOWED)
-            || conn.getResponseMessage().contains(INVALID_SIGNATURE))))
+        && isAuthenticationFailure(conn))
         || conn.getResponseCode() == HttpURLConnection.HTTP_UNAUTHORIZED) {
       // Ideally, this should happen only when there is an Authentication
       // failure. Unfortunately, the AuthenticationFilter returns 403 when it
@@ -605,6 +602,35 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       }
     }
     return ret;
+  }
+
+  /**
+   * Whether a 403 is the AuthenticationFilter refusing to authenticate the
+   * caller, rather than the KMS refusing to authorize an authenticated one.
+   * Only the former is worth resetting the token and retrying for.
+   * <p>
+   * The filter reports why through
+   * {@link javax.servlet.http.HttpServletResponse#sendError}. That detail used
+   * to arrive in the HTTP reason phrase; since Jetty 12 the phrase is always
+   * the canonical text for the status code and the detail is in the body, so
+   * read it from there. An authorization denial arrives instead as the JSON
+   * envelope {@link HttpExceptionUtils} writes, which
+   * {@link HttpExceptionUtils#getResponseDetail} leaves untouched - so a
+   * denial neither matches here nor has its body consumed before
+   * {@link HttpExceptionUtils#validateResponse} below rebuilds the exception
+   * from it.
+   * <p>
+   * Matching {@link #ANONYMOUS_REQUESTS_DISALLOWED} on a substring rather than
+   * on the whole value is forced by the move into the body: the container
+   * wraps the reason in an error page.
+   *
+   * @param conn a connection whose response status has been read
+   * @return true when the response names an authentication failure
+   */
+  private static boolean isAuthenticationFailure(HttpURLConnection conn) {
+    String detail = HttpExceptionUtils.getResponseDetail(conn);
+    return detail.contains(ANONYMOUS_REQUESTS_DISALLOWED)
+        || detail.contains(INVALID_SIGNATURE);
   }
 
   public static class KMSKeyVersion extends KeyVersion {

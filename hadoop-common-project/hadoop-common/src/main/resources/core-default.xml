@@ -4585,6 +4585,51 @@ are idle beyond the keepalive window.
   </property>
 
   <property>
+    <name>hadoop.http.uri.compliance.violations</name>
+    <value>AMBIGUOUS_EMPTY_SEGMENT,AMBIGUOUS_PATH_ENCODING,SUSPICIOUS_PATH_CHARACTERS</value>
+    <description>
+      Comma-separated Jetty UriCompliance violations that the HTTP server
+      passes to the servlet instead of refusing with 400 at the connector.
+      Jetty's DEFAULT mode refuses all of them.
+
+      The default allows what Hadoop's own paths need, and what Jetty 9.4,
+      which earlier Hadoop releases used, let through:
+      AMBIGUOUS_EMPTY_SEGMENT, an empty segment such as //tmp//file;
+      AMBIGUOUS_PATH_ENCODING, an encoded percent (%25) in a file name; and
+      SUSPICIOUS_PATH_CHARACTERS, an encoded backslash (%5C) in a file name.
+      SUSPICIOUS_PATH_CHARACTERS also admits the encoded control characters
+      %00, %09, %0A, %0D and %7F. Remove it if no client needs a backslash in
+      a path.
+
+      An empty value applies Jetty's DEFAULT mode unchanged. The other
+      violation names of org.eclipse.jetty.http.UriCompliance.Violation are
+      accepted, but widen what reaches the servlets; an unknown name stops the
+      server from starting.
+
+      Jetty 9.4 also decoded an encoded separator (%2F) in a path to a '/',
+      which this default refuses with 400. A deployment whose clients or
+      gateways send one can add AMBIGUOUS_PATH_SEPARATOR to the list to get
+      that behaviour back.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.http.ssl.renegotiation.allowed</name>
+    <value>false</value>
+    <description>
+      Whether a client of an HTTPS endpoint served by HttpServer2 may
+      renegotiate the TLS 1.2 session it opened. When false, the server closes
+      the connection on a client's renegotiation request.
+
+      Jetty 9.4, which earlier Hadoop releases used, allowed this; Jetty 12
+      refuses it, and so does this default, which also closes off the
+      renegotiation denial of service of CVE-2011-1473. Java and curl clients
+      do not renegotiate on their own. Set to true only for a client that
+      needs it. TLS 1.3 has no renegotiation.
+    </description>
+  </property>
+
+  <property>
     <name>hadoop.metrics.jvm.use-thread-mxbean</name>
     <value>false</value>
     <description>

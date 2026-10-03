@@ -21,11 +21,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -136,11 +139,16 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
   private static void setupServer(Configuration conf, Configuration sslConf)
       throws IOException, URISyntaxException {
+    server = startServer(conf, sslConf);
+  }
+
+  private static HttpServer2 startServer(Configuration conf,
+      Configuration sslConf) throws IOException, URISyntaxException {
     String protocols = Shell.isJavaVersionAtLeast(11)
         ? INCLUDED_PROTOCOLS_JDK11 : INCLUDED_PROTOCOLS;
     conf.set(SSLFactory.SSL_ENABLED_PROTOCOLS_KEY, protocols);
     sslConf.set(SSLFactory.SSL_ENABLED_PROTOCOLS_KEY, protocols);
-    server = new HttpServer2.Builder().setName("test")
+    HttpServer2 httpServer = new HttpServer2.Builder().setName("test")
         .addEndpoint(new URI("https://localhost")).setConf(conf)
         .keyPassword(
             sslConf.get(SSL_SERVER_KEYSTORE_PROP_PREFIX + ".keypassword"))
@@ -154,10 +162,12 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
         .excludeCiphers(sslConf.get("ssl.server.exclude.cipher.list"))
         .includeCiphers(sslConf.get("ssl.server.include.cipher.list"))
         .build();
-    server.addServlet(SERVLET_NAME_ECHO, SERVLET_PATH_ECHO, EchoServlet.class);
-    server.addServlet(SERVLET_NAME_LONGHEADER, SERVLET_PATH_LONGHEADER,
+    httpServer.addServlet(SERVLET_NAME_ECHO, SERVLET_PATH_ECHO,
+        EchoServlet.class);
+    httpServer.addServlet(SERVLET_NAME_LONGHEADER, SERVLET_PATH_LONGHEADER,
         LongHeaderServlet.class);
-    server.start();
+    httpServer.start();
+    return httpServer;
   }
 
   @AfterAll
@@ -348,6 +358,61 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     } else {
       testEnabledCiphers(EXCLUSIVE_ENABLED_CIPHERS_TLS1_2);
     }
+  }
+
+  /**
+   * Jetty 9.4 let a client renegotiate a TLS 1.2 session; Jetty 12 closes the
+   * connection instead, and HttpServer2 keeps that by default.
+   */
+  @Test
+  public void testClientRenegotiationRefusedByDefault() throws Exception {
+    String response = requestAfterRenegotiation(server.getConnectorAddress(0));
+    assertFalse(response.contains("HTTP/1.1"),
+        "answered after a refused renegotiation: " + response);
+  }
+
+  @Test
+  public void testClientRenegotiationAllowedWhenConfigured() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, 10);
+    conf.setBoolean(HttpServer2.HTTP_SSL_RENEGOTIATION_ALLOWED_KEY, true);
+    HttpServer2 allowing = startServer(conf, KeyStoreTestUtil.getSslConfig());
+    try {
+      String response =
+          requestAfterRenegotiation(allowing.getConnectorAddress(0));
+      assertTrue(response.startsWith("HTTP/1.1 200"), response);
+      assertTrue(response.endsWith("a:b\n"), response);
+    } finally {
+      allowing.stop();
+    }
+  }
+
+  /**
+   * Opens a TLS 1.2 connection, asks the server to renegotiate the session,
+   * then sends a request on the same connection.
+   * @return what the server sent back; empty if it closed the connection.
+   */
+  private static String requestAfterRenegotiation(InetSocketAddress address)
+      throws IOException, GeneralSecurityException {
+    ByteArrayOutputStream response = new ByteArrayOutputStream();
+    try (SSLSocket socket = (SSLSocket) clientSslFactory
+        .createSSLSocketFactory()
+        .createSocket(address.getHostName(), address.getPort())) {
+      socket.setEnabledProtocols(new String[] {"TLSv1.2"});
+      socket.setSoTimeout(30000);
+      socket.startHandshake();
+      // On an established TLS 1.2 session this starts a renegotiation.
+      socket.startHandshake();
+      OutputStream out = socket.getOutputStream();
+      out.write(("GET " + SERVLET_PATH_ECHO + "?a=b HTTP/1.1\r\n"
+          + "Host: localhost\r\nConnection: close\r\n\r\n")
+          .getBytes(StandardCharsets.UTF_8));
+      out.flush();
+      IOUtils.copyBytes(socket.getInputStream(), response, 1024, false);
+    } catch (IOException e) {
+      LOG.info("Connection ended after the renegotiation request", e);
+    }
+    return new String(response.toByteArray(), StandardCharsets.UTF_8);
   }
 
   private void testEnabledCiphers(String ciphers) throws

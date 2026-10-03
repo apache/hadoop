@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import javax.servlet.http.HttpServlet;
 
@@ -44,7 +45,7 @@ import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-import org.eclipse.jetty.webapp.WebAppContext;
+import org.eclipse.jetty.ee8.webapp.WebAppContext;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletProperties;
 import org.slf4j.Logger;
@@ -108,6 +109,8 @@ public class WebApps {
     private final HashMap<String, Object> attributes = new HashMap<>();
     private ApplicationClientProtocol appClientProtocol;
     private ResourceConfig config;
+    private final List<Consumer<HttpServer2>> serverConfigurers =
+        new ArrayList<>();
     Builder(String name, Class<T> api, T application, String wsName) {
       this.name = name;
       this.api = api;
@@ -220,6 +223,24 @@ public class WebApps {
      */
     public Builder<T> withCSRFProtection(String prefix) {
       this.csrfConfigPrefix = prefix;
+      return this;
+    }
+
+    /**
+     * Register work to run against the built server before it is started.
+     * <p>
+     * Some servlets have to be set up while their context is still stopped -
+     * a Jetty WebSocket servlet needs the WebSocket components installed on
+     * the context, and installing them once the context has started throws.
+     * Builder gives no other window between build and start, and the work is
+     * specific enough to a single webapp that pulling its dependencies into
+     * this module would be the wrong trade.
+     *
+     * @param configurer work to run on the server before it starts
+     * @return this builder
+     */
+    public Builder<T> withServerConfigurer(Consumer<HttpServer2> configurer) {
+      this.serverConfigurers.add(configurer);
       return this;
     }
 
@@ -492,9 +513,13 @@ public class WebApps {
         for (WebAppContext context : additionalContexts) {
           if (context != null) {
             addFiltersForNewContext(context);
-            httpServer.addHandlerAtFront(context);
+            httpServer.addHandlerAtFront(context.getCoreContextHandler());
           }
         }
+      }
+
+      for (Consumer<HttpServer2> configurer : serverConfigurers) {
+        configurer.accept(httpServer);
       }
 
       try {
