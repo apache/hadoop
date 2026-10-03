@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.clientrm;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,6 +30,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
@@ -44,6 +46,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService.RequestInterceptorChainWrapper;
+import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -269,6 +272,35 @@ public class TestRouterClientRMService extends BaseRouterClientRMTest {
     assertNotNull(client1.interceptor);
     assertNotNull(client2.interceptor);
     assertTrue(client1.interceptor == client2.interceptor);
+  }
+
+  /**
+   * Stopping the service stops the delegation token secret manager's
+   * ExpiredTokenRemover thread, which serviceStart started.
+   */
+  @Test
+  public void testServiceStopStopsDelegationTokenSecretManager() {
+    MockRouterClientRMService service = getRouterClientRMService();
+    RouterDelegationTokenSecretManager dtSecretManager =
+        service.getRouterDTSecretManager();
+    assertTrue(dtSecretManager.isRunning());
+
+    service.stop();
+
+    assertFalse(dtSecretManager.isRunning());
+  }
+
+  /**
+   * A service that was initialized but never started can be stopped.
+   */
+  @Test
+  public void testServiceStopWithoutStart() {
+    MockRouterClientRMService service = new MockRouterClientRMService();
+    service.init(getConf());
+
+    service.stop();
+
+    assertEquals(STATE.STOPPED, service.getServiceState());
   }
 
 }
