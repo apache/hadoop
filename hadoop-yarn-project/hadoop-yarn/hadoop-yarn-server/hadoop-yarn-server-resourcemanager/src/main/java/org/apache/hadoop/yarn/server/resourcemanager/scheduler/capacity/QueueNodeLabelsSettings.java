@@ -16,8 +16,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import java.io.IOException;
 import java.util.Set;
@@ -91,21 +89,11 @@ public class QueueNodeLabelsSettings {
     // Check if labels of this queue is a subset of parent queue, only do this
     // when the queue in question is not root
     if (!queuePath.isRoot()) {
-      if (parent.getAccessibleNodeLabels() != null && !parent
-          .getAccessibleNodeLabels().contains(RMNodeLabelsManager.ANY)) {
-        // If parent isn't "*", child shouldn't be "*" too
-        if (this.getAccessibleNodeLabels().contains(RMNodeLabelsManager.ANY)) {
-          throw new IOException("Parent's accessible queue is not ANY(*), "
-              + "but child's accessible queue is " + RMNodeLabelsManager.ANY);
-        } else {
-          Set<String> diff = Sets.difference(this.getAccessibleNodeLabels(),
-              parent.getAccessibleNodeLabels());
-          if (!diff.isEmpty()) {
-            throw new IOException(String.format(
-                "Some labels of child queue is not a subset of parent queue, these labels=[%s]",
-                StringUtils.join(diff, ",")));
-          }
-        }
+      String error = QueueLabelChecks.checkAccessibleLabelsSubset(
+          new QueueLabelChecks.AccessibleLabelsInput(false, this.getAccessibleNodeLabels(),
+              parent.getAccessibleNodeLabels()));
+      if (error != null) {
+        throw new IOException(error);
       }
     }
   }

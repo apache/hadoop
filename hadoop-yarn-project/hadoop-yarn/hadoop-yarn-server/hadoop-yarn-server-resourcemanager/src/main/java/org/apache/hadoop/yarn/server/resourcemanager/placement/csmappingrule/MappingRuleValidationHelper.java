@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks.QueueIndex;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks.QueueKind;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks.QueueRef;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -56,15 +57,22 @@ public final class MappingRuleValidationHelper {
   public static String normalizeQueuePathRoot(
       CapacitySchedulerQueueManager queueManager, String fullPath)
       throws YarnException {
+    return normalizeQueuePathRoot(
+        PlacementRuleChecks.queueIndexOf(queueManager), fullPath);
+  }
+
+  @InterfaceAudience.Private
+  public static String normalizeQueuePathRoot(
+      QueueIndex queueIndex, String fullPath) throws YarnException {
     //Normalizing the root of the path
     ArrayList<String> parts = new ArrayList<>();
     Collections.addAll(parts, fullPath.split("\\."));
 
     //the first element of the path is the path root
     String pathRoot = parts.get(0);
-    CSQueue pathRootQueue = queueManager.getQueue(pathRoot);
+    QueueRef pathRootQueue = queueIndex.getQueue(pathRoot);
     if (pathRootQueue == null) {
-      if (queueManager.isAmbiguous(pathRoot)) {
+      if (queueIndex.isAmbiguous(pathRoot)) {
         throw new YarnException("Path root '" + pathRoot +
             "' is ambiguous. Path '" + fullPath + "' is invalid");
       } else {
@@ -80,16 +88,23 @@ public final class MappingRuleValidationHelper {
 
   public static ValidationResult validateQueuePathAutoCreation(
       CapacitySchedulerQueueManager queueManager, String path) {
+    return validateQueuePathAutoCreation(
+        PlacementRuleChecks.queueIndexOf(queueManager), path);
+  }
+
+  @InterfaceAudience.Private
+  public static ValidationResult validateQueuePathAutoCreation(
+      QueueIndex queueIndex, String path) {
     //Some sanity checks, the empty path and existing queue can be checked easy
     if (path == null || path.isEmpty()) {
       return ValidationResult.EMPTY_PATH;
     }
 
-    if (queueManager.getQueue(path) != null) {
+    if (queueIndex.getQueue(path) != null) {
       return ValidationResult.QUEUE_EXISTS;
     }
 
-    if (queueManager.isAmbiguous(path)) {
+    if (queueIndex.isAmbiguous(path)) {
       return ValidationResult.AMBIGUOUS_QUEUE;
     }
 
@@ -108,24 +123,24 @@ public final class MappingRuleValidationHelper {
       return ValidationResult.NO_PARENT_PROVIDED;
     }
 
-    if (queueManager.isAmbiguous(parentPath)) {
+    if (queueIndex.isAmbiguous(parentPath)) {
       return ValidationResult.AMBIGUOUS_PARENT;
     }
-    CSQueue parentQueue = queueManager.getQueue(parentPath);
+    QueueRef parentQueue = queueIndex.getQueue(parentPath);
     if (parentQueue == null) {
       if (grandParentPath.isEmpty()) {
         return ValidationResult.NO_PARENT_PROVIDED;
       }
 
-      if (queueManager.isAmbiguous(grandParentPath)) {
+      if (queueIndex.isAmbiguous(grandParentPath)) {
         return ValidationResult.AMBIGUOUS_PARENT;
       }
       //if we don't have a valid parent queue, we need to check the grandparent
       //if the grandparent allows new dynamic creation, the dynamic parent and
       //the dynamic leaf queue can be created as well
-      CSQueue grandParentQueue = queueManager.getQueue(grandParentPath);
-      if (grandParentQueue != null && grandParentQueue instanceof AbstractParentQueue &&
-          ((AbstractParentQueue)grandParentQueue).isEligibleForAutoQueueCreation()) {
+      QueueRef grandParentQueue = queueIndex.getQueue(grandParentPath);
+      if (grandParentQueue != null && grandParentQueue.isParent() &&
+          grandParentQueue.isEligibleForAutoQueueCreation()) {
         //Grandparent is a new dynamic parent queue, which allows deep queue
         //creation
         return ValidationResult.CREATABLE;
@@ -136,14 +151,14 @@ public final class MappingRuleValidationHelper {
 
     //at this point we know we have a parent queue we just need to make sure
     //it allows queue creation
-    if (parentQueue instanceof ManagedParentQueue) {
+    if (parentQueue.getKind() == QueueKind.MANAGED_PARENT) {
       //Managed parent is the legacy way, so it will allow creation
       return ValidationResult.CREATABLE;
     }
-    if (parentQueue instanceof ParentQueue) {
+    if (parentQueue.getKind() == QueueKind.PARENT) {
       //the new way of dynamic queue creation uses ParentQueues so we need to
       //check if those queues allow dynamic queue creation
-      if (((ParentQueue)parentQueue).isEligibleForAutoQueueCreation()) {
+      if (parentQueue.isEligibleForAutoQueueCreation()) {
         return ValidationResult.CREATABLE;
       }
     }

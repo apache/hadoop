@@ -98,10 +98,10 @@ public class QueueAppLifetimeAndLimitSettings {
       }
     } // else if >= 0, default lifetime was set at this level. Just use it.
 
-    if (myMaxAppLifetime > 0 && defaultAppLifetime > myMaxAppLifetime) {
-      throw new YarnRuntimeException(
-          "Default lifetime " + defaultAppLifetime
-              + " can't exceed maximum lifetime " + myMaxAppLifetime);
+    String lifetimeError = QueueLimitChecks.checkDefaultAppLifetime(
+        new QueueLimitChecks.AppLifetimeInput(myMaxAppLifetime, defaultAppLifetime));
+    if (lifetimeError != null) {
+      throw new YarnRuntimeException(lifetimeError);
     }
 
     if (defaultAppLifetime <= 0) {
