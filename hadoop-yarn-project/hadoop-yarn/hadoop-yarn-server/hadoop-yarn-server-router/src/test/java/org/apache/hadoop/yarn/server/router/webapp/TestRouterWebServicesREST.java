@@ -544,17 +544,27 @@ public class TestRouterWebServicesREST {
         RM_WEB_SERVICE_PATH + format(NODE_RESOURCE, nodeId),
         null, null, resourceOption, POST);
     assertResponseStatusCode(Response.Status.OK, routerResponse.getStatusInfo());
+
+    // The RM applies the update asynchronously (AdminService dispatches an
+    // RMNodeResourceUpdateEvent), so the first reads may still return the old
+    // total resource; wait until the node reports the updated memory and cores
+    LambdaTestUtils.eventually(5 * 1000, 100, () -> {
+      List<NodeInfo> responses1 = performGetCalls(
+          RM_WEB_SERVICE_PATH + format(NODES_NODEID, nodeId),
+          NodeInfo.class, null, null);
+      NodeInfo nodeInfo1 = responses1.get(0);
+      assertEquals(4096, nodeInfo1.getTotalResource().getMemorySize());
+      assertEquals(5, nodeInfo1.getTotalResource().getvCores());
+    });
+
+    // once the update is applied, the Router reports the new total resource
+    routerResponse = performCall(
+        RM_WEB_SERVICE_PATH + format(NODE_RESOURCE, nodeId),
+        null, null, resourceOption, POST);
+    assertResponseStatusCode(Response.Status.OK, routerResponse.getStatusInfo());
     ResourceInfo totalResource = routerResponse.readEntity(ResourceInfo.class);
     assertEquals(resource.getMemorySize(), totalResource.getMemorySize());
     assertEquals(resource.getVirtualCores(), totalResource.getvCores());
-
-    // assert updated memory and cores
-    List<NodeInfo> responses1 = performGetCalls(
-        RM_WEB_SERVICE_PATH + format(NODES_NODEID, getNodeId()),
-        NodeInfo.class, null, null);
-    NodeInfo nodeInfo1 = responses1.get(0);
-    assertEquals(4096, nodeInfo1.getTotalResource().getMemorySize());
-    assertEquals(5, nodeInfo1.getTotalResource().getvCores());
   }
 
   /**
