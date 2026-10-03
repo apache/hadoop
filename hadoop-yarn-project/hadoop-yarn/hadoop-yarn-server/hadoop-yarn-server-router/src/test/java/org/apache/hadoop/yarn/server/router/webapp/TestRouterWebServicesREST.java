@@ -320,6 +320,16 @@ public class TestRouterWebServicesREST {
    */
   private static <T> void assertRouterMatchesRM(final String path,
       final Class<T> returnType, final Function<T, ?> key) throws Exception {
+    assertRouterMatchesRM(path, returnType, key, STABLE_MISMATCHES_TO_FAIL);
+  }
+
+  /**
+   * As {@link #assertRouterMatchesRM(String, Class, Function)}, failing after
+   * {@code stableMismatchesToFail} mismatches with a stable RM.
+   */
+  private static <T> void assertRouterMatchesRM(final String path,
+      final Class<T> returnType, final Function<T, ?> key,
+      final int stableMismatchesToFail) throws Exception {
     AtomicInteger stableMismatches = new AtomicInteger();
     LambdaTestUtils.eventually(APP_STATE_TIMEOUT_MS, 20, () -> {
       Object rmBefore = key.apply(
@@ -331,7 +341,7 @@ public class TestRouterWebServicesREST {
 
       assertEquals(rmBefore, rmAfter, "RM changed while Router was being read");
       if (!Objects.equals(rmAfter, router)
-          && stableMismatches.incrementAndGet() >= STABLE_MISMATCHES_TO_FAIL) {
+          && stableMismatches.incrementAndGet() >= stableMismatchesToFail) {
         throw new LambdaTestUtils.FailFastException(String.format(
             "Router answered %s where the RM, stable around the read, answered"
             + " %s (%d times)", router, rmAfter, stableMismatches.get()));
@@ -1379,14 +1389,18 @@ public class TestRouterWebServicesREST {
         APPS_APPID_APPATTEMPTS_APPATTEMPTID_CONTAINERS,
         appId, getAppAttempt(appId));
 
-    // Compare container IDs rather than counts: once the first attempt fails,
-    // the RM reports the next attempt's AM container here, so the count can go
-    // from 1 to 0 and back to 1 while the IDs cannot repeat.
+    // The RM reports the live containers of the current attempt, which here is
+    // only each attempt's AM container, for the few tens of milliseconds before
+    // it exits: none, then the first, none, the next, none. Compare IDs rather
+    // than counts so that one AM container replacing another is a change. An
+    // AM container can still come and go within the Router read, once per
+    // attempt, so a stable-looking mismatch is retried rather than failed.
     assertRouterMatchesRM(pathAttempts, ContainersInfo.class,
         containers -> containers.getContainers().stream()
             .map(ContainerInfo::getContainerId)
             .sorted()
-            .collect(Collectors.toList()));
+            .collect(Collectors.toList()),
+        Integer.MAX_VALUE);
   }
 
   @Test
