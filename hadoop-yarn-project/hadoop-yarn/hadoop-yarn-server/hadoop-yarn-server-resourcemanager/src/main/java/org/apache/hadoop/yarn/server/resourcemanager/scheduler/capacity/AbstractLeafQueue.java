@@ -33,7 +33,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Stream;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.security.AccessControlException;
@@ -215,17 +214,11 @@ public class AbstractLeafQueue extends AbstractCSQueue {
           configuration.getClusterLevelApplicationMaxPriority());
 
       Set<String> accessibleNodeLabels = this.queueNodeLabelsSettings.getAccessibleNodeLabels();
-      if (!SchedulerUtils.checkQueueLabelExpression(accessibleNodeLabels,
-          this.queueNodeLabelsSettings.getDefaultLabelExpression(), null)) {
-        throw new IOException(
-            "Invalid default label expression of " + " queue=" + getQueuePath()
-                + " doesn't have permission to access all labels "
-                + "in default label expression. labelExpression of resource request="
-                + getDefaultNodeLabelExpressionStr() + ". Queue labels=" + (
-                getAccessibleNodeLabels() == null ?
-                    "" :
-                    StringUtils
-                        .join(getAccessibleNodeLabels().iterator(), ',')));
+      String defaultLabelExpressionError = QueueLabelChecks.checkDefaultLabelExpression(
+          new QueueLabelChecks.DefaultLabelExpressionInput(getQueuePath(), accessibleNodeLabels,
+              this.queueNodeLabelsSettings.getDefaultLabelExpression()));
+      if (defaultLabelExpressionError != null) {
+        throw new IOException(defaultLabelExpressionError);
       }
 
       nodeLocalityDelay = configuration.getNodeLocalityDelay();
@@ -318,11 +311,6 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     } finally {
       writeLock.unlock();
     }
-  }
-
-  private String getDefaultNodeLabelExpressionStr() {
-    String defaultLabelExpression = queueNodeLabelsSettings.getDefaultLabelExpression();
-    return defaultLabelExpression == null ? "" : defaultLabelExpression;
   }
 
   /**
@@ -569,11 +557,10 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       Resource oldMax = getMaximumAllocation();
       Resource newMax = newlyParsedLeafQueue.getMaximumAllocation();
 
-      if (!Resources.fitsIn(oldMax, newMax)) {
-        throw new IOException("Trying to reinitialize " + getQueuePath()
-            + " the maximum allocation size can not be decreased!"
-            + " Current setting: " + oldMax + ", trying to set it to: "
-            + newMax);
+      String maxAllocationError = QueueAllocationChecks
+          .checkMaximumAllocationNotDecreased(getQueuePath(), oldMax, newMax);
+      if (maxAllocationError != null) {
+        throw new IOException(maxAllocationError);
       }
 
       setupQueueConfigs(clusterResource);

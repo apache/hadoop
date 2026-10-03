@@ -71,15 +71,10 @@ public final class UserWeights {
   }
 
   public void validateForLeafQueue(float queueUserLimit, String queuePath) throws IOException {
-    for (Map.Entry<String, Float> e : data.entrySet()) {
-      String userName = e.getKey();
-      float weight = e.getValue();
-      if (weight < 0.0F || weight > (100.0F / queueUserLimit)) {
-        throw new IOException("Weight (" + weight + ") for user \"" + userName
-            + "\" must be between 0 and" + " 100 / " + queueUserLimit + " (= " +
-            100.0f / queueUserLimit + ", the number of concurrent active users in "
-            + queuePath + ")");
-      }
+    String error = QueueLimitChecks.checkUserWeights(
+        new QueueLimitChecks.UserWeightsInput(queuePath, queueUserLimit, data));
+    if (error != null) {
+      throw new IOException(error);
     }
   }
 
