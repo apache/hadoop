@@ -334,19 +334,19 @@ public class TestRouterWebServicesREST {
     LambdaTestUtils.eventually(APP_STATE_TIMEOUT_MS, 20, () -> {
       Object rmBefore = key.apply(
           performGetCall(rmAddress, path, returnType, null, null));
-      Object router = key.apply(
+      Object routerValue = key.apply(
           performGetCall(routerAddress, path, returnType, null, null));
       Object rmAfter = key.apply(
           performGetCall(rmAddress, path, returnType, null, null));
 
       assertEquals(rmBefore, rmAfter, "RM changed while Router was being read");
-      if (!Objects.equals(rmAfter, router)
+      if (!Objects.equals(rmAfter, routerValue)
           && stableMismatches.incrementAndGet() >= stableMismatchesToFail) {
         throw new LambdaTestUtils.FailFastException(String.format(
             "Router answered %s where the RM, stable around the read, answered"
-            + " %s (%d times)", router, rmAfter, stableMismatches.get()));
+            + " %s (%d times)", routerValue, rmAfter, stableMismatches.get()));
       }
-      assertEquals(rmAfter, router, "Router does not match the RM");
+      assertEquals(rmAfter, routerValue, "Router does not match the RM");
     });
   }
 
