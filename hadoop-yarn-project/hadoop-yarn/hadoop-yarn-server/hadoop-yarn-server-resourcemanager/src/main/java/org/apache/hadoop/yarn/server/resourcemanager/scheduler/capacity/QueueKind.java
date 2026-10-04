@@ -39,6 +39,13 @@ public enum QueueKind {
   OTHER;
 
   /**
+   * @return true for a leaf queue
+   */
+  public boolean isLeaf() {
+    return this == LEAF;
+  }
+
+  /**
    * @return true for every kind of parent queue
    */
   public boolean isParent() {

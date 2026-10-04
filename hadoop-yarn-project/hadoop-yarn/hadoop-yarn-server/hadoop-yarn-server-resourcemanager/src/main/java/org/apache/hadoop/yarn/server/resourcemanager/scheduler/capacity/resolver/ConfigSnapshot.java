@@ -165,6 +165,17 @@ public final class ConfigSnapshot {
   }
 
   /**
+   * Returns every property with the raw text of its value, before variable
+   * substitution.
+   * @return a new map of the keys to their raw values
+   */
+  public Map<String, String> getRawProperties() {
+    Map<String, String> properties = new HashMap<>(values);
+    properties.putAll(rawValues);
+    return properties;
+  }
+
+  /**
    * Filters the properties by a prefix of whole key parts and returns the raw
    * text of their values, before variable substitution. Unless the keys are
    * fully qualified, they are trimmed by the prefix, a trailing dot of the

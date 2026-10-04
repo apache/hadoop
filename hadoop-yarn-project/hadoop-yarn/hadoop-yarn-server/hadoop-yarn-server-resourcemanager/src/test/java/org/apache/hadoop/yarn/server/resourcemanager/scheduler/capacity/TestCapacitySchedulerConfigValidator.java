@@ -37,6 +37,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ConfigSnapshot;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validation.CSConfigValidator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validation.ClusterFacts;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validation.ValidationResult;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -231,6 +235,113 @@ public class TestCapacitySchedulerConfigValidator {
       fail("Invalid capacity");
     } catch (IOException e) {
       assertEquals("Illegal capacity of 500.0 for queue root.test1", e.getCause().getMessage());
+    }
+  }
+
+  /**
+   * The hierarchy transition checks fail on the first live queue in the
+   * iteration order of the queue store: root.a (S06) before root.a.a1 (S04).
+   */
+  @Test
+  public void testValidateCSConfigHierarchyCheckOrder() {
+    String p = CapacitySchedulerConfiguration.PREFIX + "root";
+    Configuration oldConfig = new Configuration(false);
+    oldConfig.set(p + ".queues", "a,b");
+    oldConfig.set(p + ".a.capacity", "50");
+    oldConfig.set(p + ".b.capacity", "50");
+    oldConfig.set(p + ".a.queues", "a1");
+    oldConfig.set(p + ".a.a1.capacity", "100");
+    Configuration newConfig = new Configuration(false);
+    newConfig.set(p + ".queues", "a,b");
+    newConfig.set(p + ".a.capacity", "50");
+    newConfig.set(p + ".b.capacity", "50");
+    newConfig.set(p + ".a.auto-create-child-queue.enabled", "true");
+    IOException e = assertThrows(IOException.class,
+        () -> CapacitySchedulerConfigValidator.validateCSConfiguration(
+            oldConfig, newConfig, prepareRMContext()));
+    assertEquals("Failed to re-init queues : Can not convert parent queue:"
+        + " root.a to auto create enabled parent queue since it could have"
+        + " other pre-configured queues which is not supported",
+        e.getMessage());
+  }
+
+  @Test
+  public void testThrowIfInvalidKeepsParseFailureCause() {
+    String p = CapacitySchedulerConfiguration.PREFIX + "root";
+    Configuration conf = new Configuration(false);
+    conf.set(p + ".queues", "a,b");
+    conf.set(p + ".a.capacity", "50%");
+    conf.set(p + ".b.capacity", "50");
+    ConfigSnapshot snapshot = ConfigSnapshot.of(conf);
+    ClusterFacts facts = ClusterFacts.empty();
+    ValidationResult result = new CSConfigValidator().validate(snapshot,
+        facts);
+    IOException e = assertThrows(IOException.class,
+        () -> CapacitySchedulerConfigValidator.throwIfInvalid(result));
+    assertEquals("Failed to re-init queues : For input string: \"50%\"",
+        e.getMessage());
+    assertTrue(e.getCause() instanceof NumberFormatException,
+        String.valueOf(e.getCause()));
+  }
+
+  /**
+   * A ReservationQueue validates the user weights it inherits from its plan
+   * against the user limit of its own path, not the plan's user limit.
+   */
+  @Test
+  public void testReservationQueueUserWeightsUseOwnUserLimit()
+      throws Exception {
+    YarnConfiguration yarnConf = new YarnConfiguration();
+    yarnConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    CapacitySchedulerConfiguration conf =
+        new CapacitySchedulerConfiguration(yarnConf);
+    String p = CapacitySchedulerConfiguration.PREFIX;
+    conf.set(p + "root.queues", "a,plan");
+    conf.set(p + "root.a.capacity", "50");
+    conf.set(p + "root.plan.capacity", "50");
+    conf.set(p + "root.plan.reservable", "true");
+    conf.set(p + "minimum-user-limit-percent", "25");
+    conf.set(p + "root.plan.minimum-user-limit-percent", "100");
+    conf.set(p + "root.plan.user-settings.alice.weight", "2");
+
+    mockRM = new MockRM(conf);
+    try {
+      mockRM.start();
+      cs = (CapacityScheduler) mockRM.getResourceScheduler();
+      assertNotNull(cs.getQueue("root.plan.plan-default"));
+      cs.reinitialize(conf, mockRM.getRMContext());
+
+      ValidationResult result = new CSConfigValidator().validate(
+          ConfigSnapshot.of(conf), ClusterFacts.capture(cs));
+      assertTrue(result.isValid(), result.toString());
+      assertTrue(CapacitySchedulerConfigValidator.validateCSConfiguration(
+          conf, conf, mockRM.getRMContext()));
+    } finally {
+      mockRM.stop();
+    }
+  }
+
+  /**
+   * A malformed scheduler allocation fails before the queues are refreshed,
+   * with the parse failure itself.
+   */
+  @Test
+  public void testValidateCSConfigMalformedAllocation() {
+    Configuration oldConfig = CapacitySchedulerConfigGeneratorForTest
+        .createBasicCSConfiguration();
+    for (String key : new String[] {
+        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES}) {
+      Configuration newConfig = new Configuration(oldConfig);
+      newConfig.set(key, "abc");
+      NumberFormatException e = assertThrows(NumberFormatException.class,
+          () -> CapacitySchedulerConfigValidator.validateCSConfiguration(
+              oldConfig, newConfig, prepareRMContext()), key);
+      assertEquals("java.lang.NumberFormatException: For input string:"
+          + " \"abc\"", e.toString(), key);
     }
   }
 

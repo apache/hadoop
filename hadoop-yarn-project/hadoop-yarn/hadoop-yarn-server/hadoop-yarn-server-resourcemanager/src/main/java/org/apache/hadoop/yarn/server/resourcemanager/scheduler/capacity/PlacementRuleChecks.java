@@ -18,12 +18,21 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleValidationContext;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleValidationContextImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Placement rule and mapping rule checks, shared by the scheduler's placement
@@ -37,8 +46,57 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class PlacementRuleChecks {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PlacementRuleChecks.class);
+
+  /**
+   * The mapping rule variables with a special meaning, which are immutable
+   * in every variable context.
+   */
+  public static final Set<String> IMMUTABLE_VARIABLES = ImmutableSet.of(
+      "%user",
+      "%primary_group",
+      "%secondary_group",
+      "%application",
+      "%specified"
+      );
 
   private PlacementRuleChecks() {
+  }
+
+  /**
+   * Creates the context mapping rules are validated in: the immutable
+   * variables and {@code %default} are known, and the rules may add more.
+   * @param queueIndex the queues rule targets are validated against
+   * @return the validation context
+   * @throws IOException if a variable cannot be registered
+   */
+  public static MappingRuleValidationContext newMappingRuleValidationContext(
+      QueueIndex queueIndex) throws IOException {
+    MappingRuleValidationContext validationContext =
+        new MappingRuleValidationContextImpl(queueIndex);
+
+    //Adding all immutable variables to the known variable list
+    for (String var : IMMUTABLE_VARIABLES) {
+      try {
+        validationContext.addImmutableVariable(var);
+      } catch (YarnException e) {
+        LOG.error("Error initializing placement variables, unable to register" +
+            " '{}': {}", var, e.getMessage());
+        throw new IOException(e);
+      }
+    }
+    //Immutables + %default are the only officially supported variables,
+    //We initialize the context with these, and let the rules to extend the list
+    try {
+      validationContext.addVariable("%default");
+    } catch (YarnException e) {
+      LOG.error("Error initializing placement variables, unable to register" +
+          " '%default': " + e.getMessage());
+      throw new IOException(e);
+    }
+
+    return validationContext;
   }
 
   /**
@@ -76,6 +134,48 @@ public final class PlacementRuleChecks {
       @Override
       public boolean isAmbiguous(String shortName) {
         return queueManager.isAmbiguous(shortName);
+      }
+    };
+  }
+
+  /**
+   * Returns a queue index over the given queues, with the lookup rules of the
+   * scheduler's queue store: a full path always finds its queue, a short name
+   * finds the queue only when no other queue has the same short name, and
+   * {@code root} is not a short name.
+   * @param queues the queues, each full path at most once
+   * @return the queue index
+   */
+  public static QueueIndex queueIndexOf(Collection<QueueRef> queues) {
+    final Map<String, QueueRef> byName = new HashMap<>();
+    final Map<String, Integer> shortNameCounts = new HashMap<>();
+    Map<String, QueueRef> byShortName = new HashMap<>();
+    for (QueueRef queue : queues) {
+      byName.put(queue.getQueuePath(), queue);
+      String path = queue.getQueuePath();
+      String shortName = path.substring(path.lastIndexOf('.') + 1);
+      if (!shortName.equals(CapacitySchedulerConfiguration.ROOT)) {
+        Integer count = shortNameCounts.get(shortName);
+        shortNameCounts.put(shortName, count == null ? 1 : count + 1);
+        byShortName.put(shortName, queue);
+      }
+    }
+    for (Map.Entry<String, QueueRef> entry : byShortName.entrySet()) {
+      if (shortNameCounts.get(entry.getKey()) == 1) {
+        byName.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return new QueueIndex() {
+      @Override
+      public QueueRef getQueue(String queueName) {
+        return queueName == null ? null : byName.get(queueName);
+      }
+
+      @Override
+      public boolean isAmbiguous(String shortName) {
+        Integer count = shortName == null ? null
+            : shortNameCounts.get(shortName);
+        return count != null && count > 1;
       }
     };
   }
@@ -147,7 +247,7 @@ public final class PlacementRuleChecks {
     }
 
     public boolean isLeaf() {
-      return kind == QueueKind.LEAF;
+      return kind.isLeaf();
     }
 
     public boolean isParent() {

@@ -157,6 +157,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigValidator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ConfigSnapshot;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validation.CSConfigValidator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validation.ClusterFacts;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validation.ValidationIssue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validation.ValidationResult;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
@@ -209,6 +214,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInf
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ConfigVersionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerOverviewInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ValidationResultInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
@@ -229,6 +235,7 @@ import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 @Singleton
@@ -237,6 +244,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RMWebServices.class.getName());
+
+  /** Rule id of a mutation that cannot be applied to the configuration. */
+  static final String INVALID_MUTATION_RULE = "invalid-mutation";
 
   private final ResourceManager rm;
   private static RecordFactory recordFactory =
@@ -2780,8 +2790,11 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           e = iter.next();
           newConfig.set(e.getKey(), e.getValue());
         }
-        CapacitySchedulerConfigValidator.validateCSConfiguration(yarnConf,
-                newConfig, rm.getRMContext());
+        // Validated against the queues as configured, like trunk's
+        // throwaway scheduler saw them; validate/v2 uses the live queues
+        CapacitySchedulerConfigValidator.validateCSConfiguration(
+            ((CapacityScheduler) scheduler).getConfiguration(), newConfig,
+            rm.getRMContext());
 
         return Response.status(Status.OK)
                 .entity(new ConfInfo(newSchedulerConf))
@@ -2801,6 +2814,87 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       return Response.status(Status.BAD_REQUEST)
               .entity(errorMsg)
               .build();
+    }
+  }
+
+  /**
+   * Validates a proposed scheduler configuration mutation and reports every
+   * issue found, without storing or activating it.
+   * <p>
+   * Returns 200 whenever validation ran, valid or not. A mutation that
+   * cannot be assembled, for example removing a queue that does not exist,
+   * is reported as an {@code invalid-mutation} issue. The request is not
+   * serialized with configuration mutations and may observe a mutation that
+   * is still being applied.
+   *
+   * @param mutationInfo the proposed mutation
+   * @param explain absent, {@code affected}, or comma-separated full queue
+   *                paths whose resolved values are added to the result
+   * @param hsr the servlet request
+   * @return the validation result
+   * @throws AuthorizationException if the caller is not authenticated
+   */
+  @POST
+  @Path(RMWSConsts.SCHEDULER_CONF_VALIDATE_V2)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @InterfaceAudience.Private
+  public Response validateSchedulerConfigurationV2(
+      SchedConfUpdateInfo mutationInfo,
+      @QueryParam(RMWSConsts.EXPLAIN) String explain,
+      @Context HttpServletRequest hsr) throws AuthorizationException {
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, true);
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+    if (!isConfigurationMutable(scheduler)) {
+      String errorMsg = String.format(
+          "Configuration change validation only supported by %s.",
+          MutableConfScheduler.class.getSimpleName());
+      LOG.warn(errorMsg);
+      return Response.status(Status.BAD_REQUEST).entity(errorMsg).build();
+    }
+    if (mutationInfo == null) {
+      return Response.status(Status.BAD_REQUEST)
+          .entity("Missing scheduler configuration mutation.").build();
+    }
+
+    MutableConfigurationProvider provider =
+        ((MutableConfScheduler) scheduler).getMutableConfProvider();
+    Configuration newSchedulerConf;
+    try {
+      newSchedulerConf = provider.applyChanges(provider.getConfiguration(),
+          mutationInfo);
+    } catch (IOException | RuntimeException e) {
+      String message = e.getMessage() == null ? e.toString() : e.getMessage();
+      ValidationResult invalid = new ValidationResult(
+          Collections.singletonList(ValidationIssue.error(null, null,
+              INVALID_MUTATION_RULE, message)));
+      return Response.status(Status.OK)
+          .entity(new ValidationResultInfo(invalid)).build();
+    }
+
+    try {
+      // Same view as the legacy validate endpoint: yarn-site overlaid with
+      // the proposed scheduler configuration.
+      Configuration newConfig =
+          new Configuration(((CapacityScheduler) scheduler).getConf());
+      for (Map.Entry<String, String> e : newSchedulerConf) {
+        newConfig.set(e.getKey(), e.getValue());
+      }
+      ConfigSnapshot proposed = ConfigSnapshot.of(newConfig);
+      List<String> explainQueues =
+          ValidationExplainScope.resolve(explain, mutationInfo, proposed);
+      ClusterFacts facts = ClusterFacts.capture((CapacityScheduler) scheduler);
+      ValidationResult result = new CSConfigValidator()
+          .validate(proposed, facts, explainQueues);
+      return Response.status(Status.OK)
+          .entity(new ValidationResultInfo(result)).build();
+    } catch (Exception e) {
+      LOG.warn("CapacityScheduler configuration validation failed", e);
+      return Response.status(Status.INTERNAL_SERVER_ERROR)
+          .entity("CapacityScheduler configuration validation failed: "
+              + e.getMessage()).build();
     }
   }
 
