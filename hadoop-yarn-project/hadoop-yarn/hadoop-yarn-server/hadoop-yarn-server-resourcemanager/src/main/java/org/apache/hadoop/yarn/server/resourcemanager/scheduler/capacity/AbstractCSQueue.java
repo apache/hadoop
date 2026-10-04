@@ -50,6 +50,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AbsoluteResourceType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperty;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolvedQueueConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerAllocationProposal;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.SchedulerContainer;
@@ -63,6 +66,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -181,7 +185,7 @@ public abstract class AbstractCSQueue implements CSQueue {
    * Sets up capacity and weight values from configuration.
    */
   protected void setupConfigurableCapacities() {
-    CSQueueUtils.loadCapacitiesByLabelsFromConf(queuePath, queueCapacities,
+    CSQueueUtils.loadCapacitiesByLabels(queuePath, queueCapacities, getResolvedQueueConfig(),
         queueContext.getConfiguration(), this.queueNodeLabelsSettings.getConfiguredNodeLabels());
   }
 
@@ -274,6 +278,37 @@ public abstract class AbstractCSQueue implements CSQueue {
     return queueContext;
   }
 
+  /**
+   * Get the resolved configuration this queue is set up from.
+   * @return the resolved configuration of the queue
+   */
+  protected ResolvedQueueConfig getResolvedQueueConfig() {
+    QueueProperty.Kind kind;
+    if (this instanceof ReservationQueue) {
+      kind = QueueProperty.Kind.RESERVATION;
+    } else if (this instanceof PlanQueue) {
+      kind = QueueProperty.Kind.PLAN;
+    } else if (parent == null) {
+      kind = QueueProperty.Kind.ROOT;
+    } else if (this instanceof AbstractLeafQueue) {
+      kind = QueueProperty.Kind.LEAF;
+    } else {
+      kind = QueueProperty.Kind.PARENT;
+    }
+    return queueContext.getResolvedQueueConfig(queuePath, kind,
+        isDynamicQueue() || this instanceof AbstractAutoCreatedLeafQueue);
+  }
+
+  /**
+   * Get the resolved configuration of the parent, which is set up before its
+   * children.
+   * @return the resolved configuration of the parent, null for root
+   */
+  protected ResolvedQueueConfig getResolvedParentConfig() {
+    return parent == null ? null
+        : queueContext.getResolvedQueueConfig(parent.getQueuePathObject());
+  }
+
   public Set<String> getAccessibleNodeLabels() {
     return queueNodeLabelsSettings.getAccessibleNodeLabels();
   }
@@ -344,16 +379,18 @@ public abstract class AbstractCSQueue implements CSQueue {
     writeLock.lock();
     try {
       CapacitySchedulerConfiguration configuration = queueContext.getConfiguration();
-      this.acls = configuration.getAcls(getQueuePathObject());
+      ResolvedQueueConfig resolved = getResolvedQueueConfig();
+      // Dynamic queues take their ACLs from the templates of their parent
+      this.acls = getAcls(resolved);
 
       if (isDynamicQueue() || this instanceof AbstractAutoCreatedLeafQueue) {
         parseAndSetDynamicTemplates();
-        setDynamicQueueACLProperties();
       }
 
       // Collect and set the Node label configuration
-      this.queueNodeLabelsSettings = new QueueNodeLabelsSettings(configuration, parent,
-          queuePath, queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues());
+      this.queueNodeLabelsSettings = new QueueNodeLabelsSettings(resolved,
+          getResolvedParentConfig(), configuration, queuePath,
+          queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues());
 
       // Initialize the queue capacities
       setupConfigurableCapacities();
@@ -365,8 +402,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       // Setup queue's maximumAllocation respecting the global
       // and the queue settings
-      this.queueAllocationSettings.setupMaximumAllocation(configuration, getQueuePathObject(),
-          parent);
+      this.queueAllocationSettings.setupMaximumAllocation(configuration, resolved,
+          getQueuePathObject());
 
       // Initialize the queue state based on previous state, configured state
       // and its parent state
@@ -374,18 +411,27 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       authorizer = YarnAuthorizationProvider.getInstance(configuration);
 
-      this.userWeights = getUserWeightsFromHierarchy();
+      // The resolved weights are the union of the queue's and its ancestors'
+      this.userWeights = UserWeights.createFrom(
+          resolved.get(QueueProperties.USER_WEIGHTS).getValue());
 
       this.reservationsContinueLooking =
           configuration.getReservationContinueLook();
 
-      this.configuredCapacityVectors = configuration
-          .parseConfiguredResourceVector(queuePath,
-              this.queueNodeLabelsSettings.getConfiguredNodeLabels());
-      this.configuredMaxCapacityVectors = configuration
-          .parseConfiguredMaximumCapacityVector(queuePath,
-              this.queueNodeLabelsSettings.getConfiguredNodeLabels(),
-              QueueCapacityVector.newInstance());
+      this.configuredCapacityVectors = new HashMap<>();
+      this.configuredMaxCapacityVectors = new HashMap<>();
+      for (final String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
+        configuredCapacityVectors.put(label, CSQueueUtils.getResolvedValue(resolved,
+            QueueProperties.CAPACITY_VECTOR, label,
+            () -> configuration.parseConfiguredResourceVector(queuePath,
+                Collections.singleton(label)).get(label)));
+      }
+      for (final String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
+        configuredMaxCapacityVectors.put(label, CSQueueUtils.getResolvedValue(resolved,
+            QueueProperties.MAXIMUM_CAPACITY_VECTOR, label,
+            () -> configuration.parseConfiguredMaximumCapacityVector(queuePath,
+                Collections.singleton(label), QueueCapacityVector.newInstance()).get(label)));
+      }
 
       for (final String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
         // Manually sets the capacity vector for:
@@ -409,17 +455,19 @@ public abstract class AbstractCSQueue implements CSQueue {
           this, labelManager, null);
 
       // Store preemption settings
-      this.preemptionSettings = new CSQueuePreemptionSettings(this, configuration);
-      this.priority = configuration.getQueuePriority(
-          getQueuePathObject());
+      this.preemptionSettings = new CSQueuePreemptionSettings(resolved);
+      this.priority = Priority.newInstance(
+          resolved.get(QueueProperties.PRIORITY).getValue());
 
       // Update multi-node sorting algorithm for scheduling as configured.
-      setMultiNodeSortingPolicyClassName(
-          configuration.getMultiNodesSortingAlgorithmPolicy(getQueuePathObject()));
+      String multiNodeSortingPolicy =
+          resolved.get(QueueProperties.MULTI_NODE_SORTING_POLICY).getValue();
+      setMultiNodeSortingPolicyClassName(multiNodeSortingPolicy == null ? null
+          : configuration.normalizePolicyName(multiNodeSortingPolicy));
 
       // Setup application related limits
-      this.queueAppLifetimeSettings = new QueueAppLifetimeAndLimitSettings(configuration,
-          this, queuePath);
+      this.queueAppLifetimeSettings = new QueueAppLifetimeAndLimitSettings(resolved,
+          queuePath);
     } finally {
       writeLock.unlock();
     }
@@ -448,7 +496,16 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
   }
 
-  protected void setDynamicQueueACLProperties() {
+  private static Map<AccessType, AccessControlList> getAcls(
+      ResolvedQueueConfig resolved) {
+    Map<AccessType, AccessControlList> queueAcls = new HashMap<>();
+    queueAcls.put(SchedulerUtils.toAccessType(QueueACL.SUBMIT_APPLICATIONS),
+        new AccessControlList(resolved.get(
+            QueueProperties.ACL_SUBMIT_APPLICATIONS).getValue()));
+    queueAcls.put(SchedulerUtils.toAccessType(QueueACL.ADMINISTER_QUEUE),
+        new AccessControlList(resolved.get(
+            QueueProperties.ACL_ADMINISTER_QUEUE).getValue()));
+    return queueAcls;
   }
 
   protected void overrideCapacityVectorsForSpecialQueues(String label) {
@@ -469,32 +526,41 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
   }
 
-  private UserWeights getUserWeightsFromHierarchy() {
-    UserWeights unionInheritedWeights = UserWeights.createEmpty();
-    CSQueue parentQ = parent;
-    if (parentQ != null) {
-      // Inherit all of parent's userWeights
-      unionInheritedWeights.addFrom(parentQ.getUserWeights());
-    }
-    // Insert this queue's userWeights, overriding parent's userWeights if
-    // there is an overlap.
-    unionInheritedWeights.addFrom(
-        queueContext.getConfiguration().getAllUserWeightsForQueue(getQueuePathObject()));
-    return unionInheritedWeights;
-  }
+  // The values of the queue's own path come from its resolved configuration;
+  // the auto-created leaf queues read the template path of their parent.
 
-  protected Resource getMinimumAbsoluteResource(QueuePath queuePath, String label) {
+  protected Resource getMinimumAbsoluteResource(final QueuePath queuePath,
+      final String label) {
+    if (queuePath.equals(this.queuePath)) {
+      return CSQueueUtils.getResolvedValue(getResolvedQueueConfig(),
+          QueueProperties.MINIMUM_RESOURCE, label,
+          () -> queueContext.getConfiguration()
+              .getMinimumResourceRequirement(label, queuePath, resourceTypes));
+    }
     return queueContext.getConfiguration()
         .getMinimumResourceRequirement(label, queuePath, resourceTypes);
   }
 
-  protected Resource getMaximumAbsoluteResource(QueuePath queuePath, String label) {
+  protected Resource getMaximumAbsoluteResource(final QueuePath queuePath,
+      final String label) {
+    if (queuePath.equals(this.queuePath)) {
+      return CSQueueUtils.getResolvedValue(getResolvedQueueConfig(),
+          QueueProperties.MAXIMUM_RESOURCE, label,
+          () -> queueContext.getConfiguration()
+              .getMaximumResourceRequirement(label, queuePath, resourceTypes));
+    }
     return queueContext.getConfiguration()
         .getMaximumResourceRequirement(label, queuePath, resourceTypes);
   }
 
-  protected boolean checkConfigTypeIsAbsoluteResource(QueuePath queuePath,
-      String label) {
+  protected boolean checkConfigTypeIsAbsoluteResource(final QueuePath queuePath,
+      final String label) {
+    if (queuePath.equals(this.queuePath)) {
+      return CSQueueUtils.getResolvedValue(getResolvedQueueConfig(),
+          QueueProperties.CAPACITY_IS_ABSOLUTE_RESOURCE, label,
+          () -> queueContext.getConfiguration()
+              .checkConfigTypeIsAbsoluteResource(label, queuePath, resourceTypes));
+    }
     return queueContext.getConfiguration().checkConfigTypeIsAbsoluteResource(label,
         queuePath, resourceTypes);
   }

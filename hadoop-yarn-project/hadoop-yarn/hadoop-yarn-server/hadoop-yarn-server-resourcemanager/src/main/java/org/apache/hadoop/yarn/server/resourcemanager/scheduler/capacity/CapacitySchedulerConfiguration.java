@@ -626,6 +626,34 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     String policyType =
         QueueProperties.APP_ORDERING_POLICY.read(this::get, queue);
 
+    Map<String, String> config = new HashMap<String, String>();
+    String confPrefix =
+        QueueProperties.ORDERING_POLICY_PARAMETERS.getKey(queue, null);
+    Properties props = getProps();
+    synchronized (props) {
+      for (Map.Entry<Object, Object> kv : props.entrySet()) {
+        if (kv.getKey() instanceof String && kv.getValue() instanceof String
+            && ((String) kv.getKey()).startsWith(confPrefix)) {
+          config.put(((String) kv.getKey()).substring(confPrefix.length()),
+              (String) kv.getValue());
+        }
+      }
+    }
+    return createAppOrderingPolicy(policyType,
+        QueueProperties.ORDERING_POLICY_PARAMETERS.read(Function.identity(),
+            queue, NO_LABEL, config));
+  }
+
+  /**
+   * Creates an application ordering policy.
+   * @param policyType the configured policy name or class name
+   * @param parameters the configured parameters of the policy
+   * @param <S> the type of the scheduled entities
+   * @return the configured ordering policy
+   */
+  @SuppressWarnings("unchecked")
+  static <S extends SchedulableEntity> OrderingPolicy<S> createAppOrderingPolicy(
+      String policyType, Map<String, String> parameters) {
     OrderingPolicy<S> orderingPolicy;
 
     if (policyType.trim().equals(FIFO_APP_ORDERING_POLICY)) {
@@ -649,27 +677,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       throw new RuntimeException(message, e);
     }
 
-    Map<String, String> config = new HashMap<String, String>();
-    String confPrefix =
-        QueueProperties.ORDERING_POLICY_PARAMETERS.getKey(queue, null);
-    // Do not iterate over this: Configuration.iterator() copies every
-    // property on each call, once per leaf queue. Apply the same String
-    // filter under the same lock instead. The cached configuration snapshot
-    // is not used because set() does not refresh it.
-    Properties props = getProps();
-    synchronized (props) {
-      for (Map.Entry<Object, Object> kv : props.entrySet()) {
-        if (kv.getKey() instanceof String && kv.getValue() instanceof String) {
-          String key = (String) kv.getKey();
-          if (key.startsWith(confPrefix)) {
-            config.put(key.substring(confPrefix.length()),
-                (String) kv.getValue());
-          }
-        }
-      }
-    }
-    orderingPolicy.configure(QueueProperties.ORDERING_POLICY_PARAMETERS.read(
-        Function.identity(), queue, NO_LABEL, config));
+    orderingPolicy.configure(new HashMap<>(parameters));
     return orderingPolicy;
   }
 
@@ -1855,7 +1863,17 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       String parentPolicy) {
     String policyType = QueueProperties.QUEUE_ORDERING_POLICY.read(this::get,
         queue, NO_LABEL, parentPolicy);
+    return createQueueOrderingPolicy(policyType, queue);
+  }
 
+  /**
+   * Creates a queue ordering policy.
+   * @param policyType the configured policy name or class name
+   * @param queue the queue, used in the error message
+   * @return the configured queue ordering policy
+   */
+  static QueueOrderingPolicy createQueueOrderingPolicy(String policyType,
+      QueuePath queue) {
     QueueOrderingPolicy qop;
     if (policyType.equals(QUEUE_UTILIZATION_ORDERING_POLICY)) {
       // Doesn't respect priority
@@ -2284,8 +2302,21 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   getAutoCreatedQueueManagementPolicyClass(
       QueuePath queue) {
 
-    String queueManagementPolicyClassName =
-        getAutoCreatedQueueManagementPolicy(queue);
+    return createAutoCreatedQueueManagementPolicy(
+        getAutoCreatedQueueManagementPolicy(queue), queue);
+  }
+
+  /**
+   * Creates the policy that manages the capacities of the auto created leaf
+   * queues of a parent queue.
+   * @param queueManagementPolicyClassName the policy class name
+   * @param queue the parent queue's path
+   * @return the policy, configured with this configuration
+   */
+  @Private
+  protected AutoCreatedQueueManagementPolicy
+      createAutoCreatedQueueManagementPolicy(
+      String queueManagementPolicyClassName, QueuePath queue) {
     LOG.info("Using Auto Created Queue Management Policy: "
         + queueManagementPolicyClassName + " for queue: " + queue.getFullPath());
     try {
@@ -2622,7 +2653,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return Collections.unmodifiableSet(set);
   }
 
-  private String normalizePolicyName(String policyName) {
+  /**
+   * Checks that a multi-node lookup policy class can be loaded and is a
+   * {@link MultiNodeLookupPolicy}.
+   * @param policyName the policy class name
+   * @return the policy class name
+   */
+  String normalizePolicyName(String policyName) {
 
     // Ensure that custom node sorting algorithm class is valid.
     try {

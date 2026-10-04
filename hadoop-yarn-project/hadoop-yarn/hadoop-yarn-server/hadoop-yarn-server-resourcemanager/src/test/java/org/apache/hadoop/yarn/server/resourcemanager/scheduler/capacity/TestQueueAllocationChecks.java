@@ -18,11 +18,18 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import java.util.Collections;
+
 import org.junit.jupiter.api.Test;
 
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueConfigResolver;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolutionInputs;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolvedQueueConfig;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -123,7 +130,7 @@ public class TestQueueAllocationChecks {
     QueueAllocationSettings settings =
         new QueueAllocationSettings(Resource.newInstance(1024, 1));
     IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
-        () -> settings.setupMaximumAllocation(conf, path, null));
+        () -> settings.setupMaximumAllocation(conf, resolve(conf, path), path));
     assertEquals("Queue maximum allocation cannot be larger than the cluster"
         + " setting for queue root max allocation per queue:"
         + " <memory:4096, vCores:8> cluster setting:"
@@ -135,7 +142,8 @@ public class TestQueueAllocationChecks {
     legacy.setLong(QueuePrefixes.getQueuePrefix(path) + "maximum-allocation-mb",
         16384);
     e = assertThrows(IllegalArgumentException.class,
-        () -> settings.setupMaximumAllocation(legacy, path, null));
+        () -> settings.setupMaximumAllocation(legacy, resolve(legacy, path),
+            path));
     assertEquals("Queue maximum allocation cannot be larger than the cluster"
         + " setting for queue root max allocation per queue:"
         + " <memory:16384, vCores:4> cluster setting:"
@@ -154,5 +162,13 @@ public class TestQueueAllocationChecks {
             + " trying to set it to: <memory:8192, vCores:2>",
         QueueAllocationChecks.checkMaximumAllocationNotDecreased("root.a",
             current, Resource.newInstance(8192, 2)));
+  }
+
+  private static ResolvedQueueConfig resolve(
+      CapacitySchedulerConfiguration conf, QueuePath path) {
+    return QueueConfigResolver.resolve(conf.getConfigSnapshot(),
+        new ResolutionInputs(Collections.emptyList(),
+            ResourceUtils.fetchMaximumAllocationFromConfig(conf),
+            Priority.newInstance(0))).get(path);
   }
 }

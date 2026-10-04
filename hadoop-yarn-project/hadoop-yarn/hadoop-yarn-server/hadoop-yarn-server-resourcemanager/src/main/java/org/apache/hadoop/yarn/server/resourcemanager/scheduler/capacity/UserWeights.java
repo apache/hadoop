@@ -55,6 +55,17 @@ public final class UserWeights {
     return userWeights;
   }
 
+  /**
+   * Creates the user weights of a queue from its resolved weights.
+   * @param weights user name to weight
+   * @return the user weights
+   */
+  public static UserWeights createFrom(Map<String, Float> weights) {
+    UserWeights userWeights = new UserWeights();
+    userWeights.data.putAll(weights);
+    return userWeights;
+  }
+
   public float getByUser(String userName) {
     Float weight = data.get(userName);
     if (weight == null) {

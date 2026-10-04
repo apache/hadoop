@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.queuemanagement.GuaranteedOrZeroCapacityOverTimePolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica
     .FiCaSchedulerApp;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -63,9 +64,8 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     super(queueContext, queueName, parent, old);
     super.setupQueueConfigs(queueContext.getClusterResource());
     shouldFailAutoCreationWhenGuaranteedCapacityExceeded =
-        queueContext.getConfiguration()
-            .getShouldFailAutoQueueCreationWhenGuaranteedCapacityExceeded(
-                getQueuePathObject());
+        getResolvedQueueConfig().get(QueueProperties
+            .AUTO_CREATE_CHILD_QUEUE_FAIL_ON_EXCEEDING_CAPACITY).getValue();
 
     leafQueueTemplate = initializeLeafQueueConfigs().build();
 
@@ -81,9 +81,8 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
       validate(newlyParsedQueue);
 
       shouldFailAutoCreationWhenGuaranteedCapacityExceeded =
-          queueContext.getConfiguration()
-              .getShouldFailAutoQueueCreationWhenGuaranteedCapacityExceeded(
-                  getQueuePathObject());
+          getResolvedQueueConfig().get(QueueProperties
+              .AUTO_CREATE_CHILD_QUEUE_FAIL_ON_EXCEEDING_CAPACITY).getValue();
 
       //validate if capacity is exceeded for child queues
       if (shouldFailAutoCreationWhenGuaranteedCapacityExceeded) {
@@ -130,18 +129,22 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     }
   }
 
+  private AutoCreatedQueueManagementPolicy createQueueManagementPolicy() {
+    return queueContext.getConfiguration().createAutoCreatedQueueManagementPolicy(
+        getResolvedQueueConfig().get(
+            QueueProperties.AUTO_CREATED_QUEUE_MANAGEMENT_POLICY_NAME).getValue(),
+        getQueuePathObject());
+  }
+
   private void initializeQueueManagementPolicy() throws IOException {
-    queueManagementPolicy =
-        queueContext.getConfiguration().getAutoCreatedQueueManagementPolicyClass(
-            getQueuePathObject());
+    queueManagementPolicy = createQueueManagementPolicy();
 
     queueManagementPolicy.init(this);
   }
 
   private void reinitializeQueueManagementPolicy() throws IOException {
     AutoCreatedQueueManagementPolicy managementPolicy =
-        queueContext.getConfiguration().getAutoCreatedQueueManagementPolicyClass(
-            getQueuePathObject());
+        createQueueManagementPolicy();
 
     if (!(managementPolicy.getClass().equals(
         this.queueManagementPolicy.getClass()))) {
