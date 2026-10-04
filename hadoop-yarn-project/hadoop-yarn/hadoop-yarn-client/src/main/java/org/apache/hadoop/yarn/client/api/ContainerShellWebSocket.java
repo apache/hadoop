@@ -168,9 +168,8 @@ public class ContainerShellWebSocket {
    */
   private static String remoteHost(Session session) {
     SocketAddress remote = session.getRemoteAddress();
-    return remote instanceof InetSocketAddress
-        ? ((InetSocketAddress) remote).getHostString()
-        : String.valueOf(remote);
+    return remote instanceof InetSocketAddress isa
+        ? isa.getHostString() : String.valueOf(remote);
   }
 
 }

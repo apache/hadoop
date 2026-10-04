@@ -109,8 +109,7 @@ public class WebApps {
     private final HashMap<String, Object> attributes = new HashMap<>();
     private ApplicationClientProtocol appClientProtocol;
     private ResourceConfig config;
-    private final List<Consumer<HttpServer2>> serverConfigurers =
-        new ArrayList<>();
+    private Consumer<HttpServer2> serverConfigurer = server -> { };
     Builder(String name, Class<T> api, T application, String wsName) {
       this.name = name;
       this.api = api;
@@ -240,7 +239,7 @@ public class WebApps {
      * @return this builder
      */
     public Builder<T> withServerConfigurer(Consumer<HttpServer2> configurer) {
-      this.serverConfigurers.add(configurer);
+      this.serverConfigurer = configurer;
       return this;
     }
 
@@ -518,9 +517,7 @@ public class WebApps {
         }
       }
 
-      for (Consumer<HttpServer2> configurer : serverConfigurers) {
-        configurer.accept(httpServer);
-      }
+      serverConfigurer.accept(httpServer);
 
       try {
         httpServer.start();

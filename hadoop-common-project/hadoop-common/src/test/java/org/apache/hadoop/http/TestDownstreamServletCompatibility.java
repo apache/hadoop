@@ -18,21 +18,17 @@
 package org.apache.hadoop.http;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
-import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -369,23 +365,11 @@ public class TestDownstreamServletCompatibility
       server.start();
 
       URL url = new URL(getServerURL(server), "/downstream");
-      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-      conn.connect();
-
-      assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
-      assertEquals("downstream-ok", body(conn));
+      assertEquals("downstream-ok", readOutput(url).trim());
       assertTrue(DownstreamFilter.RAN.get(),
           "a downstream filter registered through addFilter did not run");
     } finally {
       stop(server);
-    }
-  }
-
-  private static String body(HttpURLConnection conn) throws IOException {
-    try (InputStream in = conn.getInputStream();
-         Scanner scanner = new Scanner(in, StandardCharsets.UTF_8.name())) {
-      scanner.useDelimiter("\\A");
-      return scanner.hasNext() ? scanner.next().trim() : "";
     }
   }
 

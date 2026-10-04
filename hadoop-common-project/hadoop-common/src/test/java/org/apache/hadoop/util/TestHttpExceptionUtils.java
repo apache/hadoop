@@ -165,10 +165,8 @@ public class TestHttpExceptionUtils {
   }
 
   @Test
-  public void testValidateResponseParsesAnEnvelopeTooLargeToRewind()
-      throws Exception {
-    // Larger than the rewind buffer: the parser reads straight through, so the
-    // exception is still rebuilt - only the text fallback is given up.
+  public void testValidateResponseParsesALargeEnvelope() throws Exception {
+    // Larger than the text fallback quotes: the exception is still rebuilt.
     Map<String, Object> json = new HashMap<String, Object>();
     json.put(HttpExceptionUtils.ERROR_EXCEPTION_JSON,
         IllegalStateException.class.getSimpleName());
