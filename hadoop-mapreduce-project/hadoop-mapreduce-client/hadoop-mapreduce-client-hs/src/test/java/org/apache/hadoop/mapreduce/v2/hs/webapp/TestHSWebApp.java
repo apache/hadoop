@@ -28,30 +28,50 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_LOG_TYPE;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.ENTITY_STRING;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NM_NODENAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MRApp;
 import org.apache.hadoop.mapreduce.v2.app.MockAppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockJobs;
+import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.job.Task;
+import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app.webapp.App;
 import org.apache.hadoop.mapreduce.v2.app.webapp.TestAMWebApp;
+import org.apache.hadoop.mapreduce.v2.hs.MockHistoryContext;
+import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.View;
+import org.apache.hadoop.yarn.webapp.WebApp;
+import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.log.AggregatedLogsPage;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.jupiter.api.Test;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Binding;
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.Scopes;
+import com.google.inject.servlet.RequestScoped;
+import com.google.inject.servlet.ServletScopes;
+import com.google.inject.spi.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,6 +147,66 @@ public class TestHSWebApp {
         ctx, params);
   }
   
+  /**
+   * App carries per-request job/task state from the controller to the view,
+   * so it must be shared within a request but never across requests.
+   */
+  @Test
+  public void testAppBindingIsRequestScoped() {
+    HsWebApp webApp = new HsWebApp(new MockHistoryContext(0, 1, 1, 1));
+    Binding<?> appBinding = Elements.getElements(webApp).stream()
+        .filter(e -> e instanceof Binding
+            && ((Binding<?>) e).getKey().equals(Key.get(App.class)))
+        .map(e -> (Binding<?>) e)
+        .findFirst()
+        .orElse(null);
+    assertNotNull(appBinding, "HsWebApp should bind App");
+    assertTrue(Scopes.isScoped(appBinding, ServletScopes.REQUEST,
+        RequestScoped.class), "App should be bound request-scoped");
+  }
+
+  /**
+   * Render the attempts page through a real HsWebApp, so the controller and
+   * the view get App from the webapp's own Guice bindings.
+   */
+  @Test
+  public void testAttemptsPageRender() throws Exception {
+    MockHistoryContext ctx = new MockHistoryContext(0, 1, 2, 2);
+    JobId jobId = ctx.getAllJobs().keySet().iterator().next();
+    Job job = ctx.getJob(jobId);
+    TaskAttempt attempt = null;
+    TaskAttemptStateUI state = null;
+    for (Task task : job.getTasks(TaskType.MAP).values()) {
+      for (TaskAttempt ta : task.getAttempts().values()) {
+        for (TaskAttemptStateUI ui : TaskAttemptStateUI.values()) {
+          if (state == null && ui.correspondsTo(ta.getState())) {
+            attempt = ta;
+            state = ui;
+          }
+        }
+      }
+    }
+    assertNotNull(attempt, "Mock job should have a map attempt to render");
+
+    WebApp webApp = WebApps.$for("jobhistory").at(0)
+        .start(new HsWebApp(ctx));
+    try {
+      URL url = new URL("http://localhost:"
+          + webApp.getListenerAddress().getPort() + "/jobhistory/attempts/"
+          + jobId + "/m/" + state);
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode(),
+          url.toString());
+      try (InputStream in = conn.getInputStream()) {
+        assertTrue(new String(in.readAllBytes(), StandardCharsets.UTF_8)
+            .contains(attempt.getID().toString()),
+            "Attempts page should list " + attempt.getID());
+      }
+    } finally {
+      webApp.stop();
+    }
+  }
+
   @Test public void testAttemptsView() {
     LOG.info("HsAttemptsPage");
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
