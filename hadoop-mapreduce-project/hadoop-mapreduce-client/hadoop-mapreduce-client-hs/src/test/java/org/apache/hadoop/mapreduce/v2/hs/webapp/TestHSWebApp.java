@@ -195,12 +195,18 @@ public class TestHSWebApp {
           + webApp.getListenerAddress().getPort() + "/jobhistory/attempts/"
           + jobId + "/m/" + state);
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode(),
-          url.toString());
-      try (InputStream in = conn.getInputStream()) {
-        assertTrue(new String(in.readAllBytes(), StandardCharsets.UTF_8)
-            .contains(attempt.getID().toString()),
-            "Attempts page should list " + attempt.getID());
+      conn.setConnectTimeout(10_000);
+      conn.setReadTimeout(10_000);
+      try {
+        assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode(),
+            url.toString());
+        try (InputStream in = conn.getInputStream()) {
+          assertTrue(new String(in.readAllBytes(), StandardCharsets.UTF_8)
+              .contains(attempt.getID().toString()),
+              "Attempts page should list " + attempt.getID());
+        }
+      } finally {
+        conn.disconnect();
       }
     } finally {
       webApp.stop();
