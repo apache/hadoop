@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.timelineservice;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -74,6 +75,7 @@ public class TestNMTimelinePublisher {
   private NMTimelinePublisher publisher;
   private DummyTimelineClient timelineClient;
   private Configuration conf;
+  private Context context;
   private DrainDispatcher dispatcher;
 
 
@@ -89,7 +91,7 @@ public class TestNMTimelinePublisher {
     conf.setBoolean(YarnConfiguration.NM_PUBLISH_CONTAINER_EVENTS_ENABLED,
         true);
     timelineClient = new DummyTimelineClient(null);
-    Context context = createMockContext();
+    context = createMockContext();
     dispatcher = new DrainDispatcher();
 
     publisher = new NMTimelinePublisher(context) {
@@ -163,6 +165,24 @@ public class TestNMTimelinePublisher {
     assertEquals(2, restored.getResourceValue("yarn.io/gpu"));
     assertEquals(1024, restored.getMemorySize());
     assertEquals(4, restored.getVirtualCores());
+  }
+
+  @Test
+  public void testPublishContainerCreatedWithoutCustomResources() {
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ContainerId containerId = ContainerId.newContainerId(
+        ApplicationAttemptId.newInstance(appId, 1), 1);
+    Container container = context.getContainers().get(containerId);
+    when(container.getResource()).thenReturn(Resource.newInstance(1024, 4));
+    publisher.createTimelineClient(appId);
+    publisher.publishContainerEvent(
+        new ContainerEvent(containerId, ContainerEventType.INIT_CONTAINER));
+    dispatcher.await();
+    TimelineEntity[] entities = timelineClient.getLastPublishedEntities();
+    assertNotNull(entities);
+    assertEquals(1, entities.length);
+    assertFalse(entities[0].getInfo().containsKey(
+        ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO));
   }
 
   @Test public void testPublishContainerFinish() throws Exception {

@@ -306,6 +306,35 @@ public class TestSystemMetricsPublisherForV2 {
 
   @Test
   @Timeout(value = 10)
+  public void testPublishContainerWithoutCustomResources() throws Exception {
+    ApplicationId appId = ApplicationId.newInstance(0, 2);
+    RMApp app = createAppAndRegister(appId);
+    ContainerId containerId = ContainerId.newContainerId(
+        ApplicationAttemptId.newInstance(appId, 1), 1);
+    RMContainer container = createRMContainer(containerId);
+    try {
+      when(container.getAllocatedResource()).thenReturn(Resource.newInstance(-1, -1));
+      metricsPublisher.containerCreated(container, container.getCreationTime());
+      dispatcher.await();
+      File entityFile = new File(getTimelineEntityDir(app) + "/"
+          + TimelineEntityType.YARN_CONTAINER + "/" + containerId
+          + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION);
+      assertTrue(entityFile.exists());
+      try (BufferedReader reader = new BufferedReader(new FileReader(entityFile))) {
+        TimelineEntity entity = FileSystemTimelineReaderImpl
+            .getTimelineRecordFromJSON(reader.readLine(), TimelineEntity.class);
+        assertFalse(entity.getInfo().containsKey(
+            ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO));
+      }
+    } finally {
+      YarnConfiguration resourceConf = new YarnConfiguration();
+      resourceConf.set(YarnConfiguration.RESOURCE_TYPES, "yarn.io/gpu");
+      ResourceUtils.resetResourceTypes(resourceConf);
+    }
+  }
+
+  @Test
+  @Timeout(value = 10)
   public void testPutEntityWhenNoCollector() throws Exception {
     // Validating the logs as DrainDispatcher won't throw exception
     class TestAppender extends AppenderSkeleton {

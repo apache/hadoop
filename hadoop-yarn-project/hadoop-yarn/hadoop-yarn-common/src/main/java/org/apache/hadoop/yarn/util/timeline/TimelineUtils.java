@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.util.timeline;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
@@ -79,7 +80,8 @@ public class TimelineUtils {
     for (ResourceInformation information : resource.getResources()) {
       String name = information.getName();
       if (!ResourceInformation.MEMORY_URI.equals(name)
-          && !ResourceInformation.VCORES_URI.equals(name)) {
+          && !ResourceInformation.VCORES_URI.equals(name)
+          && information.getValue() != 0) {
         Map<String, Object> allocation = new HashMap<>();
         allocation.put("value", information.getValue());
         allocation.put("units", information.getUnits());
@@ -99,26 +101,41 @@ public class TimelineUtils {
     int vcores = ((Number) entityInfo.getOrDefault(
         ContainerMetricsConstants.ALLOCATED_VCORE_INFO, 0)).intValue();
     Resource resource = Resource.newInstance(memory, vcores);
-    Map<?, ?> allocations = (Map<?, ?>) entityInfo.get(
+    Object allocationInfo = entityInfo.get(
         ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO);
-    if (allocations != null) {
+    if (allocationInfo instanceof Map) {
+      Map<?, ?> allocations = (Map<?, ?>) allocationInfo;
       for (Map.Entry<?, ?> entry : allocations.entrySet()) {
-        String name = (String) entry.getKey();
-        if (ResourceInformation.MEMORY_URI.equals(name)
-            || ResourceInformation.VCORES_URI.equals(name)) {
-          continue;
+        try {
+          String name = (String) entry.getKey();
+          if (ResourceInformation.MEMORY_URI.equals(name)
+              || ResourceInformation.VCORES_URI.equals(name)) {
+            continue;
+          }
+          if (!ResourceUtils.getResourceTypes().containsKey(name)) {
+            LOG.debug("Skipping unknown resource type {} in container history", name);
+            continue;
+          }
+          Map<?, ?> allocation = (Map<?, ?>) entry.getValue();
+          Number storedValue = (Number) allocation.get("value");
+          if (storedValue instanceof Float || storedValue instanceof Double) {
+            throw new IllegalArgumentException("Floating-point resource value");
+          }
+          long value = storedValue instanceof Integer || storedValue instanceof Long
+              ? storedValue.longValue()
+              : new BigDecimal(storedValue.toString()).longValueExact();
+          String units = (String) allocation.get("units");
+          String defaultUnits = resource.getResourceInformation(name).getUnits();
+          resource.setResourceValue(name,
+              UnitsConversionUtil.convert(units, defaultUnits, value));
+        } catch (ClassCastException | NullPointerException
+            | IllegalArgumentException | ArithmeticException e) {
+          LOG.debug("Skipping malformed allocation for resource type {}",
+              entry.getKey(), e);
         }
-        if (!ResourceUtils.getResourceTypes().containsKey(name)) {
-          LOG.warn("Skipping unknown resource type {} in container history", name);
-          continue;
-        }
-        Map<?, ?> allocation = (Map<?, ?>) entry.getValue();
-        long value = ((Number) allocation.get("value")).longValue();
-        String units = (String) allocation.get("units");
-        String defaultUnits = resource.getResourceInformation(name).getUnits();
-        resource.setResourceValue(name,
-            UnitsConversionUtil.convert(units, defaultUnits, value));
       }
+    } else if (allocationInfo != null) {
+      LOG.debug("Skipping malformed container resource allocations");
     }
     return resource;
   }

@@ -232,8 +232,12 @@ public class NMTimelinePublisher extends CompositeService {
           resource.getMemorySize());
       entityInfo.put(ContainerMetricsConstants.ALLOCATED_VCORE_INFO,
           resource.getVirtualCores());
-      entityInfo.put(ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO,
-          TimelineUtils.getCustomResourceInfo(resource));
+      Map<String, Map<String, Object>> customResources =
+          TimelineUtils.getCustomResourceInfo(resource);
+      if (!customResources.isEmpty()) {
+        entityInfo.put(ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO,
+            customResources);
+      }
       entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_INFO,
           nodeId.getHost());
       entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_INFO,

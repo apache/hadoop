@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -73,6 +74,7 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -557,6 +559,26 @@ public class TestSystemMetricsPublisher {
       }
     }
     assertTrue(hasCreatedEvent && hasFinishedEvent);
+  }
+
+  @Test
+  @Timeout(value = 10)
+  public void testPublishContainerWithoutCustomResources() throws Exception {
+    initTestSystemMetricsPublisher(false, 0);
+    YarnConfiguration resourceConf = new YarnConfiguration();
+    resourceConf.set(YarnConfiguration.RESOURCE_TYPES, "yarn.io/gpu");
+    ResourceUtils.resetResourceTypes(resourceConf);
+    ContainerId containerId = ContainerId.newContainerId(
+        ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1), 1);
+    RMContainer container = createRMContainer(containerId);
+    metricsPublisher.containerCreated(container, container.getCreationTime());
+    TimelineEntity entity;
+    do {
+      entity = store.getEntity(containerId.toString(),
+          ContainerMetricsConstants.ENTITY_TYPE, EnumSet.allOf(Field.class));
+    } while (entity == null || entity.getEvents().isEmpty());
+    assertFalse(entity.getOtherInfo().containsKey(
+        ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO));
   }
 
   private static RMApp createRMApp(ApplicationId appId) {
