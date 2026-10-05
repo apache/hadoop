@@ -133,6 +133,21 @@ public class AuthenticationFilter implements Filter {
   public static final String SIGNER_SECRET_PROVIDER_ATTRIBUTE =
       "signer.secret.provider.object";
 
+  /**
+   * Request attribute that marks an error whose message the caller has to be
+   * able to read whatever the request method.
+   * <p>
+   * On Jetty 9.4 such a message travelled in the HTTP reason phrase, which
+   * every response has. Jetty 12 sends no custom reason phrase, and its error
+   * handler only writes a body for GET, POST and HEAD, so without this a
+   * refusal of a PUT or a DELETE would reach the caller with nothing but its
+   * status code. HttpServer2's error handler writes the error page for any
+   * method when the attribute is set, and for other errors keeps to the
+   * methods Jetty chose.
+   */
+  public static final String ERROR_MESSAGE_FOR_ANY_METHOD_ATTRIBUTE =
+      "org.apache.hadoop.security.authentication.error.message.for.any.method";
+
   private Properties config;
   private Signer signer;
   private SignerSecretProvider secretProvider;
@@ -623,6 +638,11 @@ public class AuthenticationFilter implements Filter {
         }
         // After Jetty 9.4.21, sendError() no longer allows a custom message.
         // use setStatus() to set a custom message.
+        //
+        // Jetty 12 sends no custom reason phrase at all, so setStatus is kept
+        // only for the containers that still do. The message reaches a
+        // caller on Jetty 12 in the body sendError writes, which the marker
+        // asks HttpServer2 to write for any method, as the phrase was.
         String reason;
         if (authenticationEx == null) {
           reason = "Authentication required";
@@ -631,6 +651,8 @@ public class AuthenticationFilter implements Filter {
         }
 
         httpResponse.setStatus(errCode, reason);
+        httpRequest.setAttribute(ERROR_MESSAGE_FOR_ANY_METHOD_ATTRIBUTE,
+            Boolean.TRUE);
         httpResponse.sendError(errCode, reason);
       }
     }

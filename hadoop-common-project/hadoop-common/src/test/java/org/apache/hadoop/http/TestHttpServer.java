@@ -28,12 +28,16 @@ import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.JsonUtils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.ServerConnector;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -54,13 +58,16 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -146,6 +153,26 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }
   }
 
+  /**
+   * Refuses every request with a message, the way the authentication and CSRF
+   * filters do; with ?mark=true it marks the refusal the way they mark theirs.
+   */
+  @SuppressWarnings("serial")
+  public static class RefusingServlet extends HttpServlet {
+    static final String DETAIL = "refused-for-a-reason";
+
+    @Override
+    protected void service(HttpServletRequest request,
+        HttpServletResponse response) throws IOException {
+      if (Boolean.parseBoolean(request.getParameter("mark"))) {
+        request.setAttribute(
+            AuthenticationFilter.ERROR_MESSAGE_FOR_ANY_METHOD_ATTRIBUTE,
+            Boolean.TRUE);
+      }
+      response.sendError(HttpServletResponse.SC_FORBIDDEN, DETAIL);
+    }
+  }
+
   @BeforeAll
   public static void setup() throws Exception {
     Configuration conf = new Configuration();
@@ -157,6 +184,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
     server.addServlet("htmlcontent", "/htmlcontent", HtmlContentServlet.class);
     server.addServlet("longheader", "/longheader", LongHeaderServlet.class);
+    server.addServlet("refusing", "/refusing", RefusingServlet.class);
     server.addJerseyResourcePackage(
         JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
@@ -277,6 +305,74 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         conn.getContentType());
   }
 
+  /**
+   * An error on a method Jetty writes no error page for goes back as it did on
+   * Jetty 9.4 - with no body - unless it is marked as one whose message the
+   * caller has to read. On 9.4 that message was in the reason phrase; Jetty 12
+   * sends none, so a marked error gets the error page whatever the method.
+   */
+  @Test
+  public void testErrorBodyOnlyForMarkedErrorsOnOtherMethods()
+      throws Exception {
+    for (String method : new String[] {"PUT", "DELETE"}) {
+      HttpURLConnection conn = refusal(method, false);
+      assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode());
+      assertEquals(0, conn.getContentLength(),
+          "an unmarked " + method + " error grew a body");
+      conn.disconnect();
+
+      conn = refusal(method, true);
+      assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode());
+      assertThat(errorBody(conn))
+          .as("a marked " + method + " error lost its message")
+          .contains(RefusingServlet.DETAIL);
+      conn.disconnect();
+    }
+    // GET keeps the error page Jetty always wrote for it, marked or not.
+    HttpURLConnection conn = refusal("GET", false);
+    assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode());
+    assertThat(errorBody(conn)).contains(RefusingServlet.DETAIL);
+    conn.disconnect();
+  }
+
+  private static HttpURLConnection refusal(String method, boolean mark)
+      throws IOException {
+    URL url = new URL(baseUrl, "/refusing?mark=" + mark);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(method);
+    conn.connect();
+    return conn;
+  }
+
+  private static String errorBody(HttpURLConnection conn) throws IOException {
+    try (InputStream in = conn.getErrorStream()) {
+      return in == null ? "" : IOUtils.toString(in, StandardCharsets.UTF_8);
+    }
+  }
+
+  /**
+   * /static must never list what is in it. The setting that stops it is a
+   * context init parameter, which the DefaultServlet reads under a prefix of
+   * its own choosing: get the prefix wrong and the parameter is not rejected,
+   * it is ignored, and dirAllowed falls back to its default of true. That is
+   * silent, so the endpoint is asserted rather than the setting.
+   */
+  @Test
+  public void testStaticContextDoesNotListDirectories() throws Exception {
+    URL staticUrl = new URL(baseUrl, "/static/");
+    HttpURLConnection conn = (HttpURLConnection) staticUrl.openConnection();
+    conn.connect();
+    assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode(),
+        "/static served a directory listing");
+
+    // The context is otherwise working, so the 403 above is dirAllowed doing
+    // its job and not the whole context being broken.
+    URL cssUrl = new URL(baseUrl, "/static/test.css");
+    conn = (HttpURLConnection) cssUrl.openConnection();
+    conn.connect();
+    assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
+  }
+
   @Test
   public void testHttpServer2Metrics() throws Exception {
     final HttpServer2Metrics metrics = server.getMetrics();
@@ -286,8 +382,10 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
     assertThat(conn.getResponseCode()).isEqualTo(200);
-    final int after = metrics.responses2xx();
-    assertThat(after).isGreaterThan(before);
+    // Jetty 12 books the response when the exchange completes on the server,
+    // which can be after the client has read the status line, so the counter
+    // is given a moment rather than read straight away.
+    GenericTestUtils.waitFor(() -> metrics.responses2xx() > before, 50, 10000);
   }
 
   @Test
@@ -323,9 +421,12 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   /**
-   * Jetty StatisticsHandler must be inserted via Server#insertHandler
-   * instead of Server#setHandler. The server fails to start if
-   * the handler is added by setHandler.
+   * Jetty StatisticsHandler must be inserted via Server#insertHandler instead
+   * of Server#setHandler. On 9.4 the difference showed up as a server that
+   * refused to start, so the test could assert the failure; Jetty 12 starts a
+   * childless handler quite happily and serves 404s from it, which is worse.
+   * So the assertion is that the server still serves after the handler goes
+   * in - the reason to prefer insertHandler in the first place.
    */
   @Test
   public void testSetStatisticsHandler() throws Exception {
@@ -334,11 +435,30 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conf.setBoolean(
         CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED, false);
     final HttpServer2 testServer = createTestServer(conf);
-    testServer.webServer.setHandler(new StatisticsHandler());
+    testServer.addServlet("echo", "/echo", EchoServlet.class);
+
+    final Handler tree = testServer.webServer.getHandler();
+    assertThat(tree).isNotNull();
+    final StatisticsHandler statistics = new StatisticsHandler();
+    testServer.webServer.insertHandler(statistics);
+    assertThat(statistics.getHandler())
+        .as("insertHandler keeps the handler tree underneath")
+        .isSameAs(tree);
+
     try {
       testServer.start();
-      fail("IOException should be thrown.");
-    } catch (IOException ignore) {
+      final URL echoUrl = new URL(getServerURL(testServer), "/echo?a=b");
+      final HttpURLConnection conn =
+          (HttpURLConnection) echoUrl.openConnection();
+      conn.connect();
+      assertThat(conn.getResponseCode())
+          .as("the webapp stopped serving once StatisticsHandler was inserted")
+          .isEqualTo(HttpServletResponse.SC_OK);
+      // Booked when the exchange completes on the server, which can be after
+      // the client has read the status line - see testHttpServer2Metrics.
+      GenericTestUtils.waitFor(() -> statistics.getRequests() > 0, 50, 10000);
+    } finally {
+      testServer.stop();
     }
   }
 
@@ -572,7 +692,73 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }
     myServer.stop();
   }
-  
+
+  /**
+   * With hadoop.log.dir pointing nowhere, /logs still sits behind the admin
+   * check: a non-admin is refused and an admin is told there is nothing there,
+   * which is what Jetty 9.4 answered. Jetty 12 will not start a context on a
+   * missing base resource, and dropping the context instead would let the
+   * request fall through to the root webapp without the check.
+   */
+  @Test
+  public void testLogsWithMissingLogDirStillCheckAdminAccess()
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
+        true);
+    conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
+        DummyFilterInitializer.class.getName());
+    // The group mapping is a process-wide singleton, created by whichever
+    // test gets there first; give it the mapping the other tests expect.
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        MyGroupsProvider.class.getName());
+    Groups.getUserToGroupsMappingService(conf);
+
+    String savedLogDir = System.getProperty("hadoop.log.dir");
+    System.setProperty("hadoop.log.dir",
+        new File(GenericTestUtils.getTestDir(), "no-such-log-dir")
+            .getAbsolutePath());
+    HttpServer2 myServer;
+    try {
+      myServer = new HttpServer2.Builder().setName("test")
+          .addEndpoint(new URI("http://localhost:0")).setFindPort(true)
+          .setConf(conf).setACL(new AccessControlList("userA")).build();
+    } finally {
+      if (savedLogDir == null) {
+        System.clearProperty("hadoop.log.dir");
+      } else {
+        System.setProperty("hadoop.log.dir", savedLogDir);
+      }
+    }
+    myServer.setAttribute(HttpServer2.CONF_CONTEXT_ATTRIBUTE, conf);
+    myServer.start();
+    try {
+      String logsURL = "http://"
+          + NetUtils.getHostPortString(myServer.getConnectorAddress(0))
+          + "/logs/";
+      assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
+          getHttpStatusCode(logsURL, "userA"));
+      assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+          getHttpStatusCode(logsURL, "userE"));
+      // DefaultServlet answers a POST as a GET, so it gets the same answers.
+      assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
+          postStatusCode(logsURL, "userA"));
+      assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+          postStatusCode(logsURL, "userE"));
+    } finally {
+      myServer.stop();
+    }
+  }
+
+  private static int postStatusCode(String urlstring, String userName)
+      throws IOException {
+    URL url = new URL(urlstring + "?user.name=" + userName);
+    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    connection.setRequestMethod("POST");
+    connection.connect();
+    return connection.getResponseCode();
+  }
+
   @Test
   public void testRequestQuoterWithNull() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
