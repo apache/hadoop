@@ -617,14 +617,30 @@ public class DirectoryCollection {
    * Content of the NM directories is created and removed concurrently by
    * localization, cache cleanup, application cleanup and log aggregation,
    * so entries that vanish during the walk are not errors.
+   * Entries owned by other users (e.g. application user directories created
+   * by the LinuxContainerExecutor) are only accessed through the container
+   * executor, so the NM user is not expected to have full access to them.
    */
   @VisibleForTesting
   static class SubAccessibilityVisitor
       extends SimpleFileVisitor<java.nio.file.Path> {
+    private final String nmUser;
+
+    SubAccessibilityVisitor() {
+      this(System.getProperty("user.name"));
+    }
+
+    @VisibleForTesting
+    SubAccessibilityVisitor(String nmUser) {
+      this.nmUser = nmUser;
+    }
 
     @Override
     public FileVisitResult preVisitDirectory(java.nio.file.Path p,
         BasicFileAttributes attrs) throws IOException {
+      if (!isOwnedByNmUser(p)) {
+        return FileVisitResult.SKIP_SUBTREE;
+      }
       checkAccessible(p, true);
       return FileVisitResult.CONTINUE;
     }
@@ -632,10 +648,19 @@ public class DirectoryCollection {
     @Override
     public FileVisitResult visitFile(java.nio.file.Path p,
         BasicFileAttributes attrs) throws IOException {
-      if (!attrs.isSymbolicLink()) {
+      if (!attrs.isSymbolicLink() && isOwnedByNmUser(p)) {
         checkAccessible(p, attrs.isDirectory());
       }
       return FileVisitResult.CONTINUE;
+    }
+
+    private boolean isOwnedByNmUser(java.nio.file.Path p) throws IOException {
+      try {
+        return nmUser.equals(
+            Files.getOwner(p, LinkOption.NOFOLLOW_LINKS).getName());
+      } catch (NoSuchFileException e) {
+        return false;
+      }
     }
 
     @Override

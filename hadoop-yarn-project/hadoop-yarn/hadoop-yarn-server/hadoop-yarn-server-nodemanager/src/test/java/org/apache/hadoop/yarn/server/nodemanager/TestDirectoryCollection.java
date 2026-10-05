@@ -555,10 +555,30 @@ public class TestDirectoryCollection {
     DirectoryCollection.SubAccessibilityVisitor visitor =
         new DirectoryCollection.SubAccessibilityVisitor();
     assertEquals(FileVisitResult.CONTINUE, visitor.visitFile(gone, attrs));
-    assertEquals(FileVisitResult.CONTINUE,
+    assertEquals(FileVisitResult.SKIP_SUBTREE,
         visitor.preVisitDirectory(new File(testDir, "missingDir").toPath(), attrs));
     assertEquals(FileVisitResult.CONTINUE,
         visitor.visitFileFailed(gone, new NoSuchFileException(gone.toString())));
+  }
+
+  @Test
+  public void testSubAccessibilitySkipsEntriesOwnedByOtherUsers() throws IOException {
+    Files.setPosixFilePermissions(testFile.toPath(),
+        PosixFilePermissions.fromString("-w--w--w-"));
+    java.nio.file.Path file = testFile.toPath();
+    BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
+
+    DirectoryCollection.SubAccessibilityVisitor otherUser =
+        new DirectoryCollection.SubAccessibilityVisitor("not-the-owner");
+    assertEquals(FileVisitResult.CONTINUE, otherUser.visitFile(file, attrs));
+    assertEquals(FileVisitResult.SKIP_SUBTREE,
+        otherUser.preVisitDirectory(testDir.toPath(), attrs));
+
+    DirectoryCollection.SubAccessibilityVisitor owner =
+        new DirectoryCollection.SubAccessibilityVisitor();
+    IOException e = Assert.assertThrows(IOException.class,
+        () -> owner.visitFile(file, attrs));
+    assertTrue(e.getMessage().contains("Can not read"));
   }
 
   @Test
