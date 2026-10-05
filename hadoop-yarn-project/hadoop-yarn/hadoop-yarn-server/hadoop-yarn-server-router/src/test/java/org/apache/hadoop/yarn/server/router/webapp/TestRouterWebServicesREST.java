@@ -70,6 +70,7 @@ import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getNMWebAppURLWitho
 import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getRMWebAppURLWithScheme;
 import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getRouterWebAppURLWithScheme;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -89,6 +90,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -160,6 +162,9 @@ public class TestRouterWebServicesREST {
 
   /** The number of concurrent submissions for multi-thread test. */
   private static final int NUM_THREADS_TESTS = 100;
+
+  /** How long to wait for the RM's asynchronous application lifecycle. */
+  private static final int APP_STATE_TIMEOUT_MS = 10 * 1000;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRouterWebServicesREST.class);
@@ -1321,7 +1326,7 @@ public class TestRouterWebServicesREST {
    * inside Router.
    */
   @Test
-  @Timeout(value = 2)
+  @Timeout(value = 30)
   public void testGetAppAttemptXML() throws Exception {
 
     String appId = submitApplication();
@@ -1346,7 +1351,7 @@ public class TestRouterWebServicesREST {
    * inside Router.
    */
   @Test
-  @Timeout(value = 2)
+  @Timeout(value = 30)
   public void testGetContainersXML() throws Exception {
 
     String appId = submitApplication();
@@ -1483,17 +1488,26 @@ public class TestRouterWebServicesREST {
     return response.readEntity(String.class);
   }
 
-  private String getAppAttempt(String appId) {
-    Client clientToRM = ClientBuilder.newClient();
+  private String getAppAttempt(String appId) throws Exception {
     String pathAppAttempt = RM_WEB_SERVICE_PATH + format(APPS_APPID_APPATTEMPTS, appId);
-    WebTarget toRM = clientToRM.
-        target(rmAddress).
-        path(pathAppAttempt);
-    Response response = toRM.
-        request(APPLICATION_XML).
-        get(Response.class);
-    AppAttemptsInfo ci = response.readEntity(AppAttemptsInfo.class);
-    return ci.getAttempts().get(0).getAppAttemptId();
+    // The RM creates the first attempt asynchronously after the submission
+    // returns, so wait for it to appear.
+    return LambdaTestUtils.eventually(APP_STATE_TIMEOUT_MS, 50, () -> {
+      Client clientToRM = ClientBuilder.newClient();
+      try {
+        Response response = clientToRM.
+            target(rmAddress).
+            path(pathAppAttempt).
+            request(APPLICATION_XML).
+            get(Response.class);
+        AppAttemptsInfo ci = response.readEntity(AppAttemptsInfo.class);
+        assertFalse(ci.getAttempts().isEmpty(),
+            "No attempt yet for application " + appId);
+        return ci.getAttempts().get(0).getAppAttemptId();
+      } finally {
+        clientToRM.close();
+      }
+    });
   }
 
   /**
