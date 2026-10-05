@@ -124,8 +124,8 @@
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>jakarta.servlet</groupId>
-          <artifactId>jakarta.servlet-api</artifactId>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
@@ -419,7 +419,7 @@
     </dependency>
     <!-- Add back in the transitive dependencies excluded from hadoop-common in client TODO remove once we have a filter for "is in these artifacts" -->
     <!-- skip javax.servlet:javax.servlet-api because it's in client -->
-    <!-- skip jakarta.servlet:jakarta.servlet-api because it's in client -->
+    <!-- skip org.eclipse.jetty.toolchain:jetty-servlet-api because it's in client -->
     <!-- skip jakarta.ws.rs-api:jakarta.ws.rs because it's in client -->
     <!-- Skip commons-logging:commons-logging-api because it looks like nothing actually included it -->
     <!-- Skip jetty-util because it's in client -->
@@ -464,7 +464,7 @@
     </dependency>
     <!-- add back in transitive dependencies of hadoop-mapreduce-client-app removed in client -->
     <!-- Skipping javax.servlet:javax.servlet-api because it's in client -->
-    <!-- Skipping jakarta.servlet:jakarta.servlet-api because it's in client -->
+    <!-- Skipping org.eclipse.jetty.toolchain:jetty-servlet-api because it's in client -->
     <!-- Skipping jakarta.ws.rs-api:jakarta.ws.rs because it's in client -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -476,8 +476,8 @@
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>jakarta.servlet</groupId>
-          <artifactId>jakarta.servlet-api</artifactId>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
@@ -551,8 +551,8 @@
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>jakarta.servlet</groupId>
-          <artifactId>jakarta.servlet-api</artifactId>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
