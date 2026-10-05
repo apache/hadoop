@@ -33,6 +33,7 @@ import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
+import org.apache.hadoop.security.authentication.util.ResponseDetail;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -615,7 +616,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
    * the canonical text for the status code and the detail is in the body, so
    * read it from there. An authorization denial arrives instead as the JSON
    * envelope {@link HttpExceptionUtils} writes, which
-   * {@link HttpExceptionUtils#getResponseDetail} leaves untouched - so a
+   * {@link ResponseDetail#of} leaves untouched - so a
    * denial neither matches here nor has its body consumed before
    * {@link HttpExceptionUtils#validateResponse} below rebuilds the exception
    * from it.
@@ -628,7 +629,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
    * @return true when the response names an authentication failure
    */
   private static boolean isAuthenticationFailure(HttpURLConnection conn) {
-    String detail = HttpExceptionUtils.getResponseDetail(conn);
+    String detail = ResponseDetail.of(conn);
     return detail.contains(ANONYMOUS_REQUESTS_DISALLOWED)
         || detail.contains(INVALID_SIGNATURE);
   }

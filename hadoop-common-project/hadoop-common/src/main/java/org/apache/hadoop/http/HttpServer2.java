@@ -586,36 +586,12 @@ public final class HttpServer2 implements FilterContainer {
       // new URL(...) - WebHdfsFileSystem does - which a relative value does
       // not parse. Nothing in Jetty 12 forces the change, so keep trunk's.
       httpConfig.setRelativeRedirectAllowed(false);
-      // Jetty 12 rejects three kinds of path at the connector that 9.4 handed to
-      // the servlet, with a bare 400 and no body, so the request never reaches
-      // the code that knows what a Hadoop path is:
-      //
-      //  - an empty segment, //tmp//file. WebHDFS takes those and answers with
-      //    its own JSON RemoteException, which is what its clients parse.
-      //  - an encoded percent, %25, which is how a file whose name contains a
-      //    '%' is written on the wire. Names like that are ordinary in HDFS
-      //    and YARN routes carry them too.
-      //  - an encoded backslash, %5C. Jetty treats it as suspicious because
-      //    it separates paths on Windows; on HDFS it is just a character in a
-      //    name, and TestWebHdfsUrl creates files containing one. Measured
-      //    rather than assumed: of every character in that test's filename,
-      //    %5C is the only one this violation gates. The same violation also
-      //    covers the encoded control characters, %00 to %1F and %7F (Jetty's
-      //    HttpURI), so those are let through as well. Jetty 9.4 let all of
-      //    them through too: its default compliance mode, RFC7230, checked
-      //    none of the ambiguous or suspicious path rules.
-      //
-      // All three are allowed back by default so that Hadoop keeps deciding
-      // what a path means. The ambiguities that let a request read as one
-      // path to a filter and another to a servlet stay rejected: an encoded
-      // separator (a%2Fb) and an encoded dot-segment (a%2E%2E%2Fb) are still
-      // refused, .. still cannot climb out of the context, and a%252Fb still
-      // decodes once, to the literal a%2Fb rather than to a separator.
-      //
-      // SUSPICIOUS_PATH_CHARACTERS is wider than %5C: it also admits the
-      // encoded control characters %00, %09, %0A, %0D and %7F. The set is
-      // configurable so that a deployment which does not need them can refuse
-      // them at the connector.
+      // Jetty 12 refuses at the connector, with a bare 400, three kinds of
+      // path 9.4 passed to the servlet: an empty segment, an encoded percent
+      // and an encoded backslash. HTTP_URI_COMPLIANCE_VIOLATIONS_KEY lets them
+      // through by default; core-default.xml says why. The ambiguities that
+      // let a filter and a servlet read different paths stay refused: a%2Fb,
+      // a%2E%2E%2Fb, and .. climbing out of the context.
       httpConfig.setUriCompliance(getUriCompliance(conf));
 
       int backlogSize = conf.getInt(HTTP_SOCKET_BACKLOG_SIZE_KEY,

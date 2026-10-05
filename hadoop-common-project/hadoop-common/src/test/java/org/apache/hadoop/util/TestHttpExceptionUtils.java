@@ -18,6 +18,7 @@
 package org.apache.hadoop.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.hadoop.security.authentication.util.ResponseDetail;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.jupiter.api.Test;
 
@@ -265,7 +266,7 @@ public class TestHttpExceptionUtils {
 
   @Test
   public void testResponseDetailPrefersTheBody() throws Exception {
-    assertEquals("the real reason", HttpExceptionUtils.getResponseDetail(
+    assertEquals("the real reason", ResponseDetail.of(
         connectionReturning("the real reason", "Forbidden")));
   }
 
@@ -276,7 +277,7 @@ public class TestHttpExceptionUtils {
         + "</head>\n<body><h2>HTTP ERROR 403</h2>\n"
         + "<table><tr><th>MESSAGE:</th><td>the real reason</td></tr></table>\n"
         + "</body>\n</html>\n";
-    String detail = HttpExceptionUtils.getResponseDetail(
+    String detail = ResponseDetail.of(
         connectionReturning(page, "Forbidden"));
     assertEquals("the real reason", detail);
   }
@@ -303,7 +304,7 @@ public class TestHttpExceptionUtils {
         + "<tr><th>SERVLET:</th><td>webservices-driver</td></tr>\n"
         + "</table>\n\n</body>\n</html>\n";
     assertEquals("Missing Required Header for CSRF Vulnerability Protection",
-        HttpExceptionUtils.getResponseDetail(
+        ResponseDetail.of(
             connectionReturning(page, "Bad Request", "text/html")));
 
     // validateResponse, which rewinds the body after the JSON parse fails,
@@ -323,7 +324,7 @@ public class TestHttpExceptionUtils {
     String page = "<table><tr><th>MESSAGE:</th>"
         + "<td>User &lt;dr.who&gt; can&#39;t &amp; won&#39;t</td></tr></table>";
     assertEquals("User <dr.who> can't & won't",
-        HttpExceptionUtils.getResponseDetail(
+        ResponseDetail.of(
             connectionReturning(page, "Forbidden", "text/html")));
   }
 
@@ -335,21 +336,21 @@ public class TestHttpExceptionUtils {
         + "<p><b>Message</b> Anonymous requests are disallowed</p>"
         + "</body></html>";
     assertEquals("HTTP Status 403 - Forbidden Message Anonymous requests are"
-        + " disallowed", HttpExceptionUtils.getResponseDetail(
+        + " disallowed", ResponseDetail.of(
             connectionReturning(page, "Forbidden", "text/html")));
   }
 
   @Test
   public void testResponseDetailFallsBackToThePhrase() throws Exception {
-    assertEquals("Forbidden", HttpExceptionUtils.getResponseDetail(
+    assertEquals("Forbidden", ResponseDetail.of(
         connectionReturning(null, "Forbidden")));
-    assertEquals("Forbidden", HttpExceptionUtils.getResponseDetail(
+    assertEquals("Forbidden", ResponseDetail.of(
         connectionReturning("   \n  ", "Forbidden")));
   }
 
   @Test
   public void testResponseDetailIsNeverNull() throws Exception {
-    assertEquals("", HttpExceptionUtils.getResponseDetail(
+    assertEquals("", ResponseDetail.of(
         connectionReturning(null, null)));
   }
 
@@ -368,10 +369,10 @@ public class TestHttpExceptionUtils {
         + "\"javaClassName\":\"org.apache.hadoop.security.authorize."
         + "AuthorizationException\"}}";
 
-    assertEquals("Forbidden", HttpExceptionUtils.getResponseDetail(
+    assertEquals("Forbidden", ResponseDetail.of(
         connectionReturning(envelope, "Forbidden", "application/json")));
     // the header may carry parameters
-    assertEquals("Forbidden", HttpExceptionUtils.getResponseDetail(
+    assertEquals("Forbidden", ResponseDetail.of(
         connectionReturning(envelope, "Forbidden",
             "application/json; charset=utf-8")));
   }
@@ -383,7 +384,7 @@ public class TestHttpExceptionUtils {
    */
   @Test
   public void testResponseDetailStillPrefersANonJsonBody() throws Exception {
-    assertEquals("the real reason", HttpExceptionUtils.getResponseDetail(
+    assertEquals("the real reason", ResponseDetail.of(
         connectionReturning("the real reason", "Forbidden", "text/plain")));
   }
 }

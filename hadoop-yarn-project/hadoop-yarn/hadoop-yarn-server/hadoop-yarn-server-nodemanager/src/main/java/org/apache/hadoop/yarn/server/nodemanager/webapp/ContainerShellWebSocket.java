@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -122,7 +120,7 @@ public class ContainerShellWebSocket {
         session.close(1003, "Nonsecure mode is unsupported.");
         return;
       }
-      LOG.info(remoteHost(session) + " connected!");
+      LOG.info(session.getRemoteAddress() + " connected!");
       LOG.info(
           "Making interactive connection to running docker container with ID: "
               + cId);
@@ -142,7 +140,7 @@ public class ContainerShellWebSocket {
   @OnWebSocketClose
   public void onClose(Session session, int status, String reason) {
     try {
-      LOG.info(remoteHost(session) + " closed!");
+      LOG.info(session.getRemoteAddress() + " closed!");
       String exit = "exit\r\n";
       pair.out.write(exit.getBytes(StandardCharsets.UTF_8));
       pair.out.flush();
@@ -197,18 +195,4 @@ public class ContainerShellWebSocket {
     }
     return limitUsers;
   }
-
-  /**
-   * Jetty 12 widened Session.getRemoteAddress() from InetSocketAddress to
-   * SocketAddress, so the host is read back out here for logging.
-   *
-   * @param session the WebSocket session
-   * @return the remote host, or the address as written if it is not an IP socket
-   */
-  private static String remoteHost(Session session) {
-    SocketAddress remote = session.getRemoteAddress();
-    return remote instanceof InetSocketAddress isa
-        ? isa.getHostString() : String.valueOf(remote);
-  }
-
 }

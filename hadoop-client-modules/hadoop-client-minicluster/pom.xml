@@ -128,10 +128,6 @@
           <artifactId>jetty-servlet-api</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.eclipse.jetty.toolchain</groupId>
-          <artifactId>jetty-servlet-api</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>jakarta.ws.rs</groupId>
           <artifactId>jakarta.ws.rs-api</artifactId>
         </exclusion>
@@ -484,10 +480,6 @@
           <artifactId>jetty-servlet-api</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.eclipse.jetty.toolchain</groupId>
-          <artifactId>jetty-servlet-api</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>jakarta.ws.rs</groupId>
           <artifactId>jakarta.ws.rs-api</artifactId>
         </exclusion>
@@ -557,10 +549,6 @@
         <exclusion>
           <groupId>javax.servlet</groupId>
           <artifactId>javax.servlet-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.eclipse.jetty.toolchain</groupId>
-          <artifactId>jetty-servlet-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.eclipse.jetty.toolchain</groupId>

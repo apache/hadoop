@@ -31,7 +31,6 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.net.HttpURLConnection;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -139,7 +138,7 @@ public class HttpExceptionUtils {
    * <p>
    * When the response does not carry the JSON envelope - a container error
    * page, say - the detail is taken from the body via
-   * {@link #getResponseDetail}, because that is where a servlet's reason now
+   * {@link ResponseDetail#of}, because that is where a servlet's reason now
    * is: Jetty 12 no longer puts one in the HTTP reason phrase.
    *
    * @param conn the <code>HttpURLConnection</code>.
@@ -186,42 +185,11 @@ public class HttpExceptionUtils {
       } catch (Exception ex) {
         toThrow = new IOException(String.format(
             "HTTP status [%d], message [%s], URL [%s], exception [%s]",
-            conn.getResponseCode(), textDetail(body, conn), conn.getURL(),
-            ex.toString()), ex);
+            conn.getResponseCode(), ResponseDetail.of(body, conn),
+            conn.getURL(), ex.toString()), ex);
       }
       throwEx(toThrow);
     }
-  }
-
-  /**
-   * Describes why a request failed, preferring the response body over the HTTP
-   * reason phrase, which Jetty 12 no longer fills in. For a response that
-   * carries the JSON envelope this class writes, prefer
-   * {@link #validateResponse}, which rebuilds the original exception; this is
-   * for everything else, and reports a JSON body by its phrase.
-   *
-   * @param conn a connection whose response status has been read
-   * @return a description of the failure, never null
-   * @see ResponseDetail#of
-   */
-  public static String getResponseDetail(HttpURLConnection conn) {
-    return ResponseDetail.of(conn);
-  }
-
-  /**
-   * Describes a failure whose body has already been read - and failed - as the
-   * JSON envelope, so it is read as text instead.
-   */
-  private static String textDetail(byte[] body, HttpURLConnection conn) {
-    if (body != null) {
-      String text = ResponseDetail.toPlainText(new String(body, 0,
-          Math.min(body.length, ResponseDetail.MAX_BYTES),
-          StandardCharsets.UTF_8));
-      if (!text.isEmpty()) {
-        return text;
-      }
-    }
-    return ResponseDetail.phrase(conn);
   }
 
 }

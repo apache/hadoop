@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.client.api;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -71,16 +69,16 @@ public class ContainerShellWebSocket {
   @OnWebSocketConnect
   public void onConnect(Session s) {
     initTerminal(s);
-    LOG.info("{} connected!", remoteHost(s));
+    LOG.info("{} connected!", s.getRemoteAddress());
   }
 
   @OnWebSocketClose
   public void onClose(Session session, int status, String reason) {
     if (status==1000) {
-      LOG.info("{} closed, status: {}", remoteHost(session), status);
+      LOG.info("{} closed, status: {}", session.getRemoteAddress(), status);
     } else {
       LOG.warn("{} closed, status:" +
-              " {} Reason: {}.", remoteHost(session), status, reason);
+              " {} Reason: {}.", session.getRemoteAddress(), status, reason);
     }
   }
 
@@ -158,18 +156,4 @@ public class ContainerShellWebSocket {
       }
     }
   }
-
-  /**
-   * Jetty 12 widened Session.getRemoteAddress() from InetSocketAddress to
-   * SocketAddress, so the host is read back out here for logging.
-   *
-   * @param session the WebSocket session
-   * @return the remote host, or the address as written if it is not an IP socket
-   */
-  private static String remoteHost(Session session) {
-    SocketAddress remote = session.getRemoteAddress();
-    return remote instanceof InetSocketAddress isa
-        ? isa.getHostString() : String.valueOf(remote);
-  }
-
 }

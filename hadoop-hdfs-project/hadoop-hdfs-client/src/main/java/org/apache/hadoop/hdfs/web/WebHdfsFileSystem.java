@@ -121,6 +121,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.util.ResponseDetail;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -130,7 +131,6 @@ import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.KMSUtil;
-import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
@@ -523,7 +523,7 @@ public class WebHdfsFileSystem extends FileSystem
       // AuthenticationFilter passes to sendError no longer reaches the wire as
       // a phrase, and the phrase is now always "Unauthorized".
       throw new AccessControlException(
-          HttpExceptionUtils.getResponseDetail(conn));
+          ResponseDetail.of(conn));
     }
     if (code != op.getExpectedHttpResponseCode()) {
       final Map<?, ?> m;
@@ -532,13 +532,13 @@ public class WebHdfsFileSystem extends FileSystem
       } catch(Exception e) {
         throw new IOException("Unexpected HTTP response: code=" + code + " != "
             + op.getExpectedHttpResponseCode() + ", " + op.toQueryString()
-            + ", message=" + HttpExceptionUtils.getResponseDetail(conn), e);
+            + ", message=" + ResponseDetail.of(conn), e);
       }
 
       if (m == null) {
         throw new IOException("Unexpected HTTP response: code=" + code + " != "
             + op.getExpectedHttpResponseCode() + ", " + op.toQueryString()
-            + ", message=" + HttpExceptionUtils.getResponseDetail(conn));
+            + ", message=" + ResponseDetail.of(conn));
       } else if (m.get(RemoteException.class.getSimpleName()) == null) {
         return m;
       }

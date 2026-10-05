@@ -44,9 +44,9 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.util.ResponseDetail;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Throwables;
 
@@ -496,7 +496,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
                     "Fetch of " + url +
                     " failed with status code " + connection.getResponseCode() +
                     "\nResponse message:\n"
-                    + HttpExceptionUtils.getResponseDetail(connection),
+                    + ResponseDetail.of(connection),
                     connection);
               }
         

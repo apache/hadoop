@@ -38,7 +38,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public final class ResponseDetail {
 
   /** How much of a failed response body is worth quoting back. */
-  public static final int MAX_BYTES = 4096;
+  private static final int MAX_BYTES = 4096;
 
   private static final String APPLICATION_JSON_MIME = "application/json";
 
@@ -68,17 +68,33 @@ public final class ResponseDetail {
    * @return a description of the failure, never null
    */
   public static String of(HttpURLConnection conn) {
+    byte[] body = null;
     if (!isJson(conn.getContentType())) {
       try (InputStream es = conn.getErrorStream()) {
         if (es != null) {
-          String body = toPlainText(
-              new String(es.readNBytes(MAX_BYTES), StandardCharsets.UTF_8));
-          if (!body.isEmpty()) {
-            return body;
-          }
+          body = es.readNBytes(MAX_BYTES);
         }
       } catch (IOException ex) {
         // nothing to add: fall through to the reason phrase
+      }
+    }
+    return of(body, conn);
+  }
+
+  /**
+   * Describes a failure from a body that has already been read, as text,
+   * whatever its content type, and falls back to the phrase when it is empty.
+   *
+   * @param body the response body, or null if there was none
+   * @param conn a connection whose response status has been read
+   * @return a description of the failure, never null
+   */
+  public static String of(byte[] body, HttpURLConnection conn) {
+    if (body != null) {
+      String text = toPlainText(new String(body, 0,
+          Math.min(body.length, MAX_BYTES), StandardCharsets.UTF_8));
+      if (!text.isEmpty()) {
+        return text;
       }
     }
     return phrase(conn);
@@ -91,7 +107,7 @@ public final class ResponseDetail {
    * @param conn a connection whose response status has been read
    * @return the reason phrase, never null
    */
-  public static String phrase(HttpURLConnection conn) {
+  private static String phrase(HttpURLConnection conn) {
     try {
       String phrase = conn.getResponseMessage();
       return phrase == null ? "" : phrase;
@@ -110,7 +126,7 @@ public final class ResponseDetail {
    * @param body the response body
    * @return the body as one line of plain text
    */
-  public static String toPlainText(String body) {
+  private static String toPlainText(String body) {
     Matcher message = ERROR_PAGE_MESSAGE.matcher(body);
     String text = message.find() && !message.group(1).trim().isEmpty()
         ? message.group(1) : body;
