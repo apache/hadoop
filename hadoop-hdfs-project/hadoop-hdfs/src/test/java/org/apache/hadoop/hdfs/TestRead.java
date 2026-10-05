@@ -96,12 +96,12 @@ public class TestRead {
     try {
       final Configuration conf = testContext.newConfiguration();
       conf.setLong(HdfsClientConfigKeys.DFS_CLIENT_CACHE_READAHEAD, BLOCK_SIZE);
-      MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
-          .format(true).build();
-      testEOF(cluster, 1);
-      testEOF(cluster, 14);
-      testEOF(cluster, 10000);
-      cluster.shutdown();
+      try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(1).format(true).build()) {
+        testEOF(cluster, 1);
+        testEOF(cluster, 14);
+        testEOF(cluster, 10000);
+      }
     } finally {
       testContext.close();
     }
@@ -112,12 +112,12 @@ public class TestRead {
   public void testEOFWithRemoteBlockReader() throws Exception {
     final Configuration conf = new Configuration();
     conf.setLong(HdfsClientConfigKeys.DFS_CLIENT_CACHE_READAHEAD, BLOCK_SIZE);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
-        .format(true).build();
-    testEOF(cluster, 1);
-    testEOF(cluster, 14);
-    testEOF(cluster, 10000);   
-    cluster.shutdown();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).format(true).build()) {
+      testEOF(cluster, 1);
+      testEOF(cluster, 14);
+      testEOF(cluster, 10000);
+    }
   }
 
   /**

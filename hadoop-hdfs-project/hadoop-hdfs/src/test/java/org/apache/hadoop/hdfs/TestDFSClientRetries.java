@@ -1279,12 +1279,15 @@ public class TestDFSClientRetries {
   @Timeout(value = 120)
   public void testLeaseRenewAndDFSOutputStreamDeadLock() throws Exception {
     CountDownLatch testLatch = new CountDownLatch(1);
+    DFSClientFaultInjector oldInjector = DFSClientFaultInjector.get();
     DFSClientFaultInjector.set(new DFSClientFaultInjector() {
       public void delayWhenRenewLeaseTimeout() {
         try {
-          testLatch.await();
+          // Bounded, so a stalled out1.close() cannot leave the renewer
+          // holding the LeaseRenewer monitor forever.
+          testLatch.await(30, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
-          e.printStackTrace();
+          Thread.currentThread().interrupt();
         }
       }
     });
@@ -1323,6 +1326,12 @@ public class TestDFSClientRetries {
       out1.close();
 
     } finally {
+      // Release any lease renewer thread parked in the injector above. If this
+      // test dies before NameNode.complete() runs, the latch is never counted
+      // down by SleepFixedTimeAnswer, and restoring the injector alone does not
+      // free a thread that is already inside the old one.
+      testLatch.countDown();
+      DFSClientFaultInjector.set(oldInjector);
       cluster.shutdown();
     }
   }

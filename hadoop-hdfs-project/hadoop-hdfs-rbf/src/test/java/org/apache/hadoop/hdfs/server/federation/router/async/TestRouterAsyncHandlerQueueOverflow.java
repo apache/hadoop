@@ -21,12 +21,14 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeoutException;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
+import org.opentest4j.AssertionFailedError;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -48,6 +50,7 @@ import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
 import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.DEFAULT_HEARTBEAT_INTERVAL_MS;
+import static org.apache.hadoop.hdfs.server.federation.metrics.NameserviceRPCMetrics.NAMESERVICE_RPC_METRICS_PREFIX;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_MAX_ASYNCCALL_PERMIT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_QUEUE_SIZE;
@@ -56,6 +59,8 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE;
 import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncUtil.syncReturn;
+import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -125,7 +130,7 @@ public class TestRouterAsyncHandlerQueueOverflow {
     spyNamesystem.writeUnlock();
 
     testLatch = new CountDownLatch(1);
-    MiniRouterDFSCluster.RouterContext router = cluster.getRandomRouter();
+    MiniRouterDFSCluster.RouterContext router = cluster.getRouterContext(ns0, NAMENODES[0]);
     routerRpcServer = router.getRouterRpcServer();
     routerRpcServer.initAsyncThreadPools(routerConf);
     asyncRpcClient = new RouterAsyncRpcClient(routerConf, router.getRouter(),
@@ -135,6 +140,9 @@ public class TestRouterAsyncHandlerQueueOverflow {
 
   @AfterAll
   public static void shutdownCluster() {
+    if (asyncRpcClient != null) {
+      asyncRpcClient.shutdown();
+    }
     if (cluster != null) {
       cluster.shutdown();
     }
@@ -143,42 +151,60 @@ public class TestRouterAsyncHandlerQueueOverflow {
   @Test
   @Timeout(value = 10)
   public void testInvokeMethodQueueOverflow() throws Exception {
-    RemoteMethod method =
-        new RemoteMethod("listOpenFiles", new Class<?>[] {long.class, EnumSet.class, String.class},
-            0, EnumSet.of(OpenFilesIterator.OpenFilesType.BLOCKING_DECOMMISSION),
-            new RemoteParam());
-    UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
-    Class<?> protocol = method.getProtocol();
-    String bigPath = "/veryBigOperation";
-    Object[] params =
-        new Object[] {0, EnumSet.of(OpenFilesIterator.OpenFilesType.BLOCKING_DECOMMISSION),
-            bigPath};
-    List<? extends FederationNamenodeContext> namenodes =
-        asyncRpcClient.getOrderedNamenodes(ns0, true);
-    // Downstream namespace processing this huge request
-    asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
-    ThreadPoolExecutor nsExecutor = routerRpcServer.getAsyncExecutorForNamespace(ns0);
-    // Successfully sent this request downstream, but all subsequent ones will get stuck
-    GenericTestUtils.waitFor(() -> nsExecutor.getQueue().isEmpty(), 50, 500);
-    GenericTestUtils.waitFor(() -> nsExecutor.getCompletedTaskCount() == 1, 50, 500);
+    try {
+      RemoteMethod method = new RemoteMethod("listOpenFiles",
+          new Class<?>[] {long.class, EnumSet.class, String.class}, 0,
+          EnumSet.of(OpenFilesIterator.OpenFilesType.BLOCKING_DECOMMISSION), new RemoteParam());
+      UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
+      Class<?> protocol = method.getProtocol();
+      String bigPath = "/veryBigOperation";
+      Object[] params =
+          new Object[] {0, EnumSet.of(OpenFilesIterator.OpenFilesType.BLOCKING_DECOMMISSION),
+              bigPath};
+      List<? extends FederationNamenodeContext> namenodes =
+          asyncRpcClient.getOrderedNamenodes(ns0, true);
+      // Downstream namespace processing this huge request
+      asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
+      ThreadPoolExecutor nsExecutor = routerRpcServer.getAsyncExecutorForNamespace(ns0);
+      // Successfully sent this request downstream, but all subsequent ones will get stuck
+      GenericTestUtils.waitFor(() -> nsExecutor.getQueue().isEmpty(), 50, 500);
+      GenericTestUtils.waitFor(() -> nsExecutor.getCompletedTaskCount() == 1, 50, 500);
 
-    // Async handler handling, blocking at acquirePermit
-    asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
-    GenericTestUtils.waitFor(() -> nsExecutor.getQueue().isEmpty(), 50, 500);
-    GenericTestUtils.waitFor(() -> nsExecutor.getCompletedTaskCount() == 1, 50, 500);
-    // Stuck in queue
-    asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
-    assertEquals(1, nsExecutor.getQueue().size());
-    // Insert one more call, also stuck in queue
-    asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
-    assertEquals(2, nsExecutor.getQueue().size());
-    // Queue full, rejected
-    asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
-    assertEquals(2, nsExecutor.getQueue().size());
-    String expectedMsg = "Namespace '" + ns0 + "' async handler is busy.";
-    LambdaTestUtils.intercept(StandbyException.class, expectedMsg,
-        () -> syncReturn(FileStatus.class));
-    // Unstuck the namenode so we can terminate this test
-    testLatch.countDown();
+      // Async handler handling, blocking at acquirePermit
+      asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
+      GenericTestUtils.waitFor(() -> nsExecutor.getQueue().isEmpty(), 50, 500);
+      GenericTestUtils.waitFor(() -> nsExecutor.getCompletedTaskCount() == 1, 50, 500);
+      // Stuck in queue
+      asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
+      verifyQueueSize(1, nsExecutor);
+      // Insert one more call, also stuck in queue
+      asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
+      verifyQueueSize(2, nsExecutor);
+      // Queue full, rejected
+      asyncRpcClient.invokeMethod(ugi, namenodes, true, protocol, method.getMethod(), params);
+      verifyQueueSize(2, nsExecutor);
+      String expectedMsg = "Namespace '" + ns0 + "' async handler is busy.";
+      LambdaTestUtils.intercept(StandbyException.class, expectedMsg,
+          () -> syncReturn(FileStatus.class));
+    } finally {
+      // Unstuck the namenode so we can terminate this test
+      testLatch.countDown();
+    }
+  }
+
+  void verifyQueueSize(int size, ThreadPoolExecutor nsExecutor)
+      throws InterruptedException, TimeoutException {
+    GenericTestUtils.waitFor(() -> {
+      try {
+        // Ping getAsyncExecutorForNamespace for metrics recording
+        routerRpcServer.getAsyncExecutorForNamespace(ns0);
+        assertGauge("AsyncHandlerQueueSize", size,
+            getMetrics(NAMESERVICE_RPC_METRICS_PREFIX + ns0));
+        return true;
+      } catch (AssertionFailedError e) {
+        return false;
+      }
+    }, 100, 2000);
+    assertEquals(size, nsExecutor.getQueue().size());
   }
 }

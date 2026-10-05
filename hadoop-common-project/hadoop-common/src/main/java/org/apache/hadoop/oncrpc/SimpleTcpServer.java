@@ -41,6 +41,7 @@ public class SimpleTcpServer {
   public static final Logger LOG =
       LoggerFactory.getLogger(SimpleTcpServer.class);
   protected final int port;
+  private final String bindHost;
   protected int boundPort = -1; // Will be set after server starts
   protected final ChannelInboundHandlerAdapter rpcProgram;
   private ServerBootstrap server;
@@ -57,7 +58,19 @@ public class SimpleTcpServer {
    * @param workercount Number of worker threads
    */
   public SimpleTcpServer(int port, RpcProgram program, int workercount) {
+    this(port, null, program, workercount);
+  }
+
+  /**
+   * @param port TCP port where to start the server at
+   * @param bindHost local address to bind the server socket to
+   * @param program RPC program corresponding to the server
+   * @param workercount Number of worker threads
+   */
+  public SimpleTcpServer(int port, String bindHost, RpcProgram program,
+      int workercount) {
     this.port = port;
+    this.bindHost = bindHost;
     this.rpcProgram = program;
     this.workerCount = workercount;
   }
@@ -85,7 +98,9 @@ public class SimpleTcpServer {
         .option(ChannelOption.SO_REUSEADDR, true);
 
     // Listen to TCP port
-    ChannelFuture f = server.bind(new InetSocketAddress(port)).sync();
+    ChannelFuture f = server.bind(bindHost != null
+        ? new InetSocketAddress(bindHost, port)
+        : new InetSocketAddress(port)).sync();
     ch = f.channel();
     InetSocketAddress socketAddr = (InetSocketAddress) ch.localAddress();
     boundPort = socketAddr.getPort();
@@ -97,6 +112,14 @@ public class SimpleTcpServer {
   // boundPort will be set only after server starts
   public int getBoundPort() {
     return this.boundPort;
+  }
+
+  /**
+   * Returns the local address this server is listening on.
+   * @return local listen address, or null if the server is not running
+   */
+  public InetSocketAddress getBoundAddress() {
+    return ch != null ? (InetSocketAddress) ch.localAddress() : null;
   }
 
   public void shutdown() {

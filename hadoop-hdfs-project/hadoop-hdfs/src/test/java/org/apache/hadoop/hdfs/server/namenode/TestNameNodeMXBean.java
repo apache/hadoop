@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Optional;
@@ -58,11 +59,11 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.NoMlockCacheManipulator;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.JsonUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -154,8 +155,7 @@ public class TestNameNodeMXBean {
       // get attribute "Version"
       String version = (String) mbs.getAttribute(mxbeanName, "Version");
       assertEquals(fsn.getVersion(), version);
-      assertTrue(version.equals(VersionInfo.getVersion()
-          + ", r" + VersionInfo.getRevision()));
+      assertEquals(version, VersionInfo.getVersion() + ", r" + VersionInfo.getRevision());
       // get attribute "Used"
       Long used = (Long) mbs.getAttribute(mxbeanName, "Used");
       assertEquals(fsn.getUsed(), used.longValue());
@@ -178,16 +178,16 @@ public class TestNameNodeMXBean {
       // get attribute alivenodeinfo
       String alivenodeinfo = (String) (mbs.getAttribute(mxbeanName,
           "LiveNodes"));
-      Map<String, Map<String, Object>> liveNodes =
-          (Map<String, Map<String, Object>>) JSON.parse(alivenodeinfo);
-      assertTrue(liveNodes.size() == 4);
+      Map<String, Map<String, Object>> liveNodes = JsonUtils.parse(alivenodeinfo,
+          new TypeReference<Map<String, Map<String, Object>>>() {});
+      assertEquals(4, liveNodes.size());
       for (Map<String, Object> liveNode : liveNodes.values()) {
         assertTrue(liveNode.containsKey("nonDfsUsedSpace"));
-        assertTrue(((Long)liveNode.get("nonDfsUsedSpace")) >= 0);
+        assertTrue(toLong(liveNode.get("nonDfsUsedSpace")) >= 0);
         assertTrue(liveNode.containsKey("capacity"));
-        assertTrue(((Long)liveNode.get("capacity")) > 0);
+        assertTrue(toLong(liveNode.get("capacity")) > 0);
         assertTrue(liveNode.containsKey("numBlocks"));
-        assertTrue(((Long)liveNode.get("numBlocks")) == 0);
+        assertEquals(0L, toLong(liveNode.get("numBlocks")));
         assertTrue(liveNode.containsKey("lastBlockReport"));
         // a. By default the upgrade domain isn't defined on any DN.
         // b. If the upgrade domain is set on a DN, JMX should have the same
@@ -196,7 +196,7 @@ public class TestNameNodeMXBean {
         if (!xferAddr.equals(dnXferAddrWithUpgradeDomainSet)) {
           assertTrue(!liveNode.containsKey("upgradeDomain"));
         } else {
-          assertTrue(liveNode.get("upgradeDomain").equals(upgradeDomain));
+          assertEquals(upgradeDomain, liveNode.get("upgradeDomain"));
         }
         // "adminState" is set to maintenance only for the specific dn.
         boolean inMaintenance = liveNode.get("adminState").equals(
@@ -219,8 +219,8 @@ public class TestNameNodeMXBean {
       // under different states
       String alivenodeinfo1 = (String) (mbs.getAttribute(mxbeanName,
               "LiveNodes"));
-      Map<String, Map<String, Object>> liveNodes1 =
-              (Map<String, Map<String, Object>>) JSON.parse(alivenodeinfo1);
+      Map<String, Map<String, Object>> liveNodes1 = JsonUtils.parse(alivenodeinfo1,
+          new TypeReference<Map<String, Map<String, Object>>>() {});
       for (Map<String, Object> liveNode : liveNodes1.values()) {
         assertTrue(liveNode.containsKey("location"));
         assertTrue(liveNode.containsKey("uuid"));
@@ -259,8 +259,8 @@ public class TestNameNodeMXBean {
       String nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
           "NameDirStatuses"));
       assertEquals(fsn.getNameDirStatuses(), nameDirStatuses);
-      Map<String, Map<String, String>> statusMap =
-        (Map<String, Map<String, String>>) JSON.parse(nameDirStatuses);
+      Map<String, Map<String, String>> statusMap = JsonUtils.parse(nameDirStatuses,
+          new TypeReference<Map<String, Map<String, String>>>() {});
       Collection<URI> nameDirUris = cluster.getNameDirs(0);
       for (URI nameDirUri : nameDirUris) {
         File nameDir = new File(nameDirUri);
@@ -279,7 +279,8 @@ public class TestNameNodeMXBean {
 
       nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
           "NameDirStatuses"));
-      statusMap = (Map<String, Map<String, String>>) JSON.parse(nameDirStatuses);
+      statusMap = JsonUtils.parse(nameDirStatuses,
+          new TypeReference<Map<String, Map<String, String>>>() {});
       for (URI nameDirUri : nameDirUris) {
         File nameDir = new File(nameDirUri);
         String expectedStatus =
@@ -346,7 +347,8 @@ public class TestNameNodeMXBean {
         "DeadNodes"));
       assertEquals(fsn.getDeadNodes(), deadNodeInfo);
       Map<String, Map<String, Object>> deadNodes =
-          (Map<String, Map<String, Object>>) JSON.parse(deadNodeInfo);
+          JsonUtils.parse(deadNodeInfo,
+              new TypeReference<Map<String, Map<String, Object>>>() {});
       assertTrue(deadNodes.size() > 0);
       for (Map<String, Object> deadNode : deadNodes.values()) {
         assertTrue(deadNode.containsKey("lastContact"));
@@ -391,8 +393,8 @@ public class TestNameNodeMXBean {
       // 1. Verify Live nodes
       String liveNodesInfo = (String) (mbs.getAttribute(mxbeanName,
           "LiveNodes"));
-      Map<String, Map<String, Object>> liveNodes =
-          (Map<String, Map<String, Object>>) JSON.parse(liveNodesInfo);
+      Map<String, Map<String, Object>> liveNodes = JsonUtils.parse(liveNodesInfo,
+          new TypeReference<Map<String, Map<String, Object>>>() {});
       assertEquals(fsn.getLiveNodes(), liveNodesInfo);
       assertEquals(fsn.getNumLiveDataNodes(), liveNodes.size());
 
@@ -413,8 +415,8 @@ public class TestNameNodeMXBean {
           try {
             String decomNodesInfo = (String) (mbs.getAttribute(mxbeanName,
                 "DecomNodes"));
-            Map<String, Map<String, Object>> decomNodes =
-                (Map<String, Map<String, Object>>) JSON.parse(decomNodesInfo);
+            Map<String, Map<String, Object>> decomNodes = JsonUtils.parse(decomNodesInfo,
+                new TypeReference<Map<String, Map<String, Object>>>() {});
             if (decomNodes.size() > 0) {
               return true;
             }
@@ -428,8 +430,8 @@ public class TestNameNodeMXBean {
       // 2. Verify Decommission InProgress nodes
       String decomNodesInfo = (String) (mbs.getAttribute(mxbeanName,
           "DecomNodes"));
-      Map<String, Map<String, Object>> decomNodes =
-          (Map<String, Map<String, Object>>) JSON.parse(decomNodesInfo);
+      Map<String, Map<String, Object>> decomNodes = JsonUtils.parse(decomNodesInfo,
+          new TypeReference<Map<String, Map<String, Object>>>() {});
       assertEquals(fsn.getDecomNodes(), decomNodesInfo);
       assertEquals(fsn.getNumDecommissioningDataNodes(), decomNodes.size());
       assertEquals(0, fsn.getNumDecomLiveDataNodes());
@@ -449,7 +451,8 @@ public class TestNameNodeMXBean {
       // 3. Verify Decommissioned nodes
       decomNodesInfo = (String) (mbs.getAttribute(mxbeanName, "DecomNodes"));
       decomNodes =
-          (Map<String, Map<String, Object>>) JSON.parse(decomNodesInfo);
+          JsonUtils.parse(decomNodesInfo,
+              new TypeReference<Map<String, Map<String, Object>>>() {});
       assertEquals(0, decomNodes.size());
       assertEquals(fsn.getDecomNodes(), decomNodesInfo);
       assertEquals(1, fsn.getNumDecomLiveDataNodes());
@@ -597,7 +600,8 @@ public class TestNameNodeMXBean {
           "LiveNodes"));
       LOG.info("Live Nodes: " + liveNodesInfo);
       Map<String, Map<String, Object>> liveNodes =
-          (Map<String, Map<String, Object>>) JSON.parse(liveNodesInfo);
+          JsonUtils.parse(liveNodesInfo,
+              new TypeReference<Map<String, Map<String, Object>>>() {});
       assertEquals(fsn.getLiveNodes(), liveNodesInfo);
       assertEquals(fsn.getNumLiveDataNodes(), liveNodes.size());
 
@@ -619,8 +623,8 @@ public class TestNameNodeMXBean {
         String enteringMaintenanceNodesInfo =
             (String) (mbs.getAttribute(mxbeanName, "EnteringMaintenanceNodes"));
         Map<String, Map<String, Object>> enteringMaintenanceNodes =
-            (Map<String, Map<String, Object>>) JSON.parse(
-                enteringMaintenanceNodesInfo);
+            JsonUtils.parse(enteringMaintenanceNodesInfo,
+                new TypeReference<Map<String, Map<String, Object>>>() {});
         if (enteringMaintenanceNodes.size() <= 0) {
           LOG.info("Waiting for a node to Enter Maintenance state!");
           Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
@@ -644,8 +648,8 @@ public class TestNameNodeMXBean {
       String enteringMaintenanceNodesInfo =
           (String) (mbs.getAttribute(mxbeanName, "EnteringMaintenanceNodes"));
       Map<String, Map<String, Object>> enteringMaintenanceNodes =
-          (Map<String, Map<String, Object>>) JSON.parse(
-              enteringMaintenanceNodesInfo);
+          JsonUtils.parse(enteringMaintenanceNodesInfo,
+              new TypeReference<Map<String, Map<String, Object>>>() {});
       assertEquals(0, enteringMaintenanceNodes.size());
       assertEquals(fsn.getEnteringMaintenanceNodes(), enteringMaintenanceNodesInfo);
       assertEquals(1, fsn.getNumInMaintenanceLiveDataNodes());
@@ -851,7 +855,8 @@ public class TestNameNodeMXBean {
   @SuppressWarnings("unchecked")
   private void checkNNDirSize(Collection<URI> nameDirUris, String metric){
     Map<String, Long> nnDirMap =
-        (Map<String, Long>) JSON.parse(metric);
+        JsonUtils.parse(metric,
+            new TypeReference<Map<String, Long>>() {});
     assertEquals(nameDirUris.size(), nnDirMap.size());
     for (URI dirUrl : nameDirUris) {
       File dir = new File(dirUrl);
@@ -1016,7 +1021,7 @@ public class TestNameNodeMXBean {
 
       String corruptFiles = (String) (mbs.getAttribute(namenodeMXBeanName,
           "CorruptFiles"));
-      int numCorruptFiles = ((Object[]) JSON.parse(corruptFiles)).length;
+      int numCorruptFiles = (JsonUtils.parse(corruptFiles, Object[].class)).length;
       assertEquals(1, numCorruptFiles);
     } finally {
       if (fs != null) {
@@ -1174,7 +1179,8 @@ public class TestNameNodeMXBean {
       assertEquals(fsn.getDeadNodes(), deadNodeInfo);
       LOG.info("Get deadNode info: {}", deadNodeInfo);
       Map<String, Map<String, Object>> deadNodes =
-          (Map<String, Map<String, Object>>) JSON.parse(deadNodeInfo);
+          JsonUtils.parse(deadNodeInfo,
+              new TypeReference<Map<String, Map<String, Object>>>() {});
       assertEquals(1, deadNodes.size());
       for (Map<String, Object> deadNode : deadNodes.values()) {
         assertTrue(deadNode.containsKey("lastContact"));
@@ -1229,7 +1235,7 @@ public class TestNameNodeMXBean {
         "VerifyECWithTopologyResult");
     ObjectMapper mapper = new ObjectMapper();
     Map<String, String> resultMap = mapper.readValue(result, Map.class);
-    Boolean isSupported = Boolean.parseBoolean(resultMap.get("isSupported"));
+    boolean isSupported = Boolean.parseBoolean(resultMap.get("isSupported"));
     String resultMessage = resultMap.get("resultMessage");
 
     assertFalse(isSupported,
@@ -1237,5 +1243,12 @@ public class TestNameNodeMXBean {
     assertTrue(resultMessage.contains("3 racks are required for " +
         "the erasure coding policies: RS-6-3-1024k. " +
         "The number of racks is only 1."));
+  }
+
+  private static long toLong(Object value) {
+    if (value instanceof Number) {
+      return ((Number) value).longValue();
+    }
+    throw new IllegalArgumentException("Unsupported type: " + value.getClass());
   }
 }

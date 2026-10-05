@@ -25,7 +25,7 @@ import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 
 /**
- * Stores ETag and checksum values from {@link  CompletedPart} responses from S3.
+ * Stores ETag and checksum values from {@link CompletedPart} responses from S3.
  * These values need to be stored to be later passed to the
  * {@link software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest
  * CompleteMultipartUploadRequest}
@@ -37,8 +37,17 @@ public class UploadEtag implements Serializable {
    */
   private static final long serialVersionUID = 1L;
 
+  /**
+   * CompletedPart's ETag value.
+   */
   private String etag;
+  /**
+   * Algorithm used to calculate the checksum.
+   */
   private String checksumAlgorithm;
+  /**
+   * CompletedPart's checksum value.
+   */
   private String checksum;
 
   public UploadEtag() {

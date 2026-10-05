@@ -16,38 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.io.serializer;
+package org.apache.hadoop.mcp;
 
-import java.io.IOException;
-import java.io.Serializable;
+import javax.servlet.http.HttpServletRequest;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.RawComparator;
 
 /**
- * <p>
- * A {@link RawComparator} that uses a {@link JavaSerialization}
- * {@link Deserializer} to deserialize objects that are then compared via
- * their {@link Comparable} interfaces.
- * </p>
- * @param <T> generic type.
- * @see JavaSerialization
+ * Request-scoped context passed to MCP tool handlers.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Unstable
-public class JavaSerializationComparator<T extends Serializable&Comparable<T>>
-  extends DeserializerComparator<T> {
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+public final class McpCallContext {
 
-  @InterfaceAudience.Private
-  public JavaSerializationComparator() throws IOException {
-    super(new JavaSerialization.JavaSerializationDeserializer<T>());
+  private final HttpServletRequest request;
+
+  public McpCallContext(HttpServletRequest request) {
+    this.request = request;
   }
 
-  @Override
-  @InterfaceAudience.Private
-  public int compare(T o1, T o2) {
-    return o1.compareTo(o2);
+  public HttpServletRequest getRequest() {
+    return request;
   }
-
 }

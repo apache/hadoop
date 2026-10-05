@@ -138,15 +138,17 @@ public class CompositeInputSplit implements InputSplit {
     Class<? extends InputSplit>[] cls = new Class[card];
     try {
       for (int i = 0; i < card; ++i) {
-        cls[i] =
-          Class.forName(Text.readString(in)).asSubclass(InputSplit.class);
+        cls[i] = ReflectionUtils.loadUninitedClass(
+            getClass().getClassLoader(),
+            Text.readString(in),
+            InputSplit.class);
       }
       for (int i = 0; i < card; ++i) {
         splits[i] = ReflectionUtils.newInstance(cls[i], null);
         splits[i].readFields(in);
       }
     } catch (ClassNotFoundException e) {
-      throw (IOException)new IOException("Failed split init").initCause(e);
+      throw new IOException("Failed split init", e);
     }
   }
 

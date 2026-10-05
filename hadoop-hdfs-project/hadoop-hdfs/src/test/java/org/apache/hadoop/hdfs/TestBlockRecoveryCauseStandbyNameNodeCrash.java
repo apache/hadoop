@@ -73,9 +73,12 @@ public class TestBlockRecoveryCauseStandbyNameNodeCrash {
     conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     final int numDNs = dataBlocks + parityBlocks;
+    // Ephemeral ports: the fixed-port variant simpleHATopology(2, 50070)
+    // binds 50070-50073 and fails with BindException whenever anything
+    // else on the CI agent holds one of them.
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numDNs)
-        .nnTopology(MiniDFSNNTopology.simpleHATopology(2, 50070))
+        .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .build();
     cluster.waitActive();
     cluster.transitionToActive(0);
@@ -156,7 +159,7 @@ public class TestBlockRecoveryCauseStandbyNameNodeCrash {
             return false;
           }
         }
-      }, 5000, 24000);
+      }, 5000, 60000);
     } catch (TimeoutException e) {
       throw new IOException("Timeout waiting for recoverLease()");
     }

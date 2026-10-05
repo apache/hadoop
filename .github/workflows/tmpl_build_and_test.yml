@@ -321,5 +321,5 @@ jobs:
         with:
           name: unit-test-logs-${{ matrix.comment }}-java${{ inputs.java }})-${{ inputs.os }}-${{ inputs.branch }}
           path: |
-            **/target/*.log
-            **/target/*.xml
+            **/target/**/*.log
+            **/target/surefire-reports/**

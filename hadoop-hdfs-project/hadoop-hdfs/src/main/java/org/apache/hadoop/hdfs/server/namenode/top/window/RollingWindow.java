@@ -76,7 +76,7 @@ public class RollingWindow {
     }
     this.windowLenMs = windowLenMs;
     this.bucketSize = windowLenMs / numBuckets;
-    if (this.bucketSize % bucketSize != 0) {
+    if (this.windowLenMs % numBuckets != 0) {
       throw new IllegalArgumentException(
           "The bucket size in the rolling window is not integer: windowLenMs= "
               + windowLenMs + " numBuckets= " + numBuckets);

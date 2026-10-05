@@ -66,6 +66,11 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_PATCH_REQUEST;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_POST_REQUEST;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_PUT_REQUEST;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.METADATA_INCOMPLETE_RENAME_FAILURES;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_FALLBACK_COUNT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_LISTING_LATENCY;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_PARSE_FAILURE_COUNT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_REQUEST_COUNT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_RESPONSE_COUNT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.READ_THROTTLES;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_RECOVERY;
@@ -140,7 +145,11 @@ public class AbfsCountersImpl implements AbfsCounters {
       RENAME_RECOVERY,
       METADATA_INCOMPLETE_RENAME_FAILURES,
       RENAME_PATH_ATTEMPTS,
-      ATOMIC_RENAME_PATH_ATTEMPTS
+      ATOMIC_RENAME_PATH_ATTEMPTS,
+      PHOTON_REQUEST_COUNT,
+      PHOTON_RESPONSE_COUNT,
+      PHOTON_FALLBACK_COUNT,
+      PHOTON_PARSE_FAILURE_COUNT
   };
 
   private static final AbfsStatistic[] DURATION_TRACKER_LIST = {
@@ -149,7 +158,8 @@ public class AbfsCountersImpl implements AbfsCounters {
       HTTP_DELETE_REQUEST,
       HTTP_PUT_REQUEST,
       HTTP_PATCH_REQUEST,
-      HTTP_POST_REQUEST
+      HTTP_POST_REQUEST,
+      PHOTON_LISTING_LATENCY
   };
 
   public AbfsCountersImpl(URI uri) {

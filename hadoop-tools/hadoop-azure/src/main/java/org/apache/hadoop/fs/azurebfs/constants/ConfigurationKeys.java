@@ -469,6 +469,24 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_ENABLE_PAGINATED_DELETE = "fs.azure.enable.paginated.delete";
 
+  /**
+   * Specify whether Photon (Apache Arrow based ListBlob) responses should be
+   * requested for listing operations on the Blob endpoint. When enabled, ABFS
+   * requests Arrow responses (with XML fallback) and parses whichever format the
+   * service returns based on the response Content-Type: {@value}.
+   */
+  public static final String FS_AZURE_ENABLE_PHOTON = "fs.azure.photon.enabled";
+
+  /**
+   * Maximum off-heap (direct) memory in bytes that the Apache Arrow allocator
+   * may use while parsing a single Photon (Arrow) ListBlobs response. Bounds the
+   * memory a large or malformed Arrow response can consume so that failures are
+   * surfaced as a driver exception instead of a JVM direct-memory error:
+   * {@value}.
+   */
+  public static final String FS_AZURE_PHOTON_ARROW_MEMORY_LIMIT =
+      "fs.azure.photon.arrow.memory.limit";
+
   /** Add extra layer of verification of the integrity of the request content during transport: {@value}. */
   public static final String FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION = "fs.azure.enable.checksum.validation";
 

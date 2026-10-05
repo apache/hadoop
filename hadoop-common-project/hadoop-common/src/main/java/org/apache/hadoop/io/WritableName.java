@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /** Utility to permit renaming of Writable implementation classes without
  * invalidiating files that contain their class name.
@@ -86,7 +87,7 @@ public class WritableName {
    * @param name input name.
    * @param conf input configuration.
    * @return class for a name.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException raised on errors loading the class.
    */
   public static synchronized Class<?> getClass(String name, Configuration conf
                                             ) throws IOException {
@@ -94,11 +95,9 @@ public class WritableName {
     if (writableClass != null)
       return writableClass;
     try {
-      return conf.getClassByName(name);
+      return ReflectionUtils.loadUninitedClass(conf, name, null);
     } catch (ClassNotFoundException e) {
-      IOException newE = new IOException("WritableName can't load class: " + name);
-      newE.initCause(e);
-      throw newE;
+      throw new IOException("WritableName can't load class: " + name, e);
     }
   }
 

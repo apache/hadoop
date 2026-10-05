@@ -75,7 +75,7 @@ public abstract class TaskId implements Comparable<TaskId> {
     int result = 1;
     result = prime * result + getId();
     result = prime * result + getJobId().hashCode();
-    result = prime * result + getTaskType().hashCode();
+    result = prime * result + getTaskType().ordinal();
     return result;
   }
 

@@ -572,40 +572,41 @@ public class TestWriteToReplica {
   @Test
   public void testRecoverInconsistentRbw() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf,
-        new File(GenericTestUtils.getRandomizedTempPath())).build();
-    cluster.waitActive();
-    DataNode dn = cluster.getDataNodes().get(0);
-    FsDatasetImpl fsDataset = (FsDatasetImpl)DataNodeTestUtils.getFSDataset(dn);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf,
+        new File(GenericTestUtils.getRandomizedTempPath())).build()) {
+      cluster.waitActive();
+      DataNode dn = cluster.getDataNodes().get(0);
+      FsDatasetImpl fsDataset = (FsDatasetImpl)DataNodeTestUtils.getFSDataset(dn);
 
-    // set up replicasMap
-    String bpid = cluster.getNamesystem().getBlockPoolId();
-    ExtendedBlock[] blocks = setup(bpid, cluster.getFsDatasetTestUtils(dn));
+      // set up replicasMap
+      String bpid = cluster.getNamesystem().getBlockPoolId();
+      ExtendedBlock[] blocks = setup(bpid, cluster.getFsDatasetTestUtils(dn));
 
-    ReplicaBeingWritten rbw = (ReplicaBeingWritten)fsDataset.
-        getReplicaInfo(bpid, blocks[RBW].getBlockId());
-    long bytesOnDisk = rbw.getBytesOnDisk();
-    // simulate an inconsistent replica length update by reducing in-memory
-    // value of on disk length
-    rbw.setLastChecksumAndDataLen(bytesOnDisk - 1, null);
-    fsDataset.recoverRbw(blocks[RBW], blocks[RBW].getGenerationStamp(), 0L,
-        rbw.getNumBytes());
-    // after the recovery, on disk length should equal acknowledged length.
-    assertTrue(rbw.getBytesOnDisk() == rbw.getBytesAcked());
-
-    // reduce on disk length again; this time actually truncate the file to
-    // simulate the data not being present
-    rbw.setLastChecksumAndDataLen(bytesOnDisk - 1, null);
-    try (RandomAccessFile blockRAF = rbw.getFileIoProvider().
-        getRandomAccessFile(rbw.getVolume(), rbw.getBlockFile(), "rw")) {
-      // truncate blockFile
-      blockRAF.setLength(bytesOnDisk - 1);
+      ReplicaBeingWritten rbw = (ReplicaBeingWritten)fsDataset.
+          getReplicaInfo(bpid, blocks[RBW].getBlockId());
+      long bytesOnDisk = rbw.getBytesOnDisk();
+      // simulate an inconsistent replica length update by reducing in-memory
+      // value of on disk length
+      rbw.setLastChecksumAndDataLen(bytesOnDisk - 1, null);
       fsDataset.recoverRbw(blocks[RBW], blocks[RBW].getGenerationStamp(), 0L,
           rbw.getNumBytes());
-      fail("recovery should have failed");
-    } catch (ReplicaNotFoundException rnfe) {
-      GenericTestUtils.assertExceptionContains("Found fewer bytesOnDisk than " +
-          "bytesAcked for replica", rnfe);
+      // after the recovery, on disk length should equal acknowledged length.
+      assertTrue(rbw.getBytesOnDisk() == rbw.getBytesAcked());
+
+      // reduce on disk length again; this time actually truncate the file to
+      // simulate the data not being present
+      rbw.setLastChecksumAndDataLen(bytesOnDisk - 1, null);
+      try (RandomAccessFile blockRAF = rbw.getFileIoProvider().
+          getRandomAccessFile(rbw.getVolume(), rbw.getBlockFile(), "rw")) {
+        // truncate blockFile
+        blockRAF.setLength(bytesOnDisk - 1);
+        fsDataset.recoverRbw(blocks[RBW], blocks[RBW].getGenerationStamp(), 0L,
+            rbw.getNumBytes());
+        fail("recovery should have failed");
+      } catch (ReplicaNotFoundException rnfe) {
+        GenericTestUtils.assertExceptionContains("Found fewer bytesOnDisk than " +
+            "bytesAcked for replica", rnfe);
+      }
     }
   }
 

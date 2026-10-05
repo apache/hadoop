@@ -1260,133 +1260,136 @@ public class TestDistributedFileSystem {
 
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(2).build();
-    final FileSystem hdfs = cluster.getFileSystem();
-
-    final String nnAddr = conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
-    final UserGroupInformation current = UserGroupInformation.getCurrentUser();
-    final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
-        current.getShortUserName() + "x", new String[]{"user"});
-    
     try {
-      hdfs.getFileChecksum(new Path(
-          "/test/TestNonExistingFile"));
-      fail("Expecting FileNotFoundException");
-    } catch (FileNotFoundException e) {
-      assertTrue(e.getMessage().contains("File does not exist: /test/TestNonExistingFile"),
-          "Not throwing the intended exception message");
-    }
+      final FileSystem hdfs = cluster.getFileSystem();
 
-    try {
-      Path path = new Path("/test/TestExistingDir/");
-      hdfs.mkdirs(path);
-      hdfs.getFileChecksum(path);
-      fail("Expecting FileNotFoundException");
-    } catch (FileNotFoundException e) {
-      assertTrue(e.getMessage().contains("Path is not a file: /test/TestExistingDir"),
-          "Not throwing the intended exception message");
-    }
+      final String nnAddr = conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+      final UserGroupInformation current = UserGroupInformation.getCurrentUser();
+      final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+          current.getShortUserName() + "x", new String[]{"user"});
 
-    //webhdfs
-    final String webhdfsuri = WebHdfsConstants.WEBHDFS_SCHEME + "://" + nnAddr;
-    System.out.println("webhdfsuri=" + webhdfsuri);
-    final FileSystem webhdfs = ugi.doAs(
-        new PrivilegedExceptionAction<FileSystem>() {
-      @Override
-      public FileSystem run() throws Exception {
-        return new Path(webhdfsuri).getFileSystem(conf);
+      try {
+        hdfs.getFileChecksum(new Path(
+            "/test/TestNonExistingFile"));
+        fail("Expecting FileNotFoundException");
+      } catch (FileNotFoundException e) {
+        assertTrue(e.getMessage().contains("File does not exist: /test/TestNonExistingFile"),
+            "Not throwing the intended exception message");
       }
-    });
 
-    final Path dir = new Path("/filechecksum");
-    final int block_size = 1024;
-    final int buffer_size = conf.getInt(
-        CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
-    conf.setInt(HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 512);
-
-    //try different number of blocks
-    for(int n = 0; n < 5; n++) {
-      //generate random data
-      final byte[] data = new byte[RAN.nextInt(block_size/2-1)+n*block_size+1];
-      RAN.nextBytes(data);
-      System.out.println("data.length=" + data.length);
-  
-      //write data to a file
-      final Path foo = new Path(dir, "foo" + n);
-      {
-        final FSDataOutputStream out = hdfs.create(foo, false, buffer_size,
-            (short)2, block_size);
-        out.write(data);
-        out.close();
+      try {
+        Path path = new Path("/test/TestExistingDir/");
+        hdfs.mkdirs(path);
+        hdfs.getFileChecksum(path);
+        fail("Expecting FileNotFoundException");
+      } catch (FileNotFoundException e) {
+        assertTrue(e.getMessage().contains("Path is not a file: /test/TestExistingDir"),
+            "Not throwing the intended exception message");
       }
-      
-      //compute checksum
-      final FileChecksum hdfsfoocs = hdfs.getFileChecksum(foo);
-      System.out.println("hdfsfoocs=" + hdfsfoocs);
 
       //webhdfs
-      final FileChecksum webhdfsfoocs = webhdfs.getFileChecksum(foo);
-      System.out.println("webhdfsfoocs=" + webhdfsfoocs);
+      final String webhdfsuri = WebHdfsConstants.WEBHDFS_SCHEME + "://" + nnAddr;
+      System.out.println("webhdfsuri=" + webhdfsuri);
+      final FileSystem webhdfs = ugi.doAs(
+          new PrivilegedExceptionAction<FileSystem>() {
+            @Override
+            public FileSystem run() throws Exception {
+              return new Path(webhdfsuri).getFileSystem(conf);
+            }
+          });
 
-      final Path webhdfsqualified = new Path(webhdfsuri + dir, "foo" + n);
-      final FileChecksum webhdfs_qfoocs =
-          webhdfs.getFileChecksum(webhdfsqualified);
-      System.out.println("webhdfs_qfoocs=" + webhdfs_qfoocs);
+      final Path dir = new Path("/filechecksum");
+      final int block_size = 1024;
+      final int buffer_size = conf.getInt(
+          CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
+      conf.setInt(HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 512);
 
-      //create a zero byte file
-      final Path zeroByteFile = new Path(dir, "zeroByteFile" + n);
-      {
-        final FSDataOutputStream out = hdfs.create(zeroByteFile, false,
-            buffer_size, (short)2, block_size);
-        out.close();
-      }
+      //try different number of blocks
+      for(int n = 0; n < 5; n++) {
+        //generate random data
+        final byte[] data = new byte[RAN.nextInt(block_size/2-1)+n*block_size+1];
+        RAN.nextBytes(data);
+        System.out.println("data.length=" + data.length);
 
-      //write another file
-      final Path bar = new Path(dir, "bar" + n);
-      {
-        final FSDataOutputStream out = hdfs.create(bar, false, buffer_size,
-            (short)2, block_size);
-        out.write(data);
-        out.close();
-      }
+        //write data to a file
+        final Path foo = new Path(dir, "foo" + n);
+        {
+          final FSDataOutputStream out = hdfs.create(foo, false, buffer_size,
+              (short)2, block_size);
+          out.write(data);
+          out.close();
+        }
 
-      {
-        final FileChecksum zeroChecksum = hdfs.getFileChecksum(zeroByteFile);
-        final String magicValue =
-            "MD5-of-0MD5-of-0CRC32:70bc8f4b72a86921468bf8e8441dce51";
-        // verify the magic val for zero byte files
-        assertEquals(magicValue, zeroChecksum.toString());
-
-        //verify checksums for empty file and 0 request length
-        final FileChecksum checksumWith0 = hdfs.getFileChecksum(bar, 0);
-        assertEquals(zeroChecksum, checksumWith0);
-
-        //verify checksum
-        final FileChecksum barcs = hdfs.getFileChecksum(bar);
-        final int barhashcode = barcs.hashCode();
-        assertEquals(hdfsfoocs.hashCode(), barhashcode);
-        assertEquals(hdfsfoocs, barcs);
+        //compute checksum
+        final FileChecksum hdfsfoocs = hdfs.getFileChecksum(foo);
+        System.out.println("hdfsfoocs=" + hdfsfoocs);
 
         //webhdfs
-        assertEquals(webhdfsfoocs.hashCode(), barhashcode);
-        assertEquals(webhdfsfoocs, barcs);
+        final FileChecksum webhdfsfoocs = webhdfs.getFileChecksum(foo);
+        System.out.println("webhdfsfoocs=" + webhdfsfoocs);
 
-        assertEquals(webhdfs_qfoocs.hashCode(), barhashcode);
-        assertEquals(webhdfs_qfoocs, barcs);
-      }
+        final Path webhdfsqualified = new Path(webhdfsuri + dir, "foo" + n);
+        final FileChecksum webhdfs_qfoocs =
+            webhdfs.getFileChecksum(webhdfsqualified);
+        System.out.println("webhdfs_qfoocs=" + webhdfs_qfoocs);
 
-      hdfs.setPermission(dir, new FsPermission((short)0));
-
-      { //test permission error on webhdfs 
-        try {
-          webhdfs.getFileChecksum(webhdfsqualified);
-          fail();
-        } catch(IOException ioe) {
-          FileSystem.LOG.info("GOOD: getting an exception", ioe);
+        //create a zero byte file
+        final Path zeroByteFile = new Path(dir, "zeroByteFile" + n);
+        {
+          final FSDataOutputStream out = hdfs.create(zeroByteFile, false,
+              buffer_size, (short)2, block_size);
+          out.close();
         }
+
+        //write another file
+        final Path bar = new Path(dir, "bar" + n);
+        {
+          final FSDataOutputStream out = hdfs.create(bar, false, buffer_size,
+              (short)2, block_size);
+          out.write(data);
+          out.close();
+        }
+
+        {
+          final FileChecksum zeroChecksum = hdfs.getFileChecksum(zeroByteFile);
+          final String magicValue =
+              "MD5-of-0MD5-of-0CRC32:70bc8f4b72a86921468bf8e8441dce51";
+          // verify the magic val for zero byte files
+          assertEquals(magicValue, zeroChecksum.toString());
+
+          //verify checksums for empty file and 0 request length
+          final FileChecksum checksumWith0 = hdfs.getFileChecksum(bar, 0);
+          assertEquals(zeroChecksum, checksumWith0);
+
+          //verify checksum
+          final FileChecksum barcs = hdfs.getFileChecksum(bar);
+          final int barhashcode = barcs.hashCode();
+          assertEquals(hdfsfoocs.hashCode(), barhashcode);
+          assertEquals(hdfsfoocs, barcs);
+
+          //webhdfs
+          assertEquals(webhdfsfoocs.hashCode(), barhashcode);
+          assertEquals(webhdfsfoocs, barcs);
+
+          assertEquals(webhdfs_qfoocs.hashCode(), barhashcode);
+          assertEquals(webhdfs_qfoocs, barcs);
+        }
+
+        hdfs.setPermission(dir, new FsPermission((short)0));
+
+        { //test permission error on webhdfs
+          try {
+            webhdfs.getFileChecksum(webhdfsqualified);
+            fail();
+          } catch(IOException ioe) {
+            FileSystem.LOG.info("GOOD: getting an exception", ioe);
+          }
+        }
+        hdfs.setPermission(dir, new FsPermission((short)0777));
       }
-      hdfs.setPermission(dir, new FsPermission((short)0777));
+    } finally {
+      cluster.shutdown();
     }
-    cluster.shutdown();
   }
   
   @Test

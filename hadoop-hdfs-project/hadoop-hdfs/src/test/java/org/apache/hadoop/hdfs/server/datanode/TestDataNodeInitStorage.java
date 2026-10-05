@@ -78,9 +78,9 @@ public class TestDataNodeInitStorage {
 
     // Start a cluster so that SimulatedFsDatasetVerifier constructor is
     // invoked.
-    MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    cluster.waitActive();
-    cluster.shutdown();
+    try (MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build()) {
+      cluster.waitActive();
+    }
   }
 }

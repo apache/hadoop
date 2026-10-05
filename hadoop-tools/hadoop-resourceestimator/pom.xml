@@ -113,6 +113,16 @@
                     <configLocation>src/config/checkstyle.xml</configLocation>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <configuration>
+                    <xmlOutput>true</xmlOutput>
+                    <excludeFilterFiles>
+                        <excludeFilterFile>${maven.multiModuleProjectDirectory}/dev-support/findbugs-exclude-global.xml</excludeFilterFile>
+                    </excludeFilterFiles>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

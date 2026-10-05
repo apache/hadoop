@@ -74,7 +74,9 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListResultSchema;
-import org.apache.hadoop.fs.azurebfs.contracts.services.BlobListXmlParser;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListBlobResponseParser;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ResponseParserFactory;
+import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ContainerListResponseData;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ContainerListXmlParser;
 import org.apache.hadoop.fs.azurebfs.contracts.services.StorageErrorResponseSchema;
@@ -91,12 +93,18 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_FALLBACK_COUNT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_LISTING_LATENCY;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_PARSE_FAILURE_COUNT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_REQUEST_COUNT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_RESPONSE_COUNT;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ACQUIRE_LEASE_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.AND_MARK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_BLOB_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_BLOCK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_JSON;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_APACHE_ARROW_STREAM;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_OCTET_STREAM;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_XML;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCK;
@@ -224,6 +232,42 @@ public class AbfsBlobClient extends AbfsClient {
   }
 
   /**
+   * When Photon is enabled, request Apache Arrow responses for ListBlobs by
+   * overriding the Accept header to advertise the Arrow media type with XML as
+   * the fallback format. The service may still return XML (for example when
+   * Photon is not available for the account, namespace or API version), so XML
+   * remains part of the accepted media types and response parsing is driven by
+   * the returned Content-Type. The change is scoped to the ListBlobs path only.
+   *
+   * <p>Photon is only requested on non-HNS (flat namespace) accounts. The Blob
+   * endpoint rejects an Arrow ListBlobs request on a hierarchical-namespace
+   * (HNS) account with {@code 409 Conflict}; that status short-circuits before
+   * {@link ResponseParserFactory} runs, so the Content-Type driven XML fallback
+   * cannot recover it and every listing would fail hard. Gating on the account
+   * type keeps HNS accounts on the XML path.
+   *
+   * @param requestHeaders the request headers to update in place.
+   * @return {@code true} if Arrow (Photon) was requested, {@code false} when
+   * Photon is disabled or the account is HNS and the headers were left
+   * unchanged.
+   * @throws AzureBlobFileSystemException if the account namespace type cannot be
+   * determined.
+   */
+  @VisibleForTesting
+  boolean applyPhotonRequestHeadersIfEnabled(
+      final List<AbfsHttpHeader> requestHeaders)
+      throws AzureBlobFileSystemException {
+    if (!getAbfsConfiguration().isPhotonEnabled() || getIsNamespaceEnabled()) {
+      return false;
+    }
+    requestHeaders.removeIf(header -> ACCEPT.equalsIgnoreCase(header.getName()));
+    requestHeaders.add(new AbfsHttpHeader(ACCEPT,
+        APPLICATION_APACHE_ARROW_STREAM + COMMA + SINGLE_WHITE_SPACE
+            + APPLICATION_XML));
+    return true;
+  }
+
+  /**
    * Get Rest Operation for API
    * <a href="../../../../site/markdown/blobEndpoint.md#create-container">Create Container</a>.
    * @param tracingContext for tracing the service call.
@@ -347,6 +391,8 @@ public class AbfsBlobClient extends AbfsClient {
       throws AzureBlobFileSystemException {
 
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    final boolean photonRequested =
+        applyPhotonRequestHeadersIfEnabled(requestHeaders);
 
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESTYPE, CONTAINER);
@@ -367,31 +413,71 @@ public class AbfsBlobClient extends AbfsClient {
         url,
         requestHeaders);
 
-    op.execute(tracingContext);
-    ListResponseData listResponseData = parseListPathResults(op.getResult(), uri);
-    listResponseData.setOp(op);
+    updatePhotonRequestMetric(photonRequested);
+    final DurationTracker listingLatencyTracker =
+        maybeStartPhotonListingLatencyTracker(photonRequested);
+    try {
+      op.execute(tracingContext);
+      ListResponseData listResponseData =
+          parseListPathResultsWithMetrics(op, uri, photonRequested);
 
-    // Perform Pending Rename Redo Operation on Atomic Rename Paths.
-    // Crashed HBase log rename recovery can be done by Filesystem.listStatus.
-    if (tracingContext.getOpType() == FSOperationType.LISTSTATUS
-        && op.getResult() != null
-        && op.getResult().getStatusCode() == HTTP_OK) {
-      boolean isRenameRecovered = retryRenameOnAtomicEntriesInListResults(tracingContext,
-          listResponseData.getRenamePendingJsonPaths());
-      if (isRenameRecovered) {
-        LOG.debug("Retrying list operation after rename recovery.");
-        // Retry the list operation to get the updated list of paths after rename recovery.
-        AbfsRestOperation retryListOp = getAbfsRestOperation(
-            AbfsRestOperationType.ListBlobs,
-            HTTP_METHOD_GET,
-            url,
-            requestHeaders);
-        retryListOp.execute(tracingContext);
-        listResponseData = parseListPathResults(retryListOp.getResult(), uri);
-        listResponseData.setOp(retryListOp);
+      // Perform Pending Rename Redo Operation on Atomic Rename Paths.
+      // Crashed HBase log rename recovery can be done by Filesystem.listStatus.
+      if (tracingContext.getOpType() == FSOperationType.LISTSTATUS
+          && op.getResult() != null
+          && op.getResult().getStatusCode() == HTTP_OK) {
+        boolean isRenameRecovered = retryRenameOnAtomicEntriesInListResults(tracingContext,
+            listResponseData.getRenamePendingJsonPaths());
+        if (isRenameRecovered) {
+          LOG.debug("Retrying list operation after rename recovery.");
+          // Retry the list operation to get the updated list of paths after rename recovery.
+          AbfsRestOperation retryListOp = getAbfsRestOperation(
+              AbfsRestOperationType.ListBlobs,
+              HTTP_METHOD_GET,
+              url,
+              requestHeaders);
+          // The retry issues a second ListBlobs request whose response is also
+          // classified below, so count it as a request too; otherwise
+          // PHOTON_RESPONSE_COUNT + PHOTON_FALLBACK_COUNT could exceed
+          // PHOTON_REQUEST_COUNT and break the metric invariant.
+          updatePhotonRequestMetric(photonRequested);
+          retryListOp.execute(tracingContext);
+          listResponseData =
+              parseListPathResultsWithMetrics(retryListOp, uri, photonRequested);
+        }
+      }
+      return listResponseData;
+    } finally {
+      if (listingLatencyTracker != null) {
+        listingLatencyTracker.close();
       }
     }
-    return listResponseData;
+  }
+
+  /**
+   * Parse a ListBlobs response, emitting the Photon (Apache Arrow) response,
+   * fallback and parse-failure metrics along the way. Shared by the primary and
+   * the rename-recovery retry list calls.
+   *
+   * @param op the executed ListBlobs REST operation.
+   * @param uri to be used for path conversion.
+   * @param photonRequested whether Arrow was requested for this listing.
+   * @return the parsed {@link ListResponseData}.
+   * @throws AzureBlobFileSystemException if parsing fails.
+   */
+  private ListResponseData parseListPathResultsWithMetrics(
+      final AbfsRestOperation op, final URI uri, final boolean photonRequested)
+      throws AzureBlobFileSystemException {
+    final AbfsHttpOperation result = op.getResult();
+    updatePhotonResponseMetrics(photonRequested, result);
+    try {
+      ListResponseData listResponseData = parseListPathResults(result, uri);
+      listResponseData.setOp(op);
+      return listResponseData;
+    } catch (AzureBlobFileSystemException parseFailure) {
+      updatePhotonParseFailureMetric(photonRequested, result);
+      throw parseFailure;
+    }
   }
 
   /**
@@ -1664,7 +1750,14 @@ public class AbfsBlobClient extends AbfsClient {
   }
 
   /**
-   * Parse the XML response body returned by ListBlob API on Blob Endpoint.
+   * Parse the response body returned by the ListBlob API on the Blob Endpoint.
+   * The parser is selected by {@link ResponseParserFactory} based on the
+   * response Content-Type: an Apache Arrow (Photon) response is parsed by
+   * {@code ArrowListBlobParser}, while any other (or missing) Content-Type is
+   * parsed by {@code XmlListBlobResponseParser}. Both parsers produce a
+   * {@link BlobListResultSchema} so downstream processing is unchanged, and a
+   * parse failure surfaces the format-specific error reported by the selected
+   * parser (a malformed Arrow response is not silently re-parsed as XML).
    * @param result InputStream contains the response from server.
    * @param uri to be used for path conversion.
    * @return {@link ListResponseData}. containing listing response.
@@ -1673,21 +1766,21 @@ public class AbfsBlobClient extends AbfsClient {
   @Override
   public ListResponseData parseListPathResults(AbfsHttpOperation result, URI uri)
       throws AzureBlobFileSystemException {
+    final ListBlobResponseParser parser = ResponseParserFactory.getParser(
+        result.getResponseHeaderIgnoreCase(CONTENT_TYPE),
+        getBaseUrl().toString(),
+        () -> saxParserThreadLocal.get(),
+        getAbfsConfiguration().getPhotonArrowMemoryLimit());
     try (InputStream stream = result.getListResultStream()) {
       try {
-        BlobListResultSchema listResultSchema;
-        final SAXParser saxParser = saxParserThreadLocal.get();
-        saxParser.reset();
-        listResultSchema = new BlobListResultSchema();
-        saxParser.parse(stream,
-            new BlobListXmlParser(listResultSchema, getBaseUrl().toString()));
+        BlobListResultSchema listResultSchema = parser.parse(stream);
         result.setListResultSchema(listResultSchema);
         LOG.debug("ListBlobs listed {} blobs with {} as continuation token",
             listResultSchema.paths().size(),
             listResultSchema.getNextMarker());
         return filterRenamePendingFiles(listResultSchema, uri);
-      } catch (SAXException | IOException ex) {
-        throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
+      } catch (IOException ex) {
+        throw new AbfsDriverException(parser.getParsingErrorMessage(), ex);
       }
     } catch (AbfsDriverException ex) {
       // Throw as it is to avoid multiple wrapping.
@@ -1695,8 +1788,86 @@ public class AbfsBlobClient extends AbfsClient {
       throw ex;
     } catch (Exception ex) {
       LOG.error("Unable to get stream for list results for uri {}", uri != null ? uri.toString(): "NULL", ex);
-      throw new AbfsDriverException(ERR_BLOB_LIST_PARSING, ex);
+      throw new AbfsDriverException(parser.getParsingErrorMessage(), ex);
     }
+  }
+
+  /**
+   * Whether the ListBlobs response was returned in the Apache Arrow (Photon)
+   * format, based on the response Content-Type.
+   * @param result the executed HTTP operation.
+   * @return {@code true} if the response body is Arrow encoded.
+   */
+  private boolean isArrowListResponse(final AbfsHttpOperation result) {
+    return result != null && ResponseParserFactory.isArrowResponse(
+        result.getResponseHeaderIgnoreCase(CONTENT_TYPE));
+  }
+
+  /**
+   * Increment the Photon request counter when Arrow was requested for a
+   * ListBlobs call.
+   * @param photonRequested whether Arrow was requested.
+   */
+  private void updatePhotonRequestMetric(final boolean photonRequested) {
+    if (photonRequested && getAbfsCounters() != null) {
+      getAbfsCounters().incrementCounter(PHOTON_REQUEST_COUNT, 1);
+    }
+  }
+
+  /**
+   * Increment the Photon response or fallback counter for a ListBlobs response
+   * depending on whether the service honoured the Arrow request or fell back to
+   * XML.
+   * @param photonRequested whether Arrow was requested.
+   * @param result the executed HTTP operation.
+   */
+  private void updatePhotonResponseMetrics(final boolean photonRequested,
+      final AbfsHttpOperation result) {
+    if (!photonRequested || getAbfsCounters() == null || result == null) {
+      return;
+    }
+    // Only classify successful (HTTP 200) listings. A non-200 response carries
+    // an XML error body rather than a genuine XML fallback, so counting it as a
+    // fallback would make the "service fell back to XML" signal unusable for
+    // rollout decisions.
+    if (result.getStatusCode() != HTTP_OK) {
+      return;
+    }
+    if (isArrowListResponse(result)) {
+      getAbfsCounters().incrementCounter(PHOTON_RESPONSE_COUNT, 1);
+    } else {
+      getAbfsCounters().incrementCounter(PHOTON_FALLBACK_COUNT, 1);
+    }
+  }
+
+  /**
+   * Increment the Photon parse-failure counter when parsing an Arrow ListBlobs
+   * response fails.
+   * @param photonRequested whether Arrow was requested.
+   * @param result the executed HTTP operation.
+   */
+  private void updatePhotonParseFailureMetric(final boolean photonRequested,
+      final AbfsHttpOperation result) {
+    if (photonRequested && getAbfsCounters() != null
+        && isArrowListResponse(result)) {
+      getAbfsCounters().incrementCounter(PHOTON_PARSE_FAILURE_COUNT, 1);
+    }
+  }
+
+  /**
+   * Start the Photon end-to-end listing latency duration tracker when Arrow was
+   * requested for a ListBlobs call.
+   * @param photonRequested whether Arrow was requested.
+   * @return the started {@link DurationTracker}, or {@code null} when Photon was
+   * not requested or counters are unavailable.
+   */
+  private DurationTracker maybeStartPhotonListingLatencyTracker(
+      final boolean photonRequested) {
+    if (photonRequested && getAbfsCounters() != null) {
+      return getAbfsCounters().trackDuration(
+          PHOTON_LISTING_LATENCY.getStatName());
+    }
+    return null;
   }
 
   /**

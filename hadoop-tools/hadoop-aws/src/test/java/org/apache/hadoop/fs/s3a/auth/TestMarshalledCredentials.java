@@ -18,9 +18,17 @@
 
 package org.apache.hadoop.fs.s3a.auth;
 
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Optional;
 
+import org.assertj.core.api.Assertions;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,9 +36,16 @@ import org.junit.jupiter.api.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.test.HadoopTestBase;
 
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_S3_ENCRYPTION_CONTEXT;
+import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_S3;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -78,13 +93,33 @@ public class TestMarshalledCredentials extends HadoopTestBase {
 
   @Test
   public void testRoundTripEncryptionData() throws Throwable {
+    final String context = "encryptionContext";
     EncryptionSecrets secrets = new EncryptionSecrets(
         S3AEncryptionMethods.SSE_KMS,
-        "key",
-        "encryptionContext");
+        KEY,
+        context);
     EncryptionSecrets result = S3ATestUtils.roundTrip(secrets,
         new Configuration());
     assertEquals(secrets, result, "round trip");
+    Assertions.assertThat(result .getEncryptionContext())
+        .describedAs("encryptionContext")
+        .isEqualTo(context);
+  }
+
+  @Test
+  public void testRoundTripEncryptionSecretsNoContext() throws Throwable {
+    EncryptionSecrets secrets = new EncryptionSecrets(
+        S3AEncryptionMethods.SSE_KMS,
+        KEY);
+    EncryptionSecrets result = S3ATestUtils.roundTrip(secrets,
+        new Configuration());
+    assertEquals(secrets, result, "round trip");
+    // not equal to secrets with a context
+    Assertions.assertThat(result)
+        .isNotEqualTo(new EncryptionSecrets(
+            S3AEncryptionMethods.SSE_KMS,
+            KEY,
+            "encryptionContext"));
   }
 
   @Test
@@ -134,4 +169,137 @@ public class TestMarshalledCredentials extends HadoopTestBase {
             credentials,
             MarshalledCredentials.CredentialTypeRequired.FullOnly));
   }
+
+  @Test
+  public void testUnmarshallOldEncryptionSecrets() throws Throwable {
+    File file = new File("src/test/resources/"
+        + "serialized-objects/EncryptionSecrets-v1.ser");
+    try (InputStream is = new FileInputStream(file);
+        ObjectInputStream ois = new ObjectInputStream(is)) {
+      EncryptionSecrets secrets = new EncryptionSecrets();
+      secrets.readFields(ois);
+      Assertions.assertThat(secrets.getEncryptionAlgorithm())
+          .describedAs("encryptionAlgorithm")
+          .isEqualTo(S3AEncryptionMethods.SSE_KMS.getMethod());
+      Assertions.assertThat(secrets .getEncryptionKey())
+          .describedAs("encryptionKey")
+          .isEqualTo(KEY);
+      Assertions.assertThat(secrets .getEncryptionContext())
+          .describedAs("encryptionContext")
+          .isEqualTo(DEFAULT_S3_ENCRYPTION_CONTEXT);
+    }
+  }
+
+  @Test
+  public void testUnmarshallUnknownEncryptionSecretsVersion() throws Throwable {
+    File file = new File("src/test/resources/"
+        + "serialized-objects/EncryptionSecrets-unknown-version.ser");
+    try (InputStream is = new FileInputStream(file);
+        ObjectInputStream ois = new ObjectInputStream(is)) {
+      EncryptionSecrets secrets = new EncryptionSecrets();
+      Assertions.assertThatExceptionOfType(DelegationTokenIOException.class)
+          .isThrownBy(() -> secrets.readFields(ois))
+          .withMessageStartingWith("Incompatible EncryptionSecrets version");
+    }
+  }
+
+  /**
+   * Generate the equivalent to a marshalled EncryptionSecrets value.
+   * @param id serialization ID.
+   * @param encryptionAlgorithm algorithm.
+   * @param encryptionKey key
+   * @param encryptionContext optional context
+   * @return the input
+   * @throws IOException write failure.
+   */
+  private DataInputBuffer writeEncryptionSecrets(long id,
+      final String encryptionAlgorithm,
+      final String encryptionKey,
+      final Optional<String> encryptionContext) throws IOException {
+    DataOutputBuffer out = new DataOutputBuffer();
+    new LongWritable(id).write(out);
+    Text.writeString(out, encryptionAlgorithm);
+    Text.writeString(out, encryptionKey);
+    if (encryptionContext.isPresent()) {
+      Text.writeString(out, encryptionContext.get());
+    }
+
+    DataInputBuffer dib = new DataInputBuffer();
+    dib.reset(out.getData(), out.getLength());
+    return dib;
+  }
+
+  private EncryptionSecrets readEncryptionSecrets(DataInputBuffer dib) throws IOException {
+    final EncryptionSecrets secrets = new EncryptionSecrets();
+    secrets.readFields(dib);
+    return secrets;
+  }
+
+  private static final String ENCRYPTION_ALGORITHM = SSE_S3.getMethod();
+
+  private static final String KEY = "key";
+
+  private static final String CONTEXT = "context";
+
+  /**
+   * Verify that the low level marshalling code works.
+   */
+  @Test
+  public void testMarshallCurrentSecrets() throws Throwable {
+    EncryptionSecrets src = new EncryptionSecrets(ENCRYPTION_ALGORITHM,
+        KEY,
+        CONTEXT);
+    final DataInputBuffer in =
+        writeEncryptionSecrets(EncryptionSecrets.SERIAL_VERSION_UID_CURRENT,
+            ENCRYPTION_ALGORITHM, KEY, Optional.of(CONTEXT));
+    final EncryptionSecrets read = readEncryptionSecrets(in);
+    Assertions.assertThat(read)
+        .isEqualTo(src);
+  }
+
+  /**
+   * Generate the layout of an old secret entry, unmarshall it to the new one.
+   */
+  @Test
+  public void testUnmarshallOldSecrets() throws Throwable {
+    final DataInputBuffer dib = writeEncryptionSecrets(EncryptionSecrets.SERIAL_VERSION_UID_1,
+        ENCRYPTION_ALGORITHM, KEY, Optional.empty());
+    final EncryptionSecrets read = readEncryptionSecrets(dib);
+
+    // all the data has been read in
+    Assertions.assertThat(dib.read())
+        .describedAs("Input stream read() at end of unmarshalling")
+        .isEqualTo(-1);
+    Assertions.assertThat(read)
+        .matches(s -> !s.hasEncryptionContext())
+        .hasFieldOrPropertyWithValue("encryptionAlgorithm", ENCRYPTION_ALGORITHM)
+        .hasFieldOrPropertyWithValue("getEncryptionKey", KEY);
+  }
+
+  /**
+   * Generate the layout of an old secret entry, unmarshall it to the new one.
+   */
+  @Test
+  public void testCurrentSecretsRequireContext() throws Throwable {
+    final DataInputBuffer in = writeEncryptionSecrets(
+        EncryptionSecrets.SERIAL_VERSION_UID_CURRENT,
+        ENCRYPTION_ALGORITHM, KEY, Optional.empty());
+    intercept(EOFException.class, "", () -> readEncryptionSecrets(in));
+  }
+
+  /**
+   * Usea unknown version ID; expect an exception with the version ID in the message.
+   */
+  @Test
+  public void testUnmarshallUnknownSecretVersion() throws Throwable {
+    EncryptionSecrets src = new EncryptionSecrets(ENCRYPTION_ALGORITHM, KEY, CONTEXT);
+    final DataInputBuffer in =
+        writeEncryptionSecrets(12345L,
+            src.getEncryptionAlgorithm(), src.getEncryptionKey(),
+            Optional.of("context1"));
+    intercept(DelegationTokenIOException.class, "12345", () -> {
+      readEncryptionSecrets(in);
+    });
+  }
+
 }

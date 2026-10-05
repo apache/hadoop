@@ -29,6 +29,7 @@ jobs:
   update:
     name: "Update Build Status"
     runs-on: ubuntu-slim
+    if: github.repository == 'apache/hadoop'
     permissions:
       actions: read
       checks: write

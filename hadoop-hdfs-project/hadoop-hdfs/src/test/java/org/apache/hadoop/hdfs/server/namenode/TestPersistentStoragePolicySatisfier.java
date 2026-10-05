@@ -318,7 +318,7 @@ public class TestPersistentStoragePolicySatisfier {
    * @throws Exception
    */
   @Test
-  @Timeout(value = 300000)
+  @Timeout(value = 300)
   public void testDropSPS() throws Exception {
     try {
       clusterSetUp();

@@ -31,6 +31,7 @@ import javax.management.MBeanInfo;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
@@ -41,9 +42,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.metrics2.impl.ConfigBuilder;
 import org.apache.hadoop.metrics2.impl.TestMetricsConfig;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.JsonUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.eclipse.jetty.util.ajax.JSON;
 
 /**
  * Class for testing {@link NameNodeMXBean} implementation
@@ -114,14 +115,14 @@ public class TestFSNamesystemMBean {
           "SnapshotStats"));
 
       @SuppressWarnings("unchecked")
-      Map<String, Object> stat = (Map<String, Object>) JSON
-          .parse(snapshotStats);
+      Map<String, Object> stat = JsonUtils.parse(snapshotStats,
+          new TypeReference<Map<String, Object>>() {});
 
       assertTrue(stat.containsKey("SnapshottableDirectories")
-          && (Long) stat.get("SnapshottableDirectories") == fsn
+          && (Integer) stat.get("SnapshottableDirectories") == fsn
               .getNumSnapshottableDirs());
       assertTrue(stat.containsKey("Snapshots")
-          && (Long) stat.get("Snapshots") == fsn.getNumSnapshots());
+          && (Integer) stat.get("Snapshots") == fsn.getNumSnapshots());
 
       Object pendingDeletionBlocks = mbs.getAttribute(mxbeanName,
         "PendingDeletionBlocks");
