@@ -72,6 +72,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -719,9 +720,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
     Map<String, String> config = new HashMap<String, String>();
     String confPrefix = getQueuePrefix(queue) + ORDERING_POLICY + ".";
-    for (Map.Entry<String, String> kv : this) {
-      if (kv.getKey().startsWith(confPrefix)) {
-         config.put(kv.getKey().substring(confPrefix.length()), kv.getValue());
+    Properties props = getProps();
+    synchronized (props) {
+      for (Map.Entry<Object, Object> kv : props.entrySet()) {
+        if (kv.getKey() instanceof String && kv.getValue() instanceof String
+            && ((String) kv.getKey()).startsWith(confPrefix)) {
+          config.put(((String) kv.getKey()).substring(confPrefix.length()),
+              (String) kv.getValue());
+        }
       }
     }
     orderingPolicy.configure(config);
