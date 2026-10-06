@@ -112,8 +112,8 @@ public class TestNMTimelinePublisher {
   }
 
   private Context createMockContext() {
-    Context context = mock(Context.class);
-    when(context.getNodeId()).thenReturn(NodeId.newInstance("localhost", 0));
+    Context mockContext = mock(Context.class);
+    when(mockContext.getNodeId()).thenReturn(NodeId.newInstance("localhost", 0));
 
     ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentHashMap<>();
@@ -129,9 +129,9 @@ public class TestNMTimelinePublisher {
     when(container.getContainerStartTime())
         .thenReturn(System.currentTimeMillis());
     containers.putIfAbsent(cId, container);
-    when(context.getContainers()).thenReturn(containers);
+    when(mockContext.getContainers()).thenReturn(containers);
 
-    return context;
+    return mockContext;
   }
 
   @AfterEach
