@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -107,6 +108,9 @@ public class TestQueueStateManager {
     assertTrue(stateManager.canDelete(Q3));
 
     // Active Q2, it will fail.
+    YarnException e = assertThrows(YarnException.class, () -> stateManager.activateQueue(Q2));
+    assertEquals("The parent Queue:root.q1 is not running."
+        + " Please activate the parent queue first", e.getMessage());
     assertEquals(QueueState.STOPPED, cs.getQueue(Q2).getState());
 
     // Now active Q1

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -25,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
@@ -52,6 +55,7 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -325,27 +329,30 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   @Test
   public void testAutoCreateQueueShouldFailWhenNonParentQueue()
       throws Exception {
-    assertThrows(SchedulerDynamicEditException.class, () -> {
-      startScheduler();
-      createQueue("root.a.a1.a2-auto");
-    });
+    startScheduler();
+    SchedulerDynamicEditException e = assertThrows(SchedulerDynamicEditException.class,
+        () -> createQueue("root.a.a1.a2-auto"));
+    assertEquals("Could not auto create hierarchy of root.a.a1.a2-auto. "
+        + "Queue root.a.a1 is not a ParentQueue.", e.getMessage());
   }
 
   @Test
   public void testAutoCreateQueueWhenSiblingsNotInWeightMode()
       throws Exception {
-    assertThrows(SchedulerDynamicEditException.class, () -> {
-      startScheduler();
-      // If the new queue mode is used it's allowed to
-      // create a new dynamic queue when the sibling is
-      // not in weight mode
-      assumeTrue(csConf.isLegacyQueueMode() == true);
-      csConf.setCapacity(A, 50f);
-      csConf.setCapacity(B, 50f);
-      csConf.setCapacity(A1, 100f);
-      cs.reinitialize(csConf, mockRM.getRMContext());
-      createQueue("root.a.a2-auto");
-    });
+    startScheduler();
+    // If the new queue mode is used it's allowed to
+    // create a new dynamic queue when the sibling is
+    // not in weight mode
+    assumeTrue(csConf.isLegacyQueueMode());
+    csConf.setCapacity(A, 50f);
+    csConf.setCapacity(B, 50f);
+    csConf.setCapacity(A1, 100f);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    SchedulerDynamicEditException e = assertThrows(SchedulerDynamicEditException.class,
+        () -> createQueue("root.a.a2-auto"));
+    assertEquals("Trying to create new queue=root.a.a2-auto but not all the queues under "
+        + "parent=root.a are using weight-based capacity. Failed to created queue",
+        e.getMessage());
   }
 
   @Test()
@@ -353,8 +360,11 @@ public class TestCapacitySchedulerNewQueueAutoCreation
       throws Exception {
     startScheduler();
     // By default, max depth is 2, therefore this is an invalid scenario
-    assertThrows(SchedulerDynamicEditException.class,
+    SchedulerDynamicEditException e = assertThrows(SchedulerDynamicEditException.class,
         () -> createQueue("root.a.a3-auto.a4-auto.a5-auto"));
+    assertEquals("Could not auto create queue root.a.a3-auto.a4-auto.a5-auto. The distance "
+        + "of the LeafQueue from the first static ParentQueue is 3, which is above the limit.",
+        e.getMessage());
 
     // Set depth 3 for root.a, making it a valid scenario
     csConf.setMaximumAutoCreatedQueueDepth(A, 3);
@@ -387,12 +397,13 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   @Test
   public void testAutoCreateQueueShouldFailIfNotEnabledForParent()
       throws Exception {
-    assertThrows(SchedulerDynamicEditException.class, () -> {
-      startScheduler();
-      csConf.setAutoQueueCreationV2Enabled(ROOT, false);
-      cs.reinitialize(csConf, mockRM.getRMContext());
-      createQueue("root.c-auto");
-    });
+    startScheduler();
+    csConf.setAutoQueueCreationV2Enabled(ROOT, false);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    SchedulerDynamicEditException e = assertThrows(SchedulerDynamicEditException.class,
+        () -> createQueue("root.c-auto"));
+    assertEquals("Auto creation of queue root.c-auto is not enabled under parent root",
+        e.getMessage());
   }
 
   @Test
@@ -673,12 +684,13 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   @Test
   public void testAutoCreateQueueWithAmbiguousNonFullPathParentName()
       throws Exception {
-    assertThrows(SchedulerDynamicEditException.class, () -> {
-      startScheduler();
+    startScheduler();
 
-      createQueue("root.a.a");
-      createQueue("a.a");
-    });
+    createQueue("root.a.a");
+    SchedulerDynamicEditException e = assertThrows(SchedulerDynamicEditException.class,
+        () -> createQueue("a.a"));
+    assertEquals("Could not auto-create queue a.a due to ParentQueue a being ambiguous.",
+        e.getMessage());
   }
 
   @Test
@@ -737,6 +749,8 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     } catch (Exception ex) {
       assertTrue(ex
           instanceof SchedulerDynamicEditException);
+      assertEquals("Cannot auto create queue root.e.q_6. Max Child Queue limit exceeded "
+          + "which is configured as: 5 and number of child queues is: 5", ex.getMessage());
     }
   }
 
@@ -1284,12 +1298,79 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   @Test()
   public void testAutoCreateInvalidParent() throws Exception {
     startScheduler();
-    assertThrows(SchedulerDynamicEditException.class,
+    SchedulerDynamicEditException e = assertThrows(SchedulerDynamicEditException.class,
         () -> createQueue("invalid.queue"));
+    assertEquals("Could not auto-create queue invalid.queue parent queue does not exist.",
+        e.getMessage());
     assertThrows(SchedulerDynamicEditException.class,
         () -> createQueue("invalid.queue.longer"));
-    assertThrows(SchedulerDynamicEditException.class,
+    e = assertThrows(SchedulerDynamicEditException.class,
         () -> createQueue("invalidQueue"));
+    assertEquals("Could not auto-create leaf queue for invalidQueue. Queue mapping does not "
+        + "specify which parent queue it needs to be created under.", e.getMessage());
+  }
+
+  @Test
+  public void testAutoCreateQueueFailsWithPercentSuffixInLeafTemplateCapacity()
+      throws Exception {
+    csConf.set(getLeafTemplatePrefix(A) + "capacity", "50%");
+    startScheduler();
+
+    NumberFormatException e = assertThrows(NumberFormatException.class,
+        () -> createQueue("root.a.a2-auto"));
+    assertEquals("For input string: \"50%\"", e.getMessage());
+  }
+
+  @Test
+  public void testExplicitSettingsOfDynamicLeafQueue() throws Exception {
+    QueuePath dynamicLeafPath = new QueuePath("root.a.dyn1");
+    String leafTemplateOfRootChildren = getLeafTemplatePrefix(new QueuePath("root.*"));
+    csConf.set(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(A)
+        + "maximum-applications", "11");
+    csConf.set(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(A)
+        + "acl_submit_applications", "templateUser");
+    csConf.set(leafTemplateOfRootChildren + "maximum-applications", "22");
+    csConf.set(leafTemplateOfRootChildren + "priority", "2");
+    csConf.setUserLimitFactor(dynamicLeafPath, 9f);
+    csConf.setMaximumApplicationMasterResourcePerQueuePercent(dynamicLeafPath, 0.7f);
+    csConf.setAcl(dynamicLeafPath, QueueACL.SUBMIT_APPLICATIONS, "explicitUser");
+    csConf.setQueuePriority(dynamicLeafPath, 5);
+    startScheduler();
+
+    AbstractLeafQueue dynamicLeaf = createQueue("root.a.dyn1");
+    // Explicit settings of a dynamic leaf queue are ignored, except for its priority
+    assertEquals(-1f, dynamicLeaf.getUserLimitFactor(), 1e-6);
+    assertEquals(1f, dynamicLeaf.getMaxAMResourcePerQueuePercent(), 1e-6);
+    assertEquals("templateUser ",
+        dynamicLeaf.getACLs().get(AccessType.SUBMIT_APP).getAclString());
+    assertEquals(5, dynamicLeaf.getPriority().getPriority());
+    // A wildcard leaf template value beats an exact template value
+    assertEquals(22, dynamicLeaf.getMaxApplications());
+  }
+
+  @Test
+  public void testStaticChildQueueIgnoresParentTemplate() throws Exception {
+    String template = AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(A);
+    csConf.set(template + "acl_submit_applications", "templateUser");
+    csConf.set(template + "user-limit-factor", "7");
+    csConf.set(template + "maximum-applications", "1");
+    startScheduler();
+    UserGroupInformation templateUser = UserGroupInformation.createRemoteUser("templateUser");
+
+    AbstractLeafQueue dynamicLeaf = createQueue("root.a.a2-auto");
+    assertTrue(dynamicLeaf.getACLs().get(AccessType.SUBMIT_APP).isUserAllowed(templateUser));
+    assertEquals(7f, dynamicLeaf.getUserLimitFactor(), 1e-6);
+    assertEquals(1, dynamicLeaf.getMaxApplications());
+
+    AbstractLeafQueue staticLeaf = (AbstractLeafQueue) cs.getQueue("root.a.a1");
+    assertFalse(staticLeaf.getACLs().get(AccessType.SUBMIT_APP).isUserAllowed(templateUser));
+    assertEquals(1f, staticLeaf.getUserLimitFactor(), 1e-6);
+    assertNotEquals(1, staticLeaf.getMaxApplications());
+  }
+
+  private static String getLeafTemplatePrefix(QueuePath queuePath) {
+    return QueuePrefixes.getQueuePrefix(queuePath)
+        + AutoCreatedQueueTemplate.AUTO_QUEUE_LEAF_TEMPLATE_PREFIX;
   }
 
   protected AbstractLeafQueue createQueue(String queuePath) throws YarnException,

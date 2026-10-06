@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -70,6 +71,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -688,7 +690,9 @@ public class TestCapacitySchedulerQueues {
       fail("Expected to throw exception when refresh queue tries to convert"
           + " a child queue to a parent queue.");
     } catch (IOException e) {
-      // ignore
+      assertEquals("Failed to re-init queues : Can not convert the leaf queue: root.b.b1"
+          + " to parent queue since it is not yet in stopped state. Current State : RUNNING",
+          e.getMessage());
     }
 
     // now set queue state for b1 to STOPPED
@@ -870,5 +874,139 @@ public class TestCapacitySchedulerQueues {
           "maximum allocation exception");
     }
     cs.stop();
+  }
+
+  @Test
+  public void testRefreshFromWeightsToPercentagesKeepsNormalizedWeight()
+      throws Exception {
+    CapacitySchedulerConfiguration weights = newConfiguration(true);
+    weights.setNonLabeledQueueWeight(A, 1);
+    weights.setNonLabeledQueueWeight(B, 3);
+    try (MockRM mockRM = startRM(weights)) {
+      CapacityScheduler cs = (CapacityScheduler) mockRM.getResourceScheduler();
+      CapacitySchedulerConfiguration percentages = newConfiguration(true);
+      percentages.setCapacity(A, 50f);
+      percentages.setCapacity(B, 50f);
+      cs.reinitialize(percentages, mockRM.getRMContext());
+
+      // The normalized weight of the old configuration is not reset, so root.b
+      // keeps an absolute capacity of 0.75 next to its capacity of 0.5.
+      CSQueue queueB = cs.getQueue(B.getFullPath());
+      assertEquals(0.5f, queueB.getCapacity());
+      assertEquals(0.75f, queueB.getQueueCapacities().getNormalizedWeight());
+      assertEquals(0.75f, queueB.getAbsoluteCapacity());
+    }
+  }
+
+  @Test
+  public void testRefreshEnablingAllowZeroCapacitySumIsRejected() throws Exception {
+    CapacitySchedulerConfiguration base = newConfiguration(true);
+    base.setCapacity(A, 50f);
+    base.setCapacity(B, 50f);
+    base.setQueues(A, new String[]{"a1", "a2"});
+    base.setCapacity(A1, 50f);
+    base.setCapacity(A2, 50f);
+    try (MockRM mockRM = startRM(base)) {
+      CapacityScheduler cs = (CapacityScheduler) mockRM.getResourceScheduler();
+      CapacitySchedulerConfiguration target = new CapacitySchedulerConfiguration(base, false);
+      target.setAllowZeroCapacitySum(A, true);
+      target.setCapacity(A1, 0f);
+      target.setCapacity(A2, 0f);
+
+      // The existing root.a keeps the flag it was created with.
+      IOException e = assertThrows(IOException.class,
+          () -> cs.reinitialize(target, mockRM.getRMContext()));
+      assertEquals("Failed to re-init queues : Illegal capacity sum of 0.0 for children of "
+          + "queue a for label=. It is set to 0, but parent percent != 0, and doesn't allow "
+          + "children capacity to set to 0", e.getMessage());
+      assertEquals(0.5f, cs.getQueue(A1.getFullPath()).getCapacity());
+    }
+  }
+
+  @Test
+  public void testRefreshDisablingLegacyQueueMode() throws Exception {
+    CapacitySchedulerConfiguration base = newConfiguration(true);
+    base.setCapacity(A, 50f);
+    base.setCapacity(B, 50f);
+    try (MockRM mockRM = startRM(base)) {
+      CapacityScheduler cs = (CapacityScheduler) mockRM.getResourceScheduler();
+      CapacitySchedulerConfiguration target = newConfiguration(false);
+      target.setCapacity(A, "[memory=20480,vcores=20]");
+      target.setCapacity(B, 50f);
+      cs.reinitialize(target, mockRM.getRMContext());
+
+      // The mixed tree is accepted, but the capacity calculation keeps the
+      // legacy mode it was created with: root.b gets 50% of the whole cluster
+      // instead of 50% of what root.a leaves.
+      assertEquals(0.2f, cs.getQueue(A.getFullPath()).getAbsoluteCapacity(), 1e-6);
+      assertEquals(0.5f, cs.getQueue(B.getFullPath()).getAbsoluteCapacity(), 1e-6);
+    }
+  }
+
+  @Test
+  public void testRefreshEnablingLegacyQueueModeIsRejected() throws Exception {
+    CapacitySchedulerConfiguration base = newConfiguration(false);
+    base.setCapacity(A, "[memory=20480,vcores=20]");
+    base.setCapacity(B, 50f);
+    try (MockRM mockRM = startRM(base)) {
+      CapacityScheduler cs = (CapacityScheduler) mockRM.getResourceScheduler();
+      CapacitySchedulerConfiguration target = new CapacitySchedulerConfiguration(base, false);
+      target.setLegacyQueueModeEnabled(true);
+
+      IOException e = assertThrows(IOException.class,
+          () -> cs.reinitialize(target, mockRM.getRMContext()));
+      assertEquals("Failed to re-init queues : Parent queue 'root' have children queue used "
+          + "mixed of  weight mode, percentage and absolute mode, it is not allowed, please "
+          + "double check, details:{Queue=root.a, label= uses absolute mode}. "
+          + "{Queue=root.b, label= uses percentage mode}. ", e.getMessage());
+      assertFalse(cs.getConfiguration().isLegacyQueueMode());
+      assertEquals(0.4f, cs.getQueue(B.getFullPath()).getAbsoluteCapacity(), 1e-6);
+    }
+  }
+
+  @Test
+  public void testQueueMaximumAllocationKeys() throws Exception {
+    CapacityScheduler cs = new CapacityScheduler();
+    cs.setConf(new YarnConfiguration());
+    cs.setRMContext(rm.getRMContext());
+    setMaxAllocMb(conf, 16384);
+    setMaxAllocVcores(conf, 16);
+    setMaxAllocMb(conf, A, 8192);
+    // A child may allow more than its parent.
+    setMaxAllocMb(conf, A1, 12288);
+    // The resource string wins over the legacy memory key.
+    setMaxAllocation(conf, B, "memory-mb=4096,vcores=2");
+    setMaxAllocMb(conf, B, 1024);
+    // A partial resource string sets the omitted types to 0.
+    setMaxAllocation(conf, B1, "memory-mb=2048");
+    cs.init(conf);
+    cs.start();
+    cs.reinitialize(conf, rm.getRMContext());
+
+    assertEquals(Resource.newInstance(8192, 16),
+        cs.getQueue(A.getFullPath()).getMaximumAllocation());
+    assertEquals(Resource.newInstance(12288, 16),
+        cs.getQueue(A1.getFullPath()).getMaximumAllocation());
+    assertEquals(Resource.newInstance(4096, 2),
+        cs.getQueue(B.getFullPath()).getMaximumAllocation());
+    assertEquals(Resource.newInstance(2048, 0),
+        cs.getQueue(B1.getFullPath()).getMaximumAllocation());
+    cs.stop();
+  }
+
+  private static CapacitySchedulerConfiguration newConfiguration(boolean legacyQueueMode) {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
+    csConf.setLegacyQueueModeEnabled(legacyQueueMode);
+    csConf.setQueues(ROOT, new String[]{"a", "b"});
+    return csConf;
+  }
+
+  private static MockRM startRM(CapacitySchedulerConfiguration csConf) throws Exception {
+    csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    MockRM mockRM = new MockRM(csConf);
+    mockRM.start();
+    mockRM.registerNode("h1:1234", 100 * GB, 100);
+    return mockRM;
   }
 }

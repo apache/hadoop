@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -27,6 +28,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -36,6 +38,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.Test;
 
@@ -609,7 +612,9 @@ public class TestAbsoluteResourceConfiguration {
       if (!csConf.isLegacyQueueMode()) {
         fail("new queue mode supports mixed queue modes");
       }
-      assertTrue(e.getMessage().contains("Failed to re-init queues"));
+      assertEquals("Failed to re-init queues : Parent=root.queueA: When absolute "
+          + "minResource is used, we must make sure both parent and child all use "
+          + "absolute minResource", e.getMessage());
     }
 
     // 2. Create a new config and make sure one queue's min resource is more
@@ -635,6 +640,73 @@ public class TestAbsoluteResourceConfiguration {
           + "<memory:102400, vCores:10> for queue:queueA", e.getMessage());
     }
     rm.stop();
+  }
+
+  @Test
+  public void testQueueMixingAbsoluteAndPercentageAcrossLabelsRejected() {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
+    csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    csConf.setQueues(ROOT, new String[]{QUEUEA, QUEUEB});
+    csConf.setCapacity(QUEUEA_FULL, 50f);
+    csConf.setCapacity(QUEUEB_FULL, 50f);
+    csConf.setAccessibleNodeLabels(QUEUEA_FULL, ImmutableSet.of(X_LABEL));
+    csConf.setMinimumResourceRequirement(X_LABEL, QUEUEA_FULL, Resource.newInstance(GB, 1));
+
+    Exception e = assertThrows(Exception.class, () -> {
+      try (MockRM rm = new MockRM(csConf)) {
+        rm.start();
+      }
+    });
+    assertEquals("Queue 'root.queueA' should use either percentage based capacity "
+        + "configuration or absolute resource.", ExceptionUtils.getRootCause(e).getMessage());
+  }
+
+  @Test
+  public void testDefaultResourceCalculatorAcceptsChildVcoresAboveParent()
+      throws Exception {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
+    csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    csConf.setQueues(ROOT, new String[]{QUEUEA, QUEUEB});
+    csConf.setQueues(QUEUEA_FULL, new String[]{QUEUEA1, QUEUEA2});
+    csConf.setCapacity(QUEUEA_FULL, "[memory=40960,vcores=4]");
+    csConf.setCapacity(QUEUEA1_FULL, "[memory=20480,vcores=8]");
+    csConf.setCapacity(QUEUEA2_FULL, "[memory=20Gi,vcores=8]");
+    csConf.setCapacity(QUEUEB_FULL, "[memory=40960,vcores=40]");
+
+    try (MockRM rm = new MockRM(csConf)) {
+      rm.start();
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+      // Only memory is compared against the parent, so 16 vcores fit under 4.
+      assertEquals(Resource.newInstance(20 * GB, 8), cs.getQueue(QUEUEA1_FULL.getFullPath())
+          .getQueueResourceQuotas().getConfiguredMinResource());
+      assertEquals(Resource.newInstance(20 * GB, 8), cs.getQueue(QUEUEA2_FULL.getFullPath())
+          .getQueueResourceQuotas().getConfiguredMinResource());
+    }
+  }
+
+  @Test
+  public void testDominantResourceCalculatorScalesOversubscribedQueues()
+      throws Exception {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
+    csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    csConf.setResourceComparator(DominantResourceCalculator.class);
+    csConf.setQueues(ROOT, new String[]{QUEUEA, QUEUEB});
+    csConf.setCapacity(QUEUEA_FULL, "[memory=10240,vcores=60]");
+    csConf.setCapacity(QUEUEB_FULL, "[memory=10240,vcores=60]");
+
+    try (MockRM rm = new MockRM(csConf)) {
+      rm.start();
+      rm.registerNode("127.0.0.1:1234", 100 * GB, 100);
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+      // 120 configured vcores exceed the cluster, so both queues are scaled down.
+      for (QueuePath queue : new QueuePath[]{QUEUEA_FULL, QUEUEB_FULL}) {
+        assertEquals(Resource.newInstance(50 * GB, 50), cs.getQueue(queue.getFullPath())
+            .getQueueResourceQuotas().getEffectiveMinResource());
+      }
+    }
   }
 
   @Test

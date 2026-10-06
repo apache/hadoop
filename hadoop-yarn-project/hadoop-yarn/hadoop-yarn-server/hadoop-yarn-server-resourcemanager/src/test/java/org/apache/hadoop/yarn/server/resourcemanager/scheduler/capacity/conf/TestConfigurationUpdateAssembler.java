@@ -24,6 +24,8 @@ import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -90,22 +92,25 @@ public class TestConfigurationUpdateAssembler {
     QueueConfigInfo queueConfigInfo = new QueueConfigInfo(A_PATH, updateMap);
     updateInfo.getAddQueueInfo().add(queueConfigInfo);
 
-    assertThrows(IOException.class, () -> {
+    IOException e = assertThrows(IOException.class, () -> {
       ConfigurationUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
     });
+    assertEquals("Can't add existing queue root.a", e.getMessage());
   }
 
-  @Test
-  public void testAddInvalidQueue() {
+  @ParameterizedTest
+  @ValueSource(strings = {"invalidPath", "root"})
+  public void testAddInvalidQueue(String queuePath) {
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     Map<String, String> updateMap = new HashMap<>();
     updateMap.put(CONFIG_NAME, A_CONFIG_VALUE);
-    QueueConfigInfo queueConfigInfo = new QueueConfigInfo("invalidPath", updateMap);
+    QueueConfigInfo queueConfigInfo = new QueueConfigInfo(queuePath, updateMap);
     updateInfo.getAddQueueInfo().add(queueConfigInfo);
 
-    assertThrows(IOException.class, () -> {
+    IOException e = assertThrows(IOException.class, () -> {
       ConfigurationUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
     });
+    assertEquals("Can't add invalid queue " + queuePath, e.getMessage());
   }
 
   @Test
@@ -142,14 +147,16 @@ public class TestConfigurationUpdateAssembler {
     assertEquals("b", configurationUpdate.get(ROOT_QUEUES_PATH));
   }
 
-  @Test
-  public void testRemoveInvalidQueue() {
+  @ParameterizedTest
+  @ValueSource(strings = {"invalidPath", "root"})
+  public void testRemoveInvalidQueue(String queuePath) {
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
-    updateInfo.getRemoveQueueInfo().add("invalidPath");
+    updateInfo.getRemoveQueueInfo().add(queuePath);
 
-    assertThrows(IOException.class, () -> {
+    IOException e = assertThrows(IOException.class, () -> {
       ConfigurationUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
     });
+    assertEquals("Can't remove queue " + queuePath, e.getMessage());
   }
 
   @Test
@@ -157,9 +164,10 @@ public class TestConfigurationUpdateAssembler {
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     updateInfo.getRemoveQueueInfo().add("root.d");
 
-    assertThrows(IOException.class, () -> {
+    IOException e = assertThrows(IOException.class, () -> {
       ConfigurationUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
     });
+    assertEquals("Queue root.d not found", e.getMessage());
   }
 
   private CapacitySchedulerConfiguration crateInitialCSConfig() {
