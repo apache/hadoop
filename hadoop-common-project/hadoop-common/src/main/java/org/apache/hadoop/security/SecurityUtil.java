@@ -480,7 +480,7 @@ public final class SecurityUtil {
    *          hadoop.security.token.service.use_ip
    */
   public static Text buildTokenService(InetSocketAddress addr) {
-    String host = null;
+    String host;
     if (useIpForTokenService) {
       if (addr.isUnresolved()) { // host has no ip address
         throw new IllegalArgumentException(
@@ -491,7 +491,7 @@ public final class SecurityUtil {
     } else {
       host = StringUtils.toLowerCase(addr.getHostName());
     }
-    return new Text(host + ":" + addr.getPort());
+    return new Text(NetUtils.getHostPortString(host, addr.getPort()));
   }
 
   /**

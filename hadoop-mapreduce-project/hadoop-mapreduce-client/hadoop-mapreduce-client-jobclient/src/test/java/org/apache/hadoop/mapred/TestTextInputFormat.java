@@ -587,7 +587,7 @@ public class TestTextInputFormat {
    * @param args
    * @throws Exception
    */
-  /*public static void main(String[] args) throws Exception {
+  public static void main(String[] args) throws Exception {
     for(String arg: args) {
       System.out.println("Working on " + arg);
       LineReader reader = makeStream(unquote(arg));
@@ -599,5 +599,5 @@ public class TestTextInputFormat {
       }
       reader.close();
     }
-  }*/
+  }
 }

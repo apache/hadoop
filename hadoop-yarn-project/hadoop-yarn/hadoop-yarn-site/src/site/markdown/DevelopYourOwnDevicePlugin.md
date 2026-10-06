@@ -145,7 +145,7 @@ plugin's recommendation devices for one container.
 This interface is optional because YARN will provide a very basic scheduler.
 
 You can refer to `NvidiaGPUPluginForRuntimeV2` plugin for a plugin customized
-scheduler. Its scheduler is targeting for Nvidia GPU topology aware
+scheduler. Its scheduler is targeting for NVIDIA GPU topology aware
 scheduling and can get considerable performance boost for the container.
 
 ## Dependency in Plugin Project

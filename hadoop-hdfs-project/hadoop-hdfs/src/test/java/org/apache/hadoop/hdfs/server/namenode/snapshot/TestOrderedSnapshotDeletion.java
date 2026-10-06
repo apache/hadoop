@@ -231,6 +231,12 @@ public class TestOrderedSnapshotDeletion {
     cluster.getNameNode().getConf().
         setBoolean(DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED, false);
     cluster.restartNameNodes();
+    assertEquals(1, hdfs.getSnapshotListing(snapshottableDir).length);
+    assertEquals(1,
+        cluster.getNamesystem().getSnapshotManager().getNumSnapshots());
+    hdfs.setSafeMode(SafeModeAction.ENTER);
+    hdfs.saveNamespace();
+    hdfs.setSafeMode(SafeModeAction.LEAVE);
   }
 
   @Test

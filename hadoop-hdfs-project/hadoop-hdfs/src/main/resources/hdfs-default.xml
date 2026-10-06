@@ -6775,4 +6775,11 @@
       If you have more than one package, separate the packages using commas.
     </description>
   </property>
+  <property>
+    <name>nfs.server.bind.host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The host address that the NFS and mountd server will bind to.
+    </description>
+  </property>
 </configuration>

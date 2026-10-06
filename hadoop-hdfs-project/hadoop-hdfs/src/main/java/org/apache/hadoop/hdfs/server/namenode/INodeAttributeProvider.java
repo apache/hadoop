@@ -52,6 +52,7 @@ public abstract class INodeAttributeProvider {
     private boolean ignoreEmptyDir;
     private String operationName;
     private CallerContext callerContext;
+    private boolean renameToTrash;
 
     public String getFsOwner() {
       return fsOwner;
@@ -189,6 +190,14 @@ public abstract class INodeAttributeProvider {
       this.callerContext = callerContext;
     }
 
+    public boolean isRenameToTrash() {
+      return renameToTrash;
+    }
+
+    public void setRenameToTrash(boolean renameToTrash) {
+      this.renameToTrash = renameToTrash;
+    }
+
     public static class Builder {
       private String fsOwner;
       private String supergroup;
@@ -207,6 +216,7 @@ public abstract class INodeAttributeProvider {
       private boolean ignoreEmptyDir;
       private String operationName;
       private CallerContext callerContext;
+      private boolean renameToTrash;
 
       public AuthorizationContext build() {
         return new AuthorizationContext(this);
@@ -296,6 +306,11 @@ public abstract class INodeAttributeProvider {
         this.callerContext = val;
         return this;
       }
+
+      public Builder renameToTrash(boolean val) {
+        this.renameToTrash = val;
+        return this;
+      }
     }
 
     public AuthorizationContext(Builder builder) {
@@ -316,6 +331,7 @@ public abstract class INodeAttributeProvider {
       this.setIgnoreEmptyDir(builder.ignoreEmptyDir);
       this.setOperationName(builder.operationName);
       this.setCallerContext(builder.callerContext);
+      this.setRenameToTrash(builder.renameToTrash);
     }
 
     @VisibleForTesting
@@ -341,7 +357,8 @@ public abstract class INodeAttributeProvider {
           getParentAccess() == other.getParentAccess() &&
           getAccess() == other.getAccess() &&
           getSubAccess() == other.getSubAccess() &&
-          isIgnoreEmptyDir() == other.isIgnoreEmptyDir();
+          isIgnoreEmptyDir() == other.isIgnoreEmptyDir() &&
+          isRenameToTrash() == other.isRenameToTrash();
     }
 
     @Override
