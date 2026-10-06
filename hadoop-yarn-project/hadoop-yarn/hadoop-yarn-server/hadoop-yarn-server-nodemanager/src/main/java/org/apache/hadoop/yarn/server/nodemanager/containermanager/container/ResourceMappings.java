@@ -81,6 +81,8 @@ public class ResourceMappings {
    */
   public static class AssignedResources implements Serializable {
     private static final long serialVersionUID = -1059491941955757926L;
+    private static final String SHADED_GUAVA_COLLECT =
+        "org.apache.hadoop.thirdparty.com.google.common.collect.";
     private List<Serializable> resources = Collections.emptyList();
 
     public List<Serializable> getAssignedResources() {
@@ -113,11 +115,15 @@ public class ResourceMappings {
         ois.accept("java.util.Collections$UnmodifiableList",
             "java.util.Collections$UnmodifiableCollection");
         // NumaResourceAllocation serializes its shaded-guava ImmutableMaps
-        // through guava's internal SerializedForm, which carries the keys and
-        // values in an Object[]. The forms are a guava-internal detail, so the
-        // collect package is matched by pattern rather than pinned class name.
+        // through guava's serialization proxies, which carry the keys and
+        // values in an Object[]. A single-entry map is written as an
+        // ImmutableBiMap, so both proxies are needed. These are the only guava
+        // types in records written by 3.3.1 through 3.5.0 (hadoop-shaded-guava
+        // 1.1.1 through 1.5.0) and trunk; TestResourceMappings pins them with
+        // records captured from those releases.
         ois.accept(
-            "org.apache.hadoop.thirdparty.com.google.common.collect.*",
+            SHADED_GUAVA_COLLECT + "ImmutableMap$SerializedForm",
+            SHADED_GUAVA_COLLECT + "ImmutableBiMap$SerializedForm",
             "[Ljava.lang.Object;");
         Object obj = ois.readObject();
         if (!(obj instanceof List)) {
