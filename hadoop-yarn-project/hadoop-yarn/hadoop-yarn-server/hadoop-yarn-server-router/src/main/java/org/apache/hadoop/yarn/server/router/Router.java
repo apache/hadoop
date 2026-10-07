@@ -354,6 +354,9 @@ public class Router extends CompositeService {
     return rmAdminProxyService;
   }
 
+  /**
+   * @return the executor that runs the SubClusterCleaner.
+   */
   @VisibleForTesting
   public ScheduledThreadPoolExecutor getScheduledExecutorService() {
     return scheduledExecutorService;
