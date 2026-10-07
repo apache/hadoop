@@ -73,6 +73,13 @@ public class TimelineUtils {
     YarnJacksonJaxbJsonProvider.configObjectMapper(mapper);
   }
 
+  /**
+   * Returns custom allocations keyed by resource name. Each allocation has a
+   * {@code value} and {@code units}; memory, vcores, and zero values are omitted.
+   *
+   * @param resource the allocated container resource
+   * @return custom allocations for timeline storage
+   */
   @Private
   public static Map<String, Map<String, Object>> getCustomResourceInfo(
       Resource resource) {
@@ -83,14 +90,24 @@ public class TimelineUtils {
           && !ResourceInformation.VCORES_URI.equals(name)
           && information.getValue() != 0) {
         Map<String, Object> allocation = new HashMap<>();
-        allocation.put("value", information.getValue());
-        allocation.put("units", information.getUnits());
+        allocation.put(ContainerMetricsConstants.ALLOCATED_RESOURCE_VALUE_KEY,
+            information.getValue());
+        allocation.put(ContainerMetricsConstants.ALLOCATED_RESOURCE_UNITS_KEY,
+            information.getUnits());
         resources.put(name, allocation);
       }
     }
     return resources;
   }
 
+  /**
+   * Reconstructs a container resource from timeline information. Unknown or
+   * malformed custom allocations are skipped; valid values are converted to
+   * the locally configured units.
+   *
+   * @param entityInfo container timeline information, or null
+   * @return the reconstructed resource
+   */
   @Private
   public static Resource getContainerResource(Map<String, Object> entityInfo) {
     if (entityInfo == null) {
@@ -117,14 +134,16 @@ public class TimelineUtils {
             continue;
           }
           Map<?, ?> allocation = (Map<?, ?>) entry.getValue();
-          Number storedValue = (Number) allocation.get("value");
+          Number storedValue = (Number) allocation.get(
+              ContainerMetricsConstants.ALLOCATED_RESOURCE_VALUE_KEY);
           if (storedValue instanceof Float || storedValue instanceof Double) {
             throw new IllegalArgumentException("Floating-point resource value");
           }
           long value = storedValue instanceof Integer || storedValue instanceof Long
               ? storedValue.longValue()
               : new BigDecimal(storedValue.toString()).longValueExact();
-          String units = (String) allocation.get("units");
+          String units = (String) allocation.get(
+              ContainerMetricsConstants.ALLOCATED_RESOURCE_UNITS_KEY);
           String defaultUnits = resource.getResourceInformation(name).getUnits();
           resource.setResourceValue(name,
               UnitsConversionUtil.convert(units, defaultUnits, value));
