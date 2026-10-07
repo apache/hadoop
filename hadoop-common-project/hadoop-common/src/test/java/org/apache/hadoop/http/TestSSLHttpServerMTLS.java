@@ -38,12 +38,13 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests that HttpServer2 enforces mutual TLS (mTLS) when
@@ -142,31 +143,24 @@ public class TestSSLHttpServerMTLS extends HttpServerFunctionalTest {
   }
 
   @Test
+  @Timeout(value = 120)
   public void testUntrustedClientIsRejected() throws Exception {
     URL url = new URL(baseUrl, "/echo?a=b");
     HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
     // presents untrustedCert; server cert is trusted via no-op TrustManager
     KeyStoreTestUtil.setAllowAllSSL(conn, untrustedCert, untrustedKeyPair);
-    // The server rejects the certificate as soon as it arrives and drops the
-    // connection, which races the client's own last handshake flight, and how
-    // the refusal surfaces depends on who wins and on the protocol in play.
-    // Under TLSv1.2 it is an SSLHandshakeException; when the close wins the
-    // client fails writing that flight and gets a SocketException instead;
-    // under TLSv1.3 the handshake completes client-side before the server has
-    // verified the cert, so the failure lands on the request write as a bare
-    // IOException with no cause.  What the server guarantees is that the
-    // request is refused, not which of those the client gets to see.  Assert
-    // the refusal and exclude only ConnectException, which would mean we
-    // never reached the server at all.
-    // getResponseCode() rather than getInputStream(): the latter also throws
-    // for an HTTP error status, so it would accept a 403 or a 500 reached over
-    // a handshake the server should have refused.  getResponseCode() returns
-    // such a status instead of throwing, and only throws when no status line
-    // was ever read - that is, when the connection failed below HTTP.
+    // The server drops the connection as soon as it rejects the certificate,
+    // racing the client's last handshake flight, so depending on timing and
+    // TLS version the refusal surfaces as an SSLHandshakeException, a
+    // SocketException or another IOException.  getResponseCode() returns an
+    // HTTP error status instead of throwing, so a throw means the request was
+    // refused below HTTP; a ConnectException means the server was never
+    // reached.
     IOException e =
         assertThrows(IOException.class, () -> conn.getResponseCode());
-    assertFalse(e instanceof ConnectException,
-        "expected the request to be refused by the server, but it was "
-            + "never reached: " + e);
+    if (e instanceof ConnectException) {
+      fail("expected the server to refuse the request, but it was never "
+          + "reached", e);
+    }
   }
 }
