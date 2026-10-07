@@ -50,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestDirectoryCollection {
 
@@ -576,7 +577,7 @@ public class TestDirectoryCollection {
 
     DirectoryCollection.SubAccessibilityVisitor owner =
         new DirectoryCollection.SubAccessibilityVisitor();
-    IOException e = Assert.assertThrows(IOException.class,
+    IOException e = assertThrows(IOException.class,
         () -> owner.visitFile(file, attrs));
     assertTrue(e.getMessage().contains("Can not read"));
   }

@@ -257,17 +257,17 @@ public class DirectoryCollection {
     }
 
     diskUtilizationThresholdEnabled = conf.getBoolean(
-            YarnConfiguration.NM_DISK_UTILIZATION_THRESHOLD_ENABLED,
-            YarnConfiguration.DEFAULT_NM_DISK_UTILIZATION_THRESHOLD_ENABLED);
+        YarnConfiguration.NM_DISK_UTILIZATION_THRESHOLD_ENABLED,
+        YarnConfiguration.DEFAULT_NM_DISK_UTILIZATION_THRESHOLD_ENABLED);
     diskFreeSpaceThresholdEnabled = conf.getBoolean(
-            YarnConfiguration.NM_DISK_FREE_SPACE_THRESHOLD_ENABLED,
-            YarnConfiguration.DEFAULT_NM_DISK_FREE_SPACE_THRESHOLD_ENABLED);
+        YarnConfiguration.NM_DISK_FREE_SPACE_THRESHOLD_ENABLED,
+        YarnConfiguration.DEFAULT_NM_DISK_FREE_SPACE_THRESHOLD_ENABLED);
     subAccessibilityValidationEnabled = conf.getBoolean(
-            YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_ENABLED,
-            YarnConfiguration.DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_ENABLED);
+        YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_ENABLED,
+        YarnConfiguration.DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_ENABLED);
     subAccessibilityValidationMaxDepth = conf.getInt(
-            YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH,
-            YarnConfiguration.DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH);
+        YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH,
+        YarnConfiguration.DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH);
 
     localDirs = new ArrayList<>(Arrays.asList(dirs));
     errorDirs = new ArrayList<>();
@@ -614,12 +614,13 @@ public class DirectoryCollection {
   }
 
   /**
-   * Content of the NM directories is created and removed concurrently by
-   * localization, cache cleanup, application cleanup and log aggregation,
-   * so entries that vanish during the walk are not errors.
-   * Entries owned by other users (e.g. application user directories created
-   * by the LinuxContainerExecutor) are only accessed through the container
-   * executor, so the NM user is not expected to have full access to them.
+   * Walks the content of an NM directories.
+   * It fails with an {@link IOException} if the NM user cannot access the entry.
+   * Entries must be readable, writable and executable.
+   * Symbolic links are neither followed nor checked.
+   * <p>
+   * Entries deleted during the walk are ignored, because
+   * localization and cleanup modify these directories concurrently.
    */
   @VisibleForTesting
   static class SubAccessibilityVisitor
@@ -646,48 +647,48 @@ public class DirectoryCollection {
     }
 
     @Override
-    public FileVisitResult visitFile(java.nio.file.Path p,
-        BasicFileAttributes attrs) throws IOException {
-      if (!attrs.isSymbolicLink() && isOwnedByNmUser(p)) {
-        checkAccessible(p, attrs.isDirectory());
-      }
-      return FileVisitResult.CONTINUE;
-    }
-
-    private boolean isOwnedByNmUser(java.nio.file.Path p) throws IOException {
-      try {
-        return nmUser.equals(
-            Files.getOwner(p, LinkOption.NOFOLLOW_LINKS).getName());
-      } catch (NoSuchFileException e) {
-        return false;
-      }
-    }
-
-    @Override
-    public FileVisitResult visitFileFailed(java.nio.file.Path p,
-        IOException e) throws IOException {
-      if (e instanceof NoSuchFileException) {
-        return FileVisitResult.CONTINUE;
-      }
-      throw e;
-    }
-
-    @Override
-    public FileVisitResult postVisitDirectory(java.nio.file.Path p,
-        IOException e) throws IOException {
+    public FileVisitResult postVisitDirectory(java.nio.file.Path path, IOException e)
+        throws IOException {
       if (e == null || e instanceof NoSuchFileException) {
         return FileVisitResult.CONTINUE;
       }
       throw e;
     }
 
-    private static void checkAccessible(java.nio.file.Path p, boolean isDir)
+    @Override
+    public FileVisitResult visitFile(java.nio.file.Path path, BasicFileAttributes attrs)
+        throws IOException {
+      if (!attrs.isSymbolicLink() && isOwnedByNmUser(path)) {
+        checkAccessible(path, attrs.isDirectory());
+      }
+      return FileVisitResult.CONTINUE;
+    }
+
+    @Override
+    public FileVisitResult visitFileFailed(java.nio.file.Path path, IOException e)
+            throws IOException {
+      if (e instanceof NoSuchFileException) {
+        return FileVisitResult.CONTINUE;
+      }
+      throw e;
+    }
+
+    private boolean isOwnedByNmUser(java.nio.file.Path path) throws IOException {
+      try {
+        return nmUser.equals(
+            Files.getOwner(path, LinkOption.NOFOLLOW_LINKS).getName());
+      } catch (NoSuchFileException e) {
+        return false;
+      }
+    }
+
+    private static void checkAccessible(java.nio.file.Path path, boolean isDir)
         throws IOException {
       boolean accessible = isDir
-          ? Files.isReadable(p) && Files.isWritable(p) && Files.isExecutable(p)
-          : Files.isReadable(p);
-      if (!accessible && !Files.notExists(p, LinkOption.NOFOLLOW_LINKS)) {
-        throw new IOException((isDir ? "Can not access " : "Can not read ") + p);
+          ? Files.isReadable(path) && Files.isWritable(path) && Files.isExecutable(path)
+          : Files.isReadable(path);
+      if (!accessible && !Files.notExists(path, LinkOption.NOFOLLOW_LINKS)) {
+        throw new IOException((isDir ? "Can not access " : "Can not read ") + path);
       }
     }
   }
