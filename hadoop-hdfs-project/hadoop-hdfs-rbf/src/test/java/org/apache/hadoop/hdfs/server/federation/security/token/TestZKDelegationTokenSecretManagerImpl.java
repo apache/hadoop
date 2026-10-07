@@ -49,9 +49,12 @@ public class TestZKDelegationTokenSecretManagerImpl
   @Override
   @AfterEach
   public void tearDown() throws Exception {
-    super.tearDown();
-    // Prevent a STOPPED Curator from leaking into the next test.
-    ZKDelegationTokenSecretManager.setCurator(null);
+    try {
+      super.tearDown();
+    } finally {
+      // Prevent a STOPPED Curator from leaking into the next test.
+      ZKDelegationTokenSecretManager.setCurator(null);
+    }
   }
 
   @SuppressWarnings("unchecked")

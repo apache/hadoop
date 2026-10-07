@@ -59,6 +59,7 @@ import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.functional.InvocationRaisingIOE;
@@ -943,8 +944,15 @@ extends AbstractDelegationTokenIdentifier>
           }
         }
       } catch (Throwable t) {
+        if (!running) {
+          // stopThreads() interrupts this thread, which can surface as an
+          // exception from the backing store; don't kill the process for it.
+          LOG.warn("ExpiredTokenRemover thread received exception while"
+              + " stopping", t);
+          return;
+        }
         LOG.error("ExpiredTokenRemover thread received unexpected exception", t);
-        Runtime.getRuntime().exit(-1);
+        ExitUtil.terminate(-1, t);
       }
     }
   }
