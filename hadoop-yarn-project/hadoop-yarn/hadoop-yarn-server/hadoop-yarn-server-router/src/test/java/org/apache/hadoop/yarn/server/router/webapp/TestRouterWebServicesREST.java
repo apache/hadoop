@@ -145,6 +145,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
 import net.jcip.annotations.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.glassfish.jersey.client.ClientProperties;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.client.Client;
@@ -169,6 +170,10 @@ public class TestRouterWebServicesREST {
 
   /** How long to wait for the RM's asynchronous application lifecycle. */
   private static final int APP_STATE_TIMEOUT_MS = 10 * 1000;
+
+  /** Bounds each REST call, so a stuck request fails instead of hanging. */
+  private static final int HTTP_CONNECT_TIMEOUT_MS = 5 * 1000;
+  private static final int HTTP_READ_TIMEOUT_MS = 10 * 1000;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRouterWebServicesREST.class);
@@ -255,6 +260,16 @@ public class TestRouterWebServicesREST {
   }
 
   /**
+   * Creates a client whose connect and read timeouts bound each request.
+   */
+  private static Client newClient() {
+    Client client = ClientBuilder.newClient();
+    client.property(ClientProperties.CONNECT_TIMEOUT, HTTP_CONNECT_TIMEOUT_MS);
+    client.property(ClientProperties.READ_TIMEOUT, HTTP_READ_TIMEOUT_MS);
+    return client;
+  }
+
+  /**
    * Performs 2 GET calls one to RM and the one to Router. In positive case, it
    * returns the 2 answers in a list.
    */
@@ -276,7 +291,7 @@ public class TestRouterWebServicesREST {
   private static <T> T performGetCall(final String address, final String path,
       final Class<T> returnType, final String queryName,
       final String queryValue) throws IOException, InterruptedException {
-    Client client = ClientBuilder.newClient();
+    Client client = newClient();
     try {
       WebTarget target = client.target(address).path(path);
       if (queryValue != null && queryName != null) {
@@ -330,7 +345,7 @@ public class TestRouterWebServicesREST {
 
     return UserGroupInformation.createRemoteUser(userName)
         .doAs((PrivilegedExceptionAction<Response>) () -> {
-          Client clientToRouter = ClientBuilder.newClient();
+          Client clientToRouter = newClient();
           WebTarget toRouter = clientToRouter
               .target(routerAddress)
               .path(webAddress);
@@ -543,18 +558,36 @@ public class TestRouterWebServicesREST {
     Response routerResponse = performCall(
         RM_WEB_SERVICE_PATH + format(NODE_RESOURCE, nodeId),
         null, null, resourceOption, POST);
-    assertResponseStatusCode(Response.Status.OK, routerResponse.getStatusInfo());
-    ResourceInfo totalResource = routerResponse.readEntity(ResourceInfo.class);
-    assertEquals(resource.getMemorySize(), totalResource.getMemorySize());
-    assertEquals(resource.getVirtualCores(), totalResource.getvCores());
+    try {
+      assertResponseStatusCode(Response.Status.OK, routerResponse.getStatusInfo());
+    } finally {
+      routerResponse.close();
+    }
 
-    // assert updated memory and cores
-    List<NodeInfo> responses1 = performGetCalls(
-        RM_WEB_SERVICE_PATH + format(NODES_NODEID, getNodeId()),
-        NodeInfo.class, null, null);
-    NodeInfo nodeInfo1 = responses1.get(0);
-    assertEquals(4096, nodeInfo1.getTotalResource().getMemorySize());
-    assertEquals(5, nodeInfo1.getTotalResource().getvCores());
+    // The RM applies the update asynchronously (AdminService dispatches an
+    // RMNodeResourceUpdateEvent), so the first reads may still return the old
+    // total resource; wait until the node reports the updated memory and cores
+    LambdaTestUtils.eventually(5 * 1000, 100, () -> {
+      List<NodeInfo> responses1 = performGetCalls(
+          RM_WEB_SERVICE_PATH + format(NODES_NODEID, nodeId),
+          NodeInfo.class, null, null);
+      NodeInfo nodeInfo1 = responses1.get(0);
+      assertEquals(4096, nodeInfo1.getTotalResource().getMemorySize());
+      assertEquals(5, nodeInfo1.getTotalResource().getvCores());
+    });
+
+    // once the update is applied, the Router reports the new total resource
+    routerResponse = performCall(
+        RM_WEB_SERVICE_PATH + format(NODE_RESOURCE, nodeId),
+        null, null, resourceOption, POST);
+    try {
+      assertResponseStatusCode(Response.Status.OK, routerResponse.getStatusInfo());
+      ResourceInfo totalResource = routerResponse.readEntity(ResourceInfo.class);
+      assertEquals(resource.getMemorySize(), totalResource.getMemorySize());
+      assertEquals(resource.getVirtualCores(), totalResource.getvCores());
+    } finally {
+      routerResponse.close();
+    }
   }
 
   /**
@@ -1428,7 +1461,7 @@ public class TestRouterWebServicesREST {
   }
 
   private String getNodeId() {
-    Client clientToRM = ClientBuilder.newClient();
+    Client clientToRM = newClient();
     WebTarget toRM = clientToRM.target(rmAddress)
         .path(RM_WEB_SERVICE_PATH + NODES);
     Response response =
