@@ -985,7 +985,7 @@ public class ResourceLocalizationService extends CompositeService
             if (null == assoc) {
               LOG.error("Localized unknown resource to " + completed);
               // TODO delete
-              return;
+              continue;
             }
             try {
               Path local = completed.get();
