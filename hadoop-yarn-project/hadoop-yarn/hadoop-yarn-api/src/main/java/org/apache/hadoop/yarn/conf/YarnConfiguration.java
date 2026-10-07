@@ -2262,8 +2262,10 @@ public class YarnConfiguration extends Configuration {
           NM_DISK_HEALTH_CHECK_PREFIX + "working-dir-content-accessibility-validation.max-depth";
 
   /**
-   * Default to 3 because it is the deepest level that NodeManager need to check in order to launch a new container.
-   * E.g. filecache/<id>/<resource>, usercache/<user>/appcache and usercache/<user>/filecache
+   * Default to 3 because it is the deepest level that NodeManager need to check
+   * in order to launch a new container.
+   * E.g. {@code filecache/<id>/<resource>}, {@code usercache/<user>/appcache}
+   * and {@code usercache/<user>/filecache}
    */
   public static final int DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH = 3;
 
