@@ -355,6 +355,8 @@ public class Router extends CompositeService {
   }
 
   /**
+   * Returns the executor that runs the SubClusterCleaner.
+   *
    * @return the executor that runs the SubClusterCleaner.
    */
   @VisibleForTesting
