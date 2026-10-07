@@ -46,7 +46,7 @@ public final class McpHttpServlet extends HttpServlet {
 
   private static final long serialVersionUID = 1L;
 
-  private final transient ObjectMapper objectMapper;
+  private final ObjectMapper objectMapper;
   private final transient McpRequestHandler requestHandler;
 
   McpHttpServlet(ObjectMapper objectMapper, McpRequestHandler requestHandler) {
