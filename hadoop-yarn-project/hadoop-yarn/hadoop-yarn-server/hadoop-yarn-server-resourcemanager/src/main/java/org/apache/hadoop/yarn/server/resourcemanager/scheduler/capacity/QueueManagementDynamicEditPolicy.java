@@ -211,15 +211,15 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
 
     try {
       if (!parentQueue.shouldFailAutoCreationWhenGuaranteedCapacityExceeded()) {
-  
+
         AutoCreatedQueueManagementPolicy policyClazz =
             parentQueue.getAutoCreatedQueueManagementPolicy();
         long startTime = 0;
         try {
           startTime = clock.getTime();
-  
+
           queueManagementChanges = policyClazz.computeQueueManagementChanges();
-  
+
           //Scheduler update is asynchronous
           if (queueManagementChanges.size() > 0) {
             QueueManagementChangeEvent queueManagementChangeEvent =
@@ -228,7 +228,7 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
             scheduler.getRMContext().getDispatcher().getEventHandler().handle(
                 queueManagementChangeEvent);
           }
-  
+
           if (LOG.isDebugEnabled()) {
             LOG.debug("{} uses {} millisecond" + " to run",
                 policyClazz.getClass().getName(), clock.getTime() - startTime);
