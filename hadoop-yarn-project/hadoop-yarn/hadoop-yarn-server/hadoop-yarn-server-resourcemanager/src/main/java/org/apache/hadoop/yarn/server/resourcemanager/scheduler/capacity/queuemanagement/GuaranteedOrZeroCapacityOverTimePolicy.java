@@ -312,15 +312,6 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   public List<QueueManagementChange> computeQueueManagementChanges()
       throws SchedulerDynamicEditException {
 
-    // Recompute the leaf queue template capacities from the current cluster
-    // resource for ABSOLUTE_RESOURCE mode. The template fraction is otherwise
-    // computed only at reinitialize; if a leaf queue was auto-created
-    // while the cluster resource was zero  during RM recovery before any
-    // NodeManager registered the fraction stays 0 and the queue never regains
-    // capacity. This refresh lets the template pick up the real capacity once
-    // NodeManagers register. No operation unless it is ABSOLUTE_RESOURCE.
-    managedParentQueue.updateTemplateCapacitiesForAbsoluteResource();
-
     // Update template absolute capacities as the capacities could have changed
     // in weight mode
     updateTemplateAbsoluteCapacities(managedParentQueue.getQueueCapacities(),

@@ -183,7 +183,32 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
 
     List<QueueManagementChange> queueManagementChanges =
         Collections.emptyList();
-    parentQueue.getReadLock().lock();
+
+    // Lock ordering: this path must take the parent queue's lock BEFORE the
+    // policy's own lock, matching ManagedParentQueue#reinitialize. The
+    // opposite order can cause a deadlock, because the policy calls back into
+    // parentQueue.getChildQueues() while holding its own write lock.
+    //
+    // The ABSOLUTE_RESOURCE template refresh below needs the parent's WRITE
+    // lock, while the policy evaluation needs only the READ lock. So we take
+    // the write lock, refresh, then downgrade to the read lock. The downgrade
+    // keeps the lock held continuously, so a concurrent reinitialize cannot
+    // replace the leaf queue template in between.
+    parentQueue.getWriteLock().lock();
+    try {
+      // Recompute the leaf queue template capacities from the current cluster
+      // resource for ABSOLUTE_RESOURCE mode. The template fraction is otherwise
+      // computed only at reinitialize; if a leaf queue was auto-created
+      // while the cluster resource was zero  during RM recovery before any
+      // NodeManager registered the fraction stays 0 and the queue never regains
+      // capacity. This refresh lets the template pick up the real capacity once
+      // NodeManagers register. No operation unless it is ABSOLUTE_RESOURCE.
+      parentQueue.updateTemplateCapacitiesForAbsoluteResource();
+      parentQueue.getReadLock().lock();
+    } finally {
+      parentQueue.getWriteLock().unlock();
+    }
+
     try {
       if (!parentQueue.shouldFailAutoCreationWhenGuaranteedCapacityExceeded()) {
   
