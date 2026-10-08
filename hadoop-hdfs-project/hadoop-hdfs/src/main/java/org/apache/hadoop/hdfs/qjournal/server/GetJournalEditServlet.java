@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.security.Principal;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -79,6 +80,8 @@ public class GetJournalEditServlet extends DfsServlet {
   static final String SEGMENT_TXID_PARAM = "segmentTxId";
   static final String IN_PROGRESS_OK = "inProgressOk";
 
+  private static final String MATCH_ALL_PATTERN = "*";
+
   protected boolean isValidRequestor(HttpServletRequest request, Configuration conf)
       throws IOException {
     UserGroupInformation ugi = getUGI(request, conf);
@@ -109,9 +112,13 @@ public class GetJournalEditServlet extends DfsServlet {
       LOG.warn(msg);
     }
 
+    // The pattern defaults to "*", which matches every principal, so it is only
+    // meaningful as an access check when it has been narrowed by the operator.
     String clientPattern = conf.get(DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY + ".pattern");
-    if (clientPattern != null && !clientPattern.isEmpty()) {
-      String remotePrincipal = request.getUserPrincipal().getName();
+    Principal userPrincipal = request.getUserPrincipal();
+    if (userPrincipal != null && clientPattern != null && !clientPattern.isEmpty()
+        && !MATCH_ALL_PATTERN.equals(clientPattern)) {
+      String remotePrincipal = userPrincipal.getName();
       Pattern pattern = GlobPattern.compile(clientPattern);
       LOG.debug("isValidRequestor is comparing to valid NameNode principal pattern: " + clientPattern);
       if (pattern.matcher(remotePrincipal).matches()) {
