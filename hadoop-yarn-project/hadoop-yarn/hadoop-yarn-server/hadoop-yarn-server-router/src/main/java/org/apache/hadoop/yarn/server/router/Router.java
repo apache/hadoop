@@ -206,9 +206,9 @@ public class Router extends CompositeService {
       return;
     }
     // serviceStart() may have scheduled the SubClusterCleaner on this executor.
-    // Shut it down before the services below, and wait for an in-flight run to
-    // finish: the cleaner reaches the federation state store on every run, so
-    // it must not still be running once the Router has stopped.
+    // Shut it down before stopping the child services, allowing an in-flight
+    // cleaner run to finish within the timeout. This is best effort: a run that
+    // does not respond to interruption can outlive the stop.
     HadoopExecutors.shutdown(scheduledExecutorService, LOG,
         SCHEDULED_EXECUTOR_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     super.serviceStop();
