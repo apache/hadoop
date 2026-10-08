@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
+
+import com.google.re2j.Pattern;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -25,25 +28,20 @@ import java.net.URLEncoder;
 import java.security.Principal;
 import java.util.HashSet;
 import java.util.Set;
-
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import com.google.re2j.Pattern;
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.hadoop.hdfs.server.namenode.DfsServlet;
-import org.apache.hadoop.fs.GlobPattern;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.GlobPattern;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.namenode.DfsServlet;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
@@ -56,8 +54,8 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.StringUtils;
-
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This servlet is used in two cases:
@@ -120,7 +118,8 @@ public class GetJournalEditServlet extends DfsServlet {
         && !MATCH_ALL_PATTERN.equals(clientPattern)) {
       String remotePrincipal = userPrincipal.getName();
       Pattern pattern = GlobPattern.compile(clientPattern);
-      LOG.debug("isValidRequestor is comparing to valid NameNode principal pattern: " + clientPattern);
+      LOG.debug("isValidRequestor is comparing to valid NameNode principal pattern: " +
+          clientPattern);
       if (pattern.matcher(remotePrincipal).matches()) {
         LOG.debug("isValidRequestor is allowing: " + remotePrincipal);
         return true;
