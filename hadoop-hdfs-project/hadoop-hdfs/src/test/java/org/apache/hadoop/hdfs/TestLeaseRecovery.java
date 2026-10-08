@@ -50,10 +50,12 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.TestInterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
@@ -260,8 +262,8 @@ public class TestLeaseRecovery {
   @Timeout(120)
   public void testLeaseRecoveryAfterInterruptedPacketWrite() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    // A failed block recovery is only retried after 30 heartbeat intervals,
-    // well after this test stops waiting for the lease to be recovered.
+    // Deliver the block recovery command quickly. Without the fix a retry
+    // would not help: the stale bytesOnDisk stays in DataNode memory.
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
@@ -302,9 +304,10 @@ public class TestLeaseRecovery {
     ExtendedBlock block = cluster.getNameNodeRpc()
         .getBlockLocations(file.toString(), 0, Long.MAX_VALUE).get(0)
         .getBlock();
+    FsDatasetSpi<?> dataset =
+        DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
     ReplicaInfo rbw = FsDatasetTestUtil.fetchReplicaInfo(
-        DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0)),
-        block.getBlockPoolId(), block.getBlockId());
+        dataset, block.getBlockPoolId(), block.getBlockId());
     assertEquals(acked.length, rbw.getBytesOnDisk());
     assertEquals(acked.length + unacked.length, rbw.getBlockDataLength(),
         "block file should contain the unacknowledged packet");
@@ -317,9 +320,15 @@ public class TestLeaseRecovery {
       } catch (IOException e) {
         return false;
       }
-    }, 500, 15000);
+    }, 500, 15000, "lease recovery did not complete");
     assertEquals(acked.length, newDfs.getFileStatus(file).getLen());
     assertArrayEquals(acked, DFSTestUtil.readFileAsBytes(newDfs, file));
+
+    ReplicaInfo recovered = FsDatasetTestUtil.fetchReplicaInfo(
+        dataset, block.getBlockPoolId(), block.getBlockId());
+    assertEquals(ReplicaState.FINALIZED, recovered.getState());
+    assertEquals(acked.length, recovered.getBlockDataLength(),
+        "block file should be truncated to the acknowledged length");
   }
 
   /**

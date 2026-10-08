@@ -3090,25 +3090,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         throw new IOException("getBytesOnDisk() < getVisibleLength(), rip="
             + replica);
       }
-
-      // A packet write that fails after its data reached the block file but
-      // before bytesOnDisk was updated (e.g. ClosedByInterruptException while
-      // syncing) leaves an unacknowledged tail in the block file. Drop it, as
-      // recoverRbwImpl does for pipeline recovery (HDFS-11472), instead of
-      // failing checkReplicaFiles and excluding the replica from recovery.
-      final long bytesOnDisk = replica.getBytesOnDisk();
-      final long blockDataLength = replica.getBlockDataLength();
-      if (blockDataLength > bytesOnDisk) {
-        LOG.warn("initReplicaRecovery: truncating {} from block file length {}"
-            + " to bytesOnDisk {}", replica, blockDataLength, bytesOnDisk);
-        replica.breakHardLinksIfNeeded();
-        replica.truncateBlock(bytesOnDisk);
-        replica.setNumBytes(bytesOnDisk);
-        rip.setLastChecksumAndDataLen(bytesOnDisk, null);
-      }
-
-      //check the replica's files
-      checkReplicaFiles(replica);
     }
 
     //check generation stamp
@@ -3123,6 +3104,31 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       throw new IOException("THIS IS NOT SUPPOSED TO HAPPEN:"
           + " replica.getGenerationStamp() >= recoveryId = " + recoveryId
           + ", block=" + block + ", replica=" + replica);
+    }
+
+    if (replica.getState() == ReplicaState.TEMPORARY ||
+        replica.getState() == ReplicaState.RBW) {
+      // A packet write that fails after its data reached the block file but
+      // before bytesOnDisk was updated (e.g. ClosedByInterruptException while
+      // syncing) leaves a tail whose checksum may not have reached the meta
+      // file, so checkReplicaFiles would reject the replica. Truncate to
+      // bytesOnDisk: for an RBW replica it is at least the visible length
+      // checked above, so no acknowledged data is dropped.
+      final long bytesOnDisk = replica.getBytesOnDisk();
+      final long blockDataLength = replica.getBlockDataLength();
+      if (replica.getState() == ReplicaState.RBW
+          && blockDataLength > bytesOnDisk) {
+        LOG.warn("initReplicaRecovery: truncating {} from block file length {}"
+            + " to bytesOnDisk {}", replica, blockDataLength, bytesOnDisk);
+        replica.breakHardLinksIfNeeded();
+        replica.truncateBlock(bytesOnDisk);
+        replica.setNumBytes(bytesOnDisk);
+        ((ReplicaInPipeline) replica).setLastChecksumAndDataLen(
+            bytesOnDisk, null);
+      }
+
+      //check the replica's files
+      checkReplicaFiles(replica);
     }
 
     //check RUR
