@@ -54,6 +54,14 @@ public class TestZKDelegationTokenSecretManagerImpl
     ZKDelegationTokenSecretManager.setCurator(null);
   }
 
+  private static void stopAll(ZKDelegationTokenSecretManagerImpl... dtsms) {
+    for (ZKDelegationTokenSecretManagerImpl dtsm : dtsms) {
+      if (dtsm != null) {
+        dtsm.stopThreads();
+      }
+    }
+  }
+
   @SuppressWarnings("unchecked")
   @Test
   public void testMultiNodeOperationWithoutWatch() throws Exception {
@@ -104,12 +112,7 @@ public class TestZKDelegationTokenSecretManagerImpl
           // Ignore
         }
       } finally {
-        if (dtsm1 != null) {
-          dtsm1.stopThreads();
-        }
-        if (dtsm2 != null) {
-          dtsm2.stopThreads();
-        }
+        stopAll(dtsm1, dtsm2);
         destroyIfNotNull(tm1, conf);
         destroyIfNotNull(tm2, conf);
       }
@@ -167,12 +170,7 @@ public class TestZKDelegationTokenSecretManagerImpl
         tm1.verifyToken(token);
         tm2.verifyToken(token);
       } finally {
-        if (dtsm1 != null) {
-          dtsm1.stopThreads();
-        }
-        if (dtsm2 != null) {
-          dtsm2.stopThreads();
-        }
+        stopAll(dtsm1, dtsm2);
         destroyIfNotNull(tm1, conf);
         destroyIfNotNull(tm2, conf);
       }
@@ -241,15 +239,7 @@ public class TestZKDelegationTokenSecretManagerImpl
         tm2.verifyToken(token);
         tm3.verifyToken(token);
       } finally {
-        if (dtsm1 != null) {
-          dtsm1.stopThreads();
-        }
-        if (dtsm2 != null) {
-          dtsm2.stopThreads();
-        }
-        if (dtsm3 != null) {
-          dtsm3.stopThreads();
-        }
+        stopAll(dtsm1, dtsm2, dtsm3);
         destroyIfNotNull(tm1, conf);
         destroyIfNotNull(tm2, conf);
         destroyIfNotNull(tm3, conf);
