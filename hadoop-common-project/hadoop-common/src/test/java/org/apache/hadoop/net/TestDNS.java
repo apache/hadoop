@@ -26,6 +26,7 @@ import java.net.InetAddress;
 
 import javax.naming.CommunicationException;
 import javax.naming.NameNotFoundException;
+import javax.naming.NamingException;
 import javax.naming.ServiceUnavailableException;
 
 import org.apache.hadoop.util.Time;
@@ -37,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -207,6 +209,17 @@ public class TestDNS {
     byte[] linkLocal = InetAddress.getByName("fe80::1").getAddress();
     assertThat(DNS.getReverseDnsName(Inet6Address.getByAddress(null, linkLocal, 5)))
         .isEqualTo("1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.e.f.ip6.arpa");
+  }
+
+  /**
+   * Test that the reverse lookup of an IPv6 address fails with a
+   * NamingException, which DNS#getHosts handles, when no DNS server answers.
+   */
+  @Test
+  public void testReverseDnsIPv6WithInvalidServer() throws Exception {
+    InetAddress address = InetAddress.getByName("2001:db8::1");
+    assertThatThrownBy(() -> DNS.reverseDns(address, INVALID_DNS_SERVER))
+        .isInstanceOf(NamingException.class);
   }
 
   /**
