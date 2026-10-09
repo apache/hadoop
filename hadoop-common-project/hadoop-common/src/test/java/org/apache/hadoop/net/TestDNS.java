@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.net;
 
+import java.net.Inet6Address;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -183,6 +184,29 @@ public class TestDNS {
       }
       assumeTrue(false, e.getMessage());
     }
+  }
+
+  /**
+   * Test the reverse lookup names built for IPv4 and IPv6 addresses.
+   */
+  @Test
+  public void testReverseDnsName() throws Exception {
+    assertThat(DNS.getReverseDnsName(InetAddress.getByName("192.0.2.129")))
+        .isEqualTo("129.2.0.192.in-addr.arpa");
+    // The example from RFC 3596 section 2.5
+    assertThat(DNS.getReverseDnsName(InetAddress.getByName("4321:0:1:2:3:4:567:89ab")))
+        .isEqualTo("b.a.9.8.7.6.5.0.4.0.0.0.3.0.0.0.2.0.0.0.1.0.0.0.0.0.0.0.1.2.3.4.ip6.arpa");
+    assertThat(DNS.getReverseDnsName(InetAddress.getByName("2001:db8::1")))
+        .isEqualTo("1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa");
+    assertThat(DNS.getReverseDnsName(InetAddress.getByName("::1")))
+        .isEqualTo("1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa");
+    // The JDK resolves an IPv4-mapped address to an Inet4Address
+    assertThat(DNS.getReverseDnsName(InetAddress.getByName("::ffff:192.0.2.129")))
+        .isEqualTo("129.2.0.192.in-addr.arpa");
+    // The scope id is not part of the name
+    byte[] linkLocal = InetAddress.getByName("fe80::1").getAddress();
+    assertThat(DNS.getReverseDnsName(Inet6Address.getByAddress(null, linkLocal, 5)))
+        .isEqualTo("1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.e.f.ip6.arpa");
   }
 
   /**
