@@ -60,6 +60,7 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.SOCKET
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.UNKNOWN_HOST_EXCEPTION_ABBREVIATION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
@@ -280,7 +281,7 @@ public class TestAbfsRestOperationMockFailures {
     // Before iteration 3 sleep will be computed using exponential retry policy and retry count 2
     // Should retry with retry count 2 will return false and no further requests will be made.
     verify(abfsClient, times(2))
-        .getRetryPolicy(EGRESS_LIMIT_BREACH_ABBREVIATION);
+        .getRetryPolicy(any(TracingContext.class), eq(EGRESS_LIMIT_BREACH_ABBREVIATION));
     verify(exponentialRetryPolicy, times(1))
         .shouldRetry(1, HTTP_UNAVAILABLE);
     verify(exponentialRetryPolicy, times(1))
