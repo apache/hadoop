@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerHealth;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ConfigSnapshot;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -58,7 +59,7 @@ public class CapacitySchedulerQueueContext {
     this.activitiesManager = csContext.getActivitiesManager();
     this.resourceCalculator = csContext.getResourceCalculator();
 
-    this.configuration = new CapacitySchedulerConfiguration(csContext.getConfiguration());
+    installConfiguration(new CapacitySchedulerConfiguration(csContext.getConfiguration()));
     this.minimumAllocation = csContext.getMinimumResourceCapability();
   }
 
@@ -66,8 +67,16 @@ public class CapacitySchedulerQueueContext {
     // When csConfProvider.loadConfiguration is called, the useLocalConfigurationProvider is
     // correctly set to load the config entries from the capacity-scheduler.xml.
     // For this reason there is no need to reload from it again.
-    this.configuration = new CapacitySchedulerConfiguration(csContext.getConfiguration(), false);
+    installConfiguration(new CapacitySchedulerConfiguration(csContext.getConfiguration(), false));
     this.minimumAllocation = csContext.getMinimumResourceCapability();
+  }
+
+  private void installConfiguration(CapacitySchedulerConfiguration conf) {
+    this.configuration = conf;
+    // Take the snapshot when the configuration is installed. Queue setup is
+    // its first reader and nothing writes into the configuration before that,
+    // so dynamic queue template writes during setup stay outside of it.
+    conf.getConfigSnapshot();
   }
 
   public CapacitySchedulerQueueManager getQueueManager() {
@@ -92,6 +101,17 @@ public class CapacitySchedulerQueueContext {
 
   public CapacitySchedulerConfiguration getConfiguration() {
     return configuration;
+  }
+
+  /**
+   * Get the snapshot of the queue configuration installed by the last
+   * (re)initialization. Entries written later through
+   * {@link #setConfigurationEntry(String, String)} or into
+   * {@link #getConfiguration()} are not part of it.
+   * @return the configuration snapshot
+   */
+  public ConfigSnapshot getConfigSnapshot() {
+    return configuration.getConfigSnapshot();
   }
 
   public void setConfigurationEntry(String name, String value) {

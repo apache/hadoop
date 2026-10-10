@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ConfigSnapshot;
 
 import java.util.HashMap;
 import java.util.List;
@@ -106,12 +107,12 @@ public class AutoCreatedQueueTemplate {
       return;
     }
 
-    ConfigurationProperties configurationProperties =
-        conf.getConfigurationProperties();
-
-    // Get all properties that are explicitly set
-    Set<String> alreadySetProps = configurationProperties
-        .getPropertiesWithPrefix(getQueuePrefix(childQueuePath)).keySet();
+    // Get all properties that are explicitly set. The snapshot is taken
+    // before any template entry is written, so entries written for this or
+    // other dynamic queues do not count as explicitly set.
+    Set<String> alreadySetProps = conf.getConfigSnapshot()
+        .getRawPropertiesWithPrefix(getQueuePrefix(childQueuePath), false)
+        .keySet();
 
     // Check template properties only set for leaf or parent queues
     Map<String, String> queueTypeSpecificTemplates = parentOnlyProperties;
@@ -149,8 +150,7 @@ public class AutoCreatedQueueTemplate {
   private void setTemplateConfigEntries(CapacitySchedulerConfiguration configuration,
                                         QueuePath queuePath) {
     if (!queuePath.isInvalid()) {
-      ConfigurationProperties configurationProperties =
-          configuration.getConfigurationProperties();
+      ConfigSnapshot snapshot = configuration.getConfigSnapshot();
 
       int maxAutoCreatedQueueDepth = configuration
           .getMaximumAutoCreatedQueueDepth(queuePath);
@@ -160,8 +160,10 @@ public class AutoCreatedQueueTemplate {
       for (QueuePath templateQueuePath: wildcardedQueuePaths) {
         // Get all configuration entries with
         // yarn.scheduler.capacity.<queuePath> prefix
-        Map<String, String> queueProps = configurationProperties
-            .getPropertiesWithPrefix(getQueuePrefix(templateQueuePath));
+        // Template values are kept unexpanded; they are expanded when the
+        // child reads them back from the configuration they are written into
+        Map<String, String> queueProps = snapshot.getRawPropertiesWithPrefix(
+            getQueuePrefix(templateQueuePath), false);
 
         // Store template, parent-template and leaf-template properties
         for (Map.Entry<String, String> entry : queueProps.entrySet()) {
