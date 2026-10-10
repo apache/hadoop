@@ -59,7 +59,9 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -380,7 +382,7 @@ public class ContainerLaunch implements Callable<Integer> {
       // /////////// Write out the container-tokens in the nmPrivate space.
       try (DataOutputStream tokensOutStream =
                lfs.create(nmPrivateTokensPath, EnumSet.of(CREATE, OVERWRITE))) {
-        Credentials creds = container.getCredentials();
+        Credentials creds = getEffectiveCredentials(container);
         creds.writeTokenStorageToStream(tokensOutStream);
       }
       // /////////// End of writing out container-tokens
@@ -1825,6 +1827,29 @@ public class ContainerLaunch implements Callable<Integer> {
       String volumesRoot) throws IOException {
     container.setCsiVolumesRootDir(volumesRoot);
     // TODO persistent to the NM store...
+  }
+
+  /**
+   * Get the effective credentials for writing the container token file.
+   * In secure mode, if the RM has pushed updated system credentials
+   * (e.g., renewed HDFS delegation tokens) for this application, they
+   * are merged into the container's credentials. This mirrors the
+   * behavior in ResourceLocalizationService.writeCredentials().
+   */
+  @VisibleForTesting
+  Credentials getEffectiveCredentials(Container cntr) {
+    Credentials creds = cntr.getCredentials();
+    if (UserGroupInformation.isSecurityEnabled()) {
+      ApplicationId appId =
+          cntr.getContainerId().getApplicationAttemptId().getApplicationId();
+      Credentials systemCreds =
+          context.getSystemCredentialsForApps().get(appId);
+      if (systemCreds != null) {
+        creds = new Credentials(creds);
+        creds.addAll(systemCreds);
+      }
+    }
+    return creds;
   }
 
   protected Path getContainerWorkDir() throws IOException {
