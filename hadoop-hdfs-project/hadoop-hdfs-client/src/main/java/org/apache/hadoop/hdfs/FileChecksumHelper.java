@@ -240,18 +240,26 @@ final class FileChecksumHelper {
        * magic entry that matches what previous hdfs versions return.
        */
       if (locatedBlocks == null || locatedBlocks.isEmpty()) {
-        // Explicitly specified here in case the default DataOutputBuffer
-        // buffer length value is changed in future. This matters because the
-        // fixed value 32 has to be used to repeat the magic value for previous
-        // HDFS version.
-        final int lenOfZeroBytes = 32;
-        byte[] emptyBlockMd5 = new byte[lenOfZeroBytes];
-        MD5Hash fileMD5 = MD5Hash.digest(emptyBlockMd5);
-        fileChecksum =  new MD5MD5CRC32GzipFileChecksum(0, 0, fileMD5);
+        fileChecksum = makeEmptyFileChecksum();
       } else {
         checksumBlocks();
         fileChecksum = makeFinalResult();
       }
+    }
+
+    /**
+     * @return the checksum of an empty file, i.e. the magic entry that
+     *     matches what previous hdfs versions return.
+     */
+    FileChecksum makeEmptyFileChecksum() {
+      // Explicitly specified here in case the default DataOutputBuffer
+      // buffer length value is changed in future. This matters because the
+      // fixed value 32 has to be used to repeat the magic value for previous
+      // HDFS version.
+      final int lenOfZeroBytes = 32;
+      byte[] emptyBlockMd5 = new byte[lenOfZeroBytes];
+      MD5Hash fileMD5 = MD5Hash.digest(emptyBlockMd5);
+      return new MD5MD5CRC32GzipFileChecksum(0, 0, fileMD5);
     }
 
     /**
@@ -303,33 +311,38 @@ final class FileChecksumHelper {
       byte[] blockChecksumBytes = blockChecksumBuf.getData();
 
       long sumBlockLengths = 0;
-      int i = 0;
-      for (; i < locatedBlocks.size() - 1; ++i) {
+      // NB: blockChecksumBytes.length may be much longer than actual bytes
+      // written into the DataOutput.
+      int checksumOffset = 0;
+      for (int i = 0; i < locatedBlocks.size(); ++i) {
         LocatedBlock block = locatedBlocks.get(i);
         // For everything except the last LocatedBlock, we expect getBlockSize()
         // to accurately reflect the number of file bytes digested in the block
-        // checksum.
-        sumBlockLengths += block.getBlockSize();
-        int blockCrc = CrcUtil.readInt(blockChecksumBytes, i * 4);
-
-        crcComposer.update(blockCrc, block.getBlockSize());
+        // checksum. For the last one, only the bytes within the requested
+        // length are digested.
+        long consumedLength = i < locatedBlocks.size() - 1
+            ? block.getBlockSize()
+            : Math.min(length - sumBlockLengths, block.getBlockSize());
+        if (consumedLength == 0) {
+          // An empty block adds no bytes to the file, and DataNodes return an
+          // empty block checksum for it, so there is no CRC to read.
+          LOG.debug("Skipped empty block index {}", i);
+          continue;
+        }
+        int blockCrc = CrcUtil.readInt(blockChecksumBytes, checksumOffset);
+        checksumOffset += Integer.BYTES;
+        sumBlockLengths += consumedLength;
+        crcComposer.update(blockCrc, consumedLength);
         LOG.debug(
             "Added blockCrc 0x{} for block index {} of size {}",
-            Integer.toString(blockCrc, 16), i, block.getBlockSize());
+            Integer.toString(blockCrc, 16), i, consumedLength);
       }
-      LocatedBlock nextBlock = locatedBlocks.get(i);
-      long consumedLastBlockLength = Math.min(length - sumBlockLengths, nextBlock.getBlockSize());
-      // NB: blockChecksumBytes.length may be much longer than actual bytes
-      // written into the DataOutput.
-      int lastBlockCrc = CrcUtil.readInt(
-          blockChecksumBytes, 4 * (locatedBlocks.size() - 1));
-      crcComposer.update(lastBlockCrc, consumedLastBlockLength);
-      LOG.debug(
-          "Added lastBlockCrc 0x{} for block index {} of size {}",
-          Integer.toString(lastBlockCrc, 16),
-          locatedBlocks.size() - 1,
-          consumedLastBlockLength);
 
+      if (sumBlockLengths == 0) {
+        // Every block is empty, e.g. a zero-length file whose writer died
+        // after allocating a block. Treat it like a file without blocks.
+        return makeEmptyFileChecksum();
+      }
       int compositeCrc = CrcUtil.readInt(crcComposer.digest(), 0);
       return new CompositeCrcFileChecksum(
           compositeCrc, getCrcType(), bytesPerCRC);
@@ -453,7 +466,9 @@ final class FileChecksumHelper {
         }
         byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
         if (LOG.isDebugEnabled()) {
-          blockChecksumForDebug = CrcUtil.toSingleCrcString(crcBytes);
+          // An empty block has an empty block checksum.
+          blockChecksumForDebug = crcBytes.length == 0
+              ? "empty" : CrcUtil.toSingleCrcString(crcBytes);
         }
         getBlockChecksumBuf().write(crcBytes);
         break;
