@@ -82,6 +82,14 @@ public final class FedBalanceOptions {
           + " used. If the trash is disabled in the server side, the default"
           + " trash interval 60 minutes is used.");
 
+  /**
+   * Run the optional FedBalance verification phase.
+   */
+  public final static Option VERIFY =
+      new Option("verify", false,
+          "Run the optional FedBalance verification phase after the final "
+              + "DistCp succeeds.");
+
   public final static Options CLI_OPTIONS = new Options();
 
   static {
@@ -90,5 +98,6 @@ public final class FedBalanceOptions {
     CLI_OPTIONS.addOption(BANDWIDTH);
     CLI_OPTIONS.addOption(DELAY_DURATION);
     CLI_OPTIONS.addOption(TRASH);
+    CLI_OPTIONS.addOption(VERIFY);
   }
 }
