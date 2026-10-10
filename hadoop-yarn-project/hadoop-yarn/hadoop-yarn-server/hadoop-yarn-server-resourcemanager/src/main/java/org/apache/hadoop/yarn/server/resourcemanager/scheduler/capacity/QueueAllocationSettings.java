@@ -45,12 +45,6 @@ public class QueueAllocationSettings {
     maximumAllocation = Resources.clone(
         parent == null ? clusterMax : parent.getMaximumAllocation());
 
-    String errMsg =
-        "Queue maximum allocation cannot be larger than the cluster setting"
-            + " for queue " + queuePath
-            + " max allocation per queue: %s"
-            + " cluster setting: " + clusterMax;
-
     if (queueMax == Resources.none()) {
       // Handle backward compatibility
       long queueMemory = configuration.getQueueMaximumAllocationMb(queuePath);
@@ -63,19 +57,22 @@ public class QueueAllocationSettings {
         maximumAllocation.setVirtualCores(queueVcores);
       }
 
-      if ((queueMemory != UNDEFINED && queueMemory > clusterMax.getMemorySize()
-          || (queueVcores != UNDEFINED
-          && queueVcores > clusterMax.getVirtualCores()))) {
-        throw new IllegalArgumentException(
-            String.format(errMsg, maximumAllocation));
+      String error = QueueAllocationChecks.checkLegacyQueueMaximumAllocation(
+          new QueueAllocationChecks.LegacyMaximumAllocationInput(
+              String.valueOf(queuePath), queueMemory, queueVcores, clusterMax,
+              maximumAllocation));
+      if (error != null) {
+        throw new IllegalArgumentException(error);
       }
     } else {
       // Queue level maximum-allocation can't be larger than cluster setting
+      String error = QueueAllocationChecks.checkQueueMaximumAllocation(
+          new QueueAllocationChecks.MaximumAllocationInput(
+              String.valueOf(queuePath), queueMax, clusterMax));
+      if (error != null) {
+        throw new IllegalArgumentException(error);
+      }
       for (ResourceInformation ri : queueMax.getResources()) {
-        if (ri.compareTo(clusterMax.getResourceInformation(ri.getName())) > 0) {
-          throw new IllegalArgumentException(String.format(errMsg, queueMax));
-        }
-
         maximumAllocation.setResourceInformation(ri.getName(), ri);
       }
     }

@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCrea
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueLabelChecks;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueManagementChange;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.util.Clock;
@@ -279,17 +280,12 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     leafQueueTemplateCapacities = leafQueueTemplate.getQueueCapacities();
 
     Set<String> parentQueueLabels = parentQueue.getNodeLabelsForQueue();
-    for (String nodeLabel : leafQueueTemplateCapacities
-        .getExistingNodeLabels()) {
-
-      if (!parentQueueLabels.contains(nodeLabel)) {
-        LOG.error("Invalid node label " + nodeLabel
-            + " on configured leaf template on parent" + " queue " + parentQueue
-            .getQueuePath());
-        throw new IOException("Invalid node label " + nodeLabel
-            + " on configured leaf template on parent" + " queue " + parentQueue
-            .getQueuePath());
-      }
+    String templateLabelsError = QueueLabelChecks.checkLeafQueueTemplateLabels(
+        parentQueue.getQueuePath(), leafQueueTemplateCapacities.getExistingNodeLabels(),
+        parentQueueLabels);
+    if (templateLabelsError != null) {
+      LOG.error(templateLabelsError);
+      throw new IOException(templateLabelsError);
     }
 
     leafQueueTemplateNodeLabels =
