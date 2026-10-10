@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
+import org.apache.commons.io.serialization.ValidatingObjectInputStream;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.server.resourcemanager.DBManager;
 import org.slf4j.Logger;
@@ -40,11 +41,10 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -239,8 +239,10 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
       return new LinkedList<>();
     }
 
-    try (ObjectInput input = new ObjectInputStream(
+    try (ValidatingObjectInputStream input = new ValidatingObjectInputStream(
         new ByteArrayInputStream(mutations))) {
+      input.accept(LinkedList.class, LogMutation.class, HashMap.class,
+          String.class);
       return (LinkedList<LogMutation>) input.readObject();
     } catch (ClassNotFoundException e) {
       throw new IOException(e);
