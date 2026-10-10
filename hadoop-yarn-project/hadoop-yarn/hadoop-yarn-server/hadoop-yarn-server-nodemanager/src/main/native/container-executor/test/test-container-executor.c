@@ -1439,6 +1439,51 @@ void test_is_empty() {
   }
 }
 
+static int create_mock_jstack(const char *path) {
+  FILE *file = fopen(path, "w");
+  if (file == NULL) {
+    return -1;
+  }
+  fprintf(file, "#!/bin/sh\necho mock-jstack\nexit 0\n");
+  fclose(file);
+  return chmod(path, 0755);
+}
+
+void test_run_jstack_as_user() {
+  char jstack_path[PATH_MAX];
+  char pid_buf[32];
+  pid_t child;
+  int status = 0;
+
+  printf("\nTesting run_jstack_as_user\n");
+  snprintf(jstack_path, sizeof(jstack_path), "%s/jstack", TEST_ROOT);
+  if (create_mock_jstack(jstack_path) != 0) {
+    printf("FAIL: could not create mock jstack at %s\n", jstack_path);
+    exit(1);
+  }
+  snprintf(pid_buf, sizeof(pid_buf), "%d", getpid());
+
+  child = fork();
+  if (child == -1) {
+    printf("FAIL: failed to fork for run_jstack_as_user test - %s\n",
+        strerror(errno));
+    exit(1);
+  }
+  if (child == 0) {
+    _exit(run_jstack_as_user(username, pid_buf, jstack_path));
+  }
+  if (waitpid(child, &status, 0) <= 0) {
+    printf("FAIL: failed waiting for run_jstack_as_user child - %s\n",
+        strerror(errno));
+    exit(1);
+  }
+  if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+    printf("FAIL: run_jstack_as_user child exited with status %d\n",
+        WIFEXITED(status) ? WEXITSTATUS(status) : -1);
+    exit(1);
+  }
+}
+
 #define TCE_FAKE_CGROOT TEST_ROOT "/cgroup_root"
 #define TCE_NUM_CG_CONTROLLERS 6
 extern int clean_docker_cgroups_internal(const char *mount_table,
@@ -1860,6 +1905,7 @@ int main(int argc, char **argv) {
 
   test_trim_function();
   test_concatenate();
+  test_run_jstack_as_user();
   printf("\nFinished tests\n");
 
   printf("\nAttempting to clean up from the run\n");
