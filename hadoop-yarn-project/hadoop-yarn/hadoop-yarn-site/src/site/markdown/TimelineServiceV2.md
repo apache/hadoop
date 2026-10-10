@@ -387,6 +387,21 @@ If the above is not configured, then it defaults to the version set in `yarn.tim
 
 
 #### Running Timeline Service v.2
+
+Container entities include custom allocations such as `yarn.io/gpu` in the
+`YARN_CONTAINER_ALLOCATED_RESOURCES` info field. Each resource name maps to a
+`value` and `units`; the memory and vcore fields remain unchanged. Both the
+ResourceManager and NodeManager publish this information when container event
+publishing is enabled. The field is absent when no nonzero custom resource
+allocations exist.
+
+Configure standalone history clients with the same
+[resource types](./ResourceModel.html) as the ResourceManager, using
+`resource-types.xml`, to include these allocations in container reports.
+Values are converted to the configured units. Unknown types are skipped with
+a debug log and remain available in raw timeline entities. Older entities remain
+readable, but missing custom allocations cannot be recovered retroactively.
+
 Restart the resource manager as well as the node managers to pick up the new configuration. The
 collectors start within the resource manager and the node managers in an embedded manner.
 
