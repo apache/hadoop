@@ -42,6 +42,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
@@ -65,7 +66,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *   <li>{@code cs.bench.sizes}: requested queue counts, default
  *   {@code 10,100,1000,5000};</li>
  *   <li>{@code cs.bench.warmups} (default 2) and {@code cs.bench.iterations}
- *   (default 5) per operation; the median of the iterations is reported;</li>
+ *   (default 5, at least 1) per operation; the median of the iterations is
+ *   reported;</li>
  *   <li>{@code cs.bench.ops}: subset of {@code scheduler-load},
  *   {@code refresh} and {@code validate}, default all;</li>
  *   <li>{@code cs.bench.validators}: implementations measured by the
@@ -86,7 +88,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * reinitializes the running scheduler with the unchanged configuration (what
  * {@code AdminService.refreshQueues} does after loading the file), and
  * {@code validate} validates a proposal that moves one percent of capacity
- * between two sibling leaves.</p>
+ * between two sibling leaves ({@code ALL_ABSOLUTE} cannot shift percentages,
+ * so there the proposal changes maximum-applications on one leaf).</p>
  */
 public class TestCapacitySchedulerConfigBenchmark {
 
@@ -123,6 +126,8 @@ public class TestCapacitySchedulerConfigBenchmark {
   @Test
   public void testConfigurationOperations() throws Exception {
     assumeTrue(Boolean.getBoolean("RunCapacitySchedulerConfigBenchmark"));
+    assertTrue(iterations >= 1, "cs.bench.iterations must be at least 1");
+    assertTrue(warmups >= 0, "cs.bench.warmups must not be negative");
     for (String size : System.getProperty("cs.bench.sizes", "10,100,1000,5000")
         .split(",")) {
       runForSize(Integer.parseInt(size.trim()));
@@ -206,6 +211,9 @@ public class TestCapacitySchedulerConfigBenchmark {
     }
     double[] sorted = samples.clone();
     Arrays.sort(sorted);
+    int mid = iterations / 2;
+    double median = (iterations % 2 == 1) ? sorted[mid]
+        : (sorted[mid - 1] + sorted[mid]) / 2;
     List<String> all = new ArrayList<>();
     for (double sample : samples) {
       all.add(String.format(Locale.ROOT, "%.1f", sample));
@@ -214,7 +222,7 @@ public class TestCapacitySchedulerConfigBenchmark {
         "BENCH fork=%s requested=%d queues=%d op=%s%s warmups=%d n=%d "
             + "median_ms=%.1f all_ms=%s",
         fork, requested, queues, op, variant == null ? "" : "-" + variant,
-        warmups, iterations, sorted[(iterations - 1) / 2], String.join(",", all));
+        warmups, iterations, median, String.join(",", all));
     System.out.println(line);
     String out = System.getProperty("cs.bench.out");
     if (out != null) {

@@ -29,8 +29,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -87,6 +89,41 @@ public class TestCSConfigBenchmarkGenerator {
     cs.reinitialize(mutated, rm.getRMContext());
     assertEquals(gen.getQueueCount() + 1,
         cs.getCapacitySchedulerQueueManager().getQueues().size());
+  }
+
+  @Test
+  public void testAqcV2ParentsCanCreateQueues() throws Exception {
+    // 60 leaves p1 with a single sub-parent, 120 gives p1 all five.
+    for (int size : new int[]{60, 120}) {
+      CSConfigBenchmarkGenerator.GeneratedConfig gen =
+          CSConfigBenchmarkGenerator.generate(size);
+      YarnConfiguration conf = NodeAttributeTestUtils.getRandomDirConf(gen.getConf());
+      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+          ResourceScheduler.class);
+      rm = new MockRM(conf);
+      rm.start();
+
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+      for (String parent : gen.getAqcV2Parents()) {
+        QueuePath dynamic = new QueuePath(parent + ".dyn");
+        cs.getCapacitySchedulerQueueManager().createQueue(dynamic);
+        assertNotNull(cs.getQueue(dynamic.getFullPath()),
+            "dynamic queue not created under " + parent);
+      }
+      if (size == 120) {
+        assertFalse(gen.getAqcV2Parents().isEmpty(),
+            "a full weight subtree should carry an AQC v2 template");
+      }
+      rm.stop();
+      rm = null;
+      QueueMetrics.clearQueueMetrics();
+    }
+  }
+
+  @Test
+  public void testNonPositiveQueueCountRejected() {
+    assertThrows(IllegalArgumentException.class,
+        () -> CSConfigBenchmarkGenerator.generate(0));
   }
 
   @Test

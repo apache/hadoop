@@ -701,7 +701,8 @@ public class TestAbsoluteResourceConfiguration {
       rm.start();
       rm.registerNode("127.0.0.1:1234", 100 * GB, 100);
       CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-      // 120 configured vcores exceed the cluster, so both queues are scaled down.
+      // 120 configured vcores exceed the cluster, so each queue gets half of
+      // the cluster in every resource, memory included.
       for (QueuePath queue : new QueuePath[]{QUEUEA_FULL, QUEUEB_FULL}) {
         assertEquals(Resource.newInstance(50 * GB, 50), cs.getQueue(queue.getFullPath())
             .getQueueResourceQuotas().getEffectiveMinResource());

@@ -39,7 +39,8 @@ import static org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSe
  * <pre>
  *   root
  *     p0 (pct children, node label, one legacy managed parent leaf)
- *     p1 (weight children, AQC v2 template on sub-parent s0)
+ *     p1 (weight children, AQC v2 template on sub-parent s0 when its
+ *         children use weights)
  *     p2 (pct children, unlabeled)
  *     p3 (weight children)
  *     ...
@@ -78,16 +79,18 @@ public final class CSConfigBenchmarkGenerator {
     private final String mutationLeafA;
     private final String mutationLeafB;
     private final List<String> labels;
+    private final List<String> aqcV2Parents;
 
     private GeneratedConfig(CapacitySchedulerConfiguration conf, int queueCount,
         List<String> leafPaths, String mutationLeafA, String mutationLeafB,
-        List<String> labels) {
+        List<String> labels, List<String> aqcV2Parents) {
       this.conf = conf;
       this.queueCount = queueCount;
       this.leafPaths = leafPaths;
       this.mutationLeafA = mutationLeafA;
       this.mutationLeafB = mutationLeafB;
       this.labels = labels;
+      this.aqcV2Parents = aqcV2Parents;
     }
 
     public CapacitySchedulerConfiguration getConf() {
@@ -114,6 +117,11 @@ public final class CSConfigBenchmarkGenerator {
 
     public List<String> getLabels() {
       return Collections.unmodifiableList(labels);
+    }
+
+    /** Parents that carry an auto-queue-creation-v2 template. */
+    public List<String> getAqcV2Parents() {
+      return Collections.unmodifiableList(aqcV2Parents);
     }
   }
 
@@ -150,6 +158,10 @@ public final class CSConfigBenchmarkGenerator {
   }
 
   public static GeneratedConfig generate(int targetQueueCount, CapacityMode mode) {
+    if (targetQueueCount <= 0) {
+      throw new IllegalArgumentException(
+          "targetQueueCount must be positive, got " + targetQueueCount);
+    }
     List<Node> tops = buildForest(targetQueueCount);
     CapacitySchedulerConfiguration conf =
         new CapacitySchedulerConfiguration(new Configuration(false), false);
@@ -158,10 +170,11 @@ public final class CSConfigBenchmarkGenerator {
     QueuePath rootPath = new QueuePath(CapacitySchedulerConfiguration.ROOT);
     conf.setQueues(rootPath, names(tops));
 
+    List<String> aqcV2Parents = new ArrayList<>();
     if (mode == CapacityMode.ALL_ABSOLUTE) {
       emitAbsolute(conf, rootPath, tops);
     } else {
-      emitMixed(conf, tops);
+      emitMixed(conf, tops, aqcV2Parents);
     }
 
     List<String> leafPaths = new ArrayList<>();
@@ -182,13 +195,16 @@ public final class CSConfigBenchmarkGenerator {
       }
     }
     return new GeneratedConfig(conf, count, leafPaths, mutationPair[0],
-        mutationPair[1], labels);
+        mutationPair[1], labels, aqcV2Parents);
   }
 
   /**
-   * Returns a copy of {@code base} with a valid capacity change applied: one
-   * percent is moved from mutation leaf B to mutation leaf A (and likewise for
-   * their per-label capacities), so per-parent sums stay at 100.
+   * Returns a copy of {@code base} with a valid change applied. With
+   * percentage capacities one percent is moved from mutation leaf B to
+   * mutation leaf A (and likewise for their per-label capacities), so
+   * per-parent sums stay at 100. Absolute capacities cannot be shifted that
+   * way, so in {@link CapacityMode#ALL_ABSOLUTE} the change sets
+   * maximum-applications on mutation leaf A instead.
    */
   public static Configuration createMutatedCopy(Configuration base,
       GeneratedConfig gen) {
@@ -218,7 +234,7 @@ public final class CSConfigBenchmarkGenerator {
       conf.set(keyA, String.valueOf(Float.parseFloat(a) + 1.0f));
       conf.set(keyB, String.valueOf(Float.parseFloat(b) - 1.0f));
     } catch (NumberFormatException e) {
-      // Absolute/weight profiles mutate a real queue limit, never a no-op.
+      // Absolute capacities mutate a real queue limit, never a no-op.
       conf.set(CS_PREFIX + leafA + ".maximum-applications", "2345");
     }
   }
@@ -291,7 +307,8 @@ public final class CSConfigBenchmarkGenerator {
   // Mixed percentage/weight emission
   // ---------------------------------------------------------------------
 
-  private static void emitMixed(CapacitySchedulerConfiguration conf, List<Node> tops) {
+  private static void emitMixed(CapacitySchedulerConfiguration conf, List<Node> tops,
+      List<String> aqcV2Parents) {
     float[] topCaps = splitPercentages(tops.size());
     Map<String, List<Integer>> labelMembers = new LinkedHashMap<>();
     for (int i = 0; i < tops.size(); i++) {
@@ -326,7 +343,7 @@ public final class CSConfigBenchmarkGenerator {
       if (markAqcV2) {
         aqcV2Marked++;
       }
-      emitChildren(conf, top, weightMode, label, true, markAqcV2);
+      emitChildren(conf, top, weightMode, label, true, markAqcV2, aqcV2Parents);
     }
   }
 
@@ -335,7 +352,8 @@ public final class CSConfigBenchmarkGenerator {
    * {@code parent}, then recurses one level into sub-parents.
    */
   private static void emitChildren(CapacitySchedulerConfiguration conf, Node parent,
-      boolean weightMode, String label, boolean topLevel, boolean markAqcV2) {
+      boolean weightMode, String label, boolean topLevel, boolean markAqcV2,
+      List<String> aqcV2Parents) {
     if (parent.children.isEmpty()) {
       return;
     }
@@ -362,10 +380,13 @@ public final class CSConfigBenchmarkGenerator {
       if (child.managedParent) {
         emitManagedParent(conf, childPath, label);
       } else if (!child.children.isEmpty()) {
-        if (markAqcV2 && c == DIRECT_LEAVES) {
+        // AQC v2 under a legacy parent needs weight children to create queues.
+        if (markAqcV2 && c == DIRECT_LEAVES && childrenWeightMode) {
           emitAqcV2Template(conf, childPath);
+          aqcV2Parents.add(child.path);
         }
-        emitChildren(conf, child, childrenWeightMode, label, false, false);
+        emitChildren(conf, child, childrenWeightMode, label, false, false,
+            aqcV2Parents);
       }
     }
   }
