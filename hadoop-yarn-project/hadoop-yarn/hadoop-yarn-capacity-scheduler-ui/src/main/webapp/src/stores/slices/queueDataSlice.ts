@@ -23,10 +23,59 @@
 
 import type { StateCreator } from 'zustand';
 import { SPECIAL_VALUES } from '~/types';
-import type { QueueInfo, CapacitySchedulerInfo, QueueCapacitiesByPartition } from '~/types';
+import type {
+  QueueInfo,
+  CapacitySchedulerInfo,
+  QueueCapacitiesByPartition,
+  QueueCapacityVectorInfo,
+} from '~/types';
 import { buildGlobalPropertyKey, buildPropertyKey } from '~/utils/propertyUtils';
 import { globalPropertyDefinitions } from '~/config/properties/global-properties';
 import type { QueueDataSlice, SchedulerStore } from './types';
+
+type CapacityProperty = {
+  partitionName: string;
+  target: 'capacity' | 'maximum-capacity';
+};
+
+const parseCapacityProperty = (property: string): CapacityProperty | null => {
+  if (property === 'capacity' || property === 'maximum-capacity') {
+    return { partitionName: '', target: property };
+  }
+
+  const labelProperty = property.match(
+    /^accessible-node-labels\.(.+)\.(capacity|maximum-capacity)$/,
+  );
+  if (!labelProperty) {
+    return null;
+  }
+
+  return {
+    partitionName: labelProperty[1],
+    target: labelProperty[2] as CapacityProperty['target'],
+  };
+};
+
+export const getCapacityVectorValue = (vectorInfo?: QueueCapacityVectorInfo): string => {
+  const configuredVector = vectorInfo?.configuredCapacityVector?.trim();
+  if (!configuredVector || configuredVector === '[]') {
+    return '';
+  }
+
+  const entries = vectorInfo?.capacityVectorEntries ?? [];
+  const firstValue = entries[0]?.resourceValue;
+  const isUniform = firstValue && entries.every((entry) => entry.resourceValue === firstValue);
+
+  if (isUniform && firstValue.endsWith('%')) {
+    return firstValue.slice(0, -1);
+  }
+
+  if (isUniform && firstValue.endsWith('w')) {
+    return firstValue;
+  }
+
+  return configuredVector;
+};
 
 export const createQueueDataSlice: StateCreator<
   SchedulerStore,
@@ -36,7 +85,7 @@ export const createQueueDataSlice: StateCreator<
 > = (_set, get) => ({
   getQueuePropertyValue: (queuePath, property) => {
     const propertyKey = buildPropertyKey(queuePath, property);
-    const configValue = get().configData.get(propertyKey) || '';
+    const configValue = get().configData.get(propertyKey);
 
     // Check if there's a staged change for this property
     const stagedChange = get().stagedChanges.find(
@@ -47,7 +96,28 @@ export const createQueueDataSlice: StateCreator<
       return { value: stagedChange.newValue, isStaged: true };
     }
 
-    return { value: configValue, isStaged: false };
+    if (configValue) {
+      return { value: configValue, isStaged: false };
+    }
+
+    const capacityProperty = parseCapacityProperty(property);
+    if (capacityProperty) {
+      const partition = get().getQueuePartitionCapacities(
+        queuePath,
+        capacityProperty.partitionName,
+      );
+      const vectorInfo =
+        capacityProperty.target === 'capacity'
+          ? partition?.queueCapacityVectorInfo
+          : partition?.maximumQueueCapacityVectorInfo;
+      const vectorValue = getCapacityVectorValue(vectorInfo);
+
+      if (vectorValue) {
+        return { value: vectorValue, isStaged: false };
+      }
+    }
+
+    return { value: configValue ?? '', isStaged: false };
   },
 
   getGlobalPropertyValue: (property) => {

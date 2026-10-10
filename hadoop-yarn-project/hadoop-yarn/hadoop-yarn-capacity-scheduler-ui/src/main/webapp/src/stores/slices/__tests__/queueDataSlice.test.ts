@@ -20,7 +20,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createSchedulerStore } from '~/stores/schedulerStore';
 import { YarnApiClient } from '~/lib/api/YarnApiClient';
-import type { QueueInfo, SchedulerInfo } from '~/types';
+import { getCapacityVectorValue } from '~/stores/slices/queueDataSlice';
+import type { CapacitySchedulerInfo, QueueCapacityVectorInfo, QueueCapacitiesByPartition, QueueInfo, SchedulerInfo } from '~/types';
 import { SPECIAL_VALUES, CONFIG_PREFIXES } from '~/types';
 
 /**
@@ -65,6 +66,60 @@ describe('queueDataSlice', () => {
     const mockApiClient = new YarnApiClient('http://test.com', {});
     return createSchedulerStore(mockApiClient);
   };
+
+  const createAutoCreatedQueueSchedulerData = (
+    partitionCapacity: QueueCapacitiesByPartition,
+  ): CapacitySchedulerInfo => ({
+    ...createMockSchedulerData(),
+    type: 'capacityScheduler',
+    queues: {
+      queue: [
+        {
+          queueName: 'default',
+          queuePath: 'root.default',
+          queueType: 'parent',
+          capacity: 100,
+          usedCapacity: 0,
+          maxCapacity: 100,
+          absoluteCapacity: 100,
+          absoluteMaxCapacity: 100,
+          absoluteUsedCapacity: 0,
+          numApplications: 0,
+          numActiveApplications: 0,
+          numPendingApplications: 0,
+          state: 'RUNNING',
+          resourcesUsed: { memory: 0, vCores: 0 },
+          creationMethod: 'static',
+          queues: {
+            queue: [
+              {
+                queueName: 'user1',
+                queuePath: 'root.default.user1',
+                queueType: 'leaf',
+                capacity: partitionCapacity.capacity,
+                usedCapacity: partitionCapacity.usedCapacity,
+                maxCapacity: partitionCapacity.maxCapacity ?? 100,
+                absoluteCapacity: partitionCapacity.absoluteCapacity,
+                absoluteMaxCapacity: partitionCapacity.absoluteMaxCapacity,
+                absoluteUsedCapacity: partitionCapacity.absoluteUsedCapacity,
+                numApplications: 0,
+                numActiveApplications: 0,
+                numPendingApplications: 0,
+                state: 'RUNNING',
+                resourcesUsed: { memory: 0, vCores: 0 },
+                creationMethod: 'dynamicLegacy',
+                capacities: {
+                  queueCapacitiesByPartition: [
+                    { ...partitionCapacity, partitionName: partitionCapacity.partitionName ?? '' },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  });
 
   const createMockSchedulerData = (): SchedulerInfo => ({
     type: 'capacityScheduler',
@@ -286,6 +341,226 @@ describe('queueDataSlice', () => {
 
       expect(result.value).toBe('');
       expect(result.isStaged).toBe(true);
+    });
+
+    it('should resolve capacity from scheduler REST vector when queue capacity is missing from scheduler-conf', () => {
+      const store = createTestStore();
+      const schedulerData = createAutoCreatedQueueSchedulerData({
+        partitionName: '',
+        capacity: 6.25,
+        usedCapacity: 0,
+        maxCapacity: 100,
+        absoluteCapacity: 6.25,
+        absoluteMaxCapacity: 100,
+        absoluteUsedCapacity: 0,
+        queueCapacityVectorInfo: {
+          configuredCapacityVector: '[memory-mb=2048.0,vcores=2.0]',
+          capacityVectorEntries: [
+            { resourceName: 'memory-mb', resourceValue: '2048.0' },
+            { resourceName: 'vcores', resourceValue: '2.0' },
+          ],
+        },
+      });
+
+      store.setState({
+        configData: new Map(),
+        stagedChanges: [],
+        schedulerData,
+      });
+
+      const result = store.getState().getQueuePropertyValue('root.default.user1', 'capacity');
+
+      expect(result.value).toBe('[memory-mb=2048.0,vcores=2.0]');
+      expect(result.isStaged).toBe(false);
+    });
+
+    it('should resolve maximum-capacity from scheduler REST max vector when queue maximum-capacity is missing from scheduler-conf', () => {
+      const store = createTestStore();
+      const schedulerData = createAutoCreatedQueueSchedulerData({
+        partitionName: '',
+        capacity: 50,
+        usedCapacity: 0,
+        maxCapacity: 100,
+        absoluteCapacity: 50,
+        absoluteMaxCapacity: 100,
+        absoluteUsedCapacity: 0,
+        maximumQueueCapacityVectorInfo: {
+          configuredCapacityVector: '[memory-mb=4096.0,vcores=4.0w]',
+          capacityVectorEntries: [
+            { resourceName: 'memory-mb', resourceValue: '4096.0' },
+            { resourceName: 'vcores', resourceValue: '4.0w' },
+          ],
+        },
+      });
+
+      store.setState({
+        configData: new Map(),
+        stagedChanges: [],
+        schedulerData,
+      });
+
+      const result = store
+        .getState()
+        .getQueuePropertyValue('root.default.user1', 'maximum-capacity');
+
+      expect(result.value).toBe('[memory-mb=4096.0,vcores=4.0w]');
+      expect(result.isStaged).toBe(false);
+    });
+
+    it('should prefer config store over scheduler REST vectors', () => {
+      const store = createTestStore();
+      const baseSchedulerData = createMockSchedulerData();
+      const schedulerData: CapacitySchedulerInfo = {
+        ...baseSchedulerData,
+        type: 'capacityScheduler',
+        queues: {
+          queue: [
+            {
+              ...(baseSchedulerData.queues!.queue as QueueInfo[])[0],
+              queuePath: 'root.default',
+              capacities: {
+                queueCapacitiesByPartition: [
+                  {
+                    partitionName: '',
+                    capacity: 40,
+                    usedCapacity: 0,
+                    maxCapacity: 100,
+                    absoluteCapacity: 40,
+                    absoluteMaxCapacity: 100,
+                    absoluteUsedCapacity: 0,
+                    queueCapacityVectorInfo: {
+                      configuredCapacityVector: '[memory-mb=2048.0,vcores=2.0]',
+                      capacityVectorEntries: [
+                        { resourceName: 'memory-mb', resourceValue: '2048.0' },
+                        { resourceName: 'vcores', resourceValue: '2.0' },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      };
+
+      store.setState({
+        configData: new Map([['yarn.scheduler.capacity.root.default.capacity', '40']]),
+        stagedChanges: [],
+        schedulerData,
+      });
+
+      const result = store.getState().getQueuePropertyValue('root.default', 'capacity');
+
+      expect(result.value).toBe('40');
+      expect(result.isStaged).toBe(false);
+    });
+
+    it('should simplify uniform percentage vectors to a scalar value', () => {
+      const store = createTestStore();
+      const schedulerData = createAutoCreatedQueueSchedulerData({
+        partitionName: '',
+        capacity: 50,
+        usedCapacity: 0,
+        maxCapacity: 100,
+        absoluteCapacity: 50,
+        absoluteMaxCapacity: 100,
+        absoluteUsedCapacity: 0,
+        queueCapacityVectorInfo: {
+          configuredCapacityVector: '[memory-mb=50.0%,vcores=50.0%]',
+          capacityVectorEntries: [
+            { resourceName: 'memory-mb', resourceValue: '50.0%' },
+            { resourceName: 'vcores', resourceValue: '50.0%' },
+          ],
+        },
+      });
+
+      store.setState({
+        configData: new Map(),
+        stagedChanges: [],
+        schedulerData,
+      });
+
+      const result = store.getState().getQueuePropertyValue('root.default.user1', 'capacity');
+
+      expect(result.value).toBe('50.0');
+      expect(result.isStaged).toBe(false);
+    });
+
+    it('should prefer staged changes over scheduler REST vectors', () => {
+      const store = createTestStore();
+      const schedulerData = createAutoCreatedQueueSchedulerData({
+        partitionName: '',
+        capacity: 6.25,
+        usedCapacity: 0,
+        maxCapacity: 100,
+        absoluteCapacity: 6.25,
+        absoluteMaxCapacity: 100,
+        absoluteUsedCapacity: 0,
+        queueCapacityVectorInfo: {
+          configuredCapacityVector: '[memory-mb=2048.0,vcores=2.0]',
+          capacityVectorEntries: [
+            { resourceName: 'memory-mb', resourceValue: '2048.0' },
+            { resourceName: 'vcores', resourceValue: '2.0' },
+          ],
+        },
+      });
+
+      store.setState({
+        configData: new Map(),
+        stagedChanges: [
+          {
+            id: 'change-1',
+            type: 'update',
+            queuePath: 'root.default.user1',
+            property: 'capacity',
+            newValue: '75',
+            oldValue: '',
+            timestamp: Date.now(),
+          },
+        ],
+        schedulerData,
+      });
+
+      const result = store.getState().getQueuePropertyValue('root.default.user1', 'capacity');
+
+      expect(result.value).toBe('75');
+      expect(result.isStaged).toBe(true);
+    });
+  });
+
+  describe('getCapacityVectorValue', () => {
+    it('should return empty string for missing or empty vectors', () => {
+      expect(getCapacityVectorValue(undefined)).toBe('');
+      expect(
+        getCapacityVectorValue({
+          configuredCapacityVector: '[]',
+          capacityVectorEntries: [],
+        }),
+      ).toBe('');
+    });
+
+    it('should return the full vector for mixed absolute and weight entries', () => {
+      const vectorInfo: QueueCapacityVectorInfo = {
+        configuredCapacityVector: '[memory-mb=4096.0,vcores=4.0w]',
+        capacityVectorEntries: [
+          { resourceName: 'memory-mb', resourceValue: '4096.0' },
+          { resourceName: 'vcores', resourceValue: '4.0w' },
+        ],
+      };
+
+      expect(getCapacityVectorValue(vectorInfo)).toBe('[memory-mb=4096.0,vcores=4.0w]');
+    });
+
+    it('should simplify uniform weight vectors to a weight scalar', () => {
+      const vectorInfo: QueueCapacityVectorInfo = {
+        configuredCapacityVector: '[memory-mb=3.0w,vcores=3.0w]',
+        capacityVectorEntries: [
+          { resourceName: 'memory-mb', resourceValue: '3.0w' },
+          { resourceName: 'vcores', resourceValue: '3.0w' },
+        ],
+      };
+
+      expect(getCapacityVectorValue(vectorInfo)).toBe('3.0w');
     });
   });
 
