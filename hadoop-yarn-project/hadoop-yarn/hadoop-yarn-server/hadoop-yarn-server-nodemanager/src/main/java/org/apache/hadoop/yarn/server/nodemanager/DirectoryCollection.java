@@ -22,35 +22,38 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.List;
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
+import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskValidator;
 import org.apache.hadoop.util.DiskValidatorFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
@@ -70,6 +73,7 @@ public class DirectoryCollection {
   private boolean diskUtilizationThresholdEnabled;
   private boolean diskFreeSpaceThresholdEnabled;
   private boolean subAccessibilityValidationEnabled;
+  private int subAccessibilityValidationMaxDepth;
   /**
    * The enum defines disk failure type.
    */
@@ -259,6 +263,9 @@ public class DirectoryCollection {
     subAccessibilityValidationEnabled = conf.getBoolean(
         YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_ENABLED,
         YarnConfiguration.DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_ENABLED);
+    subAccessibilityValidationMaxDepth = conf.getInt(
+        YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH,
+        YarnConfiguration.DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH);
 
     localDirs = new ArrayList<>(Arrays.asList(dirs));
     errorDirs = new ArrayList<>();
@@ -593,23 +600,95 @@ public class DirectoryCollection {
     if (!subAccessibilityValidationEnabled) {
       return null;
     }
-    try (Stream<java.nio.file.Path> walk = Files.walk(dir.toPath())) {
-      List<File> subs = walk
-          .map(java.nio.file.Path::toFile)
-          .collect(Collectors.toList());
-      for (File sub : subs) {
-        if (sub.isDirectory()) {
-          DiskChecker.checkDir(sub);
-        } else if (!Files.isReadable(sub.toPath())) {
-          return new DiskErrorInformation(DiskErrorCause.OTHER, "Can not read " + sub);
-        } else {
-          LOG.debug("{} under {} is accessible", sub, dir);
-        }
-      }
+    LOG.debug("Start checking accessibility for: {}", dir);
+
+    try {
+      Files.walkFileTree(dir.toPath(), Collections.emptySet(),
+          subAccessibilityValidationMaxDepth, new SubAccessibilityVisitor());
     } catch (IOException | UncheckedIOException | SecurityException e) {
       return new DiskErrorInformation(DiskErrorCause.OTHER, e.getMessage());
     }
     return null;
+  }
+
+  /**
+   * Walks the content of an NM directories.
+   * It fails with an {@link IOException} if the NM user cannot access the entry.
+   * Entries must be readable, writable and executable.
+   * Symbolic links are neither followed nor checked.
+   * <p>
+   * Entries deleted during the walk are ignored, because
+   * localization and cleanup modify these directories concurrently.
+   */
+  @VisibleForTesting
+  static class SubAccessibilityVisitor
+      extends SimpleFileVisitor<java.nio.file.Path> {
+    private final String nmUser;
+
+    SubAccessibilityVisitor() {
+      this(System.getProperty("user.name"));
+    }
+
+    @VisibleForTesting
+    SubAccessibilityVisitor(String nmUser) {
+      this.nmUser = nmUser;
+    }
+
+    @Override
+    public FileVisitResult preVisitDirectory(java.nio.file.Path p,
+        BasicFileAttributes attrs) throws IOException {
+      if (!isOwnedByNmUser(p)) {
+        return FileVisitResult.SKIP_SUBTREE;
+      }
+      checkAccessible(p, true);
+      return FileVisitResult.CONTINUE;
+    }
+
+    @Override
+    public FileVisitResult postVisitDirectory(java.nio.file.Path path, IOException e)
+        throws IOException {
+      if (e == null || e instanceof NoSuchFileException) {
+        return FileVisitResult.CONTINUE;
+      }
+      throw e;
+    }
+
+    @Override
+    public FileVisitResult visitFile(java.nio.file.Path path, BasicFileAttributes attrs)
+        throws IOException {
+      if (!attrs.isSymbolicLink() && isOwnedByNmUser(path)) {
+        checkAccessible(path, attrs.isDirectory());
+      }
+      return FileVisitResult.CONTINUE;
+    }
+
+    @Override
+    public FileVisitResult visitFileFailed(java.nio.file.Path path, IOException e)
+            throws IOException {
+      if (e instanceof NoSuchFileException) {
+        return FileVisitResult.CONTINUE;
+      }
+      throw e;
+    }
+
+    private boolean isOwnedByNmUser(java.nio.file.Path path) throws IOException {
+      try {
+        return nmUser.equals(
+            Files.getOwner(path, LinkOption.NOFOLLOW_LINKS).getName());
+      } catch (NoSuchFileException e) {
+        return false;
+      }
+    }
+
+    private static void checkAccessible(java.nio.file.Path path, boolean isDir)
+        throws IOException {
+      boolean accessible = isDir
+          ? Files.isReadable(path) && Files.isWritable(path) && Files.isExecutable(path)
+          : Files.isReadable(path);
+      if (!accessible && !Files.notExists(path, LinkOption.NOFOLLOW_LINKS)) {
+        throw new IOException((isDir ? "Can not access " : "Can not read ") + path);
+      }
+    }
   }
 
   private void createDir(FileContext localFs, Path dir, FsPermission perm)
@@ -730,5 +809,10 @@ public class DirectoryCollection {
   @VisibleForTesting
   public void setSubAccessibilityValidationEnabled(boolean subAccessibilityValidationEnabled) {
     this.subAccessibilityValidationEnabled = subAccessibilityValidationEnabled;
+  }
+
+  @VisibleForTesting
+  void setSubAccessibilityValidationMaxDepth(int maxDepth) {
+    this.subAccessibilityValidationMaxDepth = maxDepth;
   }
 }
