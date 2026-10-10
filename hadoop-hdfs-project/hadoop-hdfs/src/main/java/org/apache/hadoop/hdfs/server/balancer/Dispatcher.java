@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.net.NetworkTopologyFactory;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -1121,7 +1122,7 @@ public class Dispatcher {
     this.includedNodes = includedNodes;
     this.movedBlocks = new MovedBlocks<StorageGroup>(movedWinWidth);
 
-    this.cluster = NetworkTopology.getInstance(conf);
+    this.cluster = NetworkTopologyFactory.create(conf);
 
     this.dispatchExecutor = dispatcherThreads == 0? null
         : Executors.newFixedThreadPool(dispatcherThreads);
@@ -1446,7 +1447,7 @@ public class Dispatcher {
 
   /** Reset all fields in order to prepare for the next iteration */
   void reset(Configuration conf) {
-    cluster = NetworkTopology.getInstance(conf);
+    cluster = NetworkTopologyFactory.create(conf);
     storageGroupMap.clear();
     sources.clear();
 
