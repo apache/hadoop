@@ -264,6 +264,8 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
       MockRM rm = new MockRM(conf);
     } catch (YarnRuntimeException e) {
       exception = true;
+      assertTrue(e.getMessage().startsWith("RM uses DefaultResourceCalculator which used only"
+          + " memory as resource-type but invalid resource-types specified"), e.getMessage());
     }
 
     assertTrue(exception, "Should have exception in CS");

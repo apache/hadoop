@@ -71,6 +71,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -266,6 +267,18 @@ public class TestCapacityScheduler {
       assertTrue(e.getMessage().startsWith("Invalid resource scheduler vcores"),
           "The thrown exception is not the expected one.");
     }
+  }
+
+  @Test
+  public void testInvalidConfigurationStoreClass() {
+    CapacityScheduler scheduler = new CapacityScheduler();
+    scheduler.setRMContext(resourceManager.getRMContext());
+    Configuration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS, "bogus");
+
+    ServiceStateException e = assertThrows(ServiceStateException.class,
+        () -> scheduler.init(conf));
+    assertEquals("Invalid configuration store class: bogus", e.getCause().getMessage());
   }
 
   @Test

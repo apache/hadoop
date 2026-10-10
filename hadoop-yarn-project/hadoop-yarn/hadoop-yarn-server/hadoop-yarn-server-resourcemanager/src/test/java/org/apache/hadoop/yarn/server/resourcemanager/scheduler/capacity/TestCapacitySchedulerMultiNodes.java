@@ -23,6 +23,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
@@ -56,6 +57,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -105,6 +107,25 @@ public class TestCapacitySchedulerMultiNodes {
         true);
     conf.setInt("yarn.scheduler.minimum-allocation-mb", 512);
     conf.setInt("yarn.scheduler.minimum-allocation-vcores", 1);
+  }
+
+  @Test
+  public void testUnknownQueueMultiNodeSortingPolicy() {
+    conf.set(QueuePrefixes.getQueuePrefix(DEFAULT) + "multi-node-sorting.policy", "nope");
+    YarnRuntimeException e = assertThrows(YarnRuntimeException.class,
+        () -> conf.getMultiNodesSortingAlgorithmPolicy(DEFAULT));
+    assertEquals("nope Class is not configured or not an instance of org.apache.hadoop.yarn."
+        + "server.resourcemanager.scheduler.placement.MultiNodeLookupPolicy", e.getMessage());
+  }
+
+  @Test
+  public void testNegativeMultiNodeSortingInterval() {
+    conf.setLong(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
+        + ".resource-based.sorting-interval.ms", -1);
+    YarnRuntimeException e = assertThrows(YarnRuntimeException.class,
+        () -> conf.getMultiNodePlacementPolicies());
+    assertEquals("resource-based multi-node policy is configured with invalid"
+        + " sorting-interval:-1", e.getMessage());
   }
 
   @Test

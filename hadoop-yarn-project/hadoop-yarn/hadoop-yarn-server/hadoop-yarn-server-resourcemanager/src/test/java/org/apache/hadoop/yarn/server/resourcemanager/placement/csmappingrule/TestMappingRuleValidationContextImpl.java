@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -96,6 +97,13 @@ public class TestMappingRuleValidationContextImpl {
     }
   }
 
+  void assertInvalidPath(MappingRuleValidationContext ctx, String path,
+      String expectedMessage) {
+    YarnException e = assertThrows(YarnException.class,
+        () -> ctx.validateQueuePath(path), "Path '" + path + "' should be INVALID");
+    assertEquals(expectedMessage, e.getMessage());
+  }
+
   @Test
   public void testManagedQueueValidation() {
     //Setting up queue manager and emulated queue hierarchy
@@ -126,8 +134,11 @@ public class TestMappingRuleValidationContextImpl {
     assertValidPath(ctx, "root.managed.%dynamic");
     assertValidPath(ctx, "managed.%dynamic");
 
-    assertInvalidPath(ctx, "root.invalid.%dynamic");
-    assertInvalidPath(ctx, "root.unmanaged.%dynamic");
+    assertInvalidPath(ctx, "root.invalid.%dynamic",
+        "No eligible parent found on path 'root.invalid.%dynamic'.");
+    assertInvalidPath(ctx, "root.unmanaged.%dynamic",
+        "Queue path 'root.unmanaged.%dynamic' is invalid because 'root.unmanaged' is a leaf "
+        + "queue, which can have no other queues under it.");
 
     assertValidPath(ctx, "root.unmanagedwithchild.%user");
     assertValidPath(ctx, "unmanagedwithchild.%user");
@@ -200,10 +211,15 @@ public class TestMappingRuleValidationContextImpl {
     assertValidPath(ctx, "unmanaged");
     assertInvalidPath(ctx, "root");
     assertInvalidPath(ctx, "managed");
-    assertInvalidPath(ctx, "root.managed");
-    assertInvalidPath(ctx, "fail");
+    assertInvalidPath(ctx, "root.managed",
+        "Target queue 'root.managed' but it's not a leaf queue.");
+    assertInvalidPath(ctx, "fail",
+        "Path root 'fail' does not exist. Path 'fail' is invalid");
+    assertInvalidPath(ctx, "root..unmanaged",
+        "Path segment cannot be empty 'root..unmanaged'.");
 
-    assertInvalidPath(ctx, "ambi");
+    assertInvalidPath(ctx, "ambi",
+        "Path root 'ambi' is ambiguous. Path 'ambi' is invalid");
     assertInvalidPath(ctx, "ambileaf");
     assertInvalidPath(ctx, "ambi.ambileaf");
     assertValidPath(ctx, "root.ambi.ambileaf");
@@ -211,11 +227,15 @@ public class TestMappingRuleValidationContextImpl {
     assertInvalidPath(ctx, "root.dynamic.static");
     assertValidPath(ctx, "root.dynamic.static.static");
     //Invalid because static is already created as a non-dynamic parent queue
-    assertInvalidPath(ctx, "root.dynamic.static.any");
+    assertInvalidPath(ctx, "root.dynamic.static.any",
+        "Mapping rule specified a parent queue 'root.dynamic.static', but it is not a dynamic "
+        + "parent queue, and no queue exists with name 'any' under it.");
     //Valid because 'any' is not created yet
     assertValidPath(ctx, "root.dynamic.any.thing");
     //Too deep, dynamic is the last dynamic parent
-    assertInvalidPath(ctx, "root.dynamic.any.thing.deep");
+    assertInvalidPath(ctx, "root.dynamic.any.thing.deep",
+        "Mapping rule specified a parent queue 'root.dynamic.any.thing', but it is not a "
+        + "dynamic parent queue, and no queue exists with name 'deep' under it.");
 
     assertValidPath(ctx, "root.managed.a");
     assertInvalidPath(ctx, "root.deep");
@@ -225,7 +245,9 @@ public class TestMappingRuleValidationContextImpl {
     assertValidPath(ctx, "deep.queue.path");
     assertInvalidPath(ctx, "ambi.very.deeepleaf");
     assertValidPath(ctx, "queue.path");
-    assertInvalidPath(ctx, "queue.invalidPath");
+    assertInvalidPath(ctx, "queue.invalidPath",
+        "Mapping rule specified a parent queue 'queue', but it is not a dynamic parent queue, "
+        + "and no queue exists with name 'invalidPath' under it.");
     assertValidPath(ctx, "path");
     assertValidPath(ctx, "root.deep.queue.path");
   }
