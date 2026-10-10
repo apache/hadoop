@@ -496,6 +496,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       sums.readVectored(checksumRanges, allocate, release);
       datas.readVectored(dataRanges, allocate, release);
       for(CombinedFileRange checksumRange: checksumRanges) {
+        List<CompletableFuture<ByteBuffer>> verifications = new ArrayList<>();
         for(FileRange dataRange: checksumRange.getUnderlying()) {
           // when we have both the ranges, validate the checksum
           CompletableFuture<ByteBuffer> result =
@@ -503,12 +504,18 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
                   (sumBuffer, dataBuffer) ->
                       checkBytes(sumBuffer, checksumRange.getOffset(),
                           dataBuffer, dataRange.getOffset(), bytesPerSum, file));
+          verifications.add(result);
           // Now, slice the read data range to the user's ranges
           for(FileRange original: ((CombinedFileRange) dataRange).getUnderlying()) {
             original.setData(result.thenApply(
                 (b) -> VectoredReadUtils.sliceTo(b, dataRange.getOffset(), original)));
           }
         }
+        // Release the checksum buffer once all verifications using it are complete.
+        // Without this, buffers allocated through the caller's allocator for checksum
+        // data are never released, since the caller has no reference to them.
+        CompletableFuture.allOf(verifications.toArray(new CompletableFuture[0]))
+            .thenRun(() -> release.accept(checksumRange.getData().join()));
       }
     }
 
