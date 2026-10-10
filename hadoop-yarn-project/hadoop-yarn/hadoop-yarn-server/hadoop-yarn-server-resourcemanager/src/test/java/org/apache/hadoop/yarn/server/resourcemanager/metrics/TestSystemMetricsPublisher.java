@@ -70,6 +70,8 @@ import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.MemoryTimelineStateStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.TimelineStateStore;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -131,6 +133,7 @@ public class TestSystemMetricsPublisher {
     if (timelineServer != null) {
       timelineServer.stop();
     }
+    ResourceUtils.resetResourceTypes(new YarnConfiguration());
   }
 
   @Test(timeout = 10000)
@@ -454,7 +457,11 @@ public class TestSystemMetricsPublisher {
     ContainerId containerId =
         ContainerId.newContainerId(ApplicationAttemptId.newInstance(
             ApplicationId.newInstance(0, 1), 1), 1);
+    YarnConfiguration resourceConf = new YarnConfiguration();
+    resourceConf.set(YarnConfiguration.RESOURCE_TYPES, "yarn.io/gpu");
+    ResourceUtils.resetResourceTypes(resourceConf);
     RMContainer container = createRMContainer(containerId);
+    container.getAllocatedResource().setResourceValue("yarn.io/gpu", 2);
     metricsPublisher.containerCreated(container, container.getCreationTime());
     metricsPublisher.containerFinished(container, container.getFinishTime());
     TimelineEntity entity = null;
@@ -492,6 +499,12 @@ public class TestSystemMetricsPublisher {
         container.getAllocatedResource().getVirtualCores(),
         entity.getOtherInfo().get(
             ContainerMetricsConstants.ALLOCATED_VCORE_INFO));
+    Map<?, ?> allocations = (Map<?, ?>) entity.getOtherInfo().get(
+        ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO);
+    Assert.assertEquals(2, ((Number) ((Map<?, ?>) allocations.get("yarn.io/gpu"))
+        .get("value")).longValue());
+    Assert.assertEquals(container.getAllocatedResource(),
+        TimelineUtils.getContainerResource(entity.getOtherInfo()));
     Assert.assertEquals(
         container.getAllocatedPriority().getPriority(),
         entity.getOtherInfo().get(
@@ -520,6 +533,24 @@ public class TestSystemMetricsPublisher {
       }
     }
     Assert.assertTrue(hasCreatedEvent && hasFinishedEvent);
+  }
+
+  @Test(timeout = 10000)
+  public void testPublishContainerWithoutCustomResources() throws Exception {
+    YarnConfiguration resourceConf = new YarnConfiguration();
+    resourceConf.set(YarnConfiguration.RESOURCE_TYPES, "yarn.io/gpu");
+    ResourceUtils.resetResourceTypes(resourceConf);
+    ContainerId containerId = ContainerId.newContainerId(
+        ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1), 1);
+    RMContainer container = createRMContainer(containerId);
+    metricsPublisher.containerCreated(container, container.getCreationTime());
+    TimelineEntity entity;
+    do {
+      entity = store.getEntity(containerId.toString(),
+          ContainerMetricsConstants.ENTITY_TYPE, EnumSet.allOf(Field.class));
+    } while (entity == null || entity.getEvents().isEmpty());
+    Assert.assertFalse(entity.getOtherInfo().containsKey(
+        ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO));
   }
 
   private static RMApp createRMApp(ApplicationId appId) {
