@@ -100,10 +100,10 @@ public class GenericExceptionHandler implements ExceptionMapper<Exception> {
     }
 
     // let jaxb handle marshalling data out in the same format requested
-    String errorMessage = e.getMessage();
+    String errorMessage = e.toString();
     Throwable cause = e.getCause();
     if (cause != null) {
-      errorMessage = cause.getMessage();
+      errorMessage = cause.toString();
     }
     RemoteExceptionData exception = new RemoteExceptionData(e.getClass().getSimpleName(),
         errorMessage, e.getClass().getName());
