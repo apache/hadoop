@@ -221,7 +221,7 @@ class DatanodeStats {
       StorageTypeStats storageTypeStats = storageTypeStatsMap.get(storageType);
       if (storageTypeStats != null) {
         storageTypeStats.subtractNode(node);
-        if (storageTypeStats.getNodesInService() == 0) {
+        if (storageTypeStats.getTotalNodes() == 0) {
           storageTypeStatsMap.remove(storageType);
         }
       }
