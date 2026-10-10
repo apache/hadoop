@@ -21,8 +21,10 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ClusterStorageCapacityExceededException;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
@@ -30,6 +32,7 @@ import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests the behavior of YarnChild.
@@ -91,7 +94,8 @@ public class TestYarnChild {
         new RuntimeException(new ClusterStorageCapacityExceededException());
     conf.setBoolean(KILL_LIMIT_EXCEED_CONF_NAME, false);
 
-    verifyReportError(exception, false);
+    verifyReportError(exception, false,
+        "The cluster storage capacity was exceeded, but fast fail is disabled.");
   }
 
   @Test
@@ -119,5 +123,24 @@ public class TestYarnChild {
     YarnChild.reportError(exception, task, umbilical);
     verify(umbilical).fatalError(any(), anyString(),
         eq(fastFail));
+  }
+
+  private void verifyReportError(Exception exception, boolean fastFail,
+      String expectedLogMessage) throws IOException {
+    LogCapturer logCapturer = LogCapturer.captureLogs(
+        LoggerFactory.getLogger(YarnChild.class));
+    try {
+      verifyReportError(exception, fastFail);
+      assertTrue(logCapturer.getOutput().contains(expectedLogMessage));
+      if (fastFail) {
+        assertTrue(logCapturer.getOutput().contains(
+            "Fast fail the job because the cluster storage capacity was exceeded."));
+      } else {
+        assertTrue(logCapturer.getOutput().contains(
+            KILL_LIMIT_EXCEED_CONF_NAME));
+      }
+    } finally {
+      logCapturer.stopCapturing();
+    }
   }
 }
