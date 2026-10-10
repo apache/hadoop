@@ -67,11 +67,25 @@ public class DiskChecker {
       new AtomicReference<>(new DefaultFileIoProvider());
 
   /**
-   * Create the directory if it doesn't exist and check that dir is readable,
-   * writable and executable
-   *  
-   * @param dir dir.
-   * @throws DiskErrorException disk problem.
+   * Create the directory if it does not exist, then check that it is a
+   * directory and that the current process can read, write, and execute it.
+   *
+   * Access is checked with {@code java.io.File} methods via
+   * {@link FileUtil#canRead}, {@link FileUtil#canWrite}, and
+   * {@link FileUtil#canExecute}. Those checks reflect operating-system and
+   * filesystem-level access, so they fail on a read-only filesystem even if
+   * Unix permission bits look writable.
+   *
+   * This is not equivalent to
+   * {@link #checkDir(LocalFileSystem, Path, FsPermission)}. That overload
+   * also applies an expected {@link FsPermission}. Hadoop permission bits
+   * (including {@link org.apache.hadoop.fs.permission.FsAction#implies}) do
+   * not by themselves prove that a directory is writable, so switching
+   * between the two overloads can change behavior.
+   *
+   * @param dir directory to create if missing and to check
+   * @throws DiskErrorException if the directory cannot be created, is not a
+   *     directory, or is not readable, writable, or executable
    */
   public static void checkDir(File dir) throws DiskErrorException {
     checkDirInternal(dir);
@@ -101,14 +115,25 @@ public class DiskChecker {
   }
 
   /**
-   * Create the local directory if necessary, check permissions and also ensure
-   * it can be read from and written into.
+   * Create the local directory if necessary, apply {@code expected}
+   * permission if missing or mismatched, then check that the directory can
+   * be read, written, and executed.
+   *
+   * After any permission update, access is checked with the same
+   * {@code java.io.File} methods as {@link #checkDir(File)}. Matching or
+   * setting {@link FsPermission} bits is not a writability check by itself:
+   * {@link org.apache.hadoop.fs.permission.FsAction#implies} can pass on a
+   * read-only filesystem. Callers switching from {@link #checkDir(File)}
+   * should not assume equivalent behavior, because this overload also
+   * mutates directory permissions.
    *
    * @param localFS local filesystem
-   * @param dir directory
-   * @param expected permission
-   * @throws DiskErrorException disk problem.
-   * @throws IOException raised on errors performing I/O.
+   * @param dir directory to create if missing and to check
+   * @param expected permission to apply if the directory is created or
+   *     current permission does not match
+   * @throws DiskErrorException if the directory cannot be created, is not a
+   *     directory, or is not readable, writable, or executable
+   * @throws IOException if permission cannot be read or set
    */
   public static void checkDir(LocalFileSystem localFS, Path dir,
                               FsPermission expected)
