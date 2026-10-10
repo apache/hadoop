@@ -5343,13 +5343,12 @@ public class BlockManager implements BlockStatsMXBean {
 
     @Override
     public void run() {
+      metrics = NameNode.getNameNodeMetrics();
       LOG.info("Start MarkedDeleteBlockScrubber thread");
       while (namesystem.isRunning() &&
           !Thread.currentThread().isInterrupted()) {
         if (!markedDeleteQueue.isEmpty() || checkToDeleteIterator()) {
           try {
-            metrics = NameNode.getNameNodeMetrics();
-            metrics.setDeleteBlocksQueued(markedDeleteQueue.size());
             isSleep = false;
             long startTime = Time.monotonicNow();
             remove(startTime);
@@ -5357,6 +5356,7 @@ public class BlockManager implements BlockStatsMXBean {
                 !Thread.currentThread().isInterrupted()) {
               List<BlockInfo> markedDeleteList = markedDeleteQueue.poll();
               if (markedDeleteList != null) {
+                metrics.decrDeleteBlocksQueued();
                 toDeleteIterator = markedDeleteList.listIterator();
               }
               remove(startTime);
@@ -5742,9 +5742,13 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   public void addBLocksToMarkedDeleteQueue(List<BlockInfo> blockInfos) {
+    if (blockInfos == null || blockInfos.isEmpty()) {
+      return;
+    }
+    NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
+    metrics.incrDeleteBlocksQueued();
+    metrics.incrPendingDeleteBlocksCount(blockInfos.size());
     markedDeleteQueue.add(blockInfos);
-    NameNode.getNameNodeMetrics().
-        incrPendingDeleteBlocksCount(blockInfos.size());
   }
 
   public long nextGenerationStamp(boolean legacyBlock) throws IOException {
