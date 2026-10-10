@@ -26,7 +26,6 @@ import java.nio.channels.ReadableByteChannel;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.util.DirectBufferPool;
 import org.apache.hadoop.io.IOUtils;
@@ -47,8 +46,19 @@ public class PacketReceiver implements Closeable {
   /**
    * The max size of any single packet. This prevents OOMEs when
    * invalid data is sent.
+   *
+   * <p>Initialized to the default value to avoid a circular class-loading
+   * deadlock: a static initializer that calls {@code new HdfsConfiguration()}
+   * can trigger URL-based resource loading over HDFS, which in turn
+   * instantiates {@code BlockReaderRemote} before {@code PacketReceiver}
+   * finishes initializing, leaving this field as 0 and causing spurious
+   * {@code IOException: Incorrect value for packet payload size} errors.
+   *
+   * <p>Call {@link #setMaxPacketSize(Configuration)} once a {@link Configuration}
+   * is available (e.g., during DFSClient construction) to apply a custom value.
    */
-  public static final int MAX_PACKET_SIZE;
+  public static volatile int MAX_PACKET_SIZE =
+      HdfsClientConfigKeys.DFS_DATA_TRANSFER_MAX_PACKET_SIZE_DEFAULT;
 
   static final Logger LOG = LoggerFactory.getLogger(PacketReceiver.class);
 
@@ -77,11 +87,18 @@ public class PacketReceiver implements Closeable {
    */
   private PacketHeader curHeader;
 
-  static {
-    Configuration conf = new HdfsConfiguration();
-    MAX_PACKET_SIZE = conf.getInt(HdfsClientConfigKeys.
-                    DFS_DATA_TRANSFER_MAX_PACKET_SIZE,
-            HdfsClientConfigKeys.DFS_DATA_TRANSFER_MAX_PACKET_SIZE_DEFAULT);
+  /**
+   * Update {@link #MAX_PACKET_SIZE} from the supplied configuration.
+   * Should be called once during client or server initialization, after the
+   * {@link Configuration} is fully constructed, rather than from a static
+   * initializer.
+   *
+   * @param conf configuration to read from
+   */
+  public static void setMaxPacketSize(Configuration conf) {
+    MAX_PACKET_SIZE = conf.getInt(
+        HdfsClientConfigKeys.DFS_DATA_TRANSFER_MAX_PACKET_SIZE,
+        HdfsClientConfigKeys.DFS_DATA_TRANSFER_MAX_PACKET_SIZE_DEFAULT);
   }
 
   public PacketReceiver(boolean useDirectBuffers) {
