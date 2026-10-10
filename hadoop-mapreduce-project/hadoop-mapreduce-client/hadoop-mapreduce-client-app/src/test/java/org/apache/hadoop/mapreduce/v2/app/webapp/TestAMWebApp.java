@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.SocketException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
@@ -51,6 +52,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MRApp;
 import org.apache.hadoop.mapreduce.v2.app.MockAppContext;
@@ -62,6 +64,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.server.webproxy.amfilter.AmFilterInitializer;
@@ -74,6 +77,7 @@ import org.junit.jupiter.api.Test;
 import com.google.inject.Injector;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -414,6 +418,61 @@ public class TestAMWebApp {
         conn.getResponseCode());
       app.waitForState(job, JobState.SUCCEEDED);
       app.verifyCompleted();
+    }
+  }
+
+  @Test
+  public void testAttemptsPageRender() throws Exception {
+    MRApp app = new MRApp(2, 2, true, this.getClass().getName(), true) {
+      @Override
+      protected ClientService createClientService(AppContext context) {
+        return new MRClientService(context);
+      }
+    };
+    try {
+      Job job = app.submit(new Configuration());
+      app.waitForState(job, JobState.SUCCEEDED);
+      String hostPort =
+          NetUtils.getHostPortString(((MRClientService) app.getClientService())
+              .getWebApp().getListenerAddress());
+      // The controller and view must share App within each HTTP request.
+      for (TaskType taskType : TaskType.values()) {
+        URL attemptsUrl = new URL("http://" + hostPort + "/mapreduce/attempts/"
+            + job.getID() + "/" + MRApps.taskSymbol(taskType) + "/SUCCESSFUL");
+        HttpURLConnection conn = (HttpURLConnection) attemptsUrl.openConnection();
+        conn.setConnectTimeout(10000);
+        conn.setReadTimeout(10000);
+        try {
+          assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode(),
+              attemptsUrl.toString());
+          ByteArrayOutputStream out = new ByteArrayOutputStream();
+          try (InputStream in = conn.getInputStream()) {
+            IOUtils.copyBytes(in, out, 1024, false);
+          }
+          String content = out.toString(StandardCharsets.UTF_8.name());
+          for (Task task : job.getTasks().values()) {
+            for (TaskAttempt attempt : task.getAttempts().values()) {
+              String attemptId = MRApps.toString(attempt.getID());
+              if (task.getType() == taskType) {
+                assertTrue(content.contains(attemptId),
+                    "Attempts page should contain " + attemptId);
+              } else {
+                assertFalse(content.contains(attemptId),
+                    "Attempts page should not contain " + attemptId);
+              }
+            }
+          }
+        } finally {
+          conn.disconnect();
+        }
+      }
+      app.verifyCompleted();
+    } finally {
+      try {
+        ServiceOperations.stop(app.getClientService());
+      } finally {
+        app.stop();
+      }
     }
   }
 
