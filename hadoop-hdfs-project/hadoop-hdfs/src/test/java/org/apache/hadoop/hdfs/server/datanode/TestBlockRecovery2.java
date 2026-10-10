@@ -28,6 +28,7 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -35,8 +36,10 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -46,6 +49,7 @@ import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.test.TestName;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,14 +72,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -461,6 +469,105 @@ public class TestBlockRecovery2 {
           dfs, filePath), 1, numReplicas, 0);
 
     } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * A datanode that is still loading its replicas after a restart must not
+   * report "no replica" to block recovery. Otherwise, if the other replicas
+   * cannot be used, block recovery deletes the block although the restarting
+   * datanode holds a valid replica.
+   */
+  @Test
+  @Timeout(180)
+  public void testBlockRecoveryWhileReplicasAreLoading() throws Exception {
+    tearDown(); // Stop the Mocked DN started in startup()
+
+    final Path filePath = new Path("/testBlockRecoveryWhileReplicasAreLoading");
+    final byte[] data = AppendTestUtil.randomBytes(0xC0FFEEL, 4096);
+    Configuration configuration = new HdfsConfiguration();
+    configuration.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    MiniDFSCluster cluster = null;
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+    CountDownLatch resumeLoading = new CountDownLatch(1);
+    LogCapturer logs = LogCapturer.captureLogs(BlockRecoveryWorker.LOG);
+    try {
+      cluster = new MiniDFSCluster.Builder(configuration).numDataNodes(2)
+          .build();
+      cluster.waitActive();
+      // Retry a failed block recovery quickly.
+      cluster.getNamesystem().getBlockManager().setBlockRecoveryTimeout(3000);
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+
+      FSDataOutputStream out = dfs.create(filePath, (short) 2);
+      out.write(data);
+      out.hsync();
+      DFSTestUtil.abortStream((DFSOutputStream) out.getWrappedStream());
+      ExtendedBlock block = cluster.getNameNodeRpc()
+          .getBlockLocations(filePath.toString(), 0, Long.MAX_VALUE).get(0)
+          .getBlock();
+
+      // Block recovery cannot use the replica on datanode 1.
+      cluster.getMaterializedReplica(1, block).deleteMeta();
+      final DatanodeManager dm =
+          cluster.getNamesystem().getBlockManager().getDatanodeManager();
+      final String dn0Uuid = cluster.getDataNodes().get(0).getDatanodeUuid();
+      final String dn1Uuid = cluster.getDataNodes().get(1).getDatanodeUuid();
+
+      // Restart datanode 0 and hold it while it loads its replicas.
+      CountDownLatch loading = new CountDownLatch(1);
+      DataNodeFaultInjector.set(new DataNodeFaultInjector() {
+        @Override
+        public void delayLoadingReplicas() {
+          loading.countDown();
+          try {
+            resumeLoading.await();
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+        }
+      });
+      cluster.restartDataNode(cluster.stopDataNode(0), true);
+      assertTrue(loading.await(60, TimeUnit.SECONDS),
+          "datanode 0 did not start loading its replicas");
+      // The primary is the replica with the most recent heartbeat; make that
+      // datanode 1, as datanode 0 does not heartbeat while it is loading.
+      GenericTestUtils.waitFor(
+          () -> dm.getDatanode(dn1Uuid).getLastUpdateMonotonic()
+              > dm.getDatanode(dn0Uuid).getLastUpdateMonotonic(),
+          100, 10000);
+
+      // Datanode 1 becomes the recovery primary and queries datanode 0.
+      DistributedFileSystem newDfs = (DistributedFileSystem) FileSystem
+          .newInstance(cluster.getConfiguration(0));
+      newDfs.recoverLease(filePath);
+      GenericTestUtils.waitFor(() -> {
+        try {
+          return logs.getOutput().contains("All datanodes failed")
+              || newDfs.isFileClosed(filePath);
+        } catch (IOException e) {
+          return false;
+        }
+      }, 100, 30000);
+
+      resumeLoading.countDown();
+      GenericTestUtils.waitFor(() -> {
+        try {
+          return newDfs.recoverLease(filePath);
+        } catch (IOException e) {
+          return false;
+        }
+      }, 500, 60000);
+      assertEquals(data.length, newDfs.getFileStatus(filePath).getLen(),
+          "block recovery dropped the replica of the restarting datanode");
+      assertArrayEquals(data, DFSTestUtil.readFileAsBytes(newDfs, filePath));
+    } finally {
+      resumeLoading.countDown();
+      DataNodeFaultInjector.set(oldInjector);
+      logs.stopCapturing();
       if (cluster != null) {
         cluster.shutdown();
       }

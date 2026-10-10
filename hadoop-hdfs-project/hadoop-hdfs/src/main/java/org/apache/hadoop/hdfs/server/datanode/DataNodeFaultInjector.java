@@ -182,4 +182,10 @@ public class DataNodeFaultInjector {
    * leaving a stale copy of {@link DirectoryScanner#diffs}.
    */
   public void waitUntilStorageRemoved() {}
+
+  /**
+   * Used in FsDatasetImpl#addBlockPool to delay loading the replicas of a
+   * block pool into the replica map.
+   */
+  public void delayLoadingReplicas() {}
 }
