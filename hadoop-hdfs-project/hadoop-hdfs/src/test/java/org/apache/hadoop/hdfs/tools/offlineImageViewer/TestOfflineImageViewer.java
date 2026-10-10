@@ -587,6 +587,30 @@ public class TestOfflineImageViewer {
   }
 
   @Test
+  public void testParallelPBImageXmlWriter() throws Exception {
+    int numThreads = 4;
+
+    File parallelXmlOut = new File(tempDir, "parallelXmlOut");
+    if (OfflineImageViewerPB.run(new String[] {"-p", "XML",
+        "-i", originalFsimage.getAbsolutePath(),
+        "-o", parallelXmlOut.getAbsolutePath(),
+        "-m", String.valueOf(numThreads)}) != 0) {
+      throw new IOException("oiv returned failure outputting XML in parallel.");
+    }
+    MD5Hash parallelMd5 = MD5FileUtils.computeMd5ForFile(parallelXmlOut);
+
+    File serialXmlOut = new File(tempDir, "serialXmlOut");
+    if (OfflineImageViewerPB.run(new String[] {"-p", "XML",
+        "-i", originalFsimage.getAbsolutePath(),
+        "-o", serialXmlOut.getAbsolutePath()}) != 0) {
+      throw new IOException("oiv returned failure outputting XML in serial.");
+    }
+    MD5Hash serialMd5 = MD5FileUtils.computeMd5ForFile(serialXmlOut);
+
+    assertEquals(serialMd5, parallelMd5);
+  }
+
+  @Test
   public void testWebImageViewer() throws Exception {
     WebImageViewer viewer = new WebImageViewer(
         NetUtils.createSocketAddr("localhost:0"));
