@@ -29,6 +29,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -49,6 +50,7 @@ public class TestRestCsrfPreventionFilter {
   private static final String X_CUSTOM_HEADER = "X-CUSTOM_HEADER";
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testNoHeaderDefaultConfigBadRequest()
       throws ServletException, IOException {
     // Setup the configuration settings of the server
@@ -77,6 +79,14 @@ public class TestRestCsrfPreventionFilter {
 
     verify(mockRes, atLeastOnce()).sendError(
         HttpServletResponse.SC_BAD_REQUEST, EXPECTED_MESSAGE);
+    // The reason phrase, for containers that still send one.
+    verify(mockRes).setStatus(
+        HttpServletResponse.SC_BAD_REQUEST, EXPECTED_MESSAGE);
+    // Marked so the error page carrying the message is written whatever the
+    // method: Jetty 12 no longer sends it in the reason phrase.
+    verify(mockReq).setAttribute(
+        AuthenticationFilter.ERROR_MESSAGE_FOR_ANY_METHOD_ATTRIBUTE,
+        Boolean.TRUE);
     verifyZeroInteractions(mockChain);
   }
 

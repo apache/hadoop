@@ -28,12 +28,17 @@ import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.JsonUtils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.commons.io.IOUtils;
+import org.eclipse.jetty.http.UriCompliance;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.ServerConnector;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -54,14 +59,18 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -109,6 +118,20 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }    
   }
 
+  /** Writes back the path info exactly as the container parsed it. */
+  @SuppressWarnings("serial")
+  public static class PathInfoServlet extends HttpServlet {
+    @Override
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws IOException {
+      response.setContentType("text/plain; charset=utf-8");
+      response.setStatus(HttpServletResponse.SC_OK);
+      try (PrintWriter out = response.getWriter()) {
+        out.println(request.getPathInfo());
+      }
+    }
+  }
+
   @SuppressWarnings("serial")
   public static class EchoServlet extends HttpServlet {
     @SuppressWarnings("unchecked")
@@ -146,6 +169,58 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }
   }
 
+  /**
+   * Stands in for a JAX-RS resource that picks its own content type: it drops
+   * whatever QuotingInputFilter left on the response, then sets the type the
+   * way Jersey does, through a header.
+   */
+  @SuppressWarnings("serial")
+  public static class OwnContentTypeServlet extends HttpServlet {
+    @Override
+    public void doGet(HttpServletRequest request,
+                      HttpServletResponse response
+                      ) throws ServletException, IOException {
+      JettyUtils.clearContentType(response);
+      response.addHeader("Content-Type", request.getParameter("type"));
+      response.setStatus(HttpServletResponse.SC_OK);
+    }
+  }
+
+  /**
+   * Refuses every request with a message, the way the authentication and CSRF
+   * filters do; with ?mark=true it marks the refusal the way they mark theirs.
+   */
+  @SuppressWarnings("serial")
+  public static class RefusingServlet extends HttpServlet {
+    static final String DETAIL = "refused-for-a-reason";
+
+    @Override
+    protected void service(HttpServletRequest request,
+        HttpServletResponse response) throws IOException {
+      if (Boolean.parseBoolean(request.getParameter("mark"))) {
+        request.setAttribute(
+            AuthenticationFilter.ERROR_MESSAGE_FOR_ANY_METHOD_ATTRIBUTE,
+            Boolean.TRUE);
+      }
+      response.sendError(HttpServletResponse.SC_FORBIDDEN, DETAIL);
+    }
+  }
+
+  /**
+   * Redirects with a context-absolute path, the way WebServlet, the webapp
+   * Dispatcher and the YARN proxy redirect.
+   */
+  @SuppressWarnings("serial")
+  public static class RedirectingServlet extends HttpServlet {
+    static final String TARGET = "/echo?redirected=true";
+
+    @Override
+    protected void doGet(HttpServletRequest request,
+        HttpServletResponse response) throws IOException {
+      response.sendRedirect(TARGET);
+    }
+  }
+
   @BeforeAll
   public static void setup() throws Exception {
     Configuration conf = new Configuration();
@@ -154,9 +229,15 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED, true);
     server = createTestServer(conf);
     server.addServlet("echo", "/echo", EchoServlet.class);
+    server.addServlet("pathinfo", "/pathinfo/*", PathInfoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
     server.addServlet("htmlcontent", "/htmlcontent", HtmlContentServlet.class);
     server.addServlet("longheader", "/longheader", LongHeaderServlet.class);
+    server.addServlet("owncontenttype", "/owncontenttype",
+        OwnContentTypeServlet.class);
+    server.addServlet("refusing", "/refusing", RefusingServlet.class);
+    server.addServlet("redirecting", "/redirecting",
+        RedirectingServlet.class);
     server.addJerseyResourcePackage(
         JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
@@ -277,6 +358,254 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         conn.getContentType());
   }
 
+  /**
+   * A resource that clears the content type QuotingInputFilter set, then picks
+   * its own, must not be given a charset back.
+   * <p>
+   * Jetty 12 remembers that a charset had been set explicitly even after the
+   * content type carrying it is cleared, and appends that memory to the next
+   * content type - as ";charset=null" for a type with no charset of its own.
+   * Only types that assume a charset, application/json among them, escape it,
+   * which is why octet-stream and xml are the ones asserted here.
+   */
+  @Test
+  public void testClearedContentTypeCarriesNoCharset() throws Exception {
+    for (String type : new String[] {MediaType.APPLICATION_OCTET_STREAM,
+        MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON}) {
+      URL url = new URL(baseUrl, "/owncontenttype?type=" + type);
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.connect();
+      assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
+      assertEquals(type, conn.getContentType(),
+          "the cleared charset came back for " + type);
+      conn.disconnect();
+    }
+  }
+
+  /**
+   * An error on a method Jetty writes no error page for goes back as it did on
+   * Jetty 9.4 - with no body - unless it is marked as one whose message the
+   * caller has to read. On 9.4 that message was in the reason phrase; Jetty 12
+   * sends none, so a marked error gets the error page whatever the method.
+   */
+  @Test
+  public void testErrorBodyOnlyForMarkedErrorsOnOtherMethods()
+      throws Exception {
+    for (String method : new String[] {"PUT", "DELETE"}) {
+      HttpURLConnection conn = refusal(method, false);
+      assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode());
+      assertEquals(0, conn.getContentLength(),
+          "an unmarked " + method + " error grew a body");
+      conn.disconnect();
+
+      conn = refusal(method, true);
+      assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode());
+      assertThat(errorBody(conn))
+          .as("a marked " + method + " error lost its message")
+          .contains(RefusingServlet.DETAIL);
+      conn.disconnect();
+    }
+    // GET keeps the error page Jetty always wrote for it, marked or not.
+    HttpURLConnection conn = refusal("GET", false);
+    assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode());
+    assertThat(errorBody(conn)).contains(RefusingServlet.DETAIL);
+    conn.disconnect();
+  }
+
+  /**
+   * A redirect carries an absolute URI in Location, as it did on Jetty 9.4.
+   * Jetty 12 defaults HttpConfiguration#relativeRedirectAllowed to true, which
+   * leaves the bare path the servlet passed to sendRedirect in the header;
+   * Hadoop reads that header back with new URL(...) - WebHdfsFileSystem does -
+   * and a relative value does not parse.
+   */
+  @Test
+  public void testRedirectLocationIsAbsolute() throws Exception {
+    URL url = new URL(baseUrl, "/redirecting");
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setInstanceFollowRedirects(false);
+    try {
+      assertEquals(HttpURLConnection.HTTP_MOVED_TEMP, conn.getResponseCode());
+      String location = conn.getHeaderField("Location");
+      assertThat(location)
+          .as("Location on a redirect")
+          .isNotNull()
+          .startsWith(baseUrl.toString());
+      // What a Hadoop client does with the header it is handed.
+      assertEquals("/echo", new URL(location).getPath());
+    } finally {
+      conn.disconnect();
+    }
+  }
+
+  private static HttpURLConnection refusal(String method, boolean mark)
+      throws IOException {
+    URL url = new URL(baseUrl, "/refusing?mark=" + mark);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(method);
+    conn.connect();
+    return conn;
+  }
+
+  private static String errorBody(HttpURLConnection conn) throws IOException {
+    try (InputStream in = conn.getErrorStream()) {
+      return in == null ? "" : IOUtils.toString(in, StandardCharsets.UTF_8);
+    }
+  }
+
+  /**
+   * /static must never list what is in it. The setting that stops it is a
+   * context init parameter, which the DefaultServlet reads under a prefix of
+   * its own choosing: get the prefix wrong and the parameter is not rejected,
+   * it is ignored, and dirAllowed falls back to its default of true. That is
+   * silent, so the endpoint is asserted rather than the setting.
+   */
+  @Test
+  public void testStaticContextDoesNotListDirectories() throws Exception {
+    URL staticUrl = new URL(baseUrl, "/static/");
+    HttpURLConnection conn = (HttpURLConnection) staticUrl.openConnection();
+    conn.connect();
+    assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode(),
+        "/static served a directory listing");
+
+    // The context is otherwise working, so the 403 above is dirAllowed doing
+    // its job and not the whole context being broken.
+    URL cssUrl = new URL(baseUrl, "/static/test.css");
+    conn = (HttpURLConnection) cssUrl.openConnection();
+    conn.connect();
+    assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
+  }
+
+  /**
+   * A path with an empty segment has to reach the servlet, which is where
+   * Hadoop decides what it means. Jetty 12 rejects one at the connector by
+   * default, with a bare 400 and no body - WebHDFS clients parse a JSON
+   * RemoteException out of that response, and there is nothing there to parse.
+   * The ambiguities that actually matter stay rejected, so an encoded
+   * separator is asserted here too.
+   */
+  @Test
+  public void testHadoopPathsReachTheServlet() throws Exception {
+    assertPathInfo("//tmp//file", "/pathinfo//tmp//file");
+    // A file whose name contains a '%' arrives as %25.
+    assertPathInfo("/a%b", "/pathinfo/a%25b");
+    assertPathInfo("/@;%$", "/pathinfo/%40%3B%25%24");
+    // A '\' is a path separator on Windows and just a character on HDFS.
+    assertPathInfo("/a\\b", "/pathinfo/a%5Cb");
+  }
+
+  /**
+   * The other half of the same setting: a path that would read as one thing
+   * to a filter and another to a servlet still has to be refused.
+   */
+  @Test
+  public void testAmbiguousPathsAreStillRejected() throws Exception {
+    assertNotServed("an encoded path separator", "/pathinfo/tmp%2Ffile");
+    assertNotServed("an encoded dot-segment", "/pathinfo/a%2E%2E%2Fb");
+  }
+
+  /**
+   * The violations let through are configurable, so a deployment can refuse
+   * at the connector what it has no use for. An empty value is Jetty's
+   * DEFAULT mode, which refuses every path the default setting admits; taking
+   * SUSPICIOUS_PATH_CHARACTERS out refuses an encoded backslash and nothing
+   * else that Hadoop's paths need.
+   */
+  @Test
+  public void testUriComplianceIsConfigurable() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(HttpServer2.HTTP_URI_COMPLIANCE_VIOLATIONS_KEY, "");
+    HttpServer2 strict = createTestServer(conf);
+    strict.addServlet("pathinfo", "/pathinfo/*", PathInfoServlet.class);
+    try {
+      strict.start();
+      URL strictUrl = getServerURL(strict);
+      assertStatus(HttpServletResponse.SC_BAD_REQUEST, strictUrl,
+          "/pathinfo//tmp//file");
+      assertStatus(HttpServletResponse.SC_BAD_REQUEST, strictUrl,
+          "/pathinfo/a%25b");
+      assertStatus(HttpServletResponse.SC_BAD_REQUEST, strictUrl,
+          "/pathinfo/a%5Cb");
+      assertStatus(HttpServletResponse.SC_OK, strictUrl, "/pathinfo/a/b");
+    } finally {
+      strict.stop();
+    }
+
+    conf.set(HttpServer2.HTTP_URI_COMPLIANCE_VIOLATIONS_KEY,
+        "ambiguous_empty_segment, AMBIGUOUS_PATH_ENCODING");
+    HttpServer2 noBackslash = createTestServer(conf);
+    noBackslash.addServlet("pathinfo", "/pathinfo/*", PathInfoServlet.class);
+    try {
+      noBackslash.start();
+      URL noBackslashUrl = getServerURL(noBackslash);
+      assertStatus(HttpServletResponse.SC_OK, noBackslashUrl,
+          "/pathinfo//tmp//file");
+      assertStatus(HttpServletResponse.SC_OK, noBackslashUrl,
+          "/pathinfo/a%25b");
+      assertStatus(HttpServletResponse.SC_BAD_REQUEST, noBackslashUrl,
+          "/pathinfo/a%5Cb");
+    } finally {
+      noBackslash.stop();
+    }
+  }
+
+  /**
+   * A Configuration built without core-default.xml, as MiniDFSCluster and
+   * the Router and HttpFS tests build theirs, leaves the key unset. It must
+   * get the same violations as one that loads core-default.xml.
+   */
+  @Test
+  public void testUriComplianceDefaultWithoutCoreDefault() {
+    Set<UriCompliance.Violation> expected = EnumSet.of(
+        UriCompliance.Violation.AMBIGUOUS_EMPTY_SEGMENT,
+        UriCompliance.Violation.AMBIGUOUS_PATH_ENCODING,
+        UriCompliance.Violation.SUSPICIOUS_PATH_CHARACTERS);
+    assertEquals(expected,
+        HttpServer2.getUriCompliance(new Configuration(false)).getAllowed());
+    assertEquals(expected,
+        HttpServer2.getUriCompliance(new Configuration()).getAllowed());
+  }
+
+  @Test
+  public void testUnknownUriComplianceViolationIsRefused() {
+    Configuration conf = new Configuration();
+    conf.set(HttpServer2.HTTP_URI_COMPLIANCE_VIOLATIONS_KEY,
+        "AMBIGUOUS_EMPTY_SEGMENT,NOT_A_VIOLATION");
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        () -> HttpServer2.getUriCompliance(conf));
+    assertThat(e.getMessage()).contains("NOT_A_VIOLATION")
+        .contains(HttpServer2.HTTP_URI_COMPLIANCE_VIOLATIONS_KEY);
+  }
+
+  private static void assertStatus(int expected, URL base, String path)
+      throws Exception {
+    HttpURLConnection conn =
+        (HttpURLConnection) new URL(base, path).openConnection();
+    conn.connect();
+    assertEquals(expected, conn.getResponseCode(), path);
+  }
+
+  private static void assertPathInfo(String expected, String path)
+      throws Exception {
+    URL url = new URL(baseUrl, path);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.connect();
+    assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode(),
+        path + " was rejected before the servlet ran");
+    assertEquals(expected, readOutput(url).trim(),
+        path + " did not reach the servlet as sent");
+  }
+
+  private static void assertNotServed(String what, String path)
+      throws Exception {
+    URL url = new URL(baseUrl, path);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.connect();
+    assertThat(conn.getResponseCode())
+        .as(what + " must not be served")
+        .isNotEqualTo(HttpServletResponse.SC_OK);
+  }
+
   @Test
   public void testHttpServer2Metrics() throws Exception {
     final HttpServer2Metrics metrics = server.getMetrics();
@@ -286,8 +615,10 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
     assertThat(conn.getResponseCode()).isEqualTo(200);
-    final int after = metrics.responses2xx();
-    assertThat(after).isGreaterThan(before);
+    // Jetty 12 books the response when the exchange completes on the server,
+    // which can be after the client has read the status line, so the counter
+    // is given a moment rather than read straight away.
+    GenericTestUtils.waitFor(() -> metrics.responses2xx() > before, 50, 10000);
   }
 
   @Test
@@ -323,9 +654,12 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   /**
-   * Jetty StatisticsHandler must be inserted via Server#insertHandler
-   * instead of Server#setHandler. The server fails to start if
-   * the handler is added by setHandler.
+   * Jetty StatisticsHandler must be inserted via Server#insertHandler instead
+   * of Server#setHandler. On 9.4 the difference showed up as a server that
+   * refused to start, so the test could assert the failure; Jetty 12 starts a
+   * childless handler quite happily and serves 404s from it, which is worse.
+   * So the assertion is that the server still serves after the handler goes
+   * in - the reason to prefer insertHandler in the first place.
    */
   @Test
   public void testSetStatisticsHandler() throws Exception {
@@ -334,11 +668,30 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conf.setBoolean(
         CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED, false);
     final HttpServer2 testServer = createTestServer(conf);
-    testServer.webServer.setHandler(new StatisticsHandler());
+    testServer.addServlet("echo", "/echo", EchoServlet.class);
+
+    final Handler tree = testServer.webServer.getHandler();
+    assertThat(tree).isNotNull();
+    final StatisticsHandler statistics = new StatisticsHandler();
+    testServer.webServer.insertHandler(statistics);
+    assertThat(statistics.getHandler())
+        .as("insertHandler keeps the handler tree underneath")
+        .isSameAs(tree);
+
     try {
       testServer.start();
-      fail("IOException should be thrown.");
-    } catch (IOException ignore) {
+      final URL echoUrl = new URL(getServerURL(testServer), "/echo?a=b");
+      final HttpURLConnection conn =
+          (HttpURLConnection) echoUrl.openConnection();
+      conn.connect();
+      assertThat(conn.getResponseCode())
+          .as("the webapp stopped serving once StatisticsHandler was inserted")
+          .isEqualTo(HttpServletResponse.SC_OK);
+      // Booked when the exchange completes on the server, which can be after
+      // the client has read the status line - see testHttpServer2Metrics.
+      GenericTestUtils.waitFor(() -> statistics.getRequests() > 0, 50, 10000);
+    } finally {
+      testServer.stop();
     }
   }
 
@@ -572,7 +925,73 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }
     myServer.stop();
   }
-  
+
+  /**
+   * With hadoop.log.dir pointing nowhere, /logs still sits behind the admin
+   * check: a non-admin is refused and an admin is told there is nothing there,
+   * which is what Jetty 9.4 answered. Jetty 12 will not start a context on a
+   * missing base resource, and dropping the context instead would let the
+   * request fall through to the root webapp without the check.
+   */
+  @Test
+  public void testLogsWithMissingLogDirStillCheckAdminAccess()
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
+        true);
+    conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
+        DummyFilterInitializer.class.getName());
+    // The group mapping is a process-wide singleton, created by whichever
+    // test gets there first; give it the mapping the other tests expect.
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        MyGroupsProvider.class.getName());
+    Groups.getUserToGroupsMappingService(conf);
+
+    String savedLogDir = System.getProperty("hadoop.log.dir");
+    System.setProperty("hadoop.log.dir",
+        new File(GenericTestUtils.getTestDir(), "no-such-log-dir")
+            .getAbsolutePath());
+    HttpServer2 myServer;
+    try {
+      myServer = new HttpServer2.Builder().setName("test")
+          .addEndpoint(new URI("http://localhost:0")).setFindPort(true)
+          .setConf(conf).setACL(new AccessControlList("userA")).build();
+    } finally {
+      if (savedLogDir == null) {
+        System.clearProperty("hadoop.log.dir");
+      } else {
+        System.setProperty("hadoop.log.dir", savedLogDir);
+      }
+    }
+    myServer.setAttribute(HttpServer2.CONF_CONTEXT_ATTRIBUTE, conf);
+    myServer.start();
+    try {
+      String logsURL = "http://"
+          + NetUtils.getHostPortString(myServer.getConnectorAddress(0))
+          + "/logs/";
+      assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
+          getHttpStatusCode(logsURL, "userA"));
+      assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+          getHttpStatusCode(logsURL, "userE"));
+      // DefaultServlet answers a POST as a GET, so it gets the same answers.
+      assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
+          postStatusCode(logsURL, "userA"));
+      assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+          postStatusCode(logsURL, "userE"));
+    } finally {
+      myServer.stop();
+    }
+  }
+
+  private static int postStatusCode(String urlstring, String userName)
+      throws IOException {
+    URL url = new URL(urlstring + "?user.name=" + userName);
+    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    connection.setRequestMethod("POST");
+    connection.connect();
+    return connection.getResponseCode();
+  }
+
   @Test
   public void testRequestQuoterWithNull() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);

@@ -121,6 +121,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.util.ResponseDetail;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -485,6 +486,18 @@ public class WebHdfsFileSystem extends FileSystem
     if (c.getContentLength() == 0) {
       return null;
     }
+    // Checked before the stream is opened: a body this method will not read
+    // is left intact for the caller to report, and getInputStream is not
+    // called for a response that has no input stream to give.
+    final String contentType = c.getContentType();
+    if (contentType != null) {
+      final MediaType parsed = MediaType.valueOf(contentType);
+      if (!MediaType.APPLICATION_JSON_TYPE.isCompatible(parsed)) {
+        throw new IOException("Content-Type \"" + contentType
+            + "\" is incompatible with \"" + MediaType.APPLICATION_JSON
+            + "\" (parsed=\"" + parsed + "\")");
+      }
+    }
     final InputStream in = useErrorStream ?
         c.getErrorStream() : c.getInputStream();
     if (in == null) {
@@ -492,15 +505,6 @@ public class WebHdfsFileSystem extends FileSystem
           " stream is null.");
     }
     try {
-      final String contentType = c.getContentType();
-      if (contentType != null) {
-        final MediaType parsed = MediaType.valueOf(contentType);
-        if (!MediaType.APPLICATION_JSON_TYPE.isCompatible(parsed)) {
-          throw new IOException("Content-Type \"" + contentType
-              + "\" is incompatible with \"" + MediaType.APPLICATION_JSON
-              + "\" (parsed=\"" + parsed + "\")");
-        }
-      }
       return JsonSerialization.mapReader().readValue(in);
     } finally {
       in.close();
@@ -514,7 +518,12 @@ public class WebHdfsFileSystem extends FileSystem
     // server is demanding an authentication we don't support
     if (code == HttpURLConnection.HTTP_UNAUTHORIZED) {
       // match hdfs/rpc exception
-      throw new AccessControlException(conn.getResponseMessage());
+      //
+      // The reason comes from the body, not the reason phrase: what
+      // AuthenticationFilter passes to sendError no longer reaches the wire as
+      // a phrase, and the phrase is now always "Unauthorized".
+      throw new AccessControlException(
+          ResponseDetail.of(conn));
     }
     if (code != op.getExpectedHttpResponseCode()) {
       final Map<?, ?> m;
@@ -523,13 +532,13 @@ public class WebHdfsFileSystem extends FileSystem
       } catch(Exception e) {
         throw new IOException("Unexpected HTTP response: code=" + code + " != "
             + op.getExpectedHttpResponseCode() + ", " + op.toQueryString()
-            + ", message=" + conn.getResponseMessage(), e);
+            + ", message=" + ResponseDetail.of(conn), e);
       }
 
       if (m == null) {
         throw new IOException("Unexpected HTTP response: code=" + code + " != "
             + op.getExpectedHttpResponseCode() + ", " + op.toQueryString()
-            + ", message=" + conn.getResponseMessage());
+            + ", message=" + ResponseDetail.of(conn));
       } else if (m.get(RemoteException.class.getSimpleName()) == null) {
         return m;
       }

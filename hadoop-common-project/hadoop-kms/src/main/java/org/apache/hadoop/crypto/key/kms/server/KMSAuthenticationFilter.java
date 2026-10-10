@@ -22,13 +22,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.KMSDelegationToken;
 import org.apache.hadoop.http.HtmlQuoting;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationFilter;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationHandler;
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticationHandler;
 import org.apache.hadoop.security.token.delegation.web.PseudoDelegationTokenAuthenticationHandler;
-import org.eclipse.jetty.server.Response;
 
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -99,9 +99,11 @@ public class KMSAuthenticationFilter
   private static class KMSResponse extends HttpServletResponseWrapper {
     public int statusCode;
     public String msg;
+    private final ServletRequest request;
 
-    public KMSResponse(ServletResponse response) {
+    KMSResponse(ServletRequest request, ServletResponse response) {
       super((HttpServletResponse)response);
+      this.request = request;
     }
 
     @Override
@@ -115,17 +117,12 @@ public class KMSAuthenticationFilter
       statusCode = sc;
       this.msg = msg;
 
-      ServletResponse response = getResponse();
-
-      // After Jetty 9.4.21, sendError() no longer allows a custom message.
-      // use setStatusWithReason() to set a custom message.
-      if (response instanceof Response) {
-        ((Response) response).setStatusWithReason(sc, msg);
-      } else {
-        KMS.LOG.warn("The wrapped response object is instance of {}" +
-            ", not org.eclipse.jetty.server.Response. Can't set custom error " +
-            "message", response.getClass());
-      }
+      // Jetty 12 never puts a reason phrase on the wire, so the detail is
+      // left to sendError, which writes it into the response body - for any
+      // method, as the reason phrase was, once the error is marked.
+      request.setAttribute(
+          AuthenticationFilter.ERROR_MESSAGE_FOR_ANY_METHOD_ATTRIBUTE,
+          Boolean.TRUE);
       super.sendError(sc, HtmlQuoting.quoteHtmlChars(msg));
     }
 
@@ -158,7 +155,7 @@ public class KMSAuthenticationFilter
   @Override
   public void doFilter(ServletRequest request, ServletResponse response,
       FilterChain filterChain) throws IOException, ServletException {
-    KMSResponse kmsResponse = new KMSResponse(response);
+    KMSResponse kmsResponse = new KMSResponse(request, response);
     super.doFilter(request, kmsResponse, filterChain);
 
     if (kmsResponse.statusCode != HttpServletResponse.SC_OK &&
