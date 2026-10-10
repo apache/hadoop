@@ -138,6 +138,7 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     config.setCapacityByLabel(root, "X", 100);
     config.setMaximumCapacityByLabel(root, "X", 100);
     // set for default queue
+    config.setAccessibleNodeLabels(defaultQueue, Set.of("X"));
     config.setCapacityByLabel(defaultQueue, "X", 100);
     config.setMaximumCapacityByLabel(defaultQueue, "X", 100);
   }
