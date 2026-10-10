@@ -31,11 +31,15 @@ import java.util.List;
 import java.util.Map;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.jupiter.api.Assertions;
 
@@ -52,6 +56,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager.DelegationTokenInformation;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Time;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -423,6 +428,78 @@ public class TestDelegationToken {
     } finally {
       dtSecretManager.stopThreads();
     }
+  }
+
+  /**
+   * Returns a secret manager that runs onFail on every incrementCurrentKeyId()
+   * call after the first. The first call comes from startThreads(); the next
+   * one comes from rollMasterKey() in the remover thread.
+   */
+  private static TestDelegationTokenSecretManager failingAfterFirstKeyId(
+      Runnable onFail) {
+    AtomicInteger keyIdCalls = new AtomicInteger();
+    return new TestDelegationTokenSecretManager(3600000, 3600000, 3600000,
+        3600000) {
+      @Override
+      protected int incrementCurrentKeyId() {
+        if (keyIdCalls.incrementAndGet() > 1) {
+          onFail.run();
+        }
+        return super.incrementCurrentKeyId();
+      }
+    };
+  }
+
+  /**
+   * An unexpected exception in the expired token remover thread must go
+   * through ExitUtil so that tests can intercept it.
+   */
+  @Test
+  @Timeout(value = 30)
+  public void testExpiredTokenRemoverFailureTerminates() throws Exception {
+    ExitUtil.disableSystemExit();
+    TestDelegationTokenSecretManager dtSecretManager =
+        failingAfterFirstKeyId(() -> {
+          throw new RuntimeException("injected key id failure");
+        });
+    try {
+      dtSecretManager.startThreads();
+      GenericTestUtils.waitFor(ExitUtil::terminateCalled, 100, 10000);
+      ExitUtil.ExitException ee = ExitUtil.getFirstExitException();
+      assertEquals(-1, ee.getExitCode());
+      assertEquals("injected key id failure", ee.getCause().getMessage());
+    } finally {
+      dtSecretManager.stopThreads();
+      ExitUtil.resetFirstExitException();
+    }
+  }
+
+  /**
+   * An exception raised because stopThreads() interrupted the expired token
+   * remover thread must not terminate the process.
+   */
+  @Test
+  @Timeout(value = 30)
+  public void testExpiredTokenRemoverFailureWhileStoppingDoesNotTerminate()
+      throws Exception {
+    ExitUtil.disableSystemExit();
+    CountDownLatch blocked = new CountDownLatch(1);
+    TestDelegationTokenSecretManager dtSecretManager =
+        failingAfterFirstKeyId(() -> {
+          // Block in the remover thread until stopThreads() interrupts it,
+          // as a backing store call would.
+          blocked.countDown();
+          try {
+            new CountDownLatch(1).await();
+          } catch (InterruptedException e) {
+            throw new RuntimeException("interrupted", e);
+          }
+        });
+    dtSecretManager.startThreads();
+    assertTrue(blocked.await(10, TimeUnit.SECONDS));
+    dtSecretManager.stopThreads();
+    assertFalse(ExitUtil.terminateCalled(),
+        "terminate should not be called while stopping");
   }
 
   @Test
