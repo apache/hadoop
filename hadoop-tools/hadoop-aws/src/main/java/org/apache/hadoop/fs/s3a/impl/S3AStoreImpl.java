@@ -22,23 +22,21 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletionException;
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
-import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
@@ -48,14 +46,8 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Error;
-import software.amazon.awssdk.services.s3.model.UploadPartRequest;
-import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
-import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
-import software.amazon.awssdk.transfer.s3.model.FileUpload;
-import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -64,14 +56,12 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.s3a.Invoker;
-import org.apache.hadoop.fs.s3a.ProgressableProgressListener;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.S3AStore;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.UploadInfo;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.impl.streams.FactoryBindingParameters;
@@ -80,26 +70,26 @@ import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStream;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectInputStreamFactory;
 import org.apache.hadoop.fs.s3a.impl.streams.ObjectReadParameters;
 import org.apache.hadoop.fs.s3a.impl.streams.StreamFactoryRequirements;
+import org.apache.hadoop.fs.s3a.impl.write.StoreWriterService;
+import org.apache.hadoop.fs.s3a.impl.write.WriteOperationHelperCallbacks;
+import org.apache.hadoop.fs.s3a.impl.write.WriteOperationHelperCallbacksImpl;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.DurationInfo;
-import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.RateLimiting;
 import org.apache.hadoop.util.functional.Tuples;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
 import static org.apache.hadoop.fs.s3a.Constants.HADOOP_TMP_DIR;
-import static org.apache.hadoop.fs.s3a.S3AUtils.extractException;
-import static org.apache.hadoop.fs.s3a.S3AUtils.getPutRequestLength;
 import static org.apache.hadoop.fs.s3a.S3AUtils.isThrottleException;
 import static org.apache.hadoop.fs.s3a.Statistic.ACTION_HTTP_HEAD_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.IGNORED_ERRORS;
-import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_PART_PUT;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_OBJECTS;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
@@ -114,11 +104,13 @@ import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_THROTTLED;
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_THROTTLE_RATE;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.OBJECT_DELETE_WRITE_CAPACITY;
+import static org.apache.hadoop.fs.s3a.impl.write.StoreWriter.STORE_WRITER;
 import static org.apache.hadoop.fs.s3a.impl.streams.StreamIntegration.factoryFromConfig;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.util.Preconditions.checkState;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
@@ -195,6 +187,17 @@ public class S3AStoreImpl
   private ObjectInputStreamFactory objectInputStreamFactory;
 
   /**
+   * store writer Service.
+   */
+  private final StoreWriterService storeWriter;
+
+  /**
+   * Map of services, used for easy lookup and so allow service retrieval to
+   * be a stable part of the of S3AStore API.
+   */
+  private final Map<String, Service> serviceMap = new HashMap<>();
+
+  /**
    * Constructor to create S3A store.
    * Package private, as {@link S3AStoreBuilder} creates them.
    * */
@@ -224,7 +227,51 @@ public class S3AStoreImpl
     this.invoker = requireNonNull(storeContext.getInvoker());
     this.bucket = requireNonNull(storeContext.getBucket());
     this.requestFactory = requireNonNull(storeContext.getRequestFactory());
-    addService(clientManager);
+    registerChildService(CLIENT_MANAGER, clientManager);
+    this.storeWriter = registerChildService(STORE_WRITER, new StoreWriterService());
+  }
+
+  /**
+   * Add and register a service, using an ID which may be used to retrieve it later.
+   * @param id ID of the service
+   * @param service service instance.
+   * @return the service
+   * @param <T> type of the service.
+   */
+  public synchronized <T extends Service> T registerChildService(final String id, final T service) {
+    serviceMap.put(id, service);
+    super.addService(service);
+    return service;
+  }
+
+  /**
+   * Add a service using its name as the service ID.
+   * This is not a robust way to do this as any extension point with multiple services
+   * (e.g object stream factory) will not be resolvable by a well known name.
+   * @param service the {@link Service} to be added
+   */
+  @Override
+  protected void addService(final Service service) {
+    registerChildService(service.getName(), service);
+  }
+
+  @Override
+  @VisibleForTesting
+  public synchronized boolean removeService(final Service service) {
+    // cut from service map.
+    serviceMap.entrySet().removeIf(entry -> entry.getValue() == service);
+    return super.removeService(service);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public <S extends Service> S lookupService(String id, Class<S> serviceClass) {
+    final Service service = serviceMap.get(id);
+    checkState(service != null, "No service found for ID " + id);
+    checkState(serviceClass.isAssignableFrom(service.getClass()),
+        "Service ID %s is of type %s but the desired class is %s",
+        id, service.getClass(), serviceClass);
+    return (S) service;
   }
 
   /**
@@ -237,10 +284,12 @@ public class S3AStoreImpl
     // create and register the stream factory, which will
     // then follow the service lifecycle
     objectInputStreamFactory = factoryFromConfig(conf);
-    addService(objectInputStreamFactory);
+    registerChildService(OBJECT_INPUT_STREAM_FACTORY, objectInputStreamFactory);
 
     // init all child services, including the stream factory
     super.serviceInit(conf);
+    // complete store writer binding
+    storeWriter.bind(this, clientManager, this);
 
     // pass down extra information to the stream factory.
     finishStreamFactoryInit();
@@ -253,6 +302,15 @@ public class S3AStoreImpl
   }
 
   /**
+   * Check the service is running.
+   * @throws IllegalStateException if not in STARTED.
+   */
+  protected void checkRunning() throws IllegalStateException {
+    checkState(isInState(STATE.STARTED),
+        "Store is in state %s", getServiceState());
+  }
+
+  /**
    * Return the store path capabilities.
    * If the object stream factory is non-null, hands off the
    * query to that factory if not handled here.
@@ -262,6 +320,7 @@ public class S3AStoreImpl
    */
   @Override
   public boolean hasPathCapability(final Path path, final String capability) {
+    checkRunning();
     switch (toLowerCase(capability)) {
     case StreamCapabilities.IOSTATISTICS:
       return true;
@@ -278,6 +337,7 @@ public class S3AStoreImpl
    */
   @Override
   public boolean inputStreamHasCapability(final String capability) {
+    checkRunning();
     if (objectInputStreamFactory != null) {
       return objectInputStreamFactory.hasCapability(capability);
     }
@@ -298,27 +358,35 @@ public class S3AStoreImpl
   /** Acquire write capacity for rate limiting {@inheritDoc}. */
   @Override
   public Duration acquireWriteCapacity(final int capacity) {
+    checkRunning();
     return writeRateLimiter.acquire(capacity);
   }
 
   /** Acquire read capacity for rate limiting {@inheritDoc}. */
   @Override
   public Duration acquireReadCapacity(final int capacity) {
+    checkRunning();
     return readRateLimiter.acquire(capacity);
-
   }
 
-  /**
-   * Create a new store context.
-   * @return a new store context.
-   */
-  private StoreContext createStoreContext() {
+  @Override
+  public StoreContext createStoreContext() {
+    checkRunning();
     return storeContextFactory.createStoreContext();
   }
 
   @Override
   public StoreContext getStoreContext() {
+    checkRunning();
     return storeContext;
+  }
+
+  /**
+   * Get the S3 client manager.
+   * @return client manager.
+   */
+  public ClientManager getClientManager() {
+    return clientManager;
   }
 
   /**
@@ -326,46 +394,55 @@ public class S3AStoreImpl
    * @return the S3 client.
    * @throws UncheckedIOException on any failure to create the client.
    */
-  private S3Client getS3Client() throws UncheckedIOException {
+  S3Client getS3Client() throws UncheckedIOException {
+    checkRunning();
     return clientManager.getOrCreateS3ClientUnchecked();
   }
 
   @Override
   public S3TransferManager getOrCreateTransferManager() throws IOException {
+    checkRunning();
     return clientManager.getOrCreateTransferManager();
   }
 
   @Override
   public S3Client getOrCreateS3Client() throws IOException {
+    checkRunning();
     return clientManager.getOrCreateS3Client();
   }
 
   @Override
   public S3AsyncClient getOrCreateAsyncClient() throws IOException {
+    checkRunning();
     return clientManager.getOrCreateAsyncClient();
   }
 
   @Override
   public S3Client getOrCreateS3ClientUnchecked() throws UncheckedIOException {
+    checkRunning();
     return clientManager.getOrCreateS3ClientUnchecked();
   }
 
   @Override
   public S3Client getOrCreateAsyncS3ClientUnchecked() throws UncheckedIOException {
+    checkRunning();
     return clientManager.getOrCreateAsyncS3ClientUnchecked();
   }
 
   @Override
   public S3Client getOrCreateUnencryptedS3Client() throws IOException {
+    checkRunning();
     return clientManager.getOrCreateUnencryptedS3Client();
   }
 
   @Override
   public DurationTrackerFactory getDurationTrackerFactory() {
+    checkRunning();
     return durationTrackerFactory;
   }
 
-  private S3AInstrumentation getInstrumentation() {
+  @Override
+  public S3AInstrumentation getInstrumentation() {
     return instrumentation;
   }
 
@@ -411,30 +488,17 @@ public class S3AStoreImpl
     statisticsContext.incrementCounter(statistic, count);
   }
 
-  /**
-   * Decrement a gauge by a specific value.
-   * @param statistic The operation to decrement
-   * @param count the count to decrement
-   */
-  protected void decrementGauge(Statistic statistic, long count) {
+  @Override
+  public void decrementGauge(Statistic statistic, long count) {
     statisticsContext.decrementGauge(statistic, count);
   }
 
-  /**
-   * Increment a gauge by a specific value.
-   * @param statistic The operation to increment
-   * @param count the count to increment
-   */
-  protected void incrementGauge(Statistic statistic, long count) {
+  @Override
+  public void incrementGauge(Statistic statistic, long count) {
     statisticsContext.incrementGauge(statistic, count);
   }
 
-  /**
-   * Callback when an operation was retried.
-   * Increments the statistics of ignored errors or throttled requests,
-   * depending up on the exception class.
-   * @param ex exception.
-   */
+  @Override
   public void operationRetried(Exception ex) {
     if (isThrottleException(ex)) {
       LOG.debug("Request throttled");
@@ -446,13 +510,7 @@ public class S3AStoreImpl
     }
   }
 
-  /**
-   * Callback from {@link Invoker} when an operation is retried.
-   * @param text text of the operation
-   * @param ex exception
-   * @param retries number of retries
-   * @param idempotent is the method idempotent
-   */
+  @Override
   public void operationRetried(String text, Exception ex, int retries, boolean idempotent) {
     operationRetried(ex);
   }
@@ -507,6 +565,7 @@ public class S3AStoreImpl
    */
   @Override
   public void incrementPutStartStatistics(long bytes) {
+    checkRunning();
     LOG.debug("PUT start {} bytes", bytes);
     incrementWriteOperations();
     incrementGauge(OBJECT_PUT_REQUESTS_ACTIVE, 1);
@@ -599,6 +658,7 @@ public class S3AStoreImpl
       final DeleteObjectsRequest deleteRequest)
       throws SdkException {
 
+    checkRunning();
     DeleteObjectsResponse response;
     BulkDeleteRetryHandler retryHandler = new BulkDeleteRetryHandler(createStoreContext());
 
@@ -671,6 +731,7 @@ public class S3AStoreImpl
       Invoker changeInvoker,
       S3AFileSystemOperations fsHandler,
       String operation) throws IOException {
+    checkRunning();
     HeadObjectResponse response = getStoreContext().getInvoker()
         .retryUntranslated("HEAD " + key, true,
             () -> {
@@ -729,6 +790,7 @@ public class S3AStoreImpl
   public ResponseInputStream<GetObjectResponse> getRangedS3Object(String key,
       long start,
       long end) throws IOException {
+    checkRunning();
     final GetObjectRequest request = getRequestFactory().newGetObjectRequestBuilder(key)
         .range(S3AUtils.formatRange(start, end))
         .build();
@@ -756,8 +818,8 @@ public class S3AStoreImpl
   @Retries.RetryRaw
   public Map.Entry<Duration, Optional<DeleteObjectResponse>> deleteObject(
       final DeleteObjectRequest request)
-      throws SdkException {
-
+      throws SdkException, UncheckedIOException {
+    checkRunning();
     String key = request.key();
     blockRootDelete(key);
     DurationInfo d = new DurationInfo(LOG, false, "deleting %s", key);
@@ -777,134 +839,38 @@ public class S3AStoreImpl
       d.close();
       return Tuples.pair(d.asDuration(), Optional.of(response));
     } catch (AwsServiceException ase) {
+      d.close();
       // 404 errors get swallowed; this can be raised by
       // third party stores (GCS).
       if (!isObjectNotFound(ase)) {
         throw ase;
       }
-      d.close();
       return Tuples.pair(d.asDuration(), Optional.empty());
     } catch (IOException e) {
+      d.close();
       // convert to unchecked.
       throw new UncheckedIOException(e);
     }
   }
 
-  /**
-   * Upload part of a multi-partition file.
-   * Increments the write and put counters.
-   * <i>Important: this call does not close any input stream in the body.</i>
-   * <p>
-   * Retry Policy: none.
-   * @param trackerFactory duration tracker factory for operation
-   * @param request the upload part request.
-   * @param body the request body.
-   * @return the result of the operation.
-   * @throws AwsServiceException on problems
-   * @throws UncheckedIOException failure to instantiate the s3 client
-   */
+  @Retries.RetryRaw
   @Override
-  @Retries.OnceRaw
-  public UploadPartResponse uploadPart(
-      final UploadPartRequest request,
-      final RequestBody body,
-      @Nullable final DurationTrackerFactory trackerFactory)
-      throws AwsServiceException, UncheckedIOException {
-    long len = request.contentLength();
-    incrementPutStartStatistics(len);
-    try {
-      UploadPartResponse uploadPartResponse = trackDurationOfSupplier(
-          nonNullDurationTrackerFactory(trackerFactory),
-          MULTIPART_UPLOAD_PART_PUT.getSymbol(), () ->
-              getS3Client().uploadPart(request, body));
-      incrementPutCompletedStatistics(true, len);
-      return uploadPartResponse;
-    } catch (AwsServiceException e) {
-      incrementPutCompletedStatistics(false, len);
-      throw e;
+  public void deleteObjectAtPath(
+      String key,
+      boolean isFile)
+      throws SdkException, UncheckedIOException {
+    checkRunning();
+    if (isFile) {
+      instrumentation.fileDeleted(1);
+    } else {
+      instrumentation.directoryDeleted();
     }
+    acquireWriteCapacity(OBJECT_DELETE_WRITE_CAPACITY);
+    deleteObject(getRequestFactory()
+            .newDeleteObjectRequestBuilder(key)
+            .build());
   }
 
-  /**
-   * Start a transfer-manager managed async PUT of an object,
-   * incrementing the put requests and put bytes
-   * counters.
-   * <p>
-   * It does not update the other counters,
-   * as existing code does that as progress callbacks come in.
-   * Byte length is calculated from the file length, or, if there is no
-   * file, from the content length of the header.
-   * <p>
-   * Because the operation is async, any stream supplied in the request
-   * must reference data (files, buffers) which stay valid until the upload
-   * completes.
-   * Retry policy: N/A: the transfer manager is performing the upload.
-   * Auditing: must be inside an audit span.
-   * @param putObjectRequest the request
-   * @param file the file to be uploaded
-   * @param listener the progress listener for the request
-   * @return the upload initiated
-   * @throws IOException if transfer manager creation failed.
-   */
-  @Override
-  @Retries.OnceRaw
-  public UploadInfo putObject(
-      PutObjectRequest putObjectRequest,
-      File file,
-      ProgressableProgressListener listener) throws IOException {
-    long len = getPutRequestLength(putObjectRequest);
-    LOG.debug("PUT {} bytes to {} via transfer manager ", len, putObjectRequest.key());
-    incrementPutStartStatistics(len);
-
-    FileUpload upload = getOrCreateTransferManager().uploadFile(
-            UploadFileRequest.builder()
-                .putObjectRequest(putObjectRequest)
-                .source(file)
-                .addTransferListener(listener)
-                .build());
-
-    return new UploadInfo(upload, len);
-  }
-
-  /**
-   * Wait for an upload to complete.
-   * If the upload (or its result collection) failed, this is where
-   * the failure is raised as an AWS exception.
-   * Calls {@link S3AStore#incrementPutCompletedStatistics(boolean, long)}
-   * to update the statistics.
-   * @param key destination key
-   * @param uploadInfo upload to wait for
-   * @return the upload result
-   * @throws IOException IO failure
-   * @throws CancellationException if the wait() was cancelled
-   */
-  @Override
-  @Retries.OnceTranslated
-  public CompletedFileUpload waitForUploadCompletion(String key, UploadInfo uploadInfo)
-      throws IOException {
-    FileUpload upload = uploadInfo.getFileUpload();
-    try {
-      CompletedFileUpload result = upload.completionFuture().join();
-      incrementPutCompletedStatistics(true, uploadInfo.getLength());
-      return result;
-    } catch (CompletionException e) {
-      LOG.info("Interrupted: aborting upload");
-      incrementPutCompletedStatistics(false, uploadInfo.getLength());
-      throw extractException("upload", key, e);
-    }
-  }
-
-  /**
-   * Complete a multipart upload.
-   * @param request request
-   * @return the response
-   */
-  @Override
-  @Retries.OnceRaw
-  public CompleteMultipartUploadResponse completeMultipartUpload(
-      CompleteMultipartUploadRequest request) {
-    return getS3Client().completeMultipartUpload(request);
-  }
 
   /**
    * Get the directory allocator.
@@ -931,6 +897,7 @@ public class S3AStoreImpl
   public File createTemporaryFileForWriting(String pathStr,
       long size,
       Configuration conf) throws IOException {
+    checkRunning();
     requireNonNull(directoryAllocator, "directory allocator not initialized");
     Path path = directoryAllocator.getLocalPathForWrite(pathStr,
         size, conf);
@@ -950,9 +917,9 @@ public class S3AStoreImpl
    */
   private void finishStreamFactoryInit() throws IOException {
     // must be on be invoked during service initialization
-    Preconditions.checkState(isInState(STATE.INITED),
+    checkState(isInState(STATE.INITED),
         "Store is in wrong state: %s", getServiceState());
-    Preconditions.checkState(clientManager.isInState(STATE.INITED),
+    checkState(clientManager.isInState(STATE.INITED),
         "Client Manager is in wrong state: %s", clientManager.getServiceState());
 
     // finish initialization and pass down callbacks to self
@@ -1007,5 +974,20 @@ public class S3AStoreImpl
 
   /*
    =============== END ObjectInputStreamFactory ===============
+   */
+
+
+  /*
+   =============== BEGIN WriteOperationHelperCallbacks ===============
+   These either invoke internal store operations or those of multipart IO.
+   */
+
+  @Override
+  public WriteOperationHelperCallbacks createWriteOperationHelperCallbacks() {
+    return new WriteOperationHelperCallbacksImpl(this);
+  }
+
+  /*
+   =============== END WriteOperationHelperCallbacks ===============
    */
 }

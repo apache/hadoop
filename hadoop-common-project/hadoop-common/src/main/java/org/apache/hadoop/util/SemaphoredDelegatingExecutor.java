@@ -31,6 +31,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -127,6 +128,7 @@ public class SemaphoredDelegatingExecutor extends
 
   @Override
   public <T> Future<T> submit(Callable<T> task) {
+    rejectWhenShutdown();
     try (DurationTracker ignored =
              trackerFactory.trackDuration(ACTION_EXECUTOR_ACQUIRED)) {
       queueingPermits.acquire();
@@ -139,6 +141,7 @@ public class SemaphoredDelegatingExecutor extends
 
   @Override
   public <T> Future<T> submit(Runnable task, T result) {
+    rejectWhenShutdown();
     try (DurationTracker ignored =
              trackerFactory.trackDuration(ACTION_EXECUTOR_ACQUIRED)) {
       queueingPermits.acquire();
@@ -151,6 +154,7 @@ public class SemaphoredDelegatingExecutor extends
 
   @Override
   public Future<?> submit(Runnable task) {
+    rejectWhenShutdown();
     try (DurationTracker ignored =
              trackerFactory.trackDuration(ACTION_EXECUTOR_ACQUIRED)) {
       queueingPermits.acquire();
@@ -163,6 +167,7 @@ public class SemaphoredDelegatingExecutor extends
 
   @Override
   public void execute(Runnable command) {
+    rejectWhenShutdown();
     try (DurationTracker ignored =
              trackerFactory.trackDuration(ACTION_EXECUTOR_ACQUIRED)) {
       queueingPermits.acquire();
@@ -209,6 +214,16 @@ public class SemaphoredDelegatingExecutor extends
   }
 
   /**
+   * Raise an exception if invoked when the executor is shut down.
+   * @throws RejectedExecutionException if the executor is shut down.
+   */
+  private void rejectWhenShutdown() throws RejectedExecutionException{
+    if (isShutdown()) {
+      throw new RejectedExecutionException("ExecutorService is shutdown");
+    }
+  }
+
+  /**
    * Releases a permit after the task is executed.
    */
   class RunnableWithPermitRelease implements Runnable {
@@ -222,6 +237,7 @@ public class SemaphoredDelegatingExecutor extends
     @Override
     public void run() {
       try {
+        rejectWhenShutdown();
         delegatee.run();
       } finally {
         queueingPermits.release();
@@ -244,6 +260,7 @@ public class SemaphoredDelegatingExecutor extends
     @Override
     public T call() throws Exception {
       try {
+        rejectWhenShutdown();
         return delegatee.call();
       } finally {
         queueingPermits.release();
