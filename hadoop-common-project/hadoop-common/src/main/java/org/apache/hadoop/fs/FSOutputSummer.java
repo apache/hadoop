@@ -52,7 +52,14 @@ abstract public class FSOutputSummer extends OutputStream implements
   
   protected FSOutputSummer(DataChecksum sum) {
     this.sum = sum;
-    this.buf = new byte[sum.getBytesPerChecksum() * BUFFER_NUM_CHUNKS];
+    int bufSize;
+    try {
+      bufSize = Math.multiplyExact(sum.getBytesPerChecksum(), BUFFER_NUM_CHUNKS);
+    } catch (ArithmeticException ae) {
+      throw new IllegalArgumentException(
+          "The calculated buffer array size for FSOutputSummer is too large", ae);
+    }
+    this.buf = new byte[bufSize];
     this.checksum = new byte[getChecksumSize() * BUFFER_NUM_CHUNKS];
     this.count = 0;
   }
@@ -261,7 +268,7 @@ abstract public class FSOutputSummer extends OutputStream implements
   }
 
   protected synchronized void resetChecksumBufSize() {
-    setChecksumBufSize(sum.getBytesPerChecksum() * BUFFER_NUM_CHUNKS);
+    setChecksumBufSize(Math.multiplyExact(sum.getBytesPerChecksum(), BUFFER_NUM_CHUNKS));
   }
 
   @Override
