@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -40,6 +42,7 @@ class ExcessRedundancyMap {
 
   private final Map<String, LightWeightHashSet<Block>> map = new HashMap<>();
   private final AtomicLong size = new AtomicLong(0L);
+  private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
   /**
    * @return the number of redundancies in this map.
@@ -52,23 +55,38 @@ class ExcessRedundancyMap {
    * @return the number of redundancies corresponding to the given datanode.
    */
   @VisibleForTesting
-  synchronized int getSize4Testing(String dnUuid) {
-    final LightWeightHashSet<Block> set = map.get(dnUuid);
-    return set == null? 0: set.size();
+  int getSize4Testing(String dnUuid) {
+    lock.readLock().lock();
+    try {
+      final LightWeightHashSet<Block> set = map.get(dnUuid);
+      return set == null? 0: set.size();
+    } finally {
+      lock.readLock().unlock();
+    }
   }
 
-  synchronized void clear() {
-    map.clear();
-    size.set(0L);
+  void clear() {
+    lock.writeLock().lock();
+    try {
+      map.clear();
+      size.set(0L);
+    } finally {
+      lock.writeLock().unlock();
+    }
   }
 
   /**
    * @return does this map contains a redundancy corresponding to the given
    *         datanode and the given block?
    */
-  synchronized boolean contains(DatanodeDescriptor dn, BlockInfo blk) {
-    final LightWeightHashSet<Block> set = map.get(dn.getDatanodeUuid());
-    return set != null && set.contains(blk);
+  boolean contains(DatanodeDescriptor dn, BlockInfo blk) {
+    lock.readLock().lock();
+    try {
+      final LightWeightHashSet<Block> set = map.get(dn.getDatanodeUuid());
+      return set != null && set.contains(blk);
+    } finally {
+      lock.readLock().unlock();
+    }
   }
 
   /**
@@ -77,18 +95,23 @@ class ExcessRedundancyMap {
    *
    * @return true if the block is added.
    */
-  synchronized boolean add(DatanodeDescriptor dn, BlockInfo blk) {
-    LightWeightHashSet<Block> set = map.get(dn.getDatanodeUuid());
-    if (set == null) {
-      set = new LightWeightHashSet<>();
-      map.put(dn.getDatanodeUuid(), set);
+  boolean add(DatanodeDescriptor dn, BlockInfo blk) {
+    lock.writeLock().lock();
+    try {
+      LightWeightHashSet<Block> set = map.get(dn.getDatanodeUuid());
+      if (set == null) {
+        set = new LightWeightHashSet<>();
+        map.put(dn.getDatanodeUuid(), set);
+      }
+      final boolean added = set.add(new ExcessBlockInfo(blk));
+      if (added) {
+        size.incrementAndGet();
+        blockLog.debug("BLOCK* ExcessRedundancyMap.add({}, {})", dn, blk);
+      }
+      return added;
+    } finally {
+      lock.writeLock().unlock();
     }
-    final boolean added = set.add(new ExcessBlockInfo(blk));
-    if (added) {
-      size.incrementAndGet();
-      blockLog.debug("BLOCK* ExcessRedundancyMap.add({}, {})", dn, blk);
-    }
-    return added;
   }
 
   /**
@@ -97,25 +120,35 @@ class ExcessRedundancyMap {
    *
    * @return true if the block is removed.
    */
-  synchronized boolean remove(DatanodeDescriptor dn, BlockInfo blk) {
-    final LightWeightHashSet<Block> set = map.get(dn.getDatanodeUuid());
-    if (set == null) {
-      return false;
-    }
-    final boolean removed = set.remove(blk);
-    if (removed) {
-      size.decrementAndGet();
-      blockLog.debug("BLOCK* ExcessRedundancyMap.remove({}, {})", dn, blk);
-
-      if (set.isEmpty()) {
-        map.remove(dn.getDatanodeUuid());
+  boolean remove(DatanodeDescriptor dn, BlockInfo blk) {
+    lock.writeLock().lock();
+    try {
+      final LightWeightHashSet<Block> set = map.get(dn.getDatanodeUuid());
+      if (set == null) {
+        return false;
       }
+      final boolean removed = set.remove(blk);
+      if (removed) {
+        size.decrementAndGet();
+        blockLog.debug("BLOCK* ExcessRedundancyMap.remove({}, {})", dn, blk);
+
+        if (set.isEmpty()) {
+          map.remove(dn.getDatanodeUuid());
+        }
+      }
+      return removed;
+    } finally {
+      lock.writeLock().unlock();
     }
-    return removed;
   }
 
-  synchronized Map<String, LightWeightHashSet<Block>> getExcessRedundancyMap() {
-    return map;
+  Map<String, LightWeightHashSet<Block>> getExcessRedundancyMap() {
+    lock.readLock().lock();
+    try {
+      return map;
+    } finally {
+      lock.readLock().unlock();
+    }
   }
 
   /**
