@@ -24,6 +24,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -46,6 +48,7 @@ import org.apache.hadoop.security.SecurityUtil.TruststoreKeystore;
 import org.apache.hadoop.security.authentication.util.ZookeeperClient;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
+import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.security.SecurityUtil.getServerPrincipal;
 import static org.apache.hadoop.util.Time.now;
@@ -133,6 +136,14 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   private static final ThreadLocal<CuratorFramework> CURATOR_TL =
       new ThreadLocal<CuratorFramework>();
+
+  // Bound on the wait for the initial cache load; 0 waits indefinitely.
+  private static volatile long cacheInitTimeoutMs = 0;
+
+  @VisibleForTesting
+  static void setCacheInitTimeoutMs(long timeoutMs) {
+    cacheInitTimeoutMs = timeoutMs;
+  }
 
   public static void setCurator(CuratorFramework curator) {
     CURATOR_TL.set(curator);
@@ -240,6 +251,23 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   @Override
   public void startThreads() throws IOException {
+    // Fail fast so the cleanup below never tears down a running instance.
+    Preconditions.checkState(!isRunning(), "Secret manager is already running");
+    try {
+      doStartThreads();
+    } catch (IOException | RuntimeException e) {
+      // The caller does not invoke stopThreads() after a failed start, so
+      // release the caches, counters and Curator client here.
+      try {
+        stopThreads();
+      } catch (RuntimeException ce) {
+        e.addSuppressed(ce);
+      }
+      throw e;
+    }
+  }
+
+  private void doStartThreads() throws IOException {
     if (!isExternalClient) {
       try {
         zkClient.start();
@@ -290,8 +318,13 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     try {
       keyCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_MASTER_KEY_ROOT)
           .build();
+      CountDownLatch keyCacheInitialized = new CountDownLatch(1);
       CuratorCacheListener keyCacheListener = CuratorCacheListener.builder()
           .forCreatesAndChanges((oldNode, node) -> {
+            if (ZK_DTSM_MASTER_KEY_ROOT.equals(node.getPath())) {
+              // The root node itself is a container, not a key.
+              return;
+            }
             try {
               processKeyAddOrUpdate(node.getData());
             } catch (IOException e) {
@@ -301,9 +334,11 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
             }
           })
           .forDeletes(childData -> processKeyRemoved(childData.getPath()))
+          .forInitialized(keyCacheInitialized::countDown)
           .build();
       keyCache.listenable().addListener(keyCacheListener);
       keyCache.start();
+      awaitCacheInitialized(keyCacheInitialized, "key");
       loadFromZKCache(false);
     } catch (Exception e) {
       throw new IOException("Could not start Curator keyCacheListener for keys",
@@ -314,8 +349,13 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       try {
         tokenCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_TOKENS_ROOT)
             .build();
+        CountDownLatch tokenCacheInitialized = new CountDownLatch(1);
         CuratorCacheListener tokenCacheListener = CuratorCacheListener.builder()
             .forCreatesAndChanges((oldNode, node) -> {
+              if (ZK_DTSM_TOKENS_ROOT.equals(node.getPath())) {
+                // The root node itself is a container, not a token.
+                return;
+              }
               try {
                 processTokenAddOrUpdate(node.getData());
               } catch (IOException e) {
@@ -333,9 +373,11 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
                 throw new UncheckedIOException(e);
               }
             })
+            .forInitialized(tokenCacheInitialized::countDown)
             .build();
         tokenCache.listenable().addListener(tokenCacheListener);
         tokenCache.start();
+        awaitCacheInitialized(tokenCacheInitialized, "token");
         loadFromZKCache(true);
       } catch (Exception e) {
         throw new IOException(
@@ -363,6 +405,11 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
     final AtomicInteger count = new AtomicInteger(0);
     children.forEach(childData -> {
+      if (childData.getPath().equals(
+          isTokenCache ? ZK_DTSM_TOKENS_ROOT : ZK_DTSM_MASTER_KEY_ROOT)) {
+        // The root node itself is a container, not a key or token.
+        return;
+      }
       try {
         if (isTokenCache) {
           processTokenAddOrUpdate(childData.getData());
@@ -384,6 +431,24 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
           cacheName);
     }
     LOG.info("Loaded {} cache.", cacheName);
+  }
+
+  private void awaitCacheInitialized(CountDownLatch initialized,
+      String cacheName) throws IOException {
+    try {
+      if (cacheInitTimeoutMs > 0) {
+        if (!initialized.await(cacheInitTimeoutMs, TimeUnit.MILLISECONDS)) {
+          throw new IOException("Timed out after " + cacheInitTimeoutMs
+              + " ms waiting for " + cacheName + " cache initialization");
+        }
+      } else {
+        initialized.await();
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("Interrupted while waiting for " + cacheName
+          + " cache initialization", e);
+    }
   }
 
   private void processKeyAddOrUpdate(byte[] data) throws IOException {
@@ -425,6 +490,10 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   private void processTokenRemoved(ChildData data) throws IOException {
+    if (ZK_DTSM_TOKENS_ROOT.equals(data.getPath())) {
+      // The root node itself is a container, not a token.
+      return;
+    }
     ByteArrayInputStream bin = new ByteArrayInputStream(data.getData());
     DataInputStream din = new DataInputStream(bin);
     TokenIdent ident = createIdentifier();
@@ -474,7 +543,9 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   private void createPersistentNode(String nodePath) throws Exception {
     try {
-      zkClient.create().withMode(CreateMode.PERSISTENT).forPath(nodePath);
+      // Store empty data instead of Curator's default (the local address);
+      // HADOOP-17835 (3.4.0): CuratorCache includes the root node in the cache.
+      zkClient.create().withMode(CreateMode.PERSISTENT).forPath(nodePath, new byte[0]);
     } catch (KeeperException.NodeExistsException ne) {
       LOG.debug(nodePath + " znode already exists !!");
     } catch (Exception e) {
