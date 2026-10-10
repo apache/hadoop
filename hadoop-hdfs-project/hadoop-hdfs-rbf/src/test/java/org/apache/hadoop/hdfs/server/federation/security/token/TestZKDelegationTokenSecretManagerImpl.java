@@ -54,6 +54,14 @@ public class TestZKDelegationTokenSecretManagerImpl
     ZKDelegationTokenSecretManager.setCurator(null);
   }
 
+  private static void stopAll(ZKDelegationTokenSecretManagerImpl... dtsms) {
+    for (ZKDelegationTokenSecretManagerImpl dtsm : dtsms) {
+      if (dtsm != null) {
+        dtsm.stopThreads();
+      }
+    }
+  }
+
   @SuppressWarnings("unchecked")
   @Test
   public void testMultiNodeOperationWithoutWatch() throws Exception {
@@ -64,50 +72,50 @@ public class TestZKDelegationTokenSecretManagerImpl
     conf.setInt(ZK_DTSM_ROUTER_TOKEN_SYNC_INTERVAL, 3);
 
     for (int i = 0; i < TEST_RETRIES; i++) {
-      ZKDelegationTokenSecretManagerImpl dtsm1 =
-          new ZKDelegationTokenSecretManagerImpl(conf);
-      ZKDelegationTokenSecretManagerImpl dtsm2 =
-          new ZKDelegationTokenSecretManagerImpl(conf);
-      DelegationTokenManager tm1, tm2;
-      tm1 = new DelegationTokenManager(conf, new Text("bla"));
-      tm1.setExternalDelegationTokenSecretManager(dtsm1);
-      tm2 = new DelegationTokenManager(conf, new Text("bla"));
-      tm2.setExternalDelegationTokenSecretManager(dtsm2);
-
-      // common token operation without watchers should still be working
-      Token<DelegationTokenIdentifier> token =
-          (Token<DelegationTokenIdentifier>) tm1.createToken(
-              UserGroupInformation.getCurrentUser(), "foo");
-      assertNotNull(token);
-      tm2.verifyToken(token);
-      tm2.renewToken(token, "foo");
-      tm1.verifyToken(token);
-      tm1.cancelToken(token, "foo");
+      ZKDelegationTokenSecretManagerImpl dtsm1 = null, dtsm2 = null;
+      DelegationTokenManager tm1 = null, tm2 = null;
       try {
-        verifyTokenFail(tm2, token);
-        fail("Expected InvalidToken");
-      } catch (SecretManager.InvalidToken it) {
-        // Ignore
-      }
+        dtsm1 = new ZKDelegationTokenSecretManagerImpl(conf);
+        dtsm2 = new ZKDelegationTokenSecretManagerImpl(conf);
+        tm1 = new DelegationTokenManager(conf, new Text("bla"));
+        tm1.setExternalDelegationTokenSecretManager(dtsm1);
+        tm2 = new DelegationTokenManager(conf, new Text("bla"));
+        tm2.setExternalDelegationTokenSecretManager(dtsm2);
 
-      token = (Token<DelegationTokenIdentifier>) tm2.createToken(
-          UserGroupInformation.getCurrentUser(), "bar");
-      assertNotNull(token);
-      tm1.verifyToken(token);
-      tm1.renewToken(token, "bar");
-      tm2.verifyToken(token);
-      tm2.cancelToken(token, "bar");
-      try {
-        verifyTokenFail(tm1, token);
-        fail("Expected InvalidToken");
-      } catch (SecretManager.InvalidToken it) {
-        // Ignore
-      }
+        // common token operation without watchers should still be working
+        Token<DelegationTokenIdentifier> token =
+            (Token<DelegationTokenIdentifier>) tm1.createToken(
+                UserGroupInformation.getCurrentUser(), "foo");
+        assertNotNull(token);
+        tm2.verifyToken(token);
+        tm2.renewToken(token, "foo");
+        tm1.verifyToken(token);
+        tm1.cancelToken(token, "foo");
+        try {
+          verifyTokenFail(tm2, token);
+          fail("Expected InvalidToken");
+        } catch (SecretManager.InvalidToken it) {
+          // Ignore
+        }
 
-      dtsm1.stopThreads();
-      dtsm2.stopThreads();
-      verifyDestroy(tm1, conf);
-      verifyDestroy(tm2, conf);
+        token = (Token<DelegationTokenIdentifier>) tm2.createToken(
+            UserGroupInformation.getCurrentUser(), "bar");
+        assertNotNull(token);
+        tm1.verifyToken(token);
+        tm1.renewToken(token, "bar");
+        tm2.verifyToken(token);
+        tm2.cancelToken(token, "bar");
+        try {
+          verifyTokenFail(tm1, token);
+          fail("Expected InvalidToken");
+        } catch (SecretManager.InvalidToken it) {
+          // Ignore
+        }
+      } finally {
+        stopAll(dtsm1, dtsm2);
+        destroyIfNotNull(tm1, conf);
+        destroyIfNotNull(tm2, conf);
+      }
     }
   }
 
@@ -126,46 +134,46 @@ public class TestZKDelegationTokenSecretManagerImpl
     conf.setInt(REMOVAL_SCAN_INTERVAL, 10);
 
     for (int i = 0; i < TEST_RETRIES; i++) {
-      ZKDelegationTokenSecretManagerImpl dtsm1 =
-          new ZKDelegationTokenSecretManagerImpl(conf);
-      ZKDelegationTokenSecretManagerImpl dtsm2 =
-          new ZKDelegationTokenSecretManagerImpl(conf);
-      DelegationTokenManager tm1, tm2;
-      tm1 = new DelegationTokenManager(conf, new Text("bla"));
-      tm1.setExternalDelegationTokenSecretManager(dtsm1);
-      tm2 = new DelegationTokenManager(conf, new Text("bla"));
-      tm2.setExternalDelegationTokenSecretManager(dtsm2);
+      ZKDelegationTokenSecretManagerImpl dtsm1 = null, dtsm2 = null;
+      DelegationTokenManager tm1 = null, tm2 = null;
+      try {
+        dtsm1 = new ZKDelegationTokenSecretManagerImpl(conf);
+        dtsm2 = new ZKDelegationTokenSecretManagerImpl(conf);
+        tm1 = new DelegationTokenManager(conf, new Text("bla"));
+        tm1.setExternalDelegationTokenSecretManager(dtsm1);
+        tm2 = new DelegationTokenManager(conf, new Text("bla"));
+        tm2.setExternalDelegationTokenSecretManager(dtsm2);
 
-      // time: X
-      // token expiry time:
-      //   tm1: X + 10
-      //   tm2: X + 10
-      Token<DelegationTokenIdentifier> token =
-          (Token<DelegationTokenIdentifier>) tm1.createToken(
-              UserGroupInformation.getCurrentUser(), "foo");
-      assertNotNull(token);
-      tm2.verifyToken(token);
+        // time: X
+        // token expiry time:
+        //   tm1: X + 10
+        //   tm2: X + 10
+        Token<DelegationTokenIdentifier> token =
+            (Token<DelegationTokenIdentifier>) tm1.createToken(
+                UserGroupInformation.getCurrentUser(), "foo");
+        assertNotNull(token);
+        tm2.verifyToken(token);
 
-      // time: X + 9
-      // token expiry time:
-      //   tm1: X + 10
-      //   tm2: X + 19
-      Thread.sleep(9 * 1000);
-      tm2.renewToken(token, "foo");
-      tm1.verifyToken(token);
+        // time: X + 9
+        // token expiry time:
+        //   tm1: X + 10
+        //   tm2: X + 19
+        Thread.sleep(9 * 1000);
+        tm2.renewToken(token, "foo");
+        tm1.verifyToken(token);
 
-      // time: X + 13
-      // token expiry time: (sync happened)
-      //   tm1: X + 19
-      //   tm2: X + 19
-      Thread.sleep(4 * 1000);
-      tm1.verifyToken(token);
-      tm2.verifyToken(token);
-
-      dtsm1.stopThreads();
-      dtsm2.stopThreads();
-      verifyDestroy(tm1, conf);
-      verifyDestroy(tm2, conf);
+        // time: X + 13
+        // token expiry time: (sync happened)
+        //   tm1: X + 19
+        //   tm2: X + 19
+        Thread.sleep(4 * 1000);
+        tm1.verifyToken(token);
+        tm2.verifyToken(token);
+      } finally {
+        stopAll(dtsm1, dtsm2);
+        destroyIfNotNull(tm1, conf);
+        destroyIfNotNull(tm2, conf);
+      }
     }
   }
 
@@ -186,58 +194,56 @@ public class TestZKDelegationTokenSecretManagerImpl
     conf.setInt(REMOVAL_SCAN_INTERVAL, 10);
 
     for (int i = 0; i < TEST_RETRIES; i++) {
-      ZKDelegationTokenSecretManagerImpl dtsm1 =
-          new ZKDelegationTokenSecretManagerImpl(conf);
-      ZKDelegationTokenSecretManagerImpl dtsm2 =
-          new ZKDelegationTokenSecretManagerImpl(conf);
-      ZKDelegationTokenSecretManagerImpl dtsm3 =
-          new ZKDelegationTokenSecretManagerImpl(conf);
-      DelegationTokenManager tm1, tm2, tm3;
-      tm1 = new DelegationTokenManager(conf, new Text("bla"));
-      tm1.setExternalDelegationTokenSecretManager(dtsm1);
-      tm2 = new DelegationTokenManager(conf, new Text("bla"));
-      tm2.setExternalDelegationTokenSecretManager(dtsm2);
-      tm3 = new DelegationTokenManager(conf, new Text("bla"));
-      tm3.setExternalDelegationTokenSecretManager(dtsm3);
+      ZKDelegationTokenSecretManagerImpl dtsm1 = null, dtsm2 = null, dtsm3 = null;
+      DelegationTokenManager tm1 = null, tm2 = null, tm3 = null;
+      try {
+        dtsm1 = new ZKDelegationTokenSecretManagerImpl(conf);
+        dtsm2 = new ZKDelegationTokenSecretManagerImpl(conf);
+        dtsm3 = new ZKDelegationTokenSecretManagerImpl(conf);
+        tm1 = new DelegationTokenManager(conf, new Text("bla"));
+        tm1.setExternalDelegationTokenSecretManager(dtsm1);
+        tm2 = new DelegationTokenManager(conf, new Text("bla"));
+        tm2.setExternalDelegationTokenSecretManager(dtsm2);
+        tm3 = new DelegationTokenManager(conf, new Text("bla"));
+        tm3.setExternalDelegationTokenSecretManager(dtsm3);
 
-      // time: X
-      // token expiry time:
-      //   tm1: X + 10
-      //   tm2: X + 10
-      //   tm3: No token due to no sync
-      Token<DelegationTokenIdentifier> token =
-          (Token<DelegationTokenIdentifier>) tm1.createToken(
-              UserGroupInformation.getCurrentUser(), "foo");
-      assertNotNull(token);
-      tm2.verifyToken(token);
+        // time: X
+        // token expiry time:
+        //   tm1: X + 10
+        //   tm2: X + 10
+        //   tm3: No token due to no sync
+        Token<DelegationTokenIdentifier> token =
+            (Token<DelegationTokenIdentifier>) tm1.createToken(
+                UserGroupInformation.getCurrentUser(), "foo");
+        assertNotNull(token);
+        tm2.verifyToken(token);
 
-      // time: X + 9
-      // token expiry time:
-      //   tm1: X + 10
-      //   tm2: X + 19
-      //   tm3: No token due to no sync
-      Thread.sleep(9 * 1000);
-      long renewalTime = tm2.renewToken(token, "foo");
-      LOG.info("Renew for token {} at current time {} renewal time {}",
-          token.getIdentifier(), Time.formatTime(Time.now()),
-          Time.formatTime(renewalTime));
-      tm1.verifyToken(token);
+        // time: X + 9
+        // token expiry time:
+        //   tm1: X + 10
+        //   tm2: X + 19
+        //   tm3: No token due to no sync
+        Thread.sleep(9 * 1000);
+        long renewalTime = tm2.renewToken(token, "foo");
+        LOG.info("Renew for token {} at current time {} renewal time {}",
+            token.getIdentifier(), Time.formatTime(Time.now()),
+            Time.formatTime(renewalTime));
+        tm1.verifyToken(token);
 
-      // time: X + 13
-      // token expiry time: (sync din't happen)
-      //   tm1: X + 10
-      //   tm2: X + 19
-      //   tm3: X + 19 due to fetch from zk
-      Thread.sleep(4 * 1000);
-      tm2.verifyToken(token);
-      tm3.verifyToken(token);
-
-      dtsm1.stopThreads();
-      dtsm2.stopThreads();
-      dtsm3.stopThreads();
-      verifyDestroy(tm1, conf);
-      verifyDestroy(tm2, conf);
-      verifyDestroy(tm3, conf);
+        // time: X + 13
+        // token expiry time: (sync din't happen)
+        //   tm1: X + 10
+        //   tm2: X + 19
+        //   tm3: X + 19 due to fetch from zk
+        Thread.sleep(4 * 1000);
+        tm2.verifyToken(token);
+        tm3.verifyToken(token);
+      } finally {
+        stopAll(dtsm1, dtsm2, dtsm3);
+        destroyIfNotNull(tm1, conf);
+        destroyIfNotNull(tm2, conf);
+        destroyIfNotNull(tm3, conf);
+      }
     }
   }
 
