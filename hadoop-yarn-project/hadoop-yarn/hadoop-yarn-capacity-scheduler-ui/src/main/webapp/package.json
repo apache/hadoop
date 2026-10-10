@@ -63,7 +63,7 @@
     "immer": "^10.0.0",
     "isbot": "^5.1.27",
     "lucide-react": "^0.525.0",
-    "nanoid": "^5.1.5",
+    "nanoid": "^5.1.16",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.59.0",
