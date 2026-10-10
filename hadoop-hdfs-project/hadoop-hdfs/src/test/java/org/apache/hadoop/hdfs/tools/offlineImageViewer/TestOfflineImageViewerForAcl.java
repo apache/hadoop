@@ -23,9 +23,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -220,9 +222,10 @@ public class TestOfflineImageViewerForAcl {
   @Test
   public void testPBImageXmlWriterForAcl() throws Exception{
     ByteArrayOutputStream output = new ByteArrayOutputStream();
-    PrintStream o = new PrintStream(output);
-    PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
+    OutputStreamWriter w = new OutputStreamWriter(output, StandardCharsets.UTF_8);
+    PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), w);
     v.visit(new RandomAccessFile(originalFsimage, "r"));
+    w.flush();
     SAXParserFactory spf = XMLUtils.newSecureSAXParserFactory();
     SAXParser parser = spf.newSAXParser();
     final String xml = output.toString();
