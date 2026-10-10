@@ -25,21 +25,40 @@
   //This stores the current directory which is being browsed
   var current_directory = "";
 
+  var home_directory = "";
+
+  var configuration = null;
+
+  var trash_root = "";
+
   function show_err_msg(msg) {
+    $('#info-panel').hide();
     $('#alert-panel-body').html(msg);
     $('#alert-panel').show();
   }
-
-  $(window).bind('hashchange', function () {
+  function show_info_msg(msg) {
     $('#alert-panel').hide();
+    $('#info-panel-body').html(msg);
+    $('#info-panel').show();
+  }
+  $(window).bind('popstate', function () {
+    reset_message_panel();
 
     var dir = decodeURIComponent(window.location.hash.slice(1));
     if(dir == "") {
-      dir = "/";
+      dir = get_path_from_query();
+    }
+    if(dir == "") {
+      dir = get_homedirectory();
     }
     if(current_directory != dir) {
       browse_directory(dir);
+    } else {
+      if(window.location.hash != dir) {
+        window.location.hash = dir;
+      }
     }
+    set_path_to_query(dir);
   });
 
   function network_error_handler(url) {
@@ -68,6 +87,10 @@
   function append_path(prefix, s) {
     var l = prefix.length;
     var p = l > 0 && prefix[l - 1] == '/' ? prefix.substring(0, l - 1) : prefix;
+
+    if(s.length > 0 && s[0] == '/'){
+      return p + s;
+    }
     return p + '/' + s;
   }
 
@@ -80,24 +103,60 @@
   }
 
   function delete_path(inode_name, absolute_file_path) {
-    $('#delete-modal-title').text("Delete - " + inode_name);
-    $('#delete-prompt').text("Are you sure you want to delete " + inode_name
-      + " ?");
+    $('#delete-modal-title').text("Trash - " + inode_name);
+    $('#delete-prompt').text("Are you sure you want to move " + inode_name
+      + " to trash?");
 
-    $('#delete-button').off().on('click', function() {
-      // DELETE /webhdfs/v1/<path>?op=DELETE&recursive=<true|false>
-      var url = '/webhdfs/v1' + encode_path(absolute_file_path) +
-        '?op=DELETE' + '&recursive=true';
+    $('#delete-button').off("click").on("click", function() {
+      get_trashroot();
+      if(trash_root == "") {
+        $('#delete-modal').modal('hide');
+        $('#delete-button').button('reset');
+        return;
+      }
 
-      $.ajax(url,
-        { type: 'DELETE'
-        }).done(function(data) {
-          browse_directory(current_directory);
-        }).fail(network_error_handler(url)
-         ).always(function() {
-           $('#delete-modal').modal('hide');
-           $('#delete-button').button('reset');
-        });
+      const trash_current = append_path(trash_root, "Current");
+      // abs_file_path: /user/foo/.Trash/file
+      // trash_root: /user/foo/.Trash
+      if (absolute_file_path == trash_root || absolute_file_path.startsWith(trash_root + "/")){
+        show_err_msg("Cannot move " + absolute_file_path + " to the trash, it is already in trash");
+        $('#delete-modal').modal('hide');
+        $('#delete-button').button('reset');
+        return;
+      }
+
+      const trash_root_parent = parent_dir(trash_root);
+      // abs_file_path: /user/foo
+      // trash_root_parent: /user/foo
+      if (trash_root_parent == absolute_file_path || trash_root_parent.startsWith(absolute_file_path + "/")){
+        show_err_msg("Cannot move " + absolute_file_path + " to the trash, as it contains the trash");
+        $('#delete-modal').modal('hide');
+        $('#delete-button').button('reset');
+        return;
+      }
+
+      let trash_path = append_path(trash_current, absolute_file_path);
+      const base_trash_path = append_path(trash_current, parent_dir(absolute_file_path));
+
+      if(!mkdirs(base_trash_path)){
+        $('#delete-modal').modal('hide');
+        $('#delete-button').button('reset');
+        return;
+      }
+
+      trash_path = get_unique_trash_path(trash_path);
+      const url = "/webhdfs/v1" + encode_path(absolute_file_path) + "?op=RENAME&renameoptions=TO_TRASH&destination=" + encode_path(trash_path);
+      $.ajax({
+        type: "PUT",
+        url:  url
+      }).done(function(data) {
+        browse_directory(current_directory);
+        show_info_msg("Moved " + absolute_file_path + " to trash at: " + trash_path);
+      }).fail(network_error_handler(url))
+      .always(function() {
+        $('#delete-modal').modal('hide');
+        $('#delete-button').button('reset');
+      });
     })
     $('#delete-modal').modal();
   }
@@ -146,6 +205,180 @@
       .always(function() {
         $('.explorer-perm-links').popover('destroy');
       });
+  }
+
+  function set_path_to_query(dir) {
+    if ('URLSearchParams' in window) {
+      const url = new URL(window.location)
+      url.searchParams.set("p", dir)
+      history.replaceState(null, '', url);
+    }
+  }
+  function get_path_from_query() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const v = urlParams.get("p");
+    if(v === null){
+      return "";
+    } else {
+      return v;
+    }
+  }
+
+  function get_homedirectory() {
+    if(home_directory != "") {
+      return home_directory;
+    }
+
+    var result = "/";
+    var url = '/webhdfs/v1?op=GETHOMEDIRECTORY';
+
+    $.ajax({
+      url: url,
+      type: "get",
+      async: false,
+      success: function (data) {
+        var d = get_response(data, "Path");
+        if (d != null) {
+          result = d;
+        }
+      }
+    });
+
+    home_directory = result;
+    return result;
+  }
+
+  function millis_to_str(milliseconds ) {
+    let temp = milliseconds / 1000;
+    const years = Math.floor( temp / 31536000 ),
+        days = Math.floor( ( temp %= 31536000 ) / 86400 ),
+        hours = Math.floor( ( temp %= 86400 ) / 3600 ),
+        minutes = Math.floor( ( temp %= 3600 ) / 60 ),
+        seconds = temp % 60;
+
+    if ( days || hours || seconds || minutes ) {
+      return ( years ? years + "y " : "" ) +
+          ( days ? days + "d " : "" ) +
+          ( hours ? hours + "h " : ""  ) +
+          ( minutes ? minutes + "m " : "" ) +
+          Number.parseFloat( seconds ).toFixed( 2 ) + "s";
+    }
+
+    return "< 1s";
+  }
+
+  function get_configuration() {
+    if(configuration != null){
+      return configuration;
+    }
+
+    const conf = new Map();
+    $.ajax({'url': '/conf', 'dataType': 'json', 'async': false}).done(
+      function (data) {
+        const props = data['properties'];
+        if(props === undefined){
+          return;
+        }
+
+        for(let i = 0; i<props.length; i++){
+          const key = props[i]['key'];
+          const value = props[i]['value'];
+          conf.set(key, value);
+        }
+      });
+
+    configuration = conf;
+    return configuration;
+  }
+
+  function get_conf(key, defaultValue){
+    const conf = get_configuration();
+    const value = conf.get(key);
+    if(value === undefined){
+      return defaultValue;
+    }
+    return value;
+  }
+
+  function get_current_namespace(){
+    return get_conf("dfs.nameservice.id", "");
+  }
+
+  function get_namespaces(){
+    return get_conf("dfs.nameservices", "").split(",");
+  }
+
+  function get_permission() {
+    let umask, oldUmask, actualUmask;
+    umask = Number(get_conf("fs.permissions.umask-mode", "-1"));
+    oldUmask = Number(get_conf("dfs.umask", "-1"));
+
+    if (oldUmask != -1) {
+      actualUmask = 777 - oldUmask;
+    } else if (umask != -1) {
+      actualUmask = 777 - umask;
+    } else {
+      actualUmask = -1;
+    }
+    return actualUmask;
+  }
+
+  function get_trashroot() {
+    if(trash_root != "") {
+      return trash_root;
+    }
+    let result = "";
+    const url = '/webhdfs/v1?op=GETTRASHROOT';
+
+    $.ajax(url, {type: "GET", async: false}
+    ).done(function (data) {
+        var d = get_response(data, "Path");
+        if (d != null) {
+          result = d;
+        }
+    }).fail(network_error_handler(url));
+
+    trash_root = result;
+    return trash_root;
+  }
+
+  function get_unique_trash_path(trash_path) {
+    const origin_trash_path = trash_path
+    for (let i = 0; i < 3; i++) {
+      let ok = false;
+      $.ajax({
+        type: 'GET',
+        url: "/webhdfs/v1" + encode_path(trash_path) + "?op=GETFILESTATUS",
+        async: false
+      }).done(function(data) {
+        // file exists. append timestamp for unique filename
+        trash_path = origin_trash_path + Date.now();
+      }).fail(function(jqXHR, textStatus, errorThrown) {
+        ok = true;
+      });
+      if(ok){
+        break;
+      }
+    }
+    return trash_path;
+  }
+
+  function mkdirs(dir) {
+    let success = false;
+    let url = '/webhdfs/v1' + encode_path(dir) + '?op=MKDIRS';
+    let permission = get_permission();
+    if(permission != -1){
+      url += "&permission=" + permission;
+    }
+    $.ajax(url, { type: 'PUT', async: false }
+    ).done(function(data) {
+      success = true;
+    }).fail(network_error_handler(url));
+    return success;
+  }
+
+  function parent_dir(abs_path){
+    return abs_path.replace(/\/+[^/]+\/*$/,"") || "/";
   }
 
   function encode_path(abs_path) {
@@ -292,6 +525,9 @@
   function func_time_render(data, type, row, meta) {
     if(type == 'display') {
       var cutoff = moment().subtract(6, 'months').unix() * 1000;
+      if(data == 0){
+        return "";
+      }
       if(data < cutoff) {
         return moment(Number(data)).format('MMM DD YYYY');
       } else {
@@ -352,7 +588,7 @@
         makeEditable('.explorer-group-links', 'SETOWNER', 'group');
         makeEditable('.explorer-replication-links', 'SETREPLICATION', 'replication');
 
-        $('.explorer-entry .glyphicon-trash').click(function() {
+        $('.explorer-entry .explorer-trash-links').click(function() {
           var inode_name = $(this).closest('tr').attr('inode-path');
           var absolute_file_path = append_path(current_directory, inode_name);
           delete_path(inode_name, absolute_file_path);
@@ -360,6 +596,56 @@
 
         $('#file-selector-all').click(function() {
           $('.file_selector').prop('checked', $('#file-selector-all')[0].checked );
+        });
+
+        $('.explorer-entry .explorer-rename-links').click(function() {
+          const inode_name = $(this).closest('tr').attr('inode-path');
+          $('#btn-rename-file-send').prop('disabled', true).button('reset');
+          $('#new_filename').val(inode_name);
+
+          $('#new_filename').on('input', function () {
+            const new_filename = $.trim($('#new_filename').val());
+            if (new_filename == null || new_filename == '' || new_filename == inode_name) {
+              $('#btn-rename-file-send').prop('disabled', true);
+            } else {
+              $('#btn-rename-file-send').prop('disabled', false);
+            }
+          });
+
+          $('#new_filename').off('keypress').on('keypress', function (event) {
+            // input new file name and press enter
+            if(event.keyCode == 13){
+              const new_filename = $.trim($('#new_filename').val());
+              if(new_filename != inode_name && new_filename != '') {
+                $('#btn-rename-file-send').trigger("click");
+              }
+            }
+          });
+
+          $('#btn-rename-file-send').off('click').on('click', function () {
+            $(this).prop('disabled', true);
+            $(this).button('complete');
+
+            const absolute_file_path = append_path(current_directory, inode_name);
+            const new_filename = $.trim($('#new_filename').val());
+            const new_file_path = append_path(current_directory, new_filename);
+            const url = '/webhdfs/v1' + encode_path(absolute_file_path) + '?op=RENAME&destination=' + encode_path(new_file_path);
+            $.ajax(url, { type: 'PUT'})
+                .fail(network_error_handler(url))
+                .done(function(data) {
+                  const success = get_response(data, "boolean")
+                  if(success) {
+                    show_info_msg("Renamed " + absolute_file_path + " to " + new_file_path);
+                  } else {
+                    show_err_msg("Failed to rename " + absolute_file_path + " to " + new_file_path);
+                  }
+                  browse_directory(current_directory);
+                })
+                .always(function(){
+                  $('#modal-rename-file').modal('hide');
+                  $('#btn-rename-file-send').button('reset');
+                });
+          });
         });
 
         //This needs to be last because it repaints the table
@@ -372,10 +658,11 @@
             null, //Group
             { 'searchable': false, 'render': func_size_render}, //Size
             { 'searchable': false, 'render': func_time_render}, //Last Modified
+            { 'searchable': false, 'render': func_time_render}, //Last Accessed
             { 'searchable': false }, //Replication
             null, //Block Size
             null, //Name
-            { 'orderable' : false } //Trash
+            { 'orderable' : false } //Actions
           ],
           "deferRender": true
         });
@@ -389,10 +676,37 @@
     browse_directory(parent);
   });
 
+  $('#homeDir').click(function () {
+    browse_directory(get_homedirectory());
+  });
+
+  function set_namespace_info(){
+    const current_ns = get_current_namespace();
+    let ns_html;
+    if(current_ns == ""){
+      ns_html = "";
+    } else {
+      ns_html = "hdfs://" + current_ns;
+    }
+    $("#namespace").html(ns_html);
+  }
 
   function init() {
     dust.loadSource(dust.compile($('#tmpl-explorer').html(), 'explorer'));
     dust.loadSource(dust.compile($('#tmpl-block-info').html(), 'block-info'));
+
+    set_namespace_info();
+
+    const homedir = get_homedirectory();
+
+    $('#btn-copy-clipboard').click(async function (){
+      const current_ns = get_current_namespace();
+      const directory = $('#directory').val();
+
+      const path = 'hdfs://' + current_ns + directory;
+      await navigator.clipboard.writeText(path);
+      show_info_msg('Copied to clipboard: ' + path);
+    });
 
     var b = function() { browse_directory($('#directory').val()); };
     $('#btn-nav-directory').click(b);
@@ -404,7 +718,10 @@
     });
     var dir = window.location.hash.slice(1);
     if(dir == "") {
-      window.location.hash = "/";
+      dir = get_path_from_query();
+    }
+    if(dir == "") {
+      window.location.hash = homedir;
     } else {
       browse_directory(dir);
     }
@@ -419,39 +736,19 @@
     $(this).button('complete');
 
     // Get umask from the configuration
-    var umask, oldUmask, actualUmask;
+    let actualUmask = get_permission();
+    let new_dir = $('#new_directory').val();
+    let url = '/webhdfs/v1' + encode_path(append_path(current_directory,
+      new_dir)) + '?op=MKDIRS';
 
-    $.ajax({'url': '/conf', 'dataType': 'xml', 'async': false}).done(
-      function(d) {
-        var $xml = $(d);
-        $xml.find('property').each(function(idx,v) {
-          // Current umask config
-          if ($(v).find('name').text() === 'fs.permissions.umask-mode') {
-            umask = $(v).find('value').text();
-          }
-
-          // Deprecated umask config
-          if ($(v).find('name').text() === 'dfs.umask') {
-            oldUmask = $(v).find('value').text();
-          }
-        });
-    });
-
-    var url = '/webhdfs/v1' + encode_path(append_path(current_directory,
-      $('#new_directory').val())) + '?op=MKDIRS';
-
-    if (oldUmask) {
-      actualUmask = 777 - oldUmask;
-    } else if (umask) {
-      actualUmask = 777 - umask;
-    }
-
-    if (actualUmask) {
+    if (actualUmask != -1) {
       url = url + '&permission=' + actualUmask;
     }
 
     $.ajax(url, { type: 'PUT' }
     ).done(function(data) {
+      let destination = append_path(current_directory, new_dir);
+      show_info_msg(destination + " created successfully")
       browse_directory(current_directory);
     }).fail(network_error_handler(url)
      ).always(function() {
@@ -463,6 +760,8 @@
   $('#btn-upload-files').click(function() {
         $('#modal-upload-file-button').prop('disabled', true).button('reset');
         $('#modal-upload-file-input').val(null);
+        $("#progress-bar").css("width", "0%");
+        $("#progress-bar").text("");
       });
 
   $('#btn-create-dir').click(function() {
@@ -479,26 +778,42 @@
         }
       });
 
-  $('#new_directory').on('keyup keypress blur change',function() {
-      if($('#new_directory').val() == '' ||  $('#new_directory').val() == null) {
+  $('#new_directory').on('input',function() {
+      const new_directory = $.trim($('#new_directory').val());
+      if(new_directory == '' ||  new_directory == null) {
          $('#btn-create-directory-send').prop('disabled', true);
-        }
-      else {
+      } else {
          $('#btn-create-directory-send').prop('disabled', false);
-        }
-      });
+      }
+  });
+
+  $('#new_directory').on('keypress',function(event) {
+    // input new dir name and press enter
+    if(event.keyCode == 13){
+      const new_directory = $.trim($('#new_directory').val());
+      if(new_directory != '') {
+        $('#btn-create-directory-send').trigger("click");
+      }
+    }
+  });
 
   $('#modal-upload-file-button').click(function() {
     $(this).prop('disabled', true);
     $(this).button('complete');
     var files = []
     var numCompleted = 0
+    const success_message = [];
+    const destination_directory = current_directory;
 
     for(var i = 0; i < $('#modal-upload-file-input').prop('files').length; i++) {
       (function() {
-        var file = $('#modal-upload-file-input').prop('files')[i];
-        var url = '/webhdfs/v1' + encode_path(append_path(current_directory, file.name));
+        let file = $('#modal-upload-file-input').prop('files')[i];
+        let url = '/webhdfs/v1' + encode_path(append_path(destination_directory, file.name));
+        let permission = get_permission();
         url += '?op=CREATE&noredirect=true';
+        if(permission != -1){
+          url += "&permission=" + permission;
+        }
         files.push( { file: file } )
         files[i].request = $.ajax({
           type: 'PUT',
@@ -508,24 +823,69 @@
         });
       })()
      }
-    for(var f in files) {
+
+    for(let i = 0; i < files.length; i++) {
       (function() {
-        var file = files[f];
+        var file = files[i];
+
+        const filename = file.file.name;
+        const id = "progress-bar-" + i;
+        const parent_id = "progress-" + i;
+        $("#progress")
+            .append($($('<div>')
+                .addClass('progress')
+                .attr('id', parent_id)
+                .append($($('<div>')
+                    .addClass('progress-bar progress-bar-success')
+                    .attr('role','progressbar')
+                    .attr('aria-valuenow', '0')
+                    .attr('aria-valuemin', '0')
+                    .attr('aria-valuemax', '100')
+                    .attr('id', id)
+            ))
+          ));
+
         file.request.done(function(data) {
           var url = data['Location'];
+          const start = new Date();
           $.ajax({
             type: 'PUT',
             url: url,
             data: file.file,
             processData: false,
             crossDomain: true,
-            contentType: 'application/octet-stream'
+            contentType: 'application/octet-stream',
+            xhr: function () {
+              let xhr = new window.XMLHttpRequest();
+              xhr.upload.addEventListener("progress", function (evt) {
+                if(evt.lengthComputable) {
+                  let percentComplete = Math.round((evt.loaded / evt.total) * 100);
+                  const elapsed_ms = new Date().getTime() - start.getTime()
+
+                  $('#' + id).css("width", percentComplete + "%");
+                  let progress_message;
+                  if(files.length == 1) {
+                    progress_message = percentComplete + "% (" + millis_to_str(elapsed_ms) + ")";
+                  } else {
+                    progress_message = filename + " " + percentComplete + "% (" + millis_to_str(elapsed_ms) + ")";
+                  }
+                  $('#' + id).text(progress_message);
+                }
+              }, false);
+              return xhr;
+            }
           }).always(function(data) {
             numCompleted++;
             if(numCompleted == files.length) {
               reset_upload_button();
-              browse_directory(current_directory);
+              browse_directory(destination_directory);
             }
+            $("#" + parent_id).remove();
+          }).done(function (data) {
+            let destination = append_path(destination_directory, file.file.name);
+            const elapsed_ms = new Date().getTime() - start.getTime()
+            success_message.push(destination + " uploaded successfully (" + millis_to_str(elapsed_ms) + ")");
+            show_info_msg(success_message.join("<br>"));
           }).fail(function(jqXHR, textStatus, errorThrown) {
             numCompleted++;
             reset_upload_button();
@@ -535,10 +895,16 @@
           numCompleted++;
           reset_upload_button();
           show_err_msg("Couldn't find datanode to write file. " + errorThrown);
+          $("#" + parent_id).remove();
         });
       })();
     }
   });
+
+  function reset_message_panel(){
+    $('#alert-panel').hide();
+    $('#info-panel').hide();
+  }
 
   //Reset the upload button
   function reset_upload_button() {
@@ -582,12 +948,118 @@
     })
   }
 
+  function move_selected_files_to_trash(current_directory) {
+    const selected_files = $("input:checked.file_selector");
+    const selected_file_names = new Array();
+    selected_files.each(function(index) {
+      selected_file_names[index] = $(this).closest('tr').attr('inode-path');
+    })
+
+    if(selected_file_names.length == 0){
+      alert("No selected files/directories");
+      return;
+    }
+
+    $('#delete-modal-title').text("Trash");
+
+    let file_list_summary;
+    if(selected_file_names.length == 1){
+      file_list_summary = selected_file_names[0];
+    } else {
+      file_list_summary = selected_file_names[0] + " and " + (selected_file_names.length - 1) + " more"
+    }
+
+    $('#delete-prompt').html("Are you sure you want to move <span style=\"color: red;font-weight:bold;\">"
+        + file_list_summary + "</span> to trash?");
+
+    $('#delete-button').off("click").on("click", function() {
+      get_trashroot();
+      if(trash_root == "") {
+        $('#delete-modal').modal('hide');
+        $('#delete-button').button('reset');
+        return;
+      }
+      const trash_current = append_path(trash_root, "Current");
+      const trash_root_parent = parent_dir(trash_root);
+
+      // check trash path
+      for(let i= 0; i < selected_file_names.length; i++) {
+        const absolute_file_path = append_path(current_directory, selected_file_names[i]);
+
+        // abs_file_path: /user/foo/.Trash/file
+        // trash_root: /user/foo/.Trash
+        if (absolute_file_path == trash_root || absolute_file_path.startsWith(trash_root + "/")){
+          show_err_msg("Cannot move " + absolute_file_path + " to the trash, it is already in trash");
+          $('#delete-modal').modal('hide');
+          $('#delete-button').button('reset');
+          return;
+        }
+
+        // abs_file_path: /user/foo
+        // trash_root_parent: /user/foo
+        if (trash_root_parent == absolute_file_path || trash_root_parent.startsWith(absolute_file_path + "/")){
+          show_err_msg("Cannot move " + absolute_file_path + " to the trash, as it contains the trash");
+          $('#delete-modal').modal('hide');
+          $('#delete-button').button('reset');
+          return;
+        }
+      }
+
+      const base_trash_path = append_path(trash_current, current_directory);
+      if (!mkdirs(base_trash_path)) {
+        $('#delete-modal').modal('hide');
+        $('#delete-button').button('reset');
+        return;
+      }
+
+      const success_message = [];
+      for(let i= 0; i < selected_file_names.length; i++) {
+        const absolute_file_path = append_path(current_directory, selected_file_names[i]);
+        const trash_path = get_unique_trash_path(append_path(trash_current, absolute_file_path));
+
+        let error = false;
+
+        const url = "/webhdfs/v1" + encode_path(absolute_file_path) + "?op=RENAME&renameoptions=TO_TRASH&destination=" + encode_path(trash_path);
+        $.ajax({
+          type: "PUT",
+          url: url,
+          async: false
+        }).done(function (data) {
+          success_message.push("Moved " + absolute_file_path + " to trash at: " + trash_path);
+          show_info_msg(success_message.join("<br>"));
+        }).fail(function(jqxhr, textStatus, errorThrown) {
+          error = true;
+          let msg = "";
+          if(jqxhr.status == 403 && jqxhr.responseJSON !== undefined && jqxhr.responseJSON.RemoteException !== undefined) {
+            msg = jqxhr.responseJSON.RemoteException.message;
+          } else {
+            msg = 'Failed to retrieve data from ' + url + ': ' + errorThrown;
+          }
+          show_err_msg("Couldn't move file " + absolute_file_path + " to trash: " + msg);
+        }).always(function () {
+          $('#delete-modal').modal('hide');
+          $('#delete-button').button('reset');
+        });
+        if(error){
+          break;
+        }
+      }
+      browse_directory(current_directory);
+    });
+
+    $('#delete-modal').modal();
+  }
+
   $('#explorer-cut').click(function() {
     store_selected_files(current_directory);
   });
 
   $('#explorer-paste').click(function() {
     paste_selected_files();
+  });
+
+  $('#btn-to-trash').click(function() {
+    move_selected_files_to_trash(current_directory);
   });
 
 
