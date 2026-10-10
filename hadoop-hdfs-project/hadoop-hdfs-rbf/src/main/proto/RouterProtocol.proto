@@ -41,6 +41,11 @@ service RouterAdminProtocolService {
   rpc removeMountTableEntry(RemoveMountTableEntryRequestProto) returns(RemoveMountTableEntryResponseProto);
 
   /**
+   * Remove multiple mount table entries.
+   */
+  rpc removeMountTableEntries(RemoveMountTableEntriesRequestProto) returns(RemoveMountTableEntriesResponseProto);
+
+  /**
    * Add all mount table entries that are present in the request.
    */
   rpc addMountTableEntries(AddMountTableEntriesRequestProto) returns(AddMountTableEntriesResponseProto);
