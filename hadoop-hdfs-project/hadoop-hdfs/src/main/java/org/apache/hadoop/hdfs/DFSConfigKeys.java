@@ -587,6 +587,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // Whether to enable datanode's stale state detection and usage for writes
   public static final String DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY = "dfs.namenode.avoid.write.stale.datanode";
   public static final boolean DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT = false;
+  // Slow disk cache rebuild interval
+  public static final String DFS_NAMENODE_SLOW_DISK_CACHE_REBUILD_INTERVAL_KEY =
+          "dfs.namenode.slow.disk.cache.rebuild.interval";
+  public static final String DFS_NAMENODE_SLOW_DISK_CACHE_REBUILD_INTERVAL_DEFAULT = "30s";
+  // Whether to deprioritize slow disk datanodes when returning block locations
+  public static final String DFS_NAMENODE_DEPRIORITIZE_SLOW_DISK_DATANODE_FOR_READ_KEY =
+          "dfs.namenode.deprioritize.slow.disk.datanode.for.read";
+  public static final boolean DFS_NAMENODE_DEPRIORITIZE_SLOW_DISK_DATANODE_FOR_READ_DEFAULT = false;
   // enable and disable logging datanode staleness. Disabled by default.
   public static final String DFS_NAMENODE_ENABLE_LOG_STALE_DATANODE_KEY =
       "dfs.namenode.enable.log.stale.datanode";
