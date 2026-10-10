@@ -1301,6 +1301,19 @@ public class TestDFSClientRetries {
 
       doAnswer(new SleepFixedTimeAnswer(1500, testLatch)).when(spyNN).complete(
           anyString(), anyString(), any(ExtendedBlock.class), anyLong());
+      // Stub renewLease here, on the test thread, while nothing else is
+      // calling the spy. Mockito keeps its doAnswer-style stubbing state on
+      // the mock rather than per thread, so stubbing a spy that other threads
+      // are calling lets one of their invocations consume this stubbing:
+      // that call returns null without running the real method, and the
+      // SocketTimeoutException lands on whichever method it happened to be.
+      // Both outcomes were observed here -- the streamer's addBlock returning
+      // null, and an AssertionError raised inside Mockito on that same call.
+      // renewLease() is a no-op until a file is being written, so stubbing it
+      // before the client exists does not change what this test exercises:
+      // the renewer still fails on its first renewal after out1 is created.
+      Mockito.doThrow(new SocketTimeoutException()).when(spyNN)
+          .renewLease(anyString(), any());
       DFSClient client = new DFSClient(null, spyNN, conf, null);
       // Get hold of the lease renewer instance used by the client
       LeaseRenewer leaseRenewer = client.getLeaseRenewer();
@@ -1309,20 +1322,9 @@ public class TestDFSClientRetries {
 
       out1.write(new byte[256]);
 
-      Thread closeThread = new Thread(new Runnable() {
-        @Override public void run() {
-          try {
-            //1. trigger get LeaseRenewer lock
-            Mockito.doThrow(new SocketTimeoutException()).when(spyNN)
-                .renewLease(Mockito.anyString(), any());
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
-        }
-      });
-      closeThread.start();
-
-      //2. trigger get DFSOutputStream lock
+      // The renewer is now failing its renewals and taking the LeaseRenewer
+      // monitor into the fault injector; close() needs that monitor to end the
+      // file lease.
       out1.close();
 
     } finally {
