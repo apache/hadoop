@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -75,13 +76,7 @@ public class DNS {
    */
   public static String reverseDns(InetAddress hostIp, @Nullable String ns)
     throws NamingException {
-    //
-    // Builds the reverse IP lookup form
-    // This is formed by reversing the IP numbers and appending in-addr.arpa
-    //
-    String[] parts = hostIp.getHostAddress().split("\\.");
-    String reverseIP = parts[3] + "." + parts[2] + "." + parts[1] + "."
-      + parts[0] + ".in-addr.arpa";
+    String reverseIP = getReverseDnsName(hostIp);
 
     DirContext ictx = new InitialDirContext();
     Attributes attribute;
@@ -100,6 +95,31 @@ public class DNS {
       hostname = hostname.substring(0, hostnameLength - 1);
     }
     return hostname;
+  }
+
+  /**
+   * Builds the reverse IP lookup form of an address.
+   *
+   * @param hostIp The address to build the reverse lookup name for
+   * @return The in-addr.arpa name for an IPv4 address, or the ip6.arpa name
+   *         (RFC 3596) for an IPv6 address
+   */
+  @VisibleForTesting
+  static String getReverseDnsName(InetAddress hostIp) {
+    if (hostIp instanceof Inet6Address) {
+      // This is formed by reversing the 32 nibbles of the address and appending ip6.arpa.
+      // The scope id is not part of the name.
+      StringBuilder reverseIP = new StringBuilder();
+      byte[] addr = hostIp.getAddress();
+      for (int i = addr.length - 1; i >= 0; i--) {
+        reverseIP.append(Character.forDigit(addr[i] & 0xf, 16)).append('.')
+            .append(Character.forDigit((addr[i] >> 4) & 0xf, 16)).append('.');
+      }
+      return reverseIP.append("ip6.arpa").toString();
+    }
+    // This is formed by reversing the IP numbers and appending in-addr.arpa
+    String[] parts = hostIp.getHostAddress().split("\\.");
+    return parts[3] + "." + parts[2] + "." + parts[1] + "." + parts[0] + ".in-addr.arpa";
   }
 
   /**
