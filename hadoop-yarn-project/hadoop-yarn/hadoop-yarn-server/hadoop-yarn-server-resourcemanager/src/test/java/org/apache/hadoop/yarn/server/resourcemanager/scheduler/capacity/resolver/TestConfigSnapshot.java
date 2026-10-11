@@ -28,6 +28,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -91,8 +93,16 @@ public class TestConfigSnapshot {
     ConfigSnapshot snapshot = ConfigSnapshot.of(conf);
 
     assertTrue(snapshot.keys().contains("test.snapshot.loop.a"));
-    assertThrows(IllegalStateException.class,
+    IllegalStateException first = assertThrows(IllegalStateException.class,
         () -> snapshot.get("test.snapshot.loop.a"));
+    IllegalStateException second = assertThrows(IllegalStateException.class,
+        () -> snapshot.get("test.snapshot.loop.a"));
+    // Every access reports a new exception naming the key, with the failure
+    // captured while the snapshot was taken as the cause
+    assertNotSame(first, second);
+    assertTrue(first.getMessage().contains("test.snapshot.loop.a"));
+    assertSame(first.getCause(), second.getCause());
+    assertInstanceOf(IllegalStateException.class, first.getCause());
     assertEquals("${test.snapshot.loop.b}",
         snapshot.getRaw("test.snapshot.loop.a"));
     assertEquals(2, snapshot
@@ -232,12 +242,12 @@ public class TestConfigSnapshot {
     conf.set(PREFIX + "root.a.capacity", "100");
     assertSame(snapshot, conf.getConfigSnapshot());
     assertNull(conf.getConfigSnapshot().get(PREFIX + "root.a.capacity"));
-    assertTrue(conf.getConfigurationProperties()
-        .getPropertiesWithPrefix(PREFIX + "root.a").isEmpty());
+    assertTrue(conf.getConfigSnapshot()
+        .getRawPropertiesWithPrefix(PREFIX + "root.a", false).isEmpty());
 
-    conf.reinitializeConfigurationProperties();
+    conf.refreshConfigSnapshot();
     assertEquals("100", conf.getConfigSnapshot().get(PREFIX + "root.a.capacity"));
-    assertEquals("100", conf.getConfigurationProperties()
-        .getPropertiesWithPrefix(PREFIX + "root.a").get("capacity"));
+    assertEquals("100", conf.getConfigSnapshot()
+        .getRawPropertiesWithPrefix(PREFIX + "root.a", false).get("capacity"));
   }
 }

@@ -437,7 +437,6 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final boolean DEFAULT_LEGACY_QUEUE_MODE = true;
 
   private ConfigSnapshot configSnapshot;
-  private ConfigurationProperties configurationProperties;
 
   public static QueueCapacityConfigParser getQueueCapacityConfigParser() {
     return queueCapacityConfigParser;
@@ -1202,41 +1201,25 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   /**
-   * Get all configuration properties parsed in a
-   * {@code ConfigurationProperties} object, which returns the raw values of
-   * the cached {@link #getConfigSnapshot() snapshot}.
-   * @return configuration properties
-   */
-  public ConfigurationProperties getConfigurationProperties() {
-    if (configurationProperties == null) {
-      reinitializeConfigurationProperties();
-    }
-
-    return configurationProperties;
-  }
-
-  /**
    * Get the snapshot of this configuration. It is taken on first use and not
    * refreshed by later writes into this object (for example template entries
-   * written for dynamic queues), until
-   * {@link #reinitializeConfigurationProperties()} is called.
+   * written for dynamic queues), until {@link #refreshConfigSnapshot()} is
+   * called.
    * @return the cached configuration snapshot
    */
   public ConfigSnapshot getConfigSnapshot() {
     if (configSnapshot == null) {
-      reinitializeConfigurationProperties();
+      refreshConfigSnapshot();
     }
 
     return configSnapshot;
   }
 
   /**
-   * Reinitializes the cached {@code ConfigSnapshot} and the
-   * {@code ConfigurationProperties} view of it.
+   * Takes a new snapshot of this configuration, replacing the cached one.
    */
-  public void reinitializeConfigurationProperties() {
+  public void refreshConfigSnapshot() {
     configSnapshot = ConfigSnapshot.of(this);
-    configurationProperties = new ConfigurationProperties(configSnapshot);
   }
 
   public void setQueueMaximumAllocationMb(QueuePath queue, int value) {
@@ -2253,7 +2236,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * @return map of user weights, if they exist. Otherwise, return empty map.
    */
   public UserWeights getAllUserWeightsForQueue(QueuePath queuePath) {
-    return UserWeights.createByConfig(this, getConfigurationProperties(), queuePath);
+    return UserWeights.createByConfig(this, getConfigSnapshot(), queuePath);
   }
 
   public boolean getAssignMultipleEnabled() {

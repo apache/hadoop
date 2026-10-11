@@ -65,7 +65,7 @@ public final class ConfigSnapshot {
    * value, which keeps the common case free of a second copy.
    */
   private final Map<String, String> rawValues;
-  /** Keys whose {@code conf.get(key)} threw, rethrown on access. */
+  /** Keys whose {@code conf.get(key)} threw, reported as the cause on access. */
   private final Map<String, RuntimeException> failures;
   private final Set<String> keys;
   private final PrefixNode root = new PrefixNode();
@@ -144,13 +144,15 @@ public final class ConfigSnapshot {
    * @param key the full property key
    * @return the value {@code conf.get(key)} returned, or {@code null} when
    *         the property is absent
-   * @throws RuntimeException the exception {@code conf.get(key)} threw, for
-   *         example on a too deep variable substitution
+   * @throws IllegalStateException when {@code conf.get(key)} threw while
+   *         the snapshot was taken, for example on a too deep variable
+   *         substitution; that exception is the cause
    */
   public String get(String key) {
     RuntimeException failure = failures.get(key);
     if (failure != null) {
-      throw failure;
+      throw new IllegalStateException(
+          "Failed to resolve configuration property " + key, failure);
     }
     return values.get(key);
   }

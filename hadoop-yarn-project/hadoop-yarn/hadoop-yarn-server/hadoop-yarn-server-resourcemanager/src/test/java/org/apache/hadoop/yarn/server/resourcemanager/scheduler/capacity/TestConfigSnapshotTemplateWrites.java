@@ -39,6 +39,11 @@ import static org.junit.jupiter.api.Assertions.assertSame;
  * configuration snapshot is taken before any template entry is written, so
  * readers going through it (user weights, the explicitly-set check of the
  * templates) do not see them, while the ordinary getters do.
+ * <p>
+ * The explicitly-set check relies on this: the dynamic leaf defaults (for
+ * example a user limit factor of -1) are written into the configuration
+ * before the templates, and must not count as explicitly set. The user limit
+ * factor assertion fails if the snapshot is refreshed during queue setup.
  */
 public class TestConfigSnapshotTemplateWrites {
   private static final QueuePath ROOT = new QueuePath("root");
@@ -121,7 +126,9 @@ public class TestConfigSnapshotTemplateWrites {
     // dynamic leaf default of -1, which is written before the templates and
     // therefore does not count as explicitly set.
     assertEquals(3f, leaf.getUserLimitFactor(), 1e-6);
-    // User weights are read through the snapshot and miss the template value
+    // User weights are read through the snapshot and miss the template value.
+    // This is a known bug, the same before the snapshot: v2 templates should
+    // apply user weights as well. Expect 0.5 here once that is fixed.
     assertEquals(UserWeights.DEFAULT_WEIGHT,
         leaf.getUserWeights().getByUser("u1"), 1e-6);
   }
