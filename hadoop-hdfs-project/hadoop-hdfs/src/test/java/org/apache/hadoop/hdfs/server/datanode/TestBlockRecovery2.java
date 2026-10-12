@@ -541,29 +541,30 @@ public class TestBlockRecovery2 {
           100, 10000);
 
       // Datanode 1 becomes the recovery primary and queries datanode 0.
-      DistributedFileSystem newDfs = (DistributedFileSystem) FileSystem
-          .newInstance(cluster.getConfiguration(0));
-      newDfs.recoverLease(filePath);
-      GenericTestUtils.waitFor(() -> {
-        try {
-          return logs.getOutput().contains("All datanodes failed")
-              || newDfs.isFileClosed(filePath);
-        } catch (IOException e) {
-          return false;
-        }
-      }, 100, 30000);
+      try (DistributedFileSystem newDfs = (DistributedFileSystem) FileSystem
+          .newInstance(cluster.getConfiguration(0))) {
+        newDfs.recoverLease(filePath);
+        GenericTestUtils.waitFor(() -> {
+          try {
+            return logs.getOutput().contains("All datanodes failed")
+                || newDfs.isFileClosed(filePath);
+          } catch (IOException e) {
+            return false;
+          }
+        }, 100, 30000);
 
-      resumeLoading.countDown();
-      GenericTestUtils.waitFor(() -> {
-        try {
-          return newDfs.recoverLease(filePath);
-        } catch (IOException e) {
-          return false;
-        }
-      }, 500, 60000);
-      assertEquals(data.length, newDfs.getFileStatus(filePath).getLen(),
-          "block recovery dropped the replica of the restarting datanode");
-      assertArrayEquals(data, DFSTestUtil.readFileAsBytes(newDfs, filePath));
+        resumeLoading.countDown();
+        GenericTestUtils.waitFor(() -> {
+          try {
+            return newDfs.recoverLease(filePath);
+          } catch (IOException e) {
+            return false;
+          }
+        }, 500, 60000);
+        assertEquals(data.length, newDfs.getFileStatus(filePath).getLen(),
+            "block recovery dropped the replica of the restarting datanode");
+        assertArrayEquals(data, DFSTestUtil.readFileAsBytes(newDfs, filePath));
+      }
     } finally {
       resumeLoading.countDown();
       DataNodeFaultInjector.set(oldInjector);
