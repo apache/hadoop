@@ -79,6 +79,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
@@ -113,6 +114,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   private static final String UTF8 = "UTF-8";
 
   private static final String CONTENT_TYPE = "Content-Type";
+  private static final String TRANSFER_ENCODING = "Transfer-Encoding";
   private static final String APPLICATION_JSON_MIME = "application/json";
 
   private static final String HTTP_GET = "GET";
@@ -129,6 +131,21 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   public static final String AUTH_RETRY = CONFIG_PREFIX
       + "authentication.retry-count";
   public static final int DEFAULT_AUTH_RETRY = 1;
+
+  /* Whether to fully consume a response body before closing it, so that the
+   * JDK can return the connection to its keep-alive cache. For a chunked
+   * response the terminating chunk is framing that the JSON parser never
+   * reads, and the JDK's non-blocking fallback cannot always recover it, so
+   * the socket is otherwise torn down and the next call pays for a fresh
+   * connection and TLS handshake.
+   * <p/>
+   * Off by default: the drain blocks until the remaining bytes arrive (bounded
+   * by the read timeout), so a server that stops writing after the payload
+   * would make a call wait where it previously returned at once.
+   */
+  public static final String  DRAIN_RESPONSE_UNREAD_BYTES         = CONFIG_PREFIX
+          + "drain.response.unread.bytes";
+  public static final boolean DEFAULT_DRAIN_RESPONSE_UNREAD_BYTES = false;
 
   private final ValueQueue<EncryptedKeyVersion> encKeyVersionQueue;
 
@@ -331,6 +348,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   private ConnectionConfigurator configurator;
   private DelegationTokenAuthenticatedURL.Token authToken;
   private final int authRetry;
+  private final boolean drainUnreadResponseBody;
 
   @Override
   public String toString() {
@@ -398,6 +416,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
             CommonConfigurationKeysPublic.KMS_CLIENT_TIMEOUT_SECONDS,
             CommonConfigurationKeysPublic.KMS_CLIENT_TIMEOUT_DEFAULT);
     authRetry = conf.getInt(AUTH_RETRY, DEFAULT_AUTH_RETRY);
+    drainUnreadResponseBody =
+            conf.getBoolean(DRAIN_RESPONSE_UNREAD_BYTES, DEFAULT_DRAIN_RESPONSE_UNREAD_BYTES);
     configurator = new TimeoutConnConfigurator(timeout, sslFactory);
     encKeyVersionQueue =
         new ValueQueue<KeyProviderCryptoExtension.EncryptedKeyVersion>(
@@ -536,6 +556,10 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     return conn;
   }
 
+  private static boolean isChunked(HttpURLConnection conn) {
+    return "chunked".equalsIgnoreCase(conn.getHeaderField(TRANSFER_ENCODING));
+  }
+
   private <T> T call(HttpURLConnection conn, Object jsonOutput,
       int expectedResponse, Class<T> klass) throws IOException {
     return call(conn, jsonOutput, expectedResponse, klass, authRetry);
@@ -582,6 +606,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         String contentType = conn.getRequestProperty(CONTENT_TYPE);
         String requestMethod = conn.getRequestMethod();
         URL url = conn.getURL();
+        // Discard the body of the rejected response so that this connection
+        // can be reused for the retry below.
+        if (drainUnreadResponseBody && isChunked(conn)) {
+          IOUtils.drainAndClose(conn);
+        }
         conn = createConnection(url, requestMethod);
         if (contentType != null && !contentType.isEmpty()) {
           conn.setRequestProperty(CONTENT_TYPE, contentType);
@@ -595,13 +624,23 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         && conn.getContentType().trim().toLowerCase()
             .startsWith(APPLICATION_JSON_MIME)
         && klass != null) {
-      ObjectMapper mapper = new ObjectMapper();
+      ObjectMapper mapper = new ObjectMapper().disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
       InputStream is = null;
       try {
         is = conn.getInputStream();
         ret = mapper.readValue(is, klass);
       } finally {
-        IOUtils.closeStream(is);
+        // Jackson stops reading at the end of the JSON value, so drain whatever
+        // is left before closing to keep the connection reusable.
+        if (drainUnreadResponseBody && isChunked(conn)) {
+          IOUtils.drainAndClose(is);
+        } else {
+          IOUtils.closeStream(is);
+        }
+      }
+    } else {
+      if (drainUnreadResponseBody && isChunked(conn)) {
+        IOUtils.drainAndClose(conn);
       }
     }
     return ret;
