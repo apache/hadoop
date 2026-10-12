@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.util;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -110,6 +111,38 @@ class TestUnitsConversionUtil {
     } catch (IllegalArgumentException ie) {
       // do nothing
     }
+  }
+
+  @Test
+  void testIntermediateOverflow() {
+    assertEquals(0, UnitsConversionUtil.convert("p", "G", Long.MAX_VALUE));
+    assertEquals(0, UnitsConversionUtil.convert("p", "G", Long.MIN_VALUE));
+    assertEquals(8881, UnitsConversionUtil.convert("P", "Pi", 10000));
+    assertEquals(-8881, UnitsConversionUtil.convert("P", "Pi", -10000));
+    assertEquals(Long.MAX_VALUE / 1000,
+        UnitsConversionUtil.convert("p", "n", Long.MAX_VALUE));
+    assertEquals(Long.MIN_VALUE / 1000,
+        UnitsConversionUtil.convert("p", "n", Long.MIN_VALUE));
+  }
+
+  @Test
+  void testZeroConversion() {
+    assertEquals(0, UnitsConversionUtil.convert("G", "p", 0));
+    assertEquals(0, UnitsConversionUtil.convert("P", "p", 0));
+    assertThrows(IllegalArgumentException.class,
+        () -> UnitsConversionUtil.convert("invalid", "p", 0));
+    assertThrows(IllegalArgumentException.class,
+        () -> UnitsConversionUtil.convert("G", "invalid", 0));
+  }
+
+  @Test
+  void testFinalResultOverflow() {
+    assertThrows(IllegalArgumentException.class,
+        () -> UnitsConversionUtil.convert("Pi", "P", Long.MAX_VALUE));
+    assertThrows(IllegalArgumentException.class,
+        () -> UnitsConversionUtil.convert("Pi", "P", Long.MIN_VALUE));
+    assertThrows(IllegalArgumentException.class,
+        () -> UnitsConversionUtil.convert("P", "p", 1));
   }
 
   @Test
