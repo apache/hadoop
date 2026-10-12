@@ -20,7 +20,6 @@ Requirements:
 * python (for releasedocs)
 * bats (for shell code testing)
 * Node.js / bower / Ember-cli (for YARN UI v2 building)
-* xmlstarling (parsing xml pom files in create-release)
 
 ----------------------------------------------------------------------------------
 The easiest way to get an environment with all the appropriate tools is by means
@@ -187,7 +186,7 @@ Maven build goals:
     If this option is not specified and the snappy library is missing,
     we silently build a version of libhadoop.so that cannot make use of snappy.
     This option is recommended if you plan on making use of snappy and want
-    to get more repeatable builds.
+    to get more deterministic builds.
   * Use -Dsnappy.prefix to specify a nonstandard location for the libsnappy
     header files and library files. You do not need this option if you have
     installed snappy using a package manager.
@@ -209,7 +208,7 @@ Maven build goals:
     If this option is not specified and the openssl library is missing,
     we silently build a version of libhadoop.so that cannot make use of
     openssl. This option is recommended if you plan on making use of openssl
-    and want to get more repeatable builds.
+    and want to get more deterministic builds.
   * Use -Dopenssl.prefix to specify a nonstandard location for the libcrypto
     header files and library files. You do not need this option if you have
     installed openssl using a package manager.
@@ -250,7 +249,7 @@ Maven build goals:
     we silently build a version of libhadoop.so that cannot make use of ISA-L and
     the native raw erasure coders.
     This option is recommended if you plan on making use of native raw erasure
-    coders and want to get more repeatable builds.
+    coders and want to get more deterministic builds.
   * Use -Disal.prefix to specify a nonstandard location for the libisal
     library files. You do not need this option if you have installed ISA-L to the
     system library path.
@@ -429,8 +428,7 @@ checksum, which is what actually ties a jar back to its inputs, is unaffected.
 The instant recorded is the hadoop.build.timestamp property in the top-level
 pom.xml. It is a committed constant so that it travels inside the source
 tarball; the release manager bumps it when cutting a release branch. Override it
-for a one-off with -Dhadoop.build.timestamp=<ISO-8601 instant or epoch seconds>,
-and keep it at or after 1980-01-01, the earliest date a ZIP entry can hold.
+for a one-off with -Dhadoop.build.timestamp=<ISO-8601 instant or epoch seconds>.
 
 Preconditions for reproducing someone else's build:
 
@@ -453,11 +451,11 @@ recreate the build environment as much as possible.
 
 Not yet reproducible, and out of scope of the profile:
 
-  * The binary .tar.gz distribution. It is assembled by shell scripts calling
-    tar and gzip directly, which record the building user and wall-clock times.
   * The generated site, which stamps a publication date into each page.
-  * Native code, which embeds absolute build paths, and the YARN UI, which
-    downloads its toolchain at build time.
+  * Native code, which embeds absolute build paths
+  * The YARN UI, which downloads its javascript toolchain at build time.
+  * The binary .tar.gz distribution.
+    This contains the YARN UI and, where built, the native libraries.
 
 Never reproducible
 
@@ -580,9 +578,6 @@ you may optionally install zlib, lz4, etc.
   $ cmake --install build
   $ protoc --version
 
-Note that building Hadoop 3.1.1/3.1.2/3.2.0 native code from source is broken
-on macOS. For 3.1.1/3.1.2, you need to manually backport YARN-8622. For 3.2.0,
-you need to backport both YARN-8622 and YARN-9487 in order to build native code.
 
 ----------------------------------------------------------------------------------
 Building command example:
@@ -731,8 +726,8 @@ OpenSSL and Zlib dependencies. Run the following commands to setup these depende
 > git fetch --all
 > git checkout 2025.03.19
 > .\bootstrap-vcpkg.bat
-(Assuming that vcpkg was checked out at C:\vcpkg and Hadoop at C:\hadoop)
-> copy C:\hadoop\dev-support\docker\vcpkg\vcpkg.json C:\vcpkg
+(Assuming that vcpkg was checked out at C:\vcpkg and Hadoop at C:\hdc)
+> copy C:\hdc\dev-support\docker\vcpkg\vcpkg.json C:\vcpkg
 > .\vcpkg.exe install --x-install-root .\installed
 
 Set the following environment variables -
@@ -782,7 +777,7 @@ following command to create the Apache Hadoop release tarball -
 
 > set IS_WINDOWS=1
 > set MVN_ARGS="-Dshell-executable=C:\Git\bin\bash.exe -Dhttps.protocols=TLSv1.2 -Pnative-win -Dskip.platformToolsetDetection -Drequire.openssl -Dopenssl.prefix=C:\vcpkg\installed\x64-windows -Dcmake.prefix.path=C:\vcpkg\installed\x64-windows -Dwindows.cmake.toolchain.file=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off -Duse.platformToolsetVersion=v142 -Dwindows.no.sasl=on -DskipTests -DskipDocs -Drequire.test.libhadoop"
-> C:\Git\bin\bash.exe C:\hadoop\dev-support\bin\create-release --mvnargs=%MVN_ARGS%
+> C:\Git\bin\bash.exe C:\hdc\dev-support\bin\create-release --mvnargs=%MVN_ARGS%
 
 Note:
 If the building fails due to an issue with long paths, rename the Hadoop root directory to just a
