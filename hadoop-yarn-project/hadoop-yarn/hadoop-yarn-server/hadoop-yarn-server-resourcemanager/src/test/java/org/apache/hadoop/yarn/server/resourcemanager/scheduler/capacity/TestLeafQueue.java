@@ -29,6 +29,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -1916,6 +1917,24 @@ public class TestLeafQueue {
     // app_0 doesn't have outstanding resources, there's only one active user.
     assertEquals(1, a.getAbstractUsersManager().getNumActiveUsers(),
         "There should only be 1 active user!");
+  }
+
+  @Test
+  public void testUserWeightAboveUserLimitIsRejected() throws Exception {
+    LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
+    csConf.setUserLimit(a.getQueuePathObject(), 50);
+    csConf.setFloat("yarn.scheduler.capacity." + a.getQueuePath()
+        + ".user-settings.alice." + CapacitySchedulerConfiguration.USER_WEIGHT, 3f);
+    csConf.reinitializeConfigurationProperties();
+    queueContext.reinitialize();
+    when(csContext.getClusterResource())
+        .thenReturn(Resources.createResource(16 * GB, 32));
+
+    IOException e = assertThrows(IOException.class,
+        () -> a.reinitialize(a, csContext.getClusterResource()));
+    assertEquals("Weight (3.0) for user \"alice\" must be between 0 and 100 / 50.0"
+        + " (= 2.0, the number of concurrent active users in " + a.getQueuePath() + ")",
+        e.getMessage());
   }
 
   @Test
