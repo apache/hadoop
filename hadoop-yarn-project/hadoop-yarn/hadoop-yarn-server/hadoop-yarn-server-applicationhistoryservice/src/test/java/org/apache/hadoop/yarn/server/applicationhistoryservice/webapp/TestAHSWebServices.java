@@ -590,31 +590,35 @@ public class TestAHSWebServices extends JerseyTestBase {
             : containers.path(containerId.toString());
         ClientResponse response = target.accept(MediaType.APPLICATION_JSON)
             .get(ClientResponse.class);
-        if (round == 1) {
-          assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
-          continue;
-        }
-        JSONObject json = response.getEntity(JSONObject.class);
-        JSONArray reports = list
-            ? json.getJSONObject("containers").getJSONArray("container")
-            : new JSONArray().put(json.getJSONObject("container"));
-        boolean found = false;
-        for (int index = 0; index < reports.length(); index++) {
-          JSONObject report = reports.getJSONObject(index);
-          if (containerId.toString().equals(report.getString("containerId"))) {
-            JSONArray resources = report.getJSONObject("allocatedResources")
-                .getJSONArray("entry");
-            for (int resourceIndex = 0; resourceIndex < resources.length();
-                resourceIndex++) {
-              JSONObject resource = resources.getJSONObject(resourceIndex);
-              if ("yarn.io/gpu".equals(resource.getString("key"))) {
-                assertEquals(2, resource.getLong("value"));
-                found = true;
+        try {
+          if (round == 1) {
+            assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
+            continue;
+          }
+          JSONObject json = response.getEntity(JSONObject.class);
+          JSONArray reports = list
+              ? json.getJSONObject("containers").getJSONArray("container")
+              : new JSONArray().put(json.getJSONObject("container"));
+          boolean found = false;
+          for (int index = 0; index < reports.length(); index++) {
+            JSONObject report = reports.getJSONObject(index);
+            if (containerId.toString().equals(report.getString("containerId"))) {
+              JSONArray resources = report.getJSONObject("allocatedResources")
+                  .getJSONArray("entry");
+              for (int resourceIndex = 0; resourceIndex < resources.length();
+                  resourceIndex++) {
+                JSONObject resource = resources.getJSONObject(resourceIndex);
+                if ("yarn.io/gpu".equals(resource.getString("key"))) {
+                  assertEquals(2, resource.getLong("value"));
+                  found = true;
+                }
               }
             }
           }
+          assertTrue(found);
+        } finally {
+          response.close();
         }
-        assertTrue(found);
       }
     } finally {
       entity.addOtherInfo(ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO,
