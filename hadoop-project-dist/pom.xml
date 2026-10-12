@@ -67,6 +67,9 @@
             <goals>
               <goal>jar</goal>
             </goals>
+            <configuration>
+              <skipIfEmpty>true</skipIfEmpty>
+            </configuration>
           </execution>
           <execution>
             <id>prepare-test-jar</id>
@@ -81,6 +84,7 @@
                 <include>META-INF/LICENSE.txt</include>
                 <include>META-INF/NOTICE.txt</include>
               </includes>
+              <skipIfEmpty>true</skipIfEmpty>
             </configuration>
           </execution>
         </executions>
