@@ -19,13 +19,17 @@
 package org.apache.hadoop.yarn.util.timeline;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
@@ -33,10 +37,17 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The helper class for the timeline module.
@@ -45,6 +56,8 @@ import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 @Public
 @Evolving
 public class TimelineUtils {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TimelineUtils.class);
 
   public static final String FLOW_NAME_TAG_PREFIX = "TIMELINE_FLOW_NAME_TAG";
   public static final String FLOW_VERSION_TAG_PREFIX =
@@ -58,6 +71,92 @@ public class TimelineUtils {
   static {
     mapper = new ObjectMapper();
     YarnJacksonJaxbJsonProvider.configObjectMapper(mapper);
+  }
+
+  /**
+   * Returns custom allocations keyed by resource name. Each allocation has a
+   * {@code value} and {@code units}; memory, vcores, and zero values are omitted.
+   *
+   * @param resource the allocated container resource
+   * @return custom allocations for timeline storage
+   */
+  @Private
+  public static Map<String, Map<String, Object>> getCustomResourceInfo(
+      Resource resource) {
+    Map<String, Map<String, Object>> resources = new HashMap<>();
+    for (ResourceInformation information : resource.getResources()) {
+      String name = information.getName();
+      if (!ResourceInformation.MEMORY_URI.equals(name)
+          && !ResourceInformation.VCORES_URI.equals(name)
+          && information.getValue() != 0) {
+        Map<String, Object> allocation = new HashMap<>();
+        allocation.put(ContainerMetricsConstants.ALLOCATED_RESOURCE_VALUE_KEY,
+            information.getValue());
+        allocation.put(ContainerMetricsConstants.ALLOCATED_RESOURCE_UNITS_KEY,
+            information.getUnits());
+        resources.put(name, allocation);
+      }
+    }
+    return resources;
+  }
+
+  /**
+   * Reconstructs a container resource from timeline information. Unknown or
+   * malformed custom allocations are skipped; valid values are converted to
+   * the locally configured units.
+   *
+   * @param entityInfo container timeline information, or null
+   * @return the reconstructed resource
+   */
+  @Private
+  public static Resource getContainerResource(Map<String, Object> entityInfo) {
+    if (entityInfo == null) {
+      return Resource.newInstance(0, 0);
+    }
+    long memory = ((Number) entityInfo.getOrDefault(
+        ContainerMetricsConstants.ALLOCATED_MEMORY_INFO, 0L)).longValue();
+    int vcores = ((Number) entityInfo.getOrDefault(
+        ContainerMetricsConstants.ALLOCATED_VCORE_INFO, 0)).intValue();
+    Resource resource = Resource.newInstance(memory, vcores);
+    Object allocationInfo = entityInfo.get(
+        ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO);
+    if (allocationInfo instanceof Map) {
+      Map<?, ?> allocations = (Map<?, ?>) allocationInfo;
+      for (Map.Entry<?, ?> entry : allocations.entrySet()) {
+        try {
+          String name = (String) entry.getKey();
+          if (ResourceInformation.MEMORY_URI.equals(name)
+              || ResourceInformation.VCORES_URI.equals(name)) {
+            continue;
+          }
+          if (!ResourceUtils.getResourceTypes().containsKey(name)) {
+            LOG.debug("Skipping unknown resource type {} in container history", name);
+            continue;
+          }
+          Map<?, ?> allocation = (Map<?, ?>) entry.getValue();
+          Number storedValue = (Number) allocation.get(
+              ContainerMetricsConstants.ALLOCATED_RESOURCE_VALUE_KEY);
+          if (storedValue instanceof Float || storedValue instanceof Double) {
+            throw new IllegalArgumentException("Floating-point resource value");
+          }
+          long value = storedValue instanceof Integer || storedValue instanceof Long
+              ? storedValue.longValue()
+              : new BigDecimal(storedValue.toString()).longValueExact();
+          String units = (String) allocation.get(
+              ContainerMetricsConstants.ALLOCATED_RESOURCE_UNITS_KEY);
+          String defaultUnits = resource.getResourceInformation(name).getUnits();
+          resource.setResourceValue(name,
+              UnitsConversionUtil.convert(units, defaultUnits, value));
+        } catch (ClassCastException | NullPointerException
+            | IllegalArgumentException | ArithmeticException e) {
+          LOG.debug("Skipping malformed allocation for resource type {}",
+              entry.getKey(), e);
+        }
+      }
+    } else if (allocationInfo != null) {
+      LOG.debug("Skipping malformed container resource allocations");
+    }
+    return resource;
   }
 
   /**
