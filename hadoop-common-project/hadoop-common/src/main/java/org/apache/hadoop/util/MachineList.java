@@ -73,18 +73,19 @@ public class MachineList {
     private final int prefixLength;
 
     Inet6Subnet(String cidr) {
-      int slash = cidr.indexOf('/');
-      String prefix = cidr.substring(slash + 1);
       // Any other character is rejected, in particular a scope id because the prefix match
       // would silently ignore it.
-      InetAddress address = cidr.matches("[0-9A-Fa-f:.]+/\\d{1,3}")
-          ? InetAddresses.forString(cidr.substring(0, slash)) : null;
+      if (!cidr.matches("[0-9A-Fa-f:.]+/\\d{1,3}")) {
+        throw new IllegalArgumentException("Could not parse [" + cidr + "]");
+      }
+      int slash = cidr.indexOf('/');
+      InetAddress address = InetAddresses.forString(cidr.substring(0, slash));
+      prefixLength = Integer.parseInt(cidr.substring(slash + 1));
       // An IPv4-mapped address is parsed as an Inet4Address and belongs in an IPv4 CIDR.
-      if (!(address instanceof Inet6Address) || Integer.parseInt(prefix) > MAX_PREFIX_LENGTH) {
+      if (!(address instanceof Inet6Address) || prefixLength > MAX_PREFIX_LENGTH) {
         throw new IllegalArgumentException("Could not parse [" + cidr + "]");
       }
       network = address.getAddress();
-      prefixLength = Integer.parseInt(prefix);
     }
 
     boolean isInRange(byte[] address) {
