@@ -32,7 +32,7 @@ import java.io.IOException;
 /**
  * Class to initialize the DynamicInputChunk invariants.
  */
-class DynamicInputChunkContext<K, V> {
+final class DynamicInputChunkContext<K, V> {
 
   private static Logger LOG = LoggerFactory.getLogger(DynamicInputChunkContext.class);
   private Configuration configuration;
