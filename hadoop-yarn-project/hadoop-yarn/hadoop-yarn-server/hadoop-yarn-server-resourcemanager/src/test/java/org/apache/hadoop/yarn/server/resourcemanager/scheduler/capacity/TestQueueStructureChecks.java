@@ -25,46 +25,35 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue.CapacityConfigType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueStructureChecks.QueueStructureInput;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.Test;
 
 public class TestQueueStructureChecks {
 
-  private static QueueStructureInput input(String path, boolean root, int childCount,
-      boolean reservable, boolean autoQueueCreationEnabledParent) {
-    String name = path.substring(path.lastIndexOf('.') + 1);
-    return new QueueStructureInput(path, name, root, childCount, reservable,
-        autoQueueCreationEnabledParent);
-  }
-
   @Test
   public void testIsParent() {
-    assertFalse(QueueStructureChecks.isParent(input("root.a", false, 0, false, false)));
-    assertTrue(QueueStructureChecks.isParent(input("root.a", false, 2, false, false)));
-    assertTrue(QueueStructureChecks.isParent(input("root.a", false, 0, false, true)));
+    assertFalse(QueueStructureChecks.isParent(0, false));
+    assertTrue(QueueStructureChecks.isParent(2, false));
+    assertTrue(QueueStructureChecks.isParent(0, true));
   }
 
   @Test
   public void testRootHasChildQueues() {
-    assertNull(QueueStructureChecks.checkRootHasChildQueues(
-        input("root", true, 1, false, false)));
-    assertNull(QueueStructureChecks.checkRootHasChildQueues(
-        input("root", true, 0, false, true)));
-    assertNull(QueueStructureChecks.checkRootHasChildQueues(
-        input("root.a", false, 0, false, false)));
+    assertNull(QueueStructureChecks.checkRootHasChildQueues("root", true, 1, false));
+    assertNull(QueueStructureChecks.checkRootHasChildQueues("root", true, 0, true));
+    assertNull(QueueStructureChecks.checkRootHasChildQueues("a", false, 0, false));
     assertEquals("Queue configuration missing child queue names for root",
-        QueueStructureChecks.checkRootHasChildQueues(input("root", true, 0, false, false)));
+        QueueStructureChecks.checkRootHasChildQueues("root", true, 0, false));
   }
 
   @Test
   public void testReservable() {
-    assertNull(QueueStructureChecks.checkReservable(input("root.a", false, 0, true, false)));
-    assertNull(QueueStructureChecks.checkReservable(input("root.a", false, 2, false, false)));
+    assertNull(QueueStructureChecks.checkReservable("root.a", 0, true, false));
+    assertNull(QueueStructureChecks.checkReservable("root.a", 2, false, false));
     assertEquals("Only Leaf Queues can be reservable for root.a.b",
-        QueueStructureChecks.checkReservable(input("root.a.b", false, 1, true, false)));
+        QueueStructureChecks.checkReservable("root.a.b", 1, true, false));
     assertEquals("Only Leaf Queues can be reservable for root.a",
-        QueueStructureChecks.checkReservable(input("root.a", false, 0, true, true)));
+        QueueStructureChecks.checkReservable("root.a", 0, true, true));
   }
 
   @Test

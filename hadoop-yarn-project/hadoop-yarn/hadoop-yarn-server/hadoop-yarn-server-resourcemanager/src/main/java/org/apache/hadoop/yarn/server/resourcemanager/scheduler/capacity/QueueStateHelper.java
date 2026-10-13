@@ -79,8 +79,8 @@ public final class QueueStateHelper {
   private static void initializeState(
       AbstractCSQueue queue, QueueState configuredState, QueueState parentState) {
     if (parentState != null) {
-      String initialStateError = checkInitialState(new InitialStateInput(
-          queue.getQueuePath(), configuredState, queue.getParent().getQueuePath(), parentState));
+      String initialStateError = checkInitialState(queue.getQueuePath(), configuredState,
+          queue.getParent().getQueuePath(), parentState);
       if (initialStateError != null) {
         throw new IllegalArgumentException(initialStateError);
       }
@@ -106,14 +106,18 @@ public final class QueueStateHelper {
   /**
    * Checks that a newly created queue configured as RUNNING is not placed under a parent that
    * is not RUNNING.
-   * @param input the queue and its parent state
+   * @param queuePath the full path of the queue
+   * @param configuredState the configured state of the queue, null if not configured
+   * @param parentQueuePath the full path of the parent
+   * @param parentState the state of the parent queue, null for root
    * @return null if the check passes, otherwise the error message
    */
-  public static String checkInitialState(InitialStateInput input) {
-    if (input.getParentState() != null && input.getConfiguredState() == QueueState.RUNNING
-        && input.getParentState() != QueueState.RUNNING) {
-      return "The parent queue:" + input.getParentQueuePath()
-          + " cannot be STOPPED as the child queue:" + input.getQueuePath()
+  public static String checkInitialState(String queuePath, QueueState configuredState,
+      String parentQueuePath, QueueState parentState) {
+    if (parentState != null && configuredState == QueueState.RUNNING
+        && parentState != QueueState.RUNNING) {
+      return "The parent queue:" + parentQueuePath
+          + " cannot be STOPPED as the child queue:" + queuePath
           + " is in RUNNING state.";
     }
     return null;
@@ -122,13 +126,13 @@ public final class QueueStateHelper {
   /**
    * Checks that a queue is activated only under a RUNNING parent. The
    * exception type of a failure is {@link YarnException}.
-   * @param parentQueuePath the full path of the parent, null for root
-   * @param parentState the state of the parent, null for root
+   * @param parentQueuePath the full path of the parent
+   * @param parentState the state of the parent
    * @return null if the queue can be activated, otherwise the error message
    */
   public static String checkParentRunning(String parentQueuePath,
       QueueState parentState) {
-    if (parentQueuePath == null || parentState == QueueState.RUNNING) {
+    if (parentState == QueueState.RUNNING) {
       return null;
     }
     return "The parent Queue:" + parentQueuePath
@@ -150,39 +154,5 @@ public final class QueueStateHelper {
       return parentState == QueueState.DRAINING ? QueueState.STOPPED : parentState;
     }
     return DEFAULT_STATE;
-  }
-
-  /**
-   * Input of {@link #checkInitialState(InitialStateInput)}.
-   */
-  public static final class InitialStateInput {
-    private final String queuePath;
-    private final QueueState configuredState;
-    private final String parentQueuePath;
-    private final QueueState parentState;
-
-    public InitialStateInput(String queuePath, QueueState configuredState,
-        String parentQueuePath, QueueState parentState) {
-      this.queuePath = queuePath;
-      this.configuredState = configuredState;
-      this.parentQueuePath = parentQueuePath;
-      this.parentState = parentState;
-    }
-
-    public String getQueuePath() {
-      return queuePath;
-    }
-
-    public QueueState getConfiguredState() {
-      return configuredState;
-    }
-
-    public String getParentQueuePath() {
-      return parentQueuePath;
-    }
-
-    public QueueState getParentState() {
-      return parentState;
-    }
   }
 }

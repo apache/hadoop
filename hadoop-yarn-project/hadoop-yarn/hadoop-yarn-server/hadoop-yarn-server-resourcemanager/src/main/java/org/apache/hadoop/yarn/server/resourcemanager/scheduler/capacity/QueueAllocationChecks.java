@@ -43,12 +43,11 @@ public final class QueueAllocationChecks {
    * Checks the scheduler minimum and maximum memory allocation. The exception
    * type of a failure is
    * {@link org.apache.hadoop.yarn.exceptions.YarnRuntimeException}.
-   * @param memory configured minimum and maximum allocation in MB
+   * @param minMem configured minimum allocation in MB
+   * @param maxMem configured maximum allocation in MB
    * @return null if the range is valid, the error message otherwise
    */
-  public static String checkMemoryAllocation(AllocationRange memory) {
-    int minMem = memory.getMinimum();
-    int maxMem = memory.getMaximum();
+  public static String checkMemoryAllocation(int minMem, int maxMem) {
     if (minMem <= 0 || minMem > maxMem) {
       return "Invalid resource scheduler memory"
           + " allocation configuration"
@@ -65,12 +64,11 @@ public final class QueueAllocationChecks {
    * Checks the scheduler minimum and maximum vcores allocation. The exception
    * type of a failure is
    * {@link org.apache.hadoop.yarn.exceptions.YarnRuntimeException}.
-   * @param vcores configured minimum and maximum allocation in vcores
+   * @param minVcores configured minimum allocation in vcores
+   * @param maxVcores configured maximum allocation in vcores
    * @return null if the range is valid, the error message otherwise
    */
-  public static String checkVcoresAllocation(AllocationRange vcores) {
-    int minVcores = vcores.getMinimum();
-    int maxVcores = vcores.getMaximum();
+  public static String checkVcoresAllocation(int minVcores, int maxVcores) {
     if (minVcores <= 0 || minVcores > maxVcores) {
       return "Invalid resource scheduler vcores"
           + " allocation configuration"
@@ -87,20 +85,29 @@ public final class QueueAllocationChecks {
    * Checks the legacy per queue {@code maximum-allocation-mb} and
    * {@code maximum-allocation-vcores} against the cluster maximum allocation.
    * The parent's maximum allocation is not checked. The exception type of a
-   * failure is {@link IllegalArgumentException}.
-   * @param input the legacy maximum allocation of the queue
+   * failure is {@link IllegalArgumentException}. The Resource values are not
+   * copied, because a copy can change units and resource type layout; callers
+   * pass values they no longer modify.
+   * @param queuePath full path of the queue, used in the message
+   * @param queueMemory configured {@code maximum-allocation-mb}, or
+   *                    {@code UNDEFINED}
+   * @param queueVcores configured {@code maximum-allocation-vcores}, or
+   *                    {@code UNDEFINED}
+   * @param clusterMax cluster maximum allocation
+   * @param effectiveMaximumAllocation the queue's maximum allocation (the
+   *                                   parent's, or the cluster's for root,
+   *                                   overridden by the configured values),
+   *                                   used in the message only
    * @return null if the allocation fits, the error message otherwise
    */
-  public static String checkLegacyQueueMaximumAllocation(
-      LegacyMaximumAllocationInput input) {
-    long queueMemory = input.getQueueMemory();
-    int queueVcores = input.getQueueVcores();
-    Resource clusterMax = input.getClusterMaximumAllocation();
+  public static String checkLegacyQueueMaximumAllocation(String queuePath,
+      long queueMemory, int queueVcores, Resource clusterMax,
+      Resource effectiveMaximumAllocation) {
     if ((queueMemory != UNDEFINED && queueMemory > clusterMax.getMemorySize()
         || (queueVcores != UNDEFINED
         && queueVcores > clusterMax.getVirtualCores()))) {
-      return String.format(maximumAllocationMessage(input.getQueuePath(),
-          clusterMax), input.getEffectiveMaximumAllocation());
+      return String.format(maximumAllocationMessage(queuePath, clusterMax),
+          effectiveMaximumAllocation);
     }
     return null;
   }
@@ -111,17 +118,19 @@ public final class QueueAllocationChecks {
    * checked. The exception type of a failure is
    * {@link IllegalArgumentException}; a resource unknown to the cluster
    * maximum allocation throws the same exception as the queue initialization.
-   * @param input the maximum allocation of the queue
+   * The Resource values are not copied, because a copy can change units and
+   * resource type layout; callers pass values they no longer modify.
+   * @param queuePath full path of the queue, used in the message
+   * @param queueMax configured {@code maximum-allocation}
+   * @param clusterMax cluster maximum allocation
    * @return null if the allocation fits, the error message otherwise
    */
-  public static String checkQueueMaximumAllocation(
-      MaximumAllocationInput input) {
-    Resource queueMax = input.getQueueMaximumAllocation();
-    Resource clusterMax = input.getClusterMaximumAllocation();
+  public static String checkQueueMaximumAllocation(String queuePath,
+      Resource queueMax, Resource clusterMax) {
     for (ResourceInformation ri : queueMax.getResources()) {
       if (ri.compareTo(clusterMax.getResourceInformation(ri.getName())) > 0) {
-        return String.format(maximumAllocationMessage(input.getQueuePath(),
-            clusterMax), queueMax);
+        return String.format(maximumAllocationMessage(queuePath, clusterMax),
+            queueMax);
       }
     }
     return null;
@@ -155,117 +164,5 @@ public final class QueueAllocationChecks {
         + " for queue " + queuePath
         + " max allocation per queue: %s"
         + " cluster setting: " + clusterMax;
-  }
-
-  // The Resource values of the inputs below are not copied, because a copy
-  // can change units and resource type layout; callers pass values they no
-  // longer modify.
-
-  /**
-   * A configured minimum and maximum allocation of one resource.
-   */
-  public static final class AllocationRange {
-    private final int minimum;
-    private final int maximum;
-
-    public AllocationRange(int minimum, int maximum) {
-      this.minimum = minimum;
-      this.maximum = maximum;
-    }
-
-    public int getMinimum() {
-      return minimum;
-    }
-
-    public int getMaximum() {
-      return maximum;
-    }
-  }
-
-  /**
-   * Input of
-   * {@link #checkLegacyQueueMaximumAllocation(LegacyMaximumAllocationInput)}.
-   */
-  public static final class LegacyMaximumAllocationInput {
-    private final String queuePath;
-    private final long queueMemory;
-    private final int queueVcores;
-    private final Resource clusterMaximumAllocation;
-    private final Resource effectiveMaximumAllocation;
-
-    /**
-     * @param queuePath full path of the queue, used in the message
-     * @param queueMemory configured {@code maximum-allocation-mb}, or
-     *                    {@code UNDEFINED}
-     * @param queueVcores configured {@code maximum-allocation-vcores}, or
-     *                    {@code UNDEFINED}
-     * @param clusterMaximumAllocation cluster maximum allocation
-     * @param effectiveMaximumAllocation the queue's maximum allocation (the
-     *                                   parent's, or the cluster's for root,
-     *                                   overridden by the configured values),
-     *                                   used in the message only
-     */
-    public LegacyMaximumAllocationInput(String queuePath, long queueMemory,
-        int queueVcores, Resource clusterMaximumAllocation,
-        Resource effectiveMaximumAllocation) {
-      this.queuePath = queuePath;
-      this.queueMemory = queueMemory;
-      this.queueVcores = queueVcores;
-      this.clusterMaximumAllocation = clusterMaximumAllocation;
-      this.effectiveMaximumAllocation = effectiveMaximumAllocation;
-    }
-
-    public String getQueuePath() {
-      return queuePath;
-    }
-
-    public long getQueueMemory() {
-      return queueMemory;
-    }
-
-    public int getQueueVcores() {
-      return queueVcores;
-    }
-
-    public Resource getClusterMaximumAllocation() {
-      return clusterMaximumAllocation;
-    }
-
-    public Resource getEffectiveMaximumAllocation() {
-      return effectiveMaximumAllocation;
-    }
-  }
-
-  /**
-   * Input of {@link #checkQueueMaximumAllocation(MaximumAllocationInput)}.
-   */
-  public static final class MaximumAllocationInput {
-    private final String queuePath;
-    private final Resource queueMaximumAllocation;
-    private final Resource clusterMaximumAllocation;
-
-    /**
-     * @param queuePath full path of the queue, used in the message
-     * @param queueMaximumAllocation configured {@code maximum-allocation}
-     * @param clusterMaximumAllocation cluster maximum allocation
-     */
-    public MaximumAllocationInput(String queuePath,
-        Resource queueMaximumAllocation, Resource clusterMaximumAllocation) {
-      this.queuePath = queuePath;
-      this.queueMaximumAllocation = queueMaximumAllocation;
-      this.clusterMaximumAllocation = clusterMaximumAllocation;
-    }
-
-    public String getQueuePath() {
-      return queuePath;
-    }
-
-    public Resource getQueueMaximumAllocation() {
-      return queueMaximumAllocation;
-    }
-
-    public Resource getClusterMaximumAllocation() {
-      return clusterMaximumAllocation;
-    }
   }
 }

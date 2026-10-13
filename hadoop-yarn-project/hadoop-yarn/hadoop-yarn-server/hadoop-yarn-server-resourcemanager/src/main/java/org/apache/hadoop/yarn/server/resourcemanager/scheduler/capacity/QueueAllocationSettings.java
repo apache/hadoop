@@ -58,17 +58,15 @@ public class QueueAllocationSettings {
       }
 
       String error = QueueAllocationChecks.checkLegacyQueueMaximumAllocation(
-          new QueueAllocationChecks.LegacyMaximumAllocationInput(
-              String.valueOf(queuePath), queueMemory, queueVcores, clusterMax,
-              maximumAllocation));
+          String.valueOf(queuePath), queueMemory, queueVcores, clusterMax,
+          maximumAllocation);
       if (error != null) {
         throw new IllegalArgumentException(error);
       }
     } else {
       // Queue level maximum-allocation can't be larger than cluster setting
       String error = QueueAllocationChecks.checkQueueMaximumAllocation(
-          new QueueAllocationChecks.MaximumAllocationInput(
-              String.valueOf(queuePath), queueMax, clusterMax));
+          String.valueOf(queuePath), queueMax, clusterMax);
       if (error != null) {
         throw new IllegalArgumentException(error);
       }

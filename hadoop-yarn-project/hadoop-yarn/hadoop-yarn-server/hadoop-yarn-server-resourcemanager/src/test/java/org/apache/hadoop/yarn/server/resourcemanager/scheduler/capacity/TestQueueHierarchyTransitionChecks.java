@@ -22,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.apache.hadoop.yarn.api.records.QueueState;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueHierarchyTransitionChecks.QueueKind;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueHierarchyTransitionChecks.QueueSnapshot;
 import org.junit.jupiter.api.Test;
 
@@ -93,6 +92,12 @@ public class TestQueueHierarchyTransitionChecks {
         QueueHierarchyTransitionChecks.checkParentQueueConversion(managed, leaf));
     assertEquals(toLeaf,
         QueueHierarchyTransitionChecks.checkParentQueueConversion(managed, parent));
+    // a reservation plan queue is a parent queue as well
+    QueueSnapshot plan = queue("root.a", QueueKind.OTHER_PARENT, QueueState.RUNNING);
+    assertNull(QueueHierarchyTransitionChecks.checkParentQueueConversion(plan, leaf));
+    assertEquals("Can not convert parent queue: root.a to auto create enabled parent queue"
+        + " since it could have other pre-configured queues which is not supported",
+        QueueHierarchyTransitionChecks.checkParentQueueConversion(plan, managed));
   }
 
   @Test
@@ -115,6 +120,8 @@ public class TestQueueHierarchyTransitionChecks {
         runningLeaf, runningParent));
     assertEquals(expected, QueueHierarchyTransitionChecks.checkLeafQueueConversion(
         runningLeaf, queue("root.a", QueueKind.MANAGED_PARENT, QueueState.RUNNING)));
+    assertEquals(expected, QueueHierarchyTransitionChecks.checkLeafQueueConversion(
+        runningLeaf, queue("root.a", QueueKind.OTHER_PARENT, QueueState.RUNNING)));
     assertEquals("Can not convert the leaf queue: root.a to parent queue since it is not"
         + " yet in stopped state. Current State : DRAINING",
         QueueHierarchyTransitionChecks.checkLeafQueueConversion(

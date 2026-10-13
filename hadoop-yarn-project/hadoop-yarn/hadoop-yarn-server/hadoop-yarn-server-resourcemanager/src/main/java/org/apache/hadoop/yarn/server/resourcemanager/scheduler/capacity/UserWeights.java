@@ -71,8 +71,8 @@ public final class UserWeights {
   }
 
   public void validateForLeafQueue(float queueUserLimit, String queuePath) throws IOException {
-    String error = QueueLimitChecks.checkUserWeights(
-        new QueueLimitChecks.UserWeightsInput(queuePath, queueUserLimit, data));
+    String error =
+        QueueLimitChecks.checkUserWeights(queuePath, queueUserLimit, data);
     if (error != null) {
       throw new IOException(error);
     }

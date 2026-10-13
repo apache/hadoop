@@ -24,7 +24,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueHierarchyTransitionChecks.QueueKind;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueHierarchyTransitionChecks.QueueSnapshot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,8 +68,8 @@ public final class CapacitySchedulerConfigValidator {
   public static Set<String> validatePlacementRules(
           Collection<String> placementRuleStrs) throws IOException {
     // fail the case if we get duplicate placementRule add in
-    String error = PlacementRuleChecks.checkDuplicatePlacementRules(
-            new PlacementRuleChecks.PlacementRuleNames(placementRuleStrs));
+    String error =
+            PlacementRuleChecks.checkDuplicatePlacementRules(placementRuleStrs);
     if (error != null) {
       throw new IOException(error);
     }
@@ -85,8 +84,7 @@ public final class CapacitySchedulerConfigValidator {
             YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
 
-    String error = QueueAllocationChecks.checkMemoryAllocation(
-            new QueueAllocationChecks.AllocationRange(minMem, maxMem));
+    String error = QueueAllocationChecks.checkMemoryAllocation(minMem, maxMem);
     if (error != null) {
       throw new YarnRuntimeException(error);
     }
@@ -99,8 +97,8 @@ public final class CapacitySchedulerConfigValidator {
             YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
 
-    String error = QueueAllocationChecks.checkVcoresAllocation(
-            new QueueAllocationChecks.AllocationRange(minVcores, maxVcores));
+    String error =
+            QueueAllocationChecks.checkVcoresAllocation(minVcores, maxVcores);
     if (error != null) {
       throw new YarnRuntimeException(error);
     }
@@ -171,7 +169,7 @@ public final class CapacitySchedulerConfigValidator {
       throw new IOException(error);
     }
 
-    if (QueueHierarchyTransitionChecks.isParent(oldQueue.getKind())
+    if (oldQueue.getKind().isParent()
         && newQueue.getKind() == QueueKind.LEAF) {
       LOG.info("Converting the parent queue: {} to leaf queue.", oldQueue.getQueuePath());
     }
@@ -190,17 +188,7 @@ public final class CapacitySchedulerConfigValidator {
   }
 
   private static QueueSnapshot toSnapshot(CSQueue queue) {
-    QueueKind kind;
-    if (queue instanceof ManagedParentQueue) {
-      kind = QueueKind.MANAGED_PARENT;
-    } else if (queue instanceof AbstractParentQueue) {
-      kind = QueueKind.PARENT;
-    } else if (queue instanceof AbstractLeafQueue) {
-      kind = QueueKind.LEAF;
-    } else {
-      kind = QueueKind.OTHER;
-    }
-    return new QueueSnapshot(queue.getQueuePath(), kind, queue.getState(),
+    return new QueueSnapshot(queue.getQueuePath(), QueueKind.of(queue), queue.getState(),
         isDynamicQueue(queue));
   }
 

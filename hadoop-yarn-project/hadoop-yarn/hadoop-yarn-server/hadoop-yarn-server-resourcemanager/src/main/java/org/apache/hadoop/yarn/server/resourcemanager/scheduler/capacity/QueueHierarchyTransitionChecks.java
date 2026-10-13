@@ -34,24 +34,11 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class QueueHierarchyTransitionChecks {
+  // Logs under the validator, where the queue state warning was logged before it moved here.
   private static final Logger LOG = LoggerFactory.getLogger(
       CapacitySchedulerConfigValidator.class);
 
   private QueueHierarchyTransitionChecks() {
-  }
-
-  /**
-   * The kind of a queue, as far as the hierarchy transition checks are concerned.
-   */
-  public enum QueueKind {
-    /** Any leaf queue. */
-    LEAF,
-    /** A parent queue that is not auto create enabled (includes reservable queues). */
-    PARENT,
-    /** An auto create enabled parent queue (auto queue creation v1). */
-    MANAGED_PARENT,
-    /** Neither a leaf nor a parent queue. */
-    OTHER
   }
 
   /**
@@ -118,7 +105,7 @@ public final class QueueHierarchyTransitionChecks {
    */
   public static String checkParentQueueConversion(QueueSnapshot oldQueue,
       QueueSnapshot newQueue) {
-    if (!isParent(oldQueue.getKind())) {
+    if (!oldQueue.getKind().isParent()) {
       return null;
     }
     if (oldQueue.getKind() != QueueKind.MANAGED_PARENT
@@ -158,11 +145,7 @@ public final class QueueHierarchyTransitionChecks {
   }
 
   static boolean isLeafToParentConversion(QueueSnapshot oldQueue, QueueSnapshot newQueue) {
-    return oldQueue.getKind() == QueueKind.LEAF && isParent(newQueue.getKind());
-  }
-
-  static boolean isParent(QueueKind kind) {
-    return kind == QueueKind.PARENT || kind == QueueKind.MANAGED_PARENT;
+    return oldQueue.getKind() == QueueKind.LEAF && newQueue.getKind().isParent();
   }
 
   static boolean isEitherQueueStopped(QueueState a, QueueState b) {

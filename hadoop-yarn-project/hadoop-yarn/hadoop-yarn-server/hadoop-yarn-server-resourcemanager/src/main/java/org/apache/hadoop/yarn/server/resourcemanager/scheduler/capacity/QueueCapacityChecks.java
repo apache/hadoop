@@ -168,7 +168,7 @@ public final class QueueCapacityChecks {
   }
 
   /**
-   * C05: the raw capacity of the root queue must be 100.
+   * The raw capacity of the root queue must be 100.
    *
    * @param queueName short name of the queue
    * @param isRoot whether the queue is the root queue
@@ -187,7 +187,7 @@ public final class QueueCapacityChecks {
   }
 
   /**
-   * C06: the configured max resource of a queue must not be greater than the
+   * The configured max resource of a queue must not be greater than the
    * configured max resource of its parent, if the latter is set.
    *
    * @param queuePath full path of the queue
@@ -213,12 +213,12 @@ public final class QueueCapacityChecks {
   /**
    * If the max resource of a queue is not set, but its min resource and the
    * max resource of its parent are, the queue inherits the max resource of its
-   * parent before C07 is evaluated.
+   * parent before {@link #checkMinResourceWithinMax} is evaluated.
    *
    * @param minResource configured min resource of the queue
    * @param maxResource configured max resource of the queue
    * @param parentMaxResource configured max resource of the parent
-   * @return the max resource C07 compares with
+   * @return the max resource {@link #checkMinResourceWithinMax} compares with
    */
   public static Resource inheritMaxResourceFromParent(Resource minResource,
       Resource maxResource, Resource parentMaxResource) {
@@ -231,7 +231,7 @@ public final class QueueCapacityChecks {
   }
 
   /**
-   * C07: the configured min resource of a queue must not be greater than its
+   * The configured min resource of a queue must not be greater than its
    * max resource, if the latter is set.
    *
    * @param queuePath full path of the queue
@@ -262,7 +262,7 @@ public final class QueueCapacityChecks {
   }
 
   /**
-   * C08: in legacy queue mode a non-root queue must use the same capacity
+   * In legacy queue mode a non-root queue must use the same capacity
    * config type for all its configured labels.
    *
    * @param queuePath full path of the queue
@@ -286,7 +286,7 @@ public final class QueueCapacityChecks {
   }
 
   /**
-   * C09: in legacy queue mode the given queues must not mix percentage,
+   * In legacy queue mode the given queues must not mix percentage,
    * weight and absolute resource capacities. The check is order dependent:
    * an absolute resource capacity clears the percentage flag collected from
    * the previously visited labels and queues, a 0% capacity does not count as
@@ -385,7 +385,7 @@ public final class QueueCapacityChecks {
   }
 
   /**
-   * C10: in legacy queue mode, when either a non-root parent or its children
+   * In legacy queue mode, when either a non-root parent or its children
    * use absolute resources, both must.
    *
    * @param parentQueuePath full path of the parent
@@ -408,7 +408,7 @@ public final class QueueCapacityChecks {
   }
 
   /**
-   * C11: in legacy queue mode with absolute resources, the configured min
+   * In legacy queue mode with absolute resources, the configured min
    * resource of a parent, if set, must not be less than the sum of the
    * configured min resources of its children.
    *
@@ -438,7 +438,7 @@ public final class QueueCapacityChecks {
   }
 
   /**
-   * C12, C13, C14: in legacy queue mode with percentage children, the sum of
+   * In legacy queue mode with percentage children, the sum of
    * the children capacities for a label must be 1, or 0; 0 is only allowed
    * under a percentage parent with zero capacity for the label or with
    * allow-zero-capacity-sum, and 1 is not allowed under a percentage parent
@@ -462,14 +462,14 @@ public final class QueueCapacityChecks {
 
     if (Math.abs(1 - childrenPctSum) > CAPACITY_SUM_PRECISION) {
       if (Math.abs(childrenPctSum) > CAPACITY_SUM_PRECISION) {
-        // C12: the sum is neither 0 nor 1
+        // the sum is neither 0 nor 1
         return "Illegal" + " capacity sum of " + childrenPctSum
             + " for children of queue " + parentQueueName + " for label="
             + label + ". It should be either 0 or 1.0";
       } else if (parentType == QueueCapacityType.PERCENT
           && (Math.abs(parentCapacity) > CAPACITY_SUM_PRECISION)
           && (!allowZeroCapacitySum)) {
-        // C13
+        // the sum is 0 under a non-zero percentage parent
         return "Illegal" + " capacity sum of " + childrenPctSum
             + " for children of queue " + parentQueueName
             + " for label=" + label
@@ -479,7 +479,7 @@ public final class QueueCapacityChecks {
     } else if (parentType == QueueCapacityType.PERCENT
         && Math.abs(parentCapacity) <= 0f
         && !allowZeroCapacitySum) {
-      // C14
+      // the sum is 1 under a zero percentage parent
       return "Illegal" + " capacity sum of " + childrenPctSum
           + " for children of queue " + parentQueueName + " for label="
           + label + ". queue=" + parentQueueName

@@ -26,9 +26,6 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueLimitChecks.AppLifetimeInput;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueLimitChecks.UserWeightsInput;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -40,10 +37,8 @@ public class TestQueueLimitChecks {
     Map<String, Float> weights = new HashMap<>();
     weights.put("alice", 0.0f);
     weights.put("bob", 2.0f);
-    assertNull(QueueLimitChecks.checkUserWeights(
-        new UserWeightsInput("root.a", 50.0f, weights)));
-    assertNull(QueueLimitChecks.checkUserWeights(
-        new UserWeightsInput("root.a", 50.0f, Collections.emptyMap())));
+    assertNull(QueueLimitChecks.checkUserWeights("root.a", 50.0f, weights));
+    assertNull(QueueLimitChecks.checkUserWeights("root.a", 50.0f, Collections.emptyMap()));
   }
 
   @Test
@@ -51,8 +46,8 @@ public class TestQueueLimitChecks {
     assertEquals("Weight (3.0) for user \"alice\" must be between 0 and"
             + " 100 / 50.0 (= 2.0, the number of concurrent active users in"
             + " root.a)",
-        QueueLimitChecks.checkUserWeights(new UserWeightsInput("root.a", 50.0f,
-            Collections.singletonMap("alice", 3.0f))));
+        QueueLimitChecks.checkUserWeights("root.a", 50.0f,
+            Collections.singletonMap("alice", 3.0f)));
   }
 
   @Test
@@ -60,19 +55,19 @@ public class TestQueueLimitChecks {
     assertEquals("Weight (-1.0) for user \"bob\" must be between 0 and"
             + " 100 / 25.0 (= 4.0, the number of concurrent active users in"
             + " root.b)",
-        QueueLimitChecks.checkUserWeights(new UserWeightsInput("root.b", 25.0f,
-            Collections.singletonMap("bob", -1.0f))));
+        QueueLimitChecks.checkUserWeights("root.b", 25.0f,
+            Collections.singletonMap("bob", -1.0f)));
   }
 
   @Test
   public void testUserLimitAboveHundredIsCapped() {
-    assertNull(QueueLimitChecks.checkUserWeights(new UserWeightsInput("root.a",
-        200.0f, Collections.singletonMap("alice", 1.0f))));
+    assertNull(QueueLimitChecks.checkUserWeights("root.a", 200.0f,
+        Collections.singletonMap("alice", 1.0f)));
     assertEquals("Weight (1.5) for user \"alice\" must be between 0 and"
             + " 100 / 100.0 (= 1.0, the number of concurrent active users in"
             + " root.a)",
-        QueueLimitChecks.checkUserWeights(new UserWeightsInput("root.a",
-            200.0f, Collections.singletonMap("alice", 1.5f))));
+        QueueLimitChecks.checkUserWeights("root.a", 200.0f,
+            Collections.singletonMap("alice", 1.5f)));
   }
 
   @Test
@@ -84,8 +79,7 @@ public class TestQueueLimitChecks {
     assertEquals("Weight (5.0) for user \"second\" must be between 0 and"
             + " 100 / 50.0 (= 2.0, the number of concurrent active users in"
             + " root.a)",
-        QueueLimitChecks.checkUserWeights(
-            new UserWeightsInput("root.a", 50.0f, weights)));
+        QueueLimitChecks.checkUserWeights("root.a", 50.0f, weights));
   }
 
   @Test
@@ -105,27 +99,21 @@ public class TestQueueLimitChecks {
 
   @Test
   public void testDefaultLifetimePass() {
-    assertNull(QueueLimitChecks.checkDefaultAppLifetime(
-        new AppLifetimeInput(100, 100)));
-    assertNull(QueueLimitChecks.checkDefaultAppLifetime(
-        new AppLifetimeInput(100, 50)));
-    assertNull(QueueLimitChecks.checkDefaultAppLifetime(
-        new AppLifetimeInput(100, -1)));
+    assertNull(QueueLimitChecks.checkDefaultAppLifetime(100, 100));
+    assertNull(QueueLimitChecks.checkDefaultAppLifetime(100, 50));
+    assertNull(QueueLimitChecks.checkDefaultAppLifetime(100, -1));
   }
 
   @Test
   public void testDefaultLifetimeWithUnlimitedMaximum() {
     // -1 (not set) and 0 (explicitly unlimited) never limit the default
-    assertNull(QueueLimitChecks.checkDefaultAppLifetime(
-        new AppLifetimeInput(-1, 500)));
-    assertNull(QueueLimitChecks.checkDefaultAppLifetime(
-        new AppLifetimeInput(0, 500)));
+    assertNull(QueueLimitChecks.checkDefaultAppLifetime(-1, 500));
+    assertNull(QueueLimitChecks.checkDefaultAppLifetime(0, 500));
   }
 
   @Test
   public void testDefaultLifetimeAboveMaximum() {
     assertEquals("Default lifetime 200 can't exceed maximum lifetime 100",
-        QueueLimitChecks.checkDefaultAppLifetime(
-            new AppLifetimeInput(100, 200)));
+        QueueLimitChecks.checkDefaultAppLifetime(100, 200));
   }
 }

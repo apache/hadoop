@@ -23,9 +23,6 @@ import org.junit.jupiter.api.Test;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueAllocationChecks.AllocationRange;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueAllocationChecks.LegacyMaximumAllocationInput;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueAllocationChecks.MaximumAllocationInput;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -49,28 +46,21 @@ public class TestQueueAllocationChecks {
 
   @Test
   public void testMemoryAllocation() {
-    assertNull(QueueAllocationChecks.checkMemoryAllocation(
-        new AllocationRange(1024, 8192)));
-    assertNull(QueueAllocationChecks.checkMemoryAllocation(
-        new AllocationRange(1024, 1024)));
+    assertNull(QueueAllocationChecks.checkMemoryAllocation(1024, 8192));
+    assertNull(QueueAllocationChecks.checkMemoryAllocation(1024, 1024));
     assertEquals(String.format(MEMORY_MESSAGE, 0, 8192),
-        QueueAllocationChecks.checkMemoryAllocation(
-            new AllocationRange(0, 8192)));
+        QueueAllocationChecks.checkMemoryAllocation(0, 8192));
     assertEquals(String.format(MEMORY_MESSAGE, 2048, 1024),
-        QueueAllocationChecks.checkMemoryAllocation(
-            new AllocationRange(2048, 1024)));
+        QueueAllocationChecks.checkMemoryAllocation(2048, 1024));
   }
 
   @Test
   public void testVcoresAllocation() {
-    assertNull(QueueAllocationChecks.checkVcoresAllocation(
-        new AllocationRange(1, 4)));
+    assertNull(QueueAllocationChecks.checkVcoresAllocation(1, 4));
     assertEquals(String.format(VCORES_MESSAGE, -1, 4),
-        QueueAllocationChecks.checkVcoresAllocation(
-            new AllocationRange(-1, 4)));
+        QueueAllocationChecks.checkVcoresAllocation(-1, 4));
     assertEquals(String.format(VCORES_MESSAGE, 8, 4),
-        QueueAllocationChecks.checkVcoresAllocation(
-            new AllocationRange(8, 4)));
+        QueueAllocationChecks.checkVcoresAllocation(8, 4));
   }
 
   @Test
@@ -92,40 +82,35 @@ public class TestQueueAllocationChecks {
   public void testLegacyQueueMaximumAllocation() {
     Resource cluster = Resource.newInstance(8192, 4);
     assertNull(QueueAllocationChecks.checkLegacyQueueMaximumAllocation(
-        new LegacyMaximumAllocationInput("root.a", UNDEFINED, UNDEFINED,
-            cluster, Resource.newInstance(8192, 4))));
+        "root.a", UNDEFINED, UNDEFINED, cluster,
+        Resource.newInstance(8192, 4)));
     assertNull(QueueAllocationChecks.checkLegacyQueueMaximumAllocation(
-        new LegacyMaximumAllocationInput("root.a", 8192, 4, cluster,
-            Resource.newInstance(8192, 4))));
+        "root.a", 8192, 4, cluster, Resource.newInstance(8192, 4)));
     assertEquals("Queue maximum allocation cannot be larger than the cluster"
             + " setting for queue root.a max allocation per queue:"
             + " <memory:16384, vCores:2> cluster setting:"
             + " <memory:8192, vCores:4>",
-        QueueAllocationChecks.checkLegacyQueueMaximumAllocation(
-            new LegacyMaximumAllocationInput("root.a", 16384, UNDEFINED,
-                cluster, Resource.newInstance(16384, 2))));
+        QueueAllocationChecks.checkLegacyQueueMaximumAllocation("root.a",
+            16384, UNDEFINED, cluster, Resource.newInstance(16384, 2)));
     assertEquals("Queue maximum allocation cannot be larger than the cluster"
             + " setting for queue root.b max allocation per queue:"
             + " <memory:4096, vCores:5> cluster setting:"
             + " <memory:8192, vCores:4>",
-        QueueAllocationChecks.checkLegacyQueueMaximumAllocation(
-            new LegacyMaximumAllocationInput("root.b", UNDEFINED, 5,
-                cluster, Resource.newInstance(4096, 5))));
+        QueueAllocationChecks.checkLegacyQueueMaximumAllocation("root.b",
+            UNDEFINED, 5, cluster, Resource.newInstance(4096, 5)));
   }
 
   @Test
   public void testQueueMaximumAllocation() {
     Resource cluster = Resource.newInstance(8192, 4);
-    assertNull(QueueAllocationChecks.checkQueueMaximumAllocation(
-        new MaximumAllocationInput("root.a", Resource.newInstance(8192, 4),
-            cluster)));
+    assertNull(QueueAllocationChecks.checkQueueMaximumAllocation("root.a",
+        Resource.newInstance(8192, 4), cluster));
     assertEquals("Queue maximum allocation cannot be larger than the cluster"
             + " setting for queue root.a max allocation per queue:"
             + " <memory:4096, vCores:8> cluster setting:"
             + " <memory:8192, vCores:4>",
-        QueueAllocationChecks.checkQueueMaximumAllocation(
-            new MaximumAllocationInput("root.a",
-                Resource.newInstance(4096, 8), cluster)));
+        QueueAllocationChecks.checkQueueMaximumAllocation("root.a",
+            Resource.newInstance(4096, 8), cluster));
   }
 
   @Test

@@ -35,9 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.Map
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleResult;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleValidationContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleValidationContextImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks.PlacementRuleNames;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks.QueueIndex;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks.QueueKind;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks.QueueRef;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -149,11 +147,11 @@ public class TestPlacementRuleChecks {
   @Test
   public void testDuplicatePlacementRules() throws IOException {
     assertNull(PlacementRuleChecks.checkDuplicatePlacementRules(
-        new PlacementRuleNames(Arrays.asList("user-group", "app-name"))));
+        Arrays.asList("user-group", "app-name")));
     assertEquals("Invalid PlacementRule inputs which contains duplicate rule"
             + " strings",
-        PlacementRuleChecks.checkDuplicatePlacementRules(new PlacementRuleNames(
-            Arrays.asList("user-group", "app-name", "user-group"))));
+        PlacementRuleChecks.checkDuplicatePlacementRules(
+            Arrays.asList("user-group", "app-name", "user-group")));
 
     Set<String> rules = CapacitySchedulerConfigValidator.validatePlacementRules(
         Arrays.asList("b", "a"));
@@ -282,6 +280,7 @@ public class TestPlacementRuleChecks {
     assertEquals(QueueKind.OTHER_PARENT,
         QueueRef.of(mock(PlanQueue.class)).getKind());
     assertEquals(QueueKind.OTHER, QueueRef.of(mock(CSQueue.class)).getKind());
+    assertTrue(QueueRef.of(mock(PlanQueue.class)).isParent());
   }
 
   @Test

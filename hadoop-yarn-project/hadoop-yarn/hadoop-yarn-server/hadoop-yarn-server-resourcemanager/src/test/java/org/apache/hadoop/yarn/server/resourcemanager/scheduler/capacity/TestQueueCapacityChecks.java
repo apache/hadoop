@@ -241,13 +241,13 @@ public class TestQueueCapacityChecks {
         QueueCapacityType.PERCENT, 0.5f, false,
         Arrays.asList(pct("root.a.x", 0.4f), pct("root.a.y", 0.5996f))));
 
-    // C12
+    // the sum is neither 0 nor 1
     assertEquals("Illegal capacity sum of 0.9 for children of queue a for label=."
             + " It should be either 0 or 1.0",
         QueueCapacityChecks.checkChildrenCapacitySum("a", "",
             QueueCapacityType.PERCENT, 0.5f, true, partial));
 
-    // C13
+    // the sum is 0 under a non-zero percentage parent
     assertEquals("Illegal capacity sum of 0.0 for children of queue a for label=x."
             + " It is set to 0, but parent percent != 0, and doesn't allow children"
             + " capacity to set to 0",
@@ -263,7 +263,7 @@ public class TestQueueCapacityChecks {
     assertNull(QueueCapacityChecks.checkChildrenCapacitySum("a", "",
         QueueCapacityType.WEIGHT, 0.5f, false, zero));
 
-    // C14
+    // the sum is 1 under a zero percentage parent
     assertEquals("Illegal capacity sum of 1.0 for children of queue a for label=."
             + " queue=a has zero capacity, but childqueues have positive capacities",
         QueueCapacityChecks.checkChildrenCapacitySum("a", "",
