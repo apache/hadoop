@@ -139,13 +139,14 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
    * the socket is otherwise torn down and the next call pays for a fresh
    * connection and TLS handshake.
    * <p/>
-   * Off by default: the drain blocks until the remaining bytes arrive (bounded
+   * On by default: the drain blocks until the remaining bytes arrive (bounded
    * by the read timeout), so a server that stops writing after the payload
-   * would make a call wait where it previously returned at once.
+   * would make a call wait where it previously returned at once. Set to false
+   * to disable draining.
    */
   public static final String  DRAIN_RESPONSE_UNREAD_BYTES         = CONFIG_PREFIX
           + "drain.response.unread.bytes";
-  public static final boolean DEFAULT_DRAIN_RESPONSE_UNREAD_BYTES = false;
+  public static final boolean DEFAULT_DRAIN_RESPONSE_UNREAD_BYTES = true;
 
   private final ValueQueue<EncryptedKeyVersion> encKeyVersionQueue;
 
