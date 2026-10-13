@@ -752,7 +752,9 @@ function signartifacts
 function write_buildinfo
 {
   local buildinfo
+  local buildinfo_tmp
   buildinfo="${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}.buildinfo"
+  buildinfo_tmp="${ARTIFACTS_DIR}/.hadoop-${HADOOP_VERSION}${RC_LABEL}.buildinfo.tmp"
 
   {
     echo "name = Hadoop"
@@ -768,7 +770,8 @@ function write_buildinfo
         sha512sum --tag "${i}"
       fi
     done
-  } > "${buildinfo}"
+  } > "${buildinfo_tmp}"
+  mv "${buildinfo_tmp}" "${buildinfo}"
 }
 
 # find root of the source tree
