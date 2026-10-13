@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -49,8 +51,12 @@ public class TestConfigSnapshot {
     ConfigSnapshot snapshot = ConfigSnapshot.of(conf);
 
     // yarn-default.xml brings in many substituted values as well
-    assertTrue(snapshot.keys().size() > 100);
-    for (String key : snapshot.keys()) {
+    List<String> keys = new ArrayList<>();
+    for (Map.Entry<String, String> entry : conf) {
+      keys.add(entry.getKey());
+    }
+    assertTrue(keys.size() > 100);
+    for (String key : keys) {
       assertEquals(conf.get(key), snapshot.get(key), key);
     }
   }
@@ -73,9 +79,6 @@ public class TestConfigSnapshot {
         snapshot.get(PREFIX + "root.a.maximum-capacity"));
     assertEquals("RUNNING", snapshot.getRaw(PREFIX + "root.a.state"));
 
-    Map<String, String> expanded =
-        snapshot.getPropertiesWithPrefix(PREFIX + "root.a");
-    assertEquals("10", expanded.get("capacity"));
     Map<String, String> raw =
         snapshot.getRawPropertiesWithPrefix(PREFIX + "root.a", false);
     assertEquals("${test.snapshot.var}", raw.get("capacity"));
@@ -92,7 +95,6 @@ public class TestConfigSnapshot {
 
     ConfigSnapshot snapshot = ConfigSnapshot.of(conf);
 
-    assertTrue(snapshot.keys().contains("test.snapshot.loop.a"));
     IllegalStateException first = assertThrows(IllegalStateException.class,
         () -> snapshot.get("test.snapshot.loop.a"));
     IllegalStateException second = assertThrows(IllegalStateException.class,
@@ -122,7 +124,8 @@ public class TestConfigSnapshot {
     assertEquals(conf.get(oldKey), snapshot.get(oldKey));
     assertEquals(conf.get(newKey), snapshot.get(newKey));
     assertEquals("5", snapshot.get(newKey));
-    assertTrue(snapshot.keys().contains(newKey));
+    assertEquals("5",
+        snapshot.getRawPropertiesWithPrefix(newKey, true).get(newKey));
 
     conf.set(newKey, "6");
     snapshot = ConfigSnapshot.of(conf);
@@ -136,8 +139,7 @@ public class TestConfigSnapshot {
 
     assertNull(snapshot.get(PREFIX + "root.queues"));
     assertNull(snapshot.getRaw(PREFIX + "root.queues"));
-    assertTrue(snapshot.keys().isEmpty());
-    assertTrue(snapshot.getPropertiesWithPrefix(PREFIX).isEmpty());
+    assertTrue(snapshot.getRawPropertiesWithPrefix(PREFIX, false).isEmpty());
     assertTrue(snapshot.getRawPropertiesWithPrefix(PREFIX, true).isEmpty());
   }
 
@@ -153,7 +155,7 @@ public class TestConfigSnapshot {
     props.put("root.12.3", "V5");
     ConfigSnapshot snapshot = ConfigSnapshot.of(props);
 
-    Map<String, String> result = snapshot.getPropertiesWithPrefix("root.1.2");
+    Map<String, String> result = snapshot.getRawPropertiesWithPrefix("root.1.2", false);
     assertEquals(4, result.size());
     assertEquals("V3", result.get(""));
     assertEquals("V1", result.get("3"));
@@ -161,26 +163,26 @@ public class TestConfigSnapshot {
     assertEquals("V32", result.get("4.5"));
 
     // A trailing dot is disregarded, as queue prefixes end with one
-    result = snapshot.getPropertiesWithPrefix("root.1.2.4.");
+    result = snapshot.getRawPropertiesWithPrefix("root.1.2.4.", false);
     assertEquals(2, result.size());
     assertEquals("V31", result.get(""));
     assertEquals("V32", result.get("5"));
 
     // Prefixes match whole key parts only
-    result = snapshot.getPropertiesWithPrefix("root.1");
+    result = snapshot.getRawPropertiesWithPrefix("root.1", false);
     assertEquals(5, result.size());
     assertFalse(result.containsValue("V5"));
-    assertEquals("V5", snapshot.getPropertiesWithPrefix("root.12").get("3"));
+    assertEquals("V5", snapshot.getRawPropertiesWithPrefix("root.12", false).get("3"));
 
-    result = snapshot.getPropertiesWithPrefix("root.1.2", true);
+    result = snapshot.getRawPropertiesWithPrefix("root.1.2", true);
     assertEquals(4, result.size());
     assertEquals("V3", result.get("root.1.2"));
     assertEquals("V32", result.get("root.1.2.4.5"));
 
-    assertEquals(7, snapshot.getPropertiesWithPrefix("root").size());
-    assertTrue(snapshot.getPropertiesWithPrefix("").isEmpty());
-    assertTrue(snapshot.getPropertiesWithPrefix("root.1.2.4.5.6").isEmpty());
-    assertTrue(snapshot.getPropertiesWithPrefix("3").isEmpty());
+    assertEquals(7, snapshot.getRawPropertiesWithPrefix("root", false).size());
+    assertTrue(snapshot.getRawPropertiesWithPrefix("", false).isEmpty());
+    assertTrue(snapshot.getRawPropertiesWithPrefix("root.1.2.4.5.6", false).isEmpty());
+    assertTrue(snapshot.getRawPropertiesWithPrefix("3", false).isEmpty());
   }
 
   @Test
@@ -195,11 +197,11 @@ public class TestConfigSnapshot {
 
     ConfigSnapshot snapshot = ConfigSnapshot.of(conf);
 
-    Map<String, String> x = snapshot.getPropertiesWithPrefix(labels + ".x.");
+    Map<String, String> x = snapshot.getRawPropertiesWithPrefix(labels + ".x.", false);
     assertEquals(2, x.size());
     assertEquals("50", x.get("capacity"));
     assertEquals("100", x.get("maximum-capacity"));
-    Map<String, String> all = snapshot.getPropertiesWithPrefix(labels);
+    Map<String, String> all = snapshot.getRawPropertiesWithPrefix(labels, false);
     assertEquals(4, all.size());
     assertEquals("x,y", all.get(""));
   }
@@ -216,13 +218,10 @@ public class TestConfigSnapshot {
 
     assertEquals("a", snapshot.get(PREFIX + "root.queues"));
     assertNull(snapshot.get(PREFIX + "root.b.capacity"));
-    assertEquals(1, snapshot.keys().size());
-    assertThrows(UnsupportedOperationException.class,
-        () -> snapshot.keys().add("x"));
 
-    Map<String, String> result = snapshot.getPropertiesWithPrefix(PREFIX);
+    Map<String, String> result = snapshot.getRawPropertiesWithPrefix(PREFIX, false);
     result.put("root.b.capacity", "50");
-    assertEquals(1, snapshot.getPropertiesWithPrefix(PREFIX).size());
+    assertEquals(1, snapshot.getRawPropertiesWithPrefix(PREFIX, false).size());
 
     Map<String, String> props = new HashMap<>();
     props.put("a.b", "1");

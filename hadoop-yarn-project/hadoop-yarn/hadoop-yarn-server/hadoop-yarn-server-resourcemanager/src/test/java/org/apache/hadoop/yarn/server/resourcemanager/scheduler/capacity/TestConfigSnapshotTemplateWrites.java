@@ -127,8 +127,8 @@ public class TestConfigSnapshotTemplateWrites {
     // therefore does not count as explicitly set.
     assertEquals(3f, leaf.getUserLimitFactor(), 1e-6);
     // User weights are read through the snapshot and miss the template value.
-    // This is a known bug, the same before the snapshot: v2 templates should
-    // apply user weights as well. Expect 0.5 here once that is fixed.
+    // This is a known bug, the same before the snapshot (YARN-12020): v2
+    // templates should apply user weights as well. Expect 0.5 here once fixed.
     assertEquals(UserWeights.DEFAULT_WEIGHT,
         leaf.getUserWeights().getByUser("u1"), 1e-6);
   }

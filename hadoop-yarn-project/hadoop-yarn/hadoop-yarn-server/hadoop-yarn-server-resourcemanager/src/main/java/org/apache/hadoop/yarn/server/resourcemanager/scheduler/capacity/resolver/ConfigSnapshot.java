@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolve
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -37,11 +36,11 @@ import org.slf4j.LoggerFactory;
  * An immutable copy of a {@link Configuration}, taken once, with a prefix
  * index for per-queue and per-label lookups.
  * <p>
- * {@link #get(String)} and {@link #getPropertiesWithPrefix(String)} return
- * the value {@code conf.get(key)} returned when the snapshot was taken, so
- * deprecation handling and variable substitution are applied. The raw
- * accessors return the unexpanded text stored in the configuration, which is
- * what the prefix lookups of the Capacity Scheduler have always used.
+ * {@link #get(String)} returns the value {@code conf.get(key)} returned when
+ * the snapshot was taken, so deprecation handling and variable substitution
+ * are applied. The raw accessors return the unexpanded text stored in the
+ * configuration, which is what the prefix lookups of the Capacity Scheduler
+ * have always used; they never throw.
  * <p>
  * The prefix index is a trie with one node per key part delimited by ".".
  * A key is stored in the node of its last part, so a prefix query walks the
@@ -67,7 +66,6 @@ public final class ConfigSnapshot {
   private final Map<String, String> rawValues;
   /** Keys whose {@code conf.get(key)} threw, reported as the cause on access. */
   private final Map<String, RuntimeException> failures;
-  private final Set<String> keys;
   private final PrefixNode root = new PrefixNode();
 
   private ConfigSnapshot(Map<String, String> values,
@@ -76,7 +74,6 @@ public final class ConfigSnapshot {
     this.values = values;
     this.rawValues = rawValues;
     this.failures = failures;
-    this.keys = Collections.unmodifiableSet(keys);
     for (String key : keys) {
       index(key);
     }
@@ -133,10 +130,10 @@ public final class ConfigSnapshot {
    * @return the snapshot
    */
   public static ConfigSnapshot of(Map<String, String> properties) {
-    return new ConfigSnapshot(new HashMap<>(properties),
+    Map<String, String> values = new HashMap<>(properties);
+    return new ConfigSnapshot(values,
         Collections.<String, String>emptyMap(),
-        Collections.<String, RuntimeException>emptyMap(),
-        new HashSet<>(properties.keySet()));
+        Collections.<String, RuntimeException>emptyMap(), values.keySet());
   }
 
   /**
@@ -168,39 +165,11 @@ public final class ConfigSnapshot {
   }
 
   /**
-   * Returns every key of the snapshot.
-   * @return an unmodifiable set of the keys
-   */
-  public Set<String> keys() {
-    return keys;
-  }
-
-  /**
-   * Filters the properties by a prefix of whole key parts. The returned keys
-   * are trimmed by the prefix, a trailing dot of the prefix is disregarded,
-   * and a key equal to the prefix is returned as the empty string.
-   * @param prefix the key prefix
-   * @return a new map of the trimmed keys to their values
-   */
-  public Map<String, String> getPropertiesWithPrefix(String prefix) {
-    return getPropertiesWithPrefix(prefix, false);
-  }
-
-  /**
-   * Filters the properties by a prefix of whole key parts.
-   * @param prefix the key prefix
-   * @param fullyQualifiedKey whether to keep the keys as they are instead of
-   *                          trimming them by the prefix
-   * @return a new map of the keys to their values
-   */
-  public Map<String, String> getPropertiesWithPrefix(String prefix,
-      boolean fullyQualifiedKey) {
-    return collect(prefix, fullyQualifiedKey, false);
-  }
-
-  /**
-   * Same as {@link #getPropertiesWithPrefix(String, boolean)}, but returns
-   * the raw text of the values, before variable substitution.
+   * Filters the properties by a prefix of whole key parts and returns the raw
+   * text of their values, before variable substitution. Unless the keys are
+   * fully qualified, they are trimmed by the prefix, a trailing dot of the
+   * prefix is disregarded, and a key equal to the prefix is returned as the
+   * empty string.
    * @param prefix the key prefix
    * @param fullyQualifiedKey whether to keep the keys as they are instead of
    *                          trimming them by the prefix
@@ -208,11 +177,6 @@ public final class ConfigSnapshot {
    */
   public Map<String, String> getRawPropertiesWithPrefix(String prefix,
       boolean fullyQualifiedKey) {
-    return collect(prefix, fullyQualifiedKey, true);
-  }
-
-  private Map<String, String> collect(String prefix,
-      boolean fullyQualifiedKey, boolean raw) {
     Map<String, String> properties = new HashMap<>();
     PrefixNode node = root;
     for (String part : prefix.split(DELIMITER)) {
@@ -230,15 +194,15 @@ public final class ConfigSnapshot {
       trimPrefix = prefix.endsWith(DOT) ?
           prefix.substring(0, prefix.length() - 1) : prefix;
     }
-    collectRecursively(node, properties, trimPrefix, raw);
+    collectRecursively(node, properties, trimPrefix);
     return properties;
   }
 
   private void collectRecursively(PrefixNode node,
-      Map<String, String> properties, String trimPrefix, boolean raw) {
+      Map<String, String> properties, String trimPrefix) {
     if (node.keys != null) {
       for (String key : node.keys) {
-        String value = raw ? getRaw(key) : get(key);
+        String value = getRaw(key);
         if (value == null) {
           continue;
         }
@@ -253,7 +217,7 @@ public final class ConfigSnapshot {
     }
     if (node.children != null) {
       for (PrefixNode child : node.children.values()) {
-        collectRecursively(child, properties, trimPrefix, raw);
+        collectRecursively(child, properties, trimPrefix);
       }
     }
   }
