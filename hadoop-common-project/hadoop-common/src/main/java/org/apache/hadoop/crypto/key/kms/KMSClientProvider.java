@@ -558,7 +558,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     return conn;
   }
 
-  private static boolean isChunked(HttpURLConnection conn) {
+  @VisibleForTesting
+  static boolean isChunkedHttpResponse(HttpURLConnection conn) {
     return "chunked".equalsIgnoreCase(conn.getHeaderField(TRANSFER_ENCODING));
   }
 
@@ -610,7 +611,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         URL url = conn.getURL();
         // Discard the body of the rejected response so that this connection
         // can be reused for the retry below.
-        if (drainUnreadResponseBody && isChunked(conn)) {
+        if (drainUnreadResponseBody && isChunkedHttpResponse(conn)) {
           IOUtils.drainAndClose(conn);
         }
         conn = createConnection(url, requestMethod);
@@ -634,14 +635,14 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       } finally {
         // Jackson stops reading at the end of the JSON value, so drain whatever
         // is left before closing to keep the connection reusable.
-        if (drainUnreadResponseBody && isChunked(conn)) {
+        if (drainUnreadResponseBody && isChunkedHttpResponse(conn)) {
           IOUtils.drainAndClose(is);
         } else {
           IOUtils.closeStream(is);
         }
       }
     } else {
-      if (drainUnreadResponseBody && isChunked(conn)) {
+      if (drainUnreadResponseBody && isChunkedHttpResponse(conn)) {
         IOUtils.drainAndClose(conn);
       }
     }

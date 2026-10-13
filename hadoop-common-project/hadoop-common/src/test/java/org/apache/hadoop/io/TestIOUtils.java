@@ -26,12 +26,15 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
+import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
@@ -353,5 +356,131 @@ public class TestIOUtils {
                   new CharacterCodingException());
             });
     assertEquals("/tmp/abc.txt", returnedEx.getPath().toString());
+  }
+
+  @Test
+  public void testDrainAndCloseNullStream() {
+    IOUtils.drainAndClose((InputStream) null);
+  }
+
+  @Test
+  public void testDrainAndCloseConsumesUntilEofAndCloses() throws Exception {
+    byte[] payload = "json{}trailing-bytes".getBytes(StandardCharsets.UTF_8);
+    TrackingInputStream in = new TrackingInputStream(payload);
+    in.read(new byte[6]);
+    IOUtils.drainAndClose(in);
+    assertTrue(in.isClosed());
+    assertEquals(payload.length, in.getTotalRead());
+  }
+
+  @Test
+  public void testDrainAndCloseSwallowsReadIOException() throws Exception {
+    InputStream in = mock(InputStream.class);
+    when(in.read(org.mockito.ArgumentMatchers.any(byte[].class)))
+        .thenThrow(new IOException("read failed"));
+    IOUtils.drainAndClose(in);
+    verify(in).close();
+  }
+
+  @Test
+  public void testDrainAndCloseHttpUrlConnectionPrefersErrorStream()
+      throws Exception {
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    byte[] body = "error-body".getBytes(StandardCharsets.UTF_8);
+    when(conn.getErrorStream()).thenReturn(new ByteArrayInputStream(body));
+    IOUtils.drainAndClose(conn);
+    verify(conn, never()).getInputStream();
+  }
+
+  @Test
+  public void testDrainAndCloseHttpUrlConnectionWhenInputStreamThrows()
+      throws Exception {
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getErrorStream()).thenReturn(null);
+    when(conn.getInputStream()).thenThrow(new IOException("no body"));
+    IOUtils.drainAndClose(conn);
+  }
+
+  @Test
+  public void testDrainAndCloseRespectsMaxBytes() throws Exception {
+    InfiniteInputStream in = new InfiniteInputStream();
+    IOUtils.drainAndClose(in);
+    assertTrue(in.isClosed());
+    assertTrue(in.getTotalRead() >= 8L * 1024 * 1024);
+    assertTrue(in.getTotalRead() <= 8L * 1024 * 1024 + 4096);
+  }
+
+  private static final class TrackingInputStream extends InputStream {
+    private final byte[] data;
+    private int pos;
+    private int totalRead;
+    private boolean closed;
+
+    TrackingInputStream(byte[] data) {
+      this.data = data;
+    }
+
+    @Override
+    public int read() throws IOException {
+      byte[] one = new byte[1];
+      int n = read(one, 0, 1);
+      return n < 0 ? -1 : one[0] & 0xff;
+    }
+
+    @Override
+    public int read(byte[] b, int off, int len) throws IOException {
+      if (pos >= data.length) {
+        return -1;
+      }
+      int n = Math.min(len, data.length - pos);
+      System.arraycopy(data, pos, b, off, n);
+      pos += n;
+      totalRead += n;
+      return n;
+    }
+
+    boolean isClosed() {
+      return closed;
+    }
+
+    int getTotalRead() {
+      return totalRead;
+    }
+
+    @Override
+    public void close() throws IOException {
+      closed = true;
+    }
+  }
+
+  private static final class InfiniteInputStream extends InputStream {
+    private long totalRead;
+    private boolean closed;
+
+    @Override
+    public int read() {
+      totalRead++;
+      return 0;
+    }
+
+    @Override
+    public int read(byte[] b, int off, int len) {
+      int n = Math.min(len, 4096);
+      totalRead += n;
+      return n;
+    }
+
+    long getTotalRead() {
+      return totalRead;
+    }
+
+    boolean isClosed() {
+      return closed;
+    }
+
+    @Override
+    public void close() throws IOException {
+      closed = true;
+    }
   }
 }
