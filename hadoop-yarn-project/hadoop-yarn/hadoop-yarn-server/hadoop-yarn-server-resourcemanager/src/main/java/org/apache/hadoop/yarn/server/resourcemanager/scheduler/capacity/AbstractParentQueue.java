@@ -203,7 +203,11 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
   public QueueCapacityType getCapacityConfigurationTypeForQueues(
       Collection<CSQueue> queues) throws IOException {
     Collection<String> labels = queueCapacities.getExistingNodeLabels();
-    List<QueueCapacityChecks.QueueCapacityInput> inputs = getCapacityInputs(queues, labels);
+    return getCapacityConfigurationType(labels, getCapacityInputs(queues, labels));
+  }
+
+  private QueueCapacityType getCapacityConfigurationType(Collection<String> labels,
+      List<QueueCapacityChecks.QueueCapacityInput> inputs) throws IOException {
     String error = QueueCapacityChecks.checkCapacityTypesNotMixed(getQueuePath(), labels,
         inputs);
     if (error != null) {
@@ -255,8 +259,11 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     try {
       boolean isLegacyQueueMode = queueContext.getConfiguration().isLegacyQueueMode();
       if (isLegacyQueueMode) {
+        Collection<String> labels = queueCapacities.getExistingNodeLabels();
+        List<QueueCapacityChecks.QueueCapacityInput> children =
+            getCapacityInputs(childQueues, labels);
         QueueCapacityType childrenCapacityType =
-            getCapacityConfigurationTypeForQueues(childQueues);
+            getCapacityConfigurationType(labels, children);
         QueueCapacityType parentCapacityType =
             getCapacityConfigurationTypeForQueues(ImmutableList.of(this));
 
@@ -294,9 +301,6 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
 
         // When child uses percent
         if (childrenCapacityType == QueueCapacityType.PERCENT) {
-          Collection<String> labels = queueCapacities.getExistingNodeLabels();
-          List<QueueCapacityChecks.QueueCapacityInput> children =
-              getCapacityInputs(childQueues, labels);
           // check label capacities
           for (String nodeLabel : labels) {
             String sumError = QueueCapacityChecks.checkChildrenCapacitySum(getQueueName(),

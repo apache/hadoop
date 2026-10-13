@@ -18,11 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -48,12 +45,12 @@ public final class PlacementRuleChecks {
    * Checks that no placement rule is listed twice in
    * {@code yarn.scheduler.queue-placement-rules}. The exception type of a
    * failure is {@link java.io.IOException}.
-   * @param input the configured placement rule names in order
+   * @param names the configured placement rule names in order
    * @return null if the names are distinct, the error message otherwise
    */
-  public static String checkDuplicatePlacementRules(PlacementRuleNames input) {
+  public static String checkDuplicatePlacementRules(Collection<String> names) {
     Set<String> distinguishRuleSet = new HashSet<>();
-    for (String pls : input.getNames()) {
+    for (String pls : names) {
       if (!distinguishRuleSet.add(pls)) {
         return "Invalid PlacementRule inputs which "
             + "contains duplicate rule strings";
@@ -103,22 +100,6 @@ public final class PlacementRuleChecks {
   }
 
   /**
-   * The kinds of queues mapping rule validation distinguishes.
-   */
-  public enum QueueKind {
-    /** Any leaf queue. */
-    LEAF,
-    /** A {@link ParentQueue}, which can be an AQC v2 parent. */
-    PARENT,
-    /** A {@link ManagedParentQueue} (AQC v1 parent). */
-    MANAGED_PARENT,
-    /** Any other parent queue, for example a reservation plan queue. */
-    OTHER_PARENT,
-    /** A queue that is neither a leaf nor a parent queue. */
-    OTHER
-  }
-
-  /**
    * A queue as seen by mapping rule validation.
    */
   public static final class QueueRef {
@@ -148,21 +129,9 @@ public final class PlacementRuleChecks {
       if (queue == null) {
         return null;
       }
-      QueueKind kind;
-      if (queue instanceof AbstractLeafQueue) {
-        kind = QueueKind.LEAF;
-      } else if (queue instanceof ManagedParentQueue) {
-        kind = QueueKind.MANAGED_PARENT;
-      } else if (queue instanceof ParentQueue) {
-        kind = QueueKind.PARENT;
-      } else if (queue instanceof AbstractParentQueue) {
-        kind = QueueKind.OTHER_PARENT;
-      } else {
-        kind = QueueKind.OTHER;
-      }
       boolean eligible = queue instanceof AbstractParentQueue
           && ((AbstractParentQueue) queue).isEligibleForAutoQueueCreation();
-      return new QueueRef(queue.getQueuePath(), kind, eligible);
+      return new QueueRef(queue.getQueuePath(), QueueKind.of(queue), eligible);
     }
 
     public String getQueuePath() {
@@ -182,23 +151,7 @@ public final class PlacementRuleChecks {
     }
 
     public boolean isParent() {
-      return kind == QueueKind.PARENT || kind == QueueKind.MANAGED_PARENT
-          || kind == QueueKind.OTHER_PARENT;
-    }
-  }
-
-  /**
-   * Input of {@link #checkDuplicatePlacementRules(PlacementRuleNames)}.
-   */
-  public static final class PlacementRuleNames {
-    private final List<String> names;
-
-    public PlacementRuleNames(Collection<String> names) {
-      this.names = Collections.unmodifiableList(new ArrayList<>(names));
-    }
-
-    public List<String> getNames() {
-      return names;
+      return kind.isParent();
     }
   }
 }

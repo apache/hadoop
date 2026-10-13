@@ -38,33 +38,48 @@ public final class QueueStructureChecks {
   /**
    * Decides whether a queue is parsed as a parent queue: it has configured child queues or it
    * is eligible for auto queue creation.
-   * @param input the structure of the queue
+   * @param childCount the number of configured child queues
+   * @param autoQueueCreationEnabledParent whether auto queue creation v1 or v2 is enabled on the
+   *                                       queue, or the existing queue on this path is a
+   *                                       dynamic parent queue
    * @return true if the queue is parsed as a parent queue
    */
-  public static boolean isParent(QueueStructureInput input) {
-    return input.getChildCount() != 0 || input.isAutoQueueCreationEnabledParent();
+  public static boolean isParent(int childCount, boolean autoQueueCreationEnabledParent) {
+    return childCount != 0 || autoQueueCreationEnabledParent;
   }
 
   /**
    * Checks that the root queue is parsed as a parent queue.
-   * @param input the structure of the queue
+   * @param queueName the name of the queue as listed in its parent ("root" for root)
+   * @param root whether the queue is parsed without a parent
+   * @param childCount the number of configured child queues
+   * @param autoQueueCreationEnabledParent whether auto queue creation v1 or v2 is enabled on the
+   *                                       queue, or the existing queue on this path is a
+   *                                       dynamic parent queue
    * @return null if the check passes, otherwise the error message
    */
-  public static String checkRootHasChildQueues(QueueStructureInput input) {
-    if (input.isRoot() && !isParent(input)) {
-      return "Queue configuration missing child queue names for " + input.getQueueName();
+  public static String checkRootHasChildQueues(String queueName, boolean root, int childCount,
+      boolean autoQueueCreationEnabledParent) {
+    if (root && !isParent(childCount, autoQueueCreationEnabledParent)) {
+      return "Queue configuration missing child queue names for " + queueName;
     }
     return null;
   }
 
   /**
    * Checks that only leaf queues are reservable.
-   * @param input the structure of the queue
+   * @param queuePath the full path of the queue
+   * @param childCount the number of configured child queues
+   * @param reservable whether the queue is configured as reservable
+   * @param autoQueueCreationEnabledParent whether auto queue creation v1 or v2 is enabled on the
+   *                                       queue, or the existing queue on this path is a
+   *                                       dynamic parent queue
    * @return null if the check passes, otherwise the error message
    */
-  public static String checkReservable(QueueStructureInput input) {
-    if (input.isReservable() && isParent(input)) {
-      return "Only Leaf Queues can be reservable for " + input.getQueuePath();
+  public static String checkReservable(String queuePath, int childCount, boolean reservable,
+      boolean autoQueueCreationEnabledParent) {
+    if (reservable && isParent(childCount, autoQueueCreationEnabledParent)) {
+      return "Only Leaf Queues can be reservable for " + queuePath;
     }
     return null;
   }
@@ -100,61 +115,5 @@ public final class QueueStructureChecks {
           + " config type is different from leaf queue template config type";
     }
     return null;
-  }
-
-  /**
-   * Input of the queue structure checks.
-   */
-  public static final class QueueStructureInput {
-    private final String queuePath;
-    private final String queueName;
-    private final boolean root;
-    private final int childCount;
-    private final boolean reservable;
-    private final boolean autoQueueCreationEnabledParent;
-
-    /**
-     * @param queuePath the full path of the queue
-     * @param queueName the name of the queue as listed in its parent ("root" for root)
-     * @param root whether the queue is parsed without a parent
-     * @param childCount the number of configured child queues
-     * @param reservable whether the queue is configured as reservable
-     * @param autoQueueCreationEnabledParent whether auto queue creation v1 or v2 is enabled on
-     *                                       the queue, or the existing queue on this path is a
-     *                                       dynamic parent queue
-     */
-    public QueueStructureInput(String queuePath, String queueName, boolean root,
-        int childCount, boolean reservable, boolean autoQueueCreationEnabledParent) {
-      this.queuePath = queuePath;
-      this.queueName = queueName;
-      this.root = root;
-      this.childCount = childCount;
-      this.reservable = reservable;
-      this.autoQueueCreationEnabledParent = autoQueueCreationEnabledParent;
-    }
-
-    public String getQueuePath() {
-      return queuePath;
-    }
-
-    public String getQueueName() {
-      return queueName;
-    }
-
-    public boolean isRoot() {
-      return root;
-    }
-
-    public int getChildCount() {
-      return childCount;
-    }
-
-    public boolean isReservable() {
-      return reservable;
-    }
-
-    public boolean isAutoQueueCreationEnabledParent() {
-      return autoQueueCreationEnabledParent;
-    }
   }
 }

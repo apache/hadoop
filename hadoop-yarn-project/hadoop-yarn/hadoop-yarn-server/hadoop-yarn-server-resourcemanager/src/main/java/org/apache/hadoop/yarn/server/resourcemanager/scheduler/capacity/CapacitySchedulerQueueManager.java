@@ -251,12 +251,9 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     boolean isAutoQueueCreationEnabledParent = isDynamicParent || conf.isAutoQueueCreationV2Enabled(
         queueToParse) || isAutoCreateEnabled;
 
-    QueueStructureChecks.QueueStructureInput structure =
-        new QueueStructureChecks.QueueStructureInput(queueToParse.getFullPath(), queueName,
-            parent == null, childQueueNames.size(), isReservableQueue,
-            isAutoQueueCreationEnabledParent);
-    if (!QueueStructureChecks.isParent(structure)) {
-      validateParent(structure);
+    int childCount = childQueueNames.size();
+    if (!QueueStructureChecks.isParent(childCount, isAutoQueueCreationEnabledParent)) {
+      validateParent(queueName, parent == null, childCount, isAutoQueueCreationEnabledParent);
       // Check if the queue will be dynamically managed by the Reservation system
       if (isReservableQueue) {
         queue = new PlanQueue(queueContext, queueName, parent,
@@ -270,7 +267,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
 
       queue = hook.hook(queue);
     } else {
-      String reservableError = QueueStructureChecks.checkReservable(structure);
+      String reservableError = QueueStructureChecks.checkReservable(queueToParse.getFullPath(),
+          childCount, isReservableQueue, isAutoQueueCreationEnabledParent);
       if (reservableError != null) {
         throw new IllegalStateException(reservableError);
       }
@@ -740,8 +738,10 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     return !isDynamicQueue(parent);
   }
 
-  private static void validateParent(QueueStructureChecks.QueueStructureInput structure) {
-    String error = QueueStructureChecks.checkRootHasChildQueues(structure);
+  private static void validateParent(String queueName, boolean root, int childCount,
+      boolean autoQueueCreationEnabledParent) {
+    String error = QueueStructureChecks.checkRootHasChildQueues(queueName, root, childCount,
+        autoQueueCreationEnabledParent);
     if (error != null) {
       throw new IllegalStateException(error);
     }

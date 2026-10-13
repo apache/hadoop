@@ -23,8 +23,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks.QueueIndex;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks.QueueKind;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks.QueueRef;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueKind;
 
 import java.util.ArrayList;
 import java.util.Collections;

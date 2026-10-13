@@ -26,8 +26,6 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueLabelChecks.AccessibleLabelsInput;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueLabelChecks.DefaultLabelExpressionInput;
 import org.junit.jupiter.api.Test;
 
 public class TestQueueLabelChecks {
@@ -39,55 +37,43 @@ public class TestQueueLabelChecks {
   @Test
   public void testAccessibleLabelsSubsetPasses() {
     // root is never checked
-    assertNull(QueueLabelChecks.checkAccessibleLabelsSubset(
-        new AccessibleLabelsInput(true, labels("*"), null)));
+    assertNull(QueueLabelChecks.checkAccessibleLabelsSubset(true, labels("*"), null));
     // a parent with "*" or without labels accepts anything
-    assertNull(QueueLabelChecks.checkAccessibleLabelsSubset(
-        new AccessibleLabelsInput(false, labels("*"), labels("*"))));
-    assertNull(QueueLabelChecks.checkAccessibleLabelsSubset(
-        new AccessibleLabelsInput(false, labels("x", "y"), labels("x", "*"))));
-    assertNull(QueueLabelChecks.checkAccessibleLabelsSubset(
-        new AccessibleLabelsInput(false, labels("x"), null)));
-    assertNull(QueueLabelChecks.checkAccessibleLabelsSubset(
-        new AccessibleLabelsInput(false, labels("x"), labels("x", "y"))));
-    assertNull(QueueLabelChecks.checkAccessibleLabelsSubset(
-        new AccessibleLabelsInput(false, labels(), labels("x"))));
+    assertNull(QueueLabelChecks.checkAccessibleLabelsSubset(false, labels("*"), labels("*")));
+    assertNull(QueueLabelChecks.checkAccessibleLabelsSubset(false, labels("x", "y"),
+        labels("x", "*")));
+    assertNull(QueueLabelChecks.checkAccessibleLabelsSubset(false, labels("x"), null));
+    assertNull(QueueLabelChecks.checkAccessibleLabelsSubset(false, labels("x"), labels("x", "y")));
+    assertNull(QueueLabelChecks.checkAccessibleLabelsSubset(false, labels(), labels("x")));
   }
 
   @Test
   public void testAccessibleLabelsWildcardUnderRestrictedParent() {
     assertEquals("Parent's accessible queue is not ANY(*), but child's accessible queue is *",
-        QueueLabelChecks.checkAccessibleLabelsSubset(
-            new AccessibleLabelsInput(false, labels("x", "*"), labels("x"))));
+        QueueLabelChecks.checkAccessibleLabelsSubset(false, labels("x", "*"), labels("x")));
     assertEquals("Parent's accessible queue is not ANY(*), but child's accessible queue is *",
-        QueueLabelChecks.checkAccessibleLabelsSubset(
-            new AccessibleLabelsInput(false, labels("*"), labels())));
+        QueueLabelChecks.checkAccessibleLabelsSubset(false, labels("*"), labels()));
   }
 
   @Test
   public void testAccessibleLabelsNotSubset() {
     assertEquals("Some labels of child queue is not a subset of parent queue, these labels=[y]",
-        QueueLabelChecks.checkAccessibleLabelsSubset(
-            new AccessibleLabelsInput(false, labels("x", "y"), labels("x"))));
+        QueueLabelChecks.checkAccessibleLabelsSubset(false, labels("x", "y"), labels("x")));
     assertEquals(
         "Some labels of child queue is not a subset of parent queue, these labels=[y,z]",
-        QueueLabelChecks.checkAccessibleLabelsSubset(
-            new AccessibleLabelsInput(false, labels("z", "x", "y"), labels("x"))));
+        QueueLabelChecks.checkAccessibleLabelsSubset(false, labels("z", "x", "y"),
+            labels("x")));
   }
 
   @Test
   public void testDefaultLabelExpressionPasses() {
-    assertNull(QueueLabelChecks.checkDefaultLabelExpression(
-        new DefaultLabelExpressionInput("root.a", null, null)));
-    assertNull(QueueLabelChecks.checkDefaultLabelExpression(
-        new DefaultLabelExpressionInput("root.a", labels("x"), "x")));
-    assertNull(QueueLabelChecks.checkDefaultLabelExpression(
-        new DefaultLabelExpressionInput("root.a", labels("*"), "y")));
-    assertNull(QueueLabelChecks.checkDefaultLabelExpression(
-        new DefaultLabelExpressionInput("root.a", labels("x", "y"), " x && y ")));
+    assertNull(QueueLabelChecks.checkDefaultLabelExpression("root.a", null, null));
+    assertNull(QueueLabelChecks.checkDefaultLabelExpression("root.a", labels("x"), "x"));
+    assertNull(QueueLabelChecks.checkDefaultLabelExpression("root.a", labels("*"), "y"));
+    assertNull(QueueLabelChecks.checkDefaultLabelExpression("root.a", labels("x", "y"),
+        " x && y "));
     // an empty expression requests the default partition
-    assertNull(QueueLabelChecks.checkDefaultLabelExpression(
-        new DefaultLabelExpressionInput("root.a", null, "")));
+    assertNull(QueueLabelChecks.checkDefaultLabelExpression("root.a", null, ""));
   }
 
   @Test
@@ -95,13 +81,11 @@ public class TestQueueLabelChecks {
     assertEquals("Invalid default label expression of  queue=root.a doesn't have permission"
         + " to access all labels in default label expression. labelExpression of resource"
         + " request=y. Queue labels=x,z",
-        QueueLabelChecks.checkDefaultLabelExpression(
-            new DefaultLabelExpressionInput("root.a", labels("x", "z"), "y")));
+        QueueLabelChecks.checkDefaultLabelExpression("root.a", labels("x", "z"), "y"));
     assertEquals("Invalid default label expression of  queue=root.a doesn't have permission"
         + " to access all labels in default label expression. labelExpression of resource"
         + " request=y. Queue labels=",
-        QueueLabelChecks.checkDefaultLabelExpression(
-            new DefaultLabelExpressionInput("root.a", null, "y")));
+        QueueLabelChecks.checkDefaultLabelExpression("root.a", null, "y"));
   }
 
   @Test

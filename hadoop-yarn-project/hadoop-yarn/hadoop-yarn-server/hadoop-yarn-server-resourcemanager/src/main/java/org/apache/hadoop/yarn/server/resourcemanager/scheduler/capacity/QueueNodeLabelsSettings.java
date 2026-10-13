@@ -89,9 +89,8 @@ public class QueueNodeLabelsSettings {
     // Check if labels of this queue is a subset of parent queue, only do this
     // when the queue in question is not root
     if (!queuePath.isRoot()) {
-      String error = QueueLabelChecks.checkAccessibleLabelsSubset(
-          new QueueLabelChecks.AccessibleLabelsInput(false, this.getAccessibleNodeLabels(),
-              parent.getAccessibleNodeLabels()));
+      String error = QueueLabelChecks.checkAccessibleLabelsSubset(false,
+          this.getAccessibleNodeLabels(), parent.getAccessibleNodeLabels());
       if (error != null) {
         throw new IOException(error);
       }

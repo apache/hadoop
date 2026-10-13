@@ -22,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.apache.hadoop.yarn.api.records.QueueState;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueStateHelper.InitialStateInput;
 import org.junit.jupiter.api.Test;
 
 public class TestQueueStateHelper {
@@ -38,17 +37,15 @@ public class TestQueueStateHelper {
 
   @Test
   public void testCheckInitialStatePasses() {
+    assertNull(QueueStateHelper.checkInitialState("root", QueueState.RUNNING, null, null));
     assertNull(QueueStateHelper.checkInitialState(
-        new InitialStateInput("root", QueueState.RUNNING, null, null)));
+        "root.a", QueueState.RUNNING, "root", QueueState.RUNNING));
     assertNull(QueueStateHelper.checkInitialState(
-        new InitialStateInput("root.a", QueueState.RUNNING, "root", QueueState.RUNNING)));
+        "root.a", QueueState.STOPPED, "root", QueueState.RUNNING));
     assertNull(QueueStateHelper.checkInitialState(
-        new InitialStateInput("root.a", QueueState.STOPPED, "root", QueueState.RUNNING)));
-    assertNull(QueueStateHelper.checkInitialState(
-        new InitialStateInput("root.a", QueueState.STOPPED, "root", QueueState.STOPPED)));
+        "root.a", QueueState.STOPPED, "root", QueueState.STOPPED));
     // a child without a configured state inherits the state of a stopped parent
-    assertNull(QueueStateHelper.checkInitialState(
-        new InitialStateInput("root.a", null, "root", QueueState.STOPPED)));
+    assertNull(QueueStateHelper.checkInitialState("root.a", null, "root", QueueState.STOPPED));
   }
 
   @Test
@@ -56,9 +53,9 @@ public class TestQueueStateHelper {
     String expected = "The parent queue:root.a cannot be STOPPED as the child queue:root.a.b"
         + " is in RUNNING state.";
     assertEquals(expected, QueueStateHelper.checkInitialState(
-        new InitialStateInput("root.a.b", QueueState.RUNNING, "root.a", QueueState.STOPPED)));
+        "root.a.b", QueueState.RUNNING, "root.a", QueueState.STOPPED));
     assertEquals(expected, QueueStateHelper.checkInitialState(
-        new InitialStateInput("root.a.b", QueueState.RUNNING, "root.a", QueueState.DRAINING)));
+        "root.a.b", QueueState.RUNNING, "root.a", QueueState.DRAINING));
   }
 
   @Test
@@ -77,7 +74,6 @@ public class TestQueueStateHelper {
 
   @Test
   public void testCheckParentRunning() {
-    assertNull(QueueStateHelper.checkParentRunning(null, null));
     assertNull(QueueStateHelper.checkParentRunning("root", QueueState.RUNNING));
     String expected = "The parent Queue:root.a is not running."
         + " Please activate the parent queue first";

@@ -215,8 +215,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
       Set<String> accessibleNodeLabels = this.queueNodeLabelsSettings.getAccessibleNodeLabels();
       String defaultLabelExpressionError = QueueLabelChecks.checkDefaultLabelExpression(
-          new QueueLabelChecks.DefaultLabelExpressionInput(getQueuePath(), accessibleNodeLabels,
-              this.queueNodeLabelsSettings.getDefaultLabelExpression()));
+          getQueuePath(), accessibleNodeLabels,
+          this.queueNodeLabelsSettings.getDefaultLabelExpression());
       if (defaultLabelExpressionError != null) {
         throw new IOException(defaultLabelExpressionError);
       }
