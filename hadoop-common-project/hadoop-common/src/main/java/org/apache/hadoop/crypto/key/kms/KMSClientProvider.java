@@ -348,10 +348,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       String[] hosts = hostsPart.split(";");
       KMSClientProvider[] providers = new KMSClientProvider[hosts.length];
       for (int i = 0; i < hosts.length; i++) {
-        // URI would add the brackets itself, which leaves the end of the address ambiguous
-        if (hosts[i].contains(":") && !hosts[i].startsWith("[")) {
-          throw new IOException("Could not parse host [" + hosts[i]
-              + "] in kms uri. An IPv6 literal must be enclosed in brackets.");
+        // URI would add missing brackets itself, which leaves the end of the address ambiguous,
+        // and would take what follows a closing bracket as a port of this host
+        if (hosts[i].contains(":") && !(hosts[i].startsWith("[") && hosts[i].endsWith("]"))) {
+          throw new IOException("Could not parse host [" + hosts[i] + "] in kms uri. An IPv6"
+              + " literal must be enclosed in brackets and the port follows the last host.");
         }
         try {
           providers[i] =

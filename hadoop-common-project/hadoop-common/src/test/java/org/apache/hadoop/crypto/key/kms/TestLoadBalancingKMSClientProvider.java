@@ -186,6 +186,7 @@ public class TestLoadBalancingKMSClientProvider {
         "kms://http@%5B2001:db8::1%5Dx:9600/kms/foo",
         // a port per host, a port that is not a number, an empty host, no protocol
         "kms://http@%5B2001:db8::1%5D:9600;%5B2001:db8::2%5D:9600/kms/foo",
+        "kms://http@%5B2001:db8::1%5D:9600;%5B2001:db8::2%5D/kms/foo",
         "kms://http@%5B2001:db8::1%5D:port/kms/foo",
         "kms://http@%5B2001:db8::1%5D;;host3:9600/kms/foo",
         "kms://[2001:db8::1]:9600/kms/foo"}) {
