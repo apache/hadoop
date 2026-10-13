@@ -193,7 +193,7 @@ public class TestLoadBalancingKMSClientProvider {
     }
     assertThatThrownBy(
         () -> createKMSUrls(conf, "kms://http@%5B2001:db8::1%5D;2001:db8::2:9600/kms/foo"))
-        .hasMessage("Unbracketed IPv6 literal in kms uri host [2001:db8::2]");
+        .hasMessageStartingWith("Could not parse host [2001:db8::2] in kms uri");
     assertThatThrownBy(() -> createKMSUrls(conf, "kms://http@%5B2001:db8::1%5D:port/kms/foo"))
         .hasMessageStartingWith("Could not parse port in kms uri");
   }
@@ -217,6 +217,7 @@ public class TestLoadBalancingKMSClientProvider {
       // KMSTokenRenewer turns back into a provider
       String service = createTokenService(conf, uri);
       assertThat(service).isEqualTo(uri);
+      assertThat(createTokenService(conf, uri + "#fragment")).isEqualTo(uri);
       assertThat(createKMSUrls(conf, service))
           .containsExactlyInAnyOrderElementsOf(createKMSUrls(conf, uri))
           .contains("http://[2001:db8::1]:9600/kms/foo/v1/");

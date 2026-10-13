@@ -350,7 +350,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       for (int i = 0; i < hosts.length; i++) {
         // URI would add the brackets itself, which leaves the end of the address ambiguous
         if (hosts[i].contains(":") && !hosts[i].startsWith("[")) {
-          throw new IOException("Unbracketed IPv6 literal in kms uri host [" + hosts[i] + "]");
+          throw new IOException("Could not parse host [" + hosts[i]
+              + "] in kms uri. An IPv6 literal must be enclosed in brackets.");
         }
         try {
           providers[i] =
@@ -470,8 +471,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     // remove fragment for forward compatibility with logical naming.
     final String fragment = uri.getFragment();
     if (fragment != null) {
-      service = new Text(
-          uri.getScheme() + ":" + uri.getSchemeSpecificPart());
+      // the decoded form of percent-encoded brackets around IPv6 literals may not parse again
+      final String authority = uri.getAuthority();
+      final boolean bracketed = authority != null && authority.contains("[");
+      service = new Text(uri.getScheme() + ":"
+          + (bracketed ? uri.getRawSchemeSpecificPart() : uri.getSchemeSpecificPart()));
     } else {
       service = new Text(uri.toString());
     }
