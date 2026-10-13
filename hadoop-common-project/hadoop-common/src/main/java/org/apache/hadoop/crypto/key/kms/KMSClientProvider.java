@@ -144,9 +144,10 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
    * would make a call wait where it previously returned at once. Set to false
    * to disable draining.
    */
-  public static final String  DRAIN_RESPONSE_UNREAD_BYTES         = CONFIG_PREFIX
-          + "drain.response.unread.bytes";
-  public static final boolean DEFAULT_DRAIN_RESPONSE_UNREAD_BYTES = true;
+  public static final String DRAIN_RESPONSE_UNREAD_BYTES =
+      CommonConfigurationKeysPublic.KMS_CLIENT_DRAIN_RESPONSE_UNREAD_BYTES_KEY;
+  public static final boolean DEFAULT_DRAIN_RESPONSE_UNREAD_BYTES =
+      CommonConfigurationKeysPublic.KMS_CLIENT_DRAIN_RESPONSE_UNREAD_BYTES_DEFAULT;
 
   private final ValueQueue<EncryptedKeyVersion> encKeyVersionQueue;
 
