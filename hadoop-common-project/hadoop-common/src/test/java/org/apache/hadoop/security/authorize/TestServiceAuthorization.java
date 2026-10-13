@@ -19,6 +19,8 @@ package org.apache.hadoop.security.authorize;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.annotation.Annotation;
 import java.net.InetAddress;
@@ -336,6 +338,39 @@ public class TestServiceAuthorization {
     } catch (AuthorizationException e) {
       fail();
     }
+  }
+
+  @Test
+  public void testBlockedMachineListWithIPv6Client() throws UnknownHostException {
+    UserGroupInformation drwho =
+        UserGroupInformation.createUserForTesting("drwho@EXAMPLE.COM",
+            new String[] {"group1", "group2"});
+    InetAddress ipv6Client = InetAddress.getByName("2001:db8::1");
+
+    ServiceAuthorizationManager serviceAuthorizationManager =
+        new ServiceAuthorizationManager();
+    Configuration conf = new Configuration();
+
+    // a blocked MachineList with only IPv4 ranges does not block an IPv6 client
+    conf.set(BLOCKED_HOST_CONFIG, IP_RANGE);
+    serviceAuthorizationManager.refresh(conf, new TestPolicyProvider());
+    assertThatCode(() -> serviceAuthorizationManager.authorize(drwho,
+        TestProtocol.class, conf, ipv6Client)).doesNotThrowAnyException();
+
+    // a blocked MachineList with a matching IPv6 range blocks the IPv6 client
+    conf.set(BLOCKED_HOST_CONFIG, IP_RANGE + ",2001:db8::/32");
+    serviceAuthorizationManager.refresh(conf, new TestPolicyProvider());
+    assertThatThrownBy(() -> serviceAuthorizationManager.authorize(drwho,
+        TestProtocol.class, conf, ipv6Client))
+        .isInstanceOf(AuthorizationException.class)
+        .hasMessageContaining("Host 2001:db8:0:0:0:0:0:1 is not authorized");
+    assertThatThrownBy(() -> serviceAuthorizationManager.authorize(drwho,
+        TestProtocol.class, conf, InetAddress.getByName("10.222.0.0")))
+        .isInstanceOf(AuthorizationException.class);
+    // an IPv6 client outside of the blocked range is not blocked
+    assertThatCode(() -> serviceAuthorizationManager.authorize(drwho,
+        TestProtocol.class, conf, InetAddress.getByName("2001:db9::1")))
+        .doesNotThrowAnyException();
   }
 
   @Test

@@ -21,7 +21,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collection;
@@ -41,6 +44,9 @@ public class TestMachineList {
   private static String INVALID_CIDR = "10.241/24";
   private static String IP_CIDR_LIST =
     "10.222.0.0/16,10.119.103.110,10.119.103.112,10.119.103.114,10.241.23.0/24";
+  private static final String IPV6_CIDR_LIST = "2001:db8::/32,fd00:1:2:3::/64";
+  private static final String IPV4_IPV6_LIST =
+      "10.222.0.0/16,2001:db8::/32,10.119.103.110,fd00::5";
   private static String HOST_LIST = "host1,host4";
   private static String HOSTNAME_IP_CIDR_LIST =
     "host1,10.222.0.0/16,10.119.103.110,10.119.103.112,10.119.103.114,10.241.23.0/24,host4,";
@@ -305,6 +311,153 @@ public class TestMachineList {
 
     for (String item:StringUtils.getTrimmedStringCollection(HOSTNAME_IP_CIDR_LIST)) {
       assertTrue(col.contains(item));
+    }
+  }
+
+  @Test
+  public void testIPv4CIDREdgeCases() {
+    MachineList ml = new MachineList("10.1.2.3/32,10.1.3.2/31", new TestAddressFactory());
+
+    assertThat(ml.includes("10.1.2.2")).isFalse();
+    assertThat(ml.includes("10.1.2.3")).isTrue();
+    assertThat(ml.includes("10.1.2.4")).isFalse();
+
+    assertThat(ml.includes("10.1.3.1")).isFalse();
+    assertThat(ml.includes("10.1.3.2")).isTrue();
+    assertThat(ml.includes("10.1.3.3")).isTrue();
+    assertThat(ml.includes("10.1.3.4")).isFalse();
+
+    ml = new MachineList("0.0.0.0/0", new TestAddressFactory());
+    assertThat(ml.includes("1.2.3.4")).isTrue();
+    assertThat(ml.includes("255.255.255.255")).isTrue();
+    assertThat(ml.includes("2001:db8::1")).isFalse();
+
+    assertThatThrownBy(() -> new MachineList("10.0.0.0/33", new TestAddressFactory()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void testIPv6List() {
+    MachineList ml = new MachineList("2001:db8::1,fd00::5", new TestAddressFactory());
+
+    assertThat(ml.includes("2001:db8::1")).isTrue();
+    assertThat(ml.includes("2001:db8:0:0:0:0:0:1")).isTrue();
+    assertThat(ml.includes("fd00::5")).isTrue();
+    assertThat(ml.includes("2001:db8::2")).isFalse();
+    assertThat(ml.includes("10.119.103.112")).isFalse();
+  }
+
+  @Test
+  public void testIPv6CIDRs() {
+    MachineList ml = new MachineList(IPV6_CIDR_LIST, new TestAddressFactory());
+
+    assertThat(ml.includes("2001:db7:ffff:ffff:ffff:ffff:ffff:ffff")).isFalse();
+    assertThat(ml.includes("2001:db8::")).isTrue();
+    assertThat(ml.includes("2001:db8::1")).isTrue();
+    assertThat(ml.includes("2001:db8:0:0:0:0:0:1")).isTrue();
+    assertThat(ml.includes("2001:db8:ffff:ffff:ffff:ffff:ffff:ffff")).isTrue();
+    assertThat(ml.includes("2001:db9::")).isFalse();
+
+    assertThat(ml.includes("fd00:1:2:2:ffff:ffff:ffff:ffff")).isFalse();
+    assertThat(ml.includes("fd00:1:2:3::")).isTrue();
+    assertThat(ml.includes("fd00:1:2:3:ffff:ffff:ffff:ffff")).isTrue();
+    assertThat(ml.includes("fd00:1:2:4::")).isFalse();
+
+    // host bits in the entry are ignored, as for an IPv4 CIDR
+    ml = new MachineList("2001:db8::1/32", new TestAddressFactory());
+    assertThat(ml.includes("2001:db8:ffff::2")).isTrue();
+    assertThat(ml.includes("2001:db9::1")).isFalse();
+  }
+
+  @Test
+  public void testIPv6CIDRPrefixNotOnByteBoundary() {
+    MachineList ml =
+        new MachineList("2001:db8:8000::/33,fd00:0:0:8::/61", new TestAddressFactory());
+
+    assertThat(ml.includes("2001:db8:7fff:ffff:ffff:ffff:ffff:ffff")).isFalse();
+    assertThat(ml.includes("2001:db8:8000::")).isTrue();
+    assertThat(ml.includes("2001:db8:ffff:ffff:ffff:ffff:ffff:ffff")).isTrue();
+    assertThat(ml.includes("2001:db9::")).isFalse();
+
+    assertThat(ml.includes("fd00:0:0:7:ffff:ffff:ffff:ffff")).isFalse();
+    assertThat(ml.includes("fd00:0:0:8::")).isTrue();
+    assertThat(ml.includes("fd00:0:0:f:ffff:ffff:ffff:ffff")).isTrue();
+    assertThat(ml.includes("fd00:0:0:10::")).isFalse();
+  }
+
+  @Test
+  public void testIPv6CIDRWithShortestAndLongestPrefix() {
+    MachineList ml = new MachineList("2001:db8::1/128", new TestAddressFactory());
+    assertThat(ml.includes("2001:db8::")).isFalse();
+    assertThat(ml.includes("2001:db8::1")).isTrue();
+    assertThat(ml.includes("2001:db8::2")).isFalse();
+    assertThat(ml.includes("2001:db8::8001")).isFalse();
+
+    ml = new MachineList("::/0", new TestAddressFactory());
+    assertThat(ml.includes("::")).isTrue();
+    assertThat(ml.includes("2001:db8::1")).isTrue();
+    assertThat(ml.includes("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")).isTrue();
+    assertThat(ml.includes("10.119.103.112")).isFalse();
+  }
+
+  @Test
+  public void testIPv4AndIPv6CIDRs() {
+    MachineList ml = new MachineList(IPV4_IPV6_LIST, new TestAddressFactory());
+
+    assertThat(ml.includes("10.222.255.255")).isTrue();
+    assertThat(ml.includes("10.223.0.0")).isFalse();
+    assertThat(ml.includes("10.119.103.110")).isTrue();
+    assertThat(ml.includes("2001:db8:ffff::1")).isTrue();
+    assertThat(ml.includes("2001:db9::1")).isFalse();
+    assertThat(ml.includes("fd00::5")).isTrue();
+    assertThat(ml.includes("fd00::6")).isFalse();
+  }
+
+  @Test
+  public void testCIDRsOfOtherAddressFamily() throws UnknownHostException {
+    // an IPv6 address is not in an IPv4 range, the lookup must not throw
+    MachineList ml = new MachineList(CIDR_LIST, new TestAddressFactory());
+    assertThat(ml.includes("2001:db8::1")).isFalse();
+    assertThat(ml.includes(InetAddress.getByName("2001:db8::1"))).isFalse();
+    assertThat(ml.includes("::10.222.0.1")).isFalse();
+
+    ml = new MachineList(IPV6_CIDR_LIST, new TestAddressFactory());
+    assertThat(ml.includes("10.222.0.1")).isFalse();
+    // 32.1.13.184 has the same leading bytes as 2001:db8::
+    assertThat(ml.includes(InetAddress.getByName("32.1.13.184"))).isFalse();
+  }
+
+  @Test
+  public void testIPv4MappedIPv6Address() {
+    // the JDK turns an IPv4-mapped IPv6 address into an IPv4 address
+    MachineList ml = new MachineList(CIDR_LIST, new TestAddressFactory());
+    assertThat(ml.includes("::ffff:10.222.0.1")).isTrue();
+    assertThat(ml.includes("::ffff:10.223.0.0")).isFalse();
+
+    ml = new MachineList("::/0", new TestAddressFactory());
+    assertThat(ml.includes("::ffff:10.222.0.1")).isFalse();
+  }
+
+  @Test
+  public void testIPv6CIDRIgnoresScopeIdOfAddress() throws UnknownHostException {
+    MachineList ml = new MachineList("fe80::/10", new TestAddressFactory());
+    byte[] linkLocal = InetAddress.getByName("fe80::1").getAddress();
+    byte[] siteLocal = InetAddress.getByName("fec0::1").getAddress();
+
+    assertThat(ml.includes(Inet6Address.getByAddress(null, linkLocal, 1))).isTrue();
+    assertThat(ml.includes(Inet6Address.getByAddress(null, siteLocal, 1))).isFalse();
+  }
+
+  @Test
+  public void testInvalidIPv6CIDR() {
+    String[] invalidCidrs = {"2001:db8::/129", "2001:db8::/1000", "2001:db8::/-1",
+        "2001:db8::/+32", "2001:db8::/x", "2001:db8::/", "2001:db8::/32/64", "2001:db8::g/32",
+        ":/32", "[2001:db8::]/32", "fe80::%1/64", "fe80::%/64", "2001:db8::\uff11/128",
+        "::ffff:10.222.0.0/112"};
+    for (String invalidCidr : invalidCidrs) {
+      assertThatThrownBy(() -> new MachineList(invalidCidr, new TestAddressFactory()))
+          .as(invalidCidr)
+          .isInstanceOf(IllegalArgumentException.class);
     }
   }
 }
