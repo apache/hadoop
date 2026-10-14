@@ -469,7 +469,6 @@ compare:
   $ find . -path '*/target/*.jar' -not -path '*/target/*/*' -exec sha512sum {} + \
       | sed 's#.*/##' | sort > /tmp/build1.txt
 
-
 ----------------------------------------------------------------------------------
 Including Cloud Connector Dependencies in Distributions:
 
@@ -706,8 +705,9 @@ command to mount the same onto the default Maven repository location while launc
 
 Building:
 
-Keep the source code tree in a short path to avoid running into problems related
-to Windows maximum path length limitation (for example, C:\hdc).
+Enable long path support in git
+
+   git config --system core.longpaths true
 
 There is one support command file located in dev-support called win-paths-eg.cmd.
 It should be copied somewhere convenient and modified to fit your needs.
@@ -726,8 +726,8 @@ OpenSSL and Zlib dependencies. Run the following commands to setup these depende
 > git fetch --all
 > git checkout 2025.03.19
 > .\bootstrap-vcpkg.bat
-(Assuming that vcpkg was checked out at C:\vcpkg and Hadoop at C:\hdc)
-> copy C:\hdc\dev-support\docker\vcpkg\vcpkg.json C:\vcpkg
+(Assuming that vcpkg was checked out at C:\vcpkg and Hadoop at C:\hadoop)
+> copy C:\hadoop\dev-support\docker\vcpkg\vcpkg.json C:\vcpkg
 > .\vcpkg.exe install --x-install-root .\installed
 
 Set the following environment variables -
@@ -777,7 +777,7 @@ following command to create the Apache Hadoop release tarball -
 
 > set IS_WINDOWS=1
 > set MVN_ARGS="-Dshell-executable=C:\Git\bin\bash.exe -Dhttps.protocols=TLSv1.2 -Pnative-win -Dskip.platformToolsetDetection -Drequire.openssl -Dopenssl.prefix=C:\vcpkg\installed\x64-windows -Dcmake.prefix.path=C:\vcpkg\installed\x64-windows -Dwindows.cmake.toolchain.file=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off -Duse.platformToolsetVersion=v142 -Dwindows.no.sasl=on -DskipTests -DskipDocs -Drequire.test.libhadoop"
-> C:\Git\bin\bash.exe C:\hdc\dev-support\bin\create-release --mvnargs=%MVN_ARGS%
+> C:\Git\bin\bash.exe C:\hadoop\dev-support\bin\create-release --mvnargs=%MVN_ARGS%
 
 Note:
 If the building fails due to an issue with long paths, rename the Hadoop root directory to just a
@@ -801,7 +801,6 @@ As an example, this invocation will check the compatibility of interfaces annota
 
 ./dev-support/bin/checkcompatibility.py --annotation org.apache.hadoop.classification.InterfaceAudience.Public --annotation org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate --include "hadoop.*" branch-2.7.2 trunk
 
-
 ----------------------------------------------------------------------------------
 
 Using create-release
@@ -812,7 +811,6 @@ and publish them to nexus.
 Important: when run it in invokes "git clean -xdf" to clean up the source tree and keep the
 distributions untainted (and secrets out of the files).
 Do not invoke it on a directory tree where this could be problematic.
-
 
 Arguments
 ---------
@@ -834,7 +832,6 @@ Arguments
 --version=[version]     Use an alternative version string
 --mvnargs=[args]        Extra Maven args to be provided when running mvn commands
 
-
 Option --asfrelease
 -------------------
 
@@ -843,7 +840,6 @@ Create an ASF release.
 The equivalent to `--deploy --sign --native --repeatable`
 
 On Linux system the --docker argument must also be provided, that is: docker builds *only*.
-
 
 Option -build-timestamp=[timestamp]
 -----------------------------------
@@ -898,8 +894,7 @@ Ignored on non-docker builds.
 Option --logdir=[path]
 ----------------------
 
-Provide a path to the log directory. The default is patchprocess
-
+Provide a path to the log directory. The default is ./patchprocess
 
 Option --mvnargs=[args]
 -----------------------
@@ -948,7 +943,6 @@ Use an alternative version string for the .tar.gz files created.
 This does not change the versioning of the maven artifacts produced in a build, or the version
 of Hadoop which it itself stores in its jar (see below); it is simply a packaging change.
 
-
 ----------------------------------------------------------------------------------
 Changing the Hadoop version declared returned by VersionInfo
 
@@ -957,4 +951,3 @@ org.apache.hadoop.util.VersionInfo, set the property declared.hadoop.version to 
 For example: mvn package -Pdist -Ddeclared.hadoop.version=2.11
 
 If unset, the project version declared in the POM file is used.
-
