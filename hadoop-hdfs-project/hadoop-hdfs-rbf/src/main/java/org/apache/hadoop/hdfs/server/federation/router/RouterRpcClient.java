@@ -612,7 +612,8 @@ public class RouterRpcClient {
         LOG.error("{} at {} error: \"{}\"", nnKey, addr, ioe.getMessage());
       }
     }
-    if (exConnect == ioes.size()) {
+    // No RPC was attempted, so an empty exception map is not a connection failure.
+    if (!ioes.isEmpty() && exConnect == ioes.size()) {
       throw new ConnectException(msg);
     } else {
       throw new StandbyException(msg);
