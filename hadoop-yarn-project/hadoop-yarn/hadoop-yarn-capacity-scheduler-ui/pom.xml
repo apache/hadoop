@@ -32,7 +32,7 @@
     <packagingType>pom</packagingType>
     <webappDir>${basedir}/target/webapp</webappDir>
     <nodeExecutable>${basedir}/target/webapp/node/node</nodeExecutable>
-    <packageManagerScript>node_modules/.bin/react-router</packageManagerScript>
+    <packageManagerScript>node_modules/@react-router/dev/bin.js</packageManagerScript>
     <keepUIBuildCache>false</keepUIBuildCache>
   </properties>
 
