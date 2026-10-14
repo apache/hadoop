@@ -92,7 +92,7 @@ public class DNS {
     }
 
     Attribute ptr = attribute.get("PTR");
-    if (ptr == null) {
+    if (ptr == null || ptr.size() == 0) {
       // The server answered, but without a PTR record.
       throw new NameNotFoundException("No PTR record for " + reverseIP);
     }

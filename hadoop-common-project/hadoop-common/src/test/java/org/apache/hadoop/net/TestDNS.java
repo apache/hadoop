@@ -19,6 +19,7 @@
 package org.apache.hadoop.net;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.Inet6Address;
@@ -256,19 +257,25 @@ public class TestDNS {
         DatagramPacket query = new DatagramPacket(buf, buf.length);
         server.receive(query);
         // Keep the header and the question, drop anything after the question.
+        int length = query.getLength();
         int end = 12;
-        while (buf[end] != 0) {
-          end += buf[end] + 1;
+        while (end < length && buf[end] != 0) {
+          end += (buf[end] & 0xff) + 1;
         }
         end += 5; // the root label, QTYPE and QCLASS
+        if (end > length) {
+          continue; // not a well formed query
+        }
         byte[] answer = Arrays.copyOf(buf, end);
         answer[2] = (byte) 0x81; // QR and RD
         answer[3] = (byte) 0x80; // RA, RCODE 0
         Arrays.fill(answer, 6, 12, (byte) 0); // no answer, authority or additional records
         server.send(new DatagramPacket(answer, end, query.getSocketAddress()));
       }
-    } catch (IOException closed) {
-      // The test closed the socket.
+    } catch (IOException e) {
+      if (!server.isClosed()) {
+        throw new UncheckedIOException(e);
+      }
     }
   }
 
