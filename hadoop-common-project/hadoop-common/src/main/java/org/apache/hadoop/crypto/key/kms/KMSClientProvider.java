@@ -273,6 +273,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
      * - HOSTNAME = string
      * - PORT = integer
      *
+     * An IPv6 literal HOSTNAME must be enclosed in square brackets, as in
+     * {@literal kms://https@[2001:db8::1]:9600/kms}. {@link URI} accepts literal brackets around
+     * a single host only, so the brackets must be percent-encoded when HOSTS has more than one
+     * host, as in {@literal kms://https@%5B2001:db8::1%5D;%5B2001:db8::2%5D:9600/kms}.
+     *
      * This will always create a {@link LoadBalancingKMSClientProvider}
      * if the uri is correct.
      */
@@ -280,6 +285,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     public KeyProvider createProvider(URI providerUri, Configuration conf)
         throws IOException {
       if (SCHEME_NAME.equals(providerUri.getScheme())) {
+        String kmsAuthority = providerUri.getAuthority();
+        if (kmsAuthority != null && kmsAuthority.contains("[")) {
+          return new LoadBalancingKMSClientProvider(providerUri,
+              createBracketedProviders(conf, providerUri, kmsAuthority), conf);
+        }
         URL origUrl = new URL(extractKMSPath(providerUri).toString());
         String authority = origUrl.getAuthority();
         // check for ';' which delimits the backup hosts
@@ -302,22 +312,52 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
           hostsPart = t[0];
         }
         KMSClientProvider[] providers =
-            createProviders(conf, origUrl, port, hostsPart);
+            createProviders(conf, origUrl.getProtocol(), origUrl.getPath(), port, hostsPart);
         return new LoadBalancingKMSClientProvider(providerUri, providers, conf);
       }
       return null;
     }
 
-    private KMSClientProvider[] createProviders(Configuration conf,
-        URL origUrl, int port, String hostsPart) throws IOException {
+    /**
+     * Handles an authority that has a bracketed IPv6 literal, which the colon split above cannot
+     * parse and, for more than one host, neither {@link Path} nor {@link URL} can hold.
+     */
+    private KMSClientProvider[] createBracketedProviders(Configuration conf, URI providerUri,
+        String kmsAuthority) throws IOException {
+      String[] parts = kmsAuthority.split("@", 2);
+      if (parts.length != 2) {
+        throw new IOException("No valid authority in kms uri [" + providerUri + "]");
+      }
+      int port = -1;
+      String hostsPart = parts[1];
+      // A colon after the last closing bracket delimits the port, others belong to a literal
+      int portIdx = hostsPart.lastIndexOf(':');
+      if (portIdx > hostsPart.lastIndexOf(']')) {
+        try {
+          port = Integer.parseInt(hostsPart.substring(portIdx + 1));
+        } catch (NumberFormatException e) {
+          throw new IOException("Could not parse port in kms uri [" + providerUri + "]");
+        }
+        hostsPart = hostsPart.substring(0, portIdx);
+      }
+      return createProviders(conf, parts[0], providerUri.getPath(), port, hostsPart);
+    }
+
+    private KMSClientProvider[] createProviders(Configuration conf, String protocol, String path,
+        int port, String hostsPart) throws IOException {
       String[] hosts = hostsPart.split(";");
       KMSClientProvider[] providers = new KMSClientProvider[hosts.length];
       for (int i = 0; i < hosts.length; i++) {
+        // URI would add missing brackets itself, which leaves the end of the address ambiguous,
+        // and would take what follows a closing bracket as a port of this host
+        if (hosts[i].contains(":") && !(hosts[i].startsWith("[") && hosts[i].endsWith("]"))) {
+          throw new IOException("Could not parse host [" + hosts[i] + "] in kms uri. An IPv6"
+              + " literal must be enclosed in brackets and the port follows the last host.");
+        }
         try {
           providers[i] =
               new KMSClientProvider(
-                  new URI("kms", origUrl.getProtocol(), hosts[i], port,
-                      origUrl.getPath(), null, null), conf);
+                  new URI("kms", protocol, hosts[i], port, path, null, null), conf);
         } catch (URISyntaxException e) {
           throw new IOException("Could not instantiate KMSProvider.", e);
         }
@@ -432,8 +472,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     // remove fragment for forward compatibility with logical naming.
     final String fragment = uri.getFragment();
     if (fragment != null) {
-      service = new Text(
-          uri.getScheme() + ":" + uri.getSchemeSpecificPart());
+      // the decoded form of percent-encoded brackets around IPv6 literals may not parse again
+      final String authority = uri.getAuthority();
+      final boolean bracketed = authority != null && authority.contains("[");
+      service = new Text(uri.getScheme() + ":"
+          + (bracketed ? uri.getRawSchemeSpecificPart() : uri.getSchemeSpecificPart()));
     } else {
       service = new Text(uri.toString());
     }
