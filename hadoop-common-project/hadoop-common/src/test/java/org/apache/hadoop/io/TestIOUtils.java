@@ -21,8 +21,9 @@ package org.apache.hadoop.io;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.Mockito.atMost;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -33,8 +34,6 @@ import static org.mockito.Mockito.when;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
-import java.net.HttpURLConnection;
-import java.nio.charset.StandardCharsets;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
@@ -42,9 +41,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.net.HttpURLConnection;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.CharacterCodingException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.List;
@@ -376,8 +377,7 @@ public class TestIOUtils {
   @Test
   public void testDrainAndCloseSwallowsReadIOException() throws Exception {
     InputStream in = mock(InputStream.class);
-    when(in.read(org.mockito.ArgumentMatchers.any(byte[].class)))
-        .thenThrow(new IOException("read failed"));
+    when(in.read(any(byte[].class))).thenThrow(new IOException("read failed"));
     IOUtils.drainAndClose(in);
     verify(in).close();
   }

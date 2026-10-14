@@ -890,7 +890,7 @@ public class CommonConfigurationKeysPublic {
    */
   public static final String KMS_CLIENT_DRAIN_RESPONSE_UNREAD_BYTES_KEY =
       "hadoop.security.kms.client.drain.response.unread.bytes";
-  /** Default value for KMS_CLIENT_DRAIN_RESPONSE_UNREAD_BYTES_KEY */
+  /** Default value for KMS_CLIENT_DRAIN_RESPONSE_UNREAD_BYTES_KEY. */
   public static final boolean KMS_CLIENT_DRAIN_RESPONSE_UNREAD_BYTES_DEFAULT =
       true;
 

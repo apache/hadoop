@@ -627,7 +627,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         && conn.getContentType().trim().toLowerCase()
             .startsWith(APPLICATION_JSON_MIME)
         && klass != null) {
-      ObjectMapper mapper = new ObjectMapper().disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
+      ObjectMapper mapper =
+          new ObjectMapper().disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
       InputStream is = null;
       try {
         is = conn.getInputStream();
