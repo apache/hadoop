@@ -181,7 +181,7 @@ public final class SecurityUtil {
    * Convert Kerberos principal name pattern to valid Kerberos principal
    * names. It replaces hostname pattern with hostname, which should be
    * fully-qualified domain name. If hostname is null or a wildcard address
-   * such as "0.0.0.0" or "::", it uses dynamically looked-up fqdn of the
+   * such as "0.0.0.0", "::" or "[::]", it uses dynamically looked-up fqdn of the
    * current host instead.
    * 
    * @param principalConfig
