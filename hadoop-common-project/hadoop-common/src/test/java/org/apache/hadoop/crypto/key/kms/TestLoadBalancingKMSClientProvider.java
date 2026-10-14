@@ -24,6 +24,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
@@ -43,6 +45,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
@@ -61,6 +64,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.KMSUtil;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -115,6 +119,119 @@ public class TestLoadBalancingKMSClientProvider {
         new HashSet<>(Arrays.asList(providers[0].getKMSUrl(),
             providers[1].getKMSUrl(),
             providers[2].getKMSUrl())));
+  }
+
+  private static List<String> createKMSUrls(Configuration conf, String providerUri)
+      throws IOException {
+    // URI.create is how the configured provider path and the token service are parsed
+    KeyProvider kp = KMSUtil.createKeyProviderFromUri(conf, URI.create(providerUri));
+    try {
+      assertThat(kp).isInstanceOf(LoadBalancingKMSClientProvider.class);
+      return Arrays.stream(((LoadBalancingKMSClientProvider) kp).getProviders())
+          .map(KMSClientProvider::getKMSUrl).collect(Collectors.toList());
+    } finally {
+      kp.close();
+    }
+  }
+
+  @Test
+  public void testCreationWithIPv6() throws Exception {
+    Configuration conf = new Configuration();
+    assertThat(createKMSUrls(conf, "kms://http@[2001:db8::1]:9600/kms/foo"))
+        .containsExactly("http://[2001:db8::1]:9600/kms/foo/v1/");
+    assertThat(createKMSUrls(conf, "kms://http@%5B2001:db8::1%5D:9600/kms/foo"))
+        .containsExactly("http://[2001:db8::1]:9600/kms/foo/v1/");
+
+    // URI rejects literal brackets in a host list, so they have to be percent-encoded
+    assertThatThrownBy(() -> URI.create("kms://http@[2001:db8::1];[2001:db8::2]:9600/kms/foo"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(createKMSUrls(conf, "kms://http@%5B2001:db8::1%5D;%5B2001:db8::2%5D:9600/kms/foo"))
+        .containsExactlyInAnyOrder("http://[2001:db8::1]:9600/kms/foo/v1/",
+            "http://[2001:db8::2]:9600/kms/foo/v1/");
+
+    String[] mixed = {"http://host1:9600/kms/foo/v1/", "http://10.0.0.2:9600/kms/foo/v1/",
+        "http://[2001:db8::3]:9600/kms/foo/v1/"};
+    assertThat(createKMSUrls(conf, "kms://http@host1;10.0.0.2;%5B2001:db8::3%5D:9600/kms/foo"))
+        .containsExactlyInAnyOrder(mixed);
+    assertThat(createKMSUrls(conf, "kms://http@%5B2001:db8::3%5D;host1;10.0.0.2:9600/kms/foo"))
+        .containsExactlyInAnyOrder(mixed);
+    assertThat(createKMSUrls(conf, "kms://http@host1;%5B2001:db8::3%5D;10.0.0.2:9600/kms/foo"))
+        .containsExactlyInAnyOrder(mixed);
+
+    // DNS and IPv4 only lists are unchanged
+    assertThat(createKMSUrls(conf, "kms://http@host1;10.0.0.2:9600/kms/foo"))
+        .containsExactlyInAnyOrder("http://host1:9600/kms/foo/v1/",
+            "http://10.0.0.2:9600/kms/foo/v1/");
+  }
+
+  @Test
+  public void testCreationWithoutPort() {
+    Configuration conf = new Configuration();
+    // The token service needs a port, whether the host is a name or an IPv6 literal
+    for (String uri : new String[] {"kms://http@host1/kms/foo", "kms://http@host1;host2/kms/foo",
+        "kms://http@[2001:db8::1]/kms/foo", "kms://http@%5B2001:db8::1%5D;host2/kms/foo"}) {
+      assertThatThrownBy(() -> createKMSUrls(conf, uri)).as(uri)
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Does not contain a valid host:port authority");
+    }
+  }
+
+  @Test
+  public void testCreationWithMalformedIPv6() {
+    Configuration conf = new Configuration();
+    for (String uri : new String[] {
+        // not bracketed, so the end of the address is ambiguous
+        "kms://http@2001:db8::1:9600/kms/foo",
+        "kms://http@host1;2001:db8::2:9600/kms/foo",
+        "kms://http@%5B2001:db8::1%5D;2001:db8::2:9600/kms/foo",
+        "kms://http@2001:db8::2;%5B2001:db8::1%5D:9600/kms/foo",
+        // not closed, not an IPv6 literal, trailing characters
+        "kms://http@%5B2001:db8::1:9600/kms/foo",
+        "kms://http@%5Bhost1%5D:9600/kms/foo",
+        "kms://http@%5B2001:db8::1%5Dx:9600/kms/foo",
+        // a port per host, a port that is not a number, an empty host, no protocol
+        "kms://http@%5B2001:db8::1%5D:9600;%5B2001:db8::2%5D:9600/kms/foo",
+        "kms://http@%5B2001:db8::1%5D:9600;%5B2001:db8::2%5D/kms/foo",
+        "kms://http@%5B2001:db8::1%5D:port/kms/foo",
+        "kms://http@%5B2001:db8::1%5D;;host3:9600/kms/foo",
+        "kms://[2001:db8::1]:9600/kms/foo"}) {
+      assertThatThrownBy(() -> createKMSUrls(conf, uri)).as(uri).isInstanceOf(IOException.class);
+    }
+    assertThatThrownBy(
+        () -> createKMSUrls(conf, "kms://http@%5B2001:db8::1%5D;2001:db8::2:9600/kms/foo"))
+        .hasMessageStartingWith("Could not parse host [2001:db8::2] in kms uri");
+    assertThatThrownBy(() -> createKMSUrls(conf, "kms://http@%5B2001:db8::1%5D:port/kms/foo"))
+        .hasMessageStartingWith("Could not parse port in kms uri");
+  }
+
+  private static String createTokenService(Configuration conf, String providerUri)
+      throws IOException {
+    KeyProvider kp = KMSUtil.createKeyProviderFromUri(conf, URI.create(providerUri));
+    try {
+      return ((LoadBalancingKMSClientProvider) kp).getCanonicalServiceName();
+    } finally {
+      kp.close();
+    }
+  }
+
+  @Test
+  public void testTokenServiceWithIPv6() throws Exception {
+    for (String uri : new String[] {"kms://http@[2001:db8::1]:9600/kms/foo",
+        "kms://http@%5B2001:db8::1%5D;%5B2001:db8::2%5D:9600/kms/foo"}) {
+      Configuration conf = new Configuration();
+      // Without a configured provider path the token service is the provider uri, which
+      // KMSTokenRenewer turns back into a provider
+      String service = createTokenService(conf, uri);
+      assertThat(service).isEqualTo(uri);
+      assertThat(createTokenService(conf, uri + "#fragment")).isEqualTo(uri);
+      assertThat(createKMSUrls(conf, service))
+          .containsExactlyInAnyOrderElementsOf(createKMSUrls(conf, uri))
+          .contains("http://[2001:db8::1]:9600/kms/foo/v1/");
+
+      // With a configured provider path it is the address of the first host
+      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH, uri);
+      assertThat(createTokenService(conf, uri)).isEqualTo("[2001:db8::1]:9600");
+    }
   }
 
   @Test
