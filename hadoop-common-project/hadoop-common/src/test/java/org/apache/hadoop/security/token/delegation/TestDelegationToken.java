@@ -467,7 +467,7 @@ public class TestDelegationToken {
       GenericTestUtils.waitFor(ExitUtil::terminateCalled, 100, 10000);
       ExitUtil.ExitException ee = ExitUtil.getFirstExitException();
       assertEquals(-1, ee.getExitCode());
-      assertEquals("injected key id failure", ee.getCause().getMessage());
+      assertThat(ee.getCause()).hasMessage("injected key id failure");
     } finally {
       dtSecretManager.stopThreads();
       ExitUtil.resetFirstExitException();
@@ -495,11 +495,17 @@ public class TestDelegationToken {
             throw new RuntimeException("interrupted", e);
           }
         });
-    dtSecretManager.startThreads();
-    assertTrue(blocked.await(10, TimeUnit.SECONDS));
-    dtSecretManager.stopThreads();
-    assertFalse(ExitUtil.terminateCalled(),
-        "terminate should not be called while stopping");
+    boolean terminated;
+    try {
+      dtSecretManager.startThreads();
+      assertTrue(blocked.await(10, TimeUnit.SECONDS));
+    } finally {
+      // stopThreads() joins the remover thread, so its outcome is final here.
+      dtSecretManager.stopThreads();
+      terminated = ExitUtil.terminateCalled();
+      ExitUtil.resetFirstExitException();
+    }
+    assertFalse(terminated, "terminate should not be called while stopping");
   }
 
   @Test

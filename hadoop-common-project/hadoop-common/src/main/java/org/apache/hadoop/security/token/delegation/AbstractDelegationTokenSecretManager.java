@@ -944,11 +944,11 @@ extends AbstractDelegationTokenIdentifier>
           }
         }
       } catch (Throwable t) {
-        if (!running) {
+        if (!running && !(t instanceof Error)) {
           // stopThreads() interrupts this thread, which can surface as an
           // exception from the backing store; don't kill the process for it.
-          LOG.warn("ExpiredTokenRemover thread received exception while"
-              + " stopping", t);
+          LOG.info("ExpiredTokenRemover thread received exception while"
+              + " stopping: {}", t.toString());
           return;
         }
         LOG.error("ExpiredTokenRemover thread received unexpected exception", t);

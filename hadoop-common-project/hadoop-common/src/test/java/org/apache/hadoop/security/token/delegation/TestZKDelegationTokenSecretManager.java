@@ -98,13 +98,18 @@ public class TestZKDelegationTokenSecretManager {
 
   @AfterEach
   public void tearDown() throws Exception {
-    if (zkServer != null) {
-      zkServer.close();
-    }
-    ExitUtil.ExitException ee = ExitUtil.getFirstExitException();
-    ExitUtil.resetFirstExitException();
-    if (ee != null) {
-      throw new AssertionError("ExitUtil.terminate was called", ee);
+    try {
+      if (zkServer != null) {
+        zkServer.close();
+      }
+    } finally {
+      // A leaked remover thread that terminates after this point is
+      // reported by the next test's tearDown().
+      ExitUtil.ExitException ee = ExitUtil.getFirstExitException();
+      ExitUtil.resetFirstExitException();
+      if (ee != null) {
+        fail("ExitUtil.terminate was called", ee);
+      }
     }
   }
 
