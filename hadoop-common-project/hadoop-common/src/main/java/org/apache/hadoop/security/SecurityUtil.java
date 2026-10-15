@@ -514,7 +514,7 @@ public final class SecurityUtil {
    * @param <T> generic type T.
    * @return generic type T.
    */
-  public static <T> T doAsLoginUserOrFatal(PrivilegedAction<T> action) { 
+  public static <T> T doAsLoginUserOrFatal(PrivilegedAction<T> action) {
     if (UserGroupInformation.isSecurityEnabled()) {
       UserGroupInformation ugi;
       try {

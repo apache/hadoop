@@ -656,6 +656,7 @@ public class TestSecurityUtil {
       assertSame(loginFailure, ee.getCause());
       assertTrue(ExitUtil.terminateCalled());
     } finally {
+      ExitUtil.enableSystemExit();
       ExitUtil.resetFirstExitException();
     }
   }
