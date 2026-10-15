@@ -470,6 +470,7 @@ public class TestDelegationToken {
       assertThat(ee.getCause()).hasMessage("injected key id failure");
     } finally {
       dtSecretManager.stopThreads();
+      ExitUtil.enableSystemExit();
       ExitUtil.resetFirstExitException();
     }
   }
@@ -503,6 +504,7 @@ public class TestDelegationToken {
       // stopThreads() joins the remover thread, so its outcome is final here.
       dtSecretManager.stopThreads();
       terminated = ExitUtil.terminateCalled();
+      ExitUtil.enableSystemExit();
       ExitUtil.resetFirstExitException();
     }
     assertFalse(terminated, "terminate should not be called while stopping");
