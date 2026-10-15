@@ -88,28 +88,39 @@ public class TestZKDelegationTokenSecretManager {
 
   @BeforeEach
   public void setup() throws Exception {
-    // A token manager leaked past tearDown() would otherwise kill the JVM
-    // when its remover thread loses the ZooKeeper connection; tearDown()
-    // turns the recorded termination into a test failure instead.
-    ExitUtil.disableSystemExit();
     zkServer = new TestingServer();
     zkServer.start();
   }
 
   @AfterEach
   public void tearDown() throws Exception {
-    try {
-      if (zkServer != null) {
-        zkServer.close();
-      }
-    } finally {
-      // A leaked remover thread that terminates after this point is
-      // reported by the next test's tearDown().
-      ExitUtil.ExitException ee = ExitUtil.getFirstExitException();
-      ExitUtil.resetFirstExitException();
-      if (ee != null) {
-        fail("ExitUtil.terminate was called", ee);
-      }
+    if (zkServer != null) {
+      zkServer.close();
+    }
+  }
+
+  /**
+   * A token manager leaked past tearDown() would otherwise kill the JVM
+   * when its remover thread loses the ZooKeeper connection;
+   * checkNoTermination() turns the recorded termination into a test
+   * failure instead.
+   */
+  @BeforeEach
+  public void disableSystemExit() {
+    ExitUtil.disableSystemExit();
+  }
+
+  /**
+   * Runs as its own lifecycle method so that the ExitUtil state is checked
+   * and reset even when tearDown() fails. A leaked remover thread that
+   * terminates after this point is reported by the next test.
+   */
+  @AfterEach
+  public void checkNoTermination() {
+    ExitUtil.ExitException ee = ExitUtil.getFirstExitException();
+    ExitUtil.resetFirstExitException();
+    if (ee != null) {
+      fail("ExitUtil.terminate was called", ee);
     }
   }
 
