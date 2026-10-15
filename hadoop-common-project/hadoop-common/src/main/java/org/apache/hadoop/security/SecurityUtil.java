@@ -516,12 +516,14 @@ public final class SecurityUtil {
    */
   public static <T> T doAsLoginUserOrFatal(PrivilegedAction<T> action) { 
     if (UserGroupInformation.isSecurityEnabled()) {
-      UserGroupInformation ugi = null;
-      try { 
+      UserGroupInformation ugi;
+      try {
         ugi = UserGroupInformation.getLoginUser();
       } catch (IOException e) {
         LOG.error("Exception while getting login user", e);
         ExitUtil.terminate(-1, e);
+        // Not reached: terminate() either exits the JVM or throws.
+        throw new IllegalStateException(e);
       }
       return ugi.doAs(action);
     } else {
