@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.ScanInfo;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StopWatch;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -364,19 +365,23 @@ public class DirectoryScanner implements Runnable {
   }
 
   /**
-   * Start the scanner. The scanner will run every
-   * {@link DFSConfigKeys#DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY} seconds.
+   * Start the scanner. The scanner waits
+   * {@link DFSConfigKeys#DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY} seconds
+   * between the end of one scan and the start of the next one. A fixed delay
+   * is used rather than a fixed rate so that a scan which takes longer than
+   * the interval (e.g. on a DataNode with millions of blocks) does not cause
+   * the missed executions to be run back-to-back afterwards.
    */
   @VisibleForTesting
   public void start() {
     shouldRun.set(true);
     long firstScanTime = ThreadLocalRandom.current().nextLong(scanPeriodMsecs);
 
-    LOG.info(
-        "Periodic Directory Tree Verification scan starting in {}ms with interval of {}ms and throttle limit of {}ms/s",
+    LOG.info("Periodic Directory Tree Verification scan starting in {}ms "
+            + "with delay of {}ms between scans and throttle limit of {}ms/s",
         firstScanTime, scanPeriodMsecs, throttleLimitMsPerSec);
 
-    masterThread.scheduleAtFixedRate(this, firstScanTime, scanPeriodMsecs,
+    masterThread.scheduleWithFixedDelay(this, firstScanTime, scanPeriodMsecs,
         TimeUnit.MILLISECONDS);
   }
 
@@ -472,8 +477,10 @@ public class DirectoryScanner implements Runnable {
    */
   @VisibleForTesting
   public void reconcile() throws IOException {
-    LOG.debug("reconcile start DirectoryScanning");
+    LOG.info("Directory scan starting");
+    final long startMs = Time.monotonicNow();
     scan();
+    final long scanDoneMs = Time.monotonicNow();
     DataNodeFaultInjector.get().waitUntilStorageRemoved();
     // HDFS-14476: run checkAndUpdate with batch to avoid holding the lock too
     // long
@@ -492,6 +499,10 @@ public class DirectoryScanner implements Runnable {
         loopCount++;
       }
     }
+    final long endMs = Time.monotonicNow();
+    LOG.info("Directory scan finished in {}ms: scanning took {}ms, "
+            + "reconciling {} differences took {}ms",
+        endMs - startMs, scanDoneMs - startMs, loopCount, endMs - scanDoneMs);
 
     if (!retainDiffs) {
       clear();
