@@ -91,6 +91,10 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
       int expectedRequests = numFiles // Get Path Status for each file
           + ((int) Math.ceil((double) fileSize / BLOCK_SIZE))
           * numFiles; // Read requests for each file
+      // in case data locality is enabled 5 extra calls (1 per file) will be made for layout fetch
+      if(fs.getAbfsStore().getAbfsConfiguration().isDataLocalityEnabled()) {
+        expectedRequests += 5;
+      }
       assertEquals(expectedRequests,
           requestsMadeAfterTest - requestsMadeBeforeTest);
     }
@@ -132,6 +136,10 @@ public class ITestReadBufferManagerV2 extends AbstractAbfsIntegrationTest {
       int expectedRequests = numFiles // Get Path Status for each file
           + ((int) Math.ceil(
           (double) fileSize / BLOCK_SIZE)); // Read requests for each file
+      // in case data locality is enabled 1 extra calls will me made for layout fetch
+      if(fs.getAbfsStore().getAbfsConfiguration().isDataLocalityEnabled()) {
+        expectedRequests += 1;
+      }
       assertEquals(expectedRequests,
           requestsMadeAfterTest - requestsMadeBeforeTest);
     }

@@ -316,6 +316,10 @@ public final class FileSystemConfigurations {
   public static final int MIN_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY = 1;
   public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS = 500;
   public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT = 1;
+  public static final long DEFAULT_FS_AZURE_BLOB_LAYOUT_CACHE_EVICTION_MINS = 5;
+  public static final long DEFAULT_FS_AZURE_BLOB_LAYOUT_CACHE_MAX_COUNT = 10_000;
+  public static final boolean DEFAULT_FS_AZURE_ENABLE_DATA_LOCALITY = false;
+  public static final long DEFAULT_FS_AZURE_BLOB_LAYOUT_FETCH_TIMEOUT_MILLIS = 10_000L;
   public static final String DEFAULT_FS_AZURE_VECTORED_READ_STRATEGY = "TPS";
   public static final int DEFAULT_FS_AZURE_MIN_SEEK_FOR_VECTORED_READS = ONE_MB;
   public static final int DEFAULT_FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS = 4 * ONE_MB;

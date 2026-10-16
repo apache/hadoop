@@ -127,11 +127,25 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
   }
 
   /**
+   * Queue read ahead based on blob segment is not supported in V1 version.
+   * {inheritDoc}
+   */
+  @Override
+  public void queueReadAhead(final AbfsInputStream stream,
+      final long requestedOffset,
+      final int requestedLength,
+      final List<BlobLayout.BlobRange> segment,
+      TracingContext tracingContext) {
+    throw new UnsupportedOperationException(
+        "LayoutReadRange is not supported in ReadBufferManagerV1");
+  }
+
+  /**
    * {@inheritDoc}
    */
   @Override
   public void queueReadAhead(final AbfsInputStream stream, final long requestedOffset, final int requestedLength,
-      TracingContext tracingContext) {
+      TracingContext tracingContext, String endpoint) {
     printTraceLog("Start Queueing readAhead for {} offset {} length {}",
         stream.getPath(), requestedOffset, requestedLength);
     ReadBuffer buffer;
@@ -151,6 +165,7 @@ public final class ReadBufferManagerV1 extends ReadBufferManager {
       buffer.setStatus(ReadBufferStatus.NOT_AVAILABLE);
       buffer.setLatch(new CountDownLatch(1));
       buffer.setTracingContext(tracingContext);
+      buffer.setReadEndpoint(endpoint);
 
       Integer bufferIndex = getFreeList().pop();  // will return a value, since we have checked size > 0 already
 
