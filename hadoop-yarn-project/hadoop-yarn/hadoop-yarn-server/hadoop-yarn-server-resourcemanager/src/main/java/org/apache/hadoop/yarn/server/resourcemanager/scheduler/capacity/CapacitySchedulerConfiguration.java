@@ -307,7 +307,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       PREFIX + "non-exclusive-label.queue-limit-enable";
 
   @Private
-  public static final boolean DEFAULT_NON_EXCLUSIVE_LABEL_QUEUE_LIMIT_ENABLE = false;
+  public static final boolean DEFAULT_NON_EXCLUSIVE_LABEL_QUEUE_LIMIT_ENABLE =
+      false;
 
   @Private
   public static final String QUEUE_MAPPING = PREFIX + "queue-mappings";
@@ -1333,6 +1334,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public boolean getOverrideWithQueueMappings() {
     return getBoolean(ENABLE_QUEUE_MAPPING_OVERRIDE,
         DEFAULT_ENABLE_QUEUE_MAPPING_OVERRIDE);
+  }
+
+  @Private
+  public boolean isNonExclusiveLabelQueueLimitEnabled() {
+    return getBoolean(NON_EXCLUSIVE_LABEL_QUEUE_LIMIT_ENABLE,
+        DEFAULT_NON_EXCLUSIVE_LABEL_QUEUE_LIMIT_ENABLE);
   }
 
   @Private
