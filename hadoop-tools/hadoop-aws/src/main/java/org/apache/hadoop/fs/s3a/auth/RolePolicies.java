@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.auth;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -199,9 +198,29 @@ public final class RolePolicies {
   public static final String S3_RESTORE_OBJECT = "s3:RestoreObject";
 
   /**
-   * S3Express session permission; required unless sessions are disabled.
+   * Everything: {@value}.
+   */
+  public static final String EVERYTHING_ARN = "*";
+
+  /**
+   * All S3Express buckets: {@value}.
+   * S3Express adds another "domain" for permissions: S3 express ARNs and S3 Express operations,
+   * of which createSession is one key operation.
+   * See https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-security.html
+   * Note: this wildcard patten came from AWS Q; if it is wrong blame GenerativeAI.
+   */
+  public static final String S3EXPRESS_ALL_BUCKETS = "arn:aws:s3express:*:*:bucket/*--*--x-s3";
+
+  /**
+   * S3Express session permission; required unless sessions are disabled: {@value}.
+   * See https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateSession.html
    */
   public static final String S3EXPRESS_CREATE_SESSION_POLICY = "s3express:CreateSession";
+
+  /**
+   * S3 Express All operations: {@value}.
+   */
+  public static final String S3EXPRESS_ALL_OPERATIONS = "s3express:*";
 
   /**
    * Actions needed to read a file in S3 through S3A, excluding
@@ -224,7 +243,7 @@ public final class RolePolicies {
    */
   private static final String[] S3_ROOT_READ_OPERATIONS =
       new String[]{
-          S3_ALL_GET
+          S3_ALL_GET,
       };
 
   public static final List<String> S3_ROOT_READ_OPERATIONS_LIST =
@@ -239,7 +258,7 @@ public final class RolePolicies {
   public static final String[] S3_BUCKET_READ_OPERATIONS =
       new String[]{
           S3_ALL_GET,
-          S3_BUCKET_ALL_LIST
+          S3_BUCKET_ALL_LIST,
       };
 
   /**
@@ -281,7 +300,7 @@ public final class RolePolicies {
           S3_PUT_OBJECT,
           S3_PUT_OBJECT_ACL,
           S3_DELETE_OBJECT,
-          S3_ABORT_MULTIPART_UPLOAD
+          S3_ABORT_MULTIPART_UPLOAD,
       }));
 
   /**
@@ -291,6 +310,13 @@ public final class RolePolicies {
   public static final Statement STATEMENT_ALL_S3 = statement(true,
       S3_ALL_BUCKETS,
       S3_ALL_OPERATIONS);
+
+  /**
+   * S3 Express operations required for operation.
+   */
+  public static final Statement STATEMENT_S3EXPRESS = statement(true,
+      S3EXPRESS_ALL_BUCKETS,
+      S3EXPRESS_ALL_OPERATIONS);
 
   /**
    * The s3:GetBucketLocation permission is for all buckets, not for
@@ -310,8 +336,9 @@ public final class RolePolicies {
   public static List<Statement> allowS3Operations(String bucket,
       boolean write) {
     // add the bucket operations for the specific bucket ARN
-    ArrayList<Statement> statements =
+    List<Statement> statements =
         Lists.newArrayList(
+            STATEMENT_S3EXPRESS,
             statement(true,
                 bucketToArn(bucket),
                 S3_GET_BUCKET_LOCATION, S3_BUCKET_ALL_LIST));

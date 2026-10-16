@@ -4,10 +4,10 @@ Build instructions for Hadoop
 Requirements:
 
 * Unix System
-* JDK 1.8
-* Maven 3.3 or later
+* JDK 17
+* Maven 3.9.15 or later (optional, a compatible version is automatically downloaded if using ./mvnw)
 * Boost 1.86.0 (if compiling native code)
-* Protocol Buffers 3.21.12 (if compiling native code)
+* Protocol Buffers 3.25.5 (if compiling native code)
 * CMake 3.19 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
 * Cyrus SASL devel (if compiling native code)
@@ -29,65 +29,72 @@ This requires a recent version of docker (1.4.1 and higher are known to work).
 On Linux / Mac:
     Install Docker and run this command:
 
-    $ ./start-build-env.sh [OS platform]
+    $ [CPU_ARCH=<arch>] ./start-build-env.sh [OS platform]
 
-   - [OS Platform] One of [centos_7, centos_8, debian_10, ubuntu_20, ubuntu_24, windows_10].
-        Default is 'ubuntu_20'.
-        Note: Currently only default ('ubuntu_20') is supported on arm machine
+   - [CPU_ARCH=<arch>] One of [x86_64, amd64, aarch64, arm64].
+        Default is output of 'uname -m'. Set to 'x86_64' on arm machine
+        (e.g. Apple M1) to create an x86_64 container.
+        Note:
+          CPU arch emulation may have significant performance overhead.
+          To enable cross-platform container support, run this command first:
+          $ docker run --rm --privileged tonistiigi/binfmt --install amd64,arm64
+          To run an x86_64 container on arm machine, use this command:
+          $ CPU_ARCH=x86_64 ./start-build-env.sh ubuntu_24
+
+   - [OS Platform] One of [rockylinux_8, debian_12, debian_13, ubuntu_24, windows_10].
+        Default is 'ubuntu_24'.
+        Note: Currently only ubuntu is supported on arm machine
 
 The prompt which is then presented is located at a mounted version of the source tree
 and all required tools for testing and building have been installed and configured.
+
+The script can also run a single command instead of an interactive shell. Any
+arguments after the OS platform are executed inside the container, at the root of
+the mounted source tree, as the invoking user. Set DOCKER_INTERACTIVE_RUN to an
+empty string to drop the '-i -t' flags, so no TTY is needed and the script exits
+with the command's status:
+
+    $ DOCKER_INTERACTIVE_RUN= ./start-build-env.sh ubuntu_24 \
+        mvn -pl hadoop-common-project/hadoop-common test -Dtest=TestIPC
+
+The source tree and ~/.m2 are bind-mounted, so build output and surefire reports
+appear in the host tree and dependencies are downloaded once. The container is
+named 'hadoop-build_<OS platform>', so only one can run at a time; remove a stale
+one with 'docker rm -f hadoop-build_<OS platform>'.
 
 Note that from within this docker environment you ONLY have access to the Hadoop source
 tree from where you started. So if you need to run
     dev-support/bin/test-patch /path/to/my.patch
 then the patch must be placed inside the hadoop source tree.
 
-Known issues:
-- On Mac with Boot2Docker the performance on the mounted directory is currently extremely slow.
-  This is a known problem related to boot2docker on the Mac.
-  See:
-    https://github.com/boot2docker/boot2docker/issues/593
-  This issue has been resolved as a duplicate, and they point to a new feature for utilizing NFS mounts
-  as the proposed solution:
-    https://github.com/boot2docker/boot2docker/issues/64
-  An alternative solution to this problem is to install Linux native inside a virtual machine
-  and run your IDE and Docker etc inside that VM.
-
 ----------------------------------------------------------------------------------
-Installing required packages for clean install of Ubuntu 18.04 LTS Desktop.
-(For Ubuntu 20.04, gcc/g++ and cmake bundled with Ubuntu can be used.
-Refer to  dev-support/docker/Dockerfile):
+Installing required packages for clean install of Ubuntu 24.04 LTS Desktop.
 
-* Open JDK 1.8
+* Open JDK 17
   $ sudo apt-get update
-  $ sudo apt-get -y install openjdk-8-jdk
+  $ sudo apt-get -y install openjdk-17-jdk
 * Maven
-  $ sudo apt-get -y install maven
+  Most package managers do not as of January 2026 install an up to date version of Maven.
+  Install an up-to-date version of Maven manually, or use mvnw command, which will download one and validate it before execution.
+
+  Following commands can be used to download and install required version of Maven manually if mvnw is not used:
+  $ curl -L https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.15/apache-maven-3.9.15-bin.tar.gz > apache-maven-3.9.15-bin.tar.gz
+  $ tar -zxvf apache-maven-3.9.15-bin.tar.gz -C /opt
+  $ sudo ln -s /opt/apache-maven-3.9.15/bin/mvn /usr/bin
 * Native libraries
   $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev libsasl2-dev
-* GCC 9.3.0
-  $ sudo apt-get -y install software-properties-common
-  $ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-  $ sudo apt-get update
-  $ sudo apt-get -y install g++-9 gcc-9
-  $ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
-* CMake 3.19
-  $ curl -L https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz > cmake-3.19.0.tar.gz
-  $ tar -zxvf cmake-3.19.0.tar.gz && cd cmake-3.19.0
-  $ ./bootstrap
-  $ make -j$(nproc)
-  $ sudo make install
-* Protocol Buffers 3.21.12 (required to build native code)
-  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz > protobuf-3.21.12.tar.gz
-  $ tar -zxvf protobuf-3.21.12.tar.gz && cd protobuf-3.21.12
-  $ ./autogen.sh
-  $ ./configure
-  $ make -j$(nproc)
-  $ sudo make install
+* Protocol Buffers 3.25.5 (required to build native code)
+  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.25.5.tar.gz > protobuf-3.25.5.tar.gz
+  $ curl -L https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz > abseil-cpp-20230802.1.tar.gz
+  $ tar -zxvf protobuf-3.25.5.tar.gz
+  $ tar -zxvf abseil-cpp-20230802.1.tar.gz --strip-components 1 -C protobuf-3.25.5/third_party/abseil-cpp
+  $ cd protobuf-3.25.5
+  $ cmake -S . -B build -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF
+  $ cmake --build build --parallel $(nproc)
+  $ sudo cmake --install build
 * Boost
-  $ curl -L https://sourceforge.net/projects/boost/files/boost/1.86.0/boost_1_86_0.tar.bz2/download > boost_1_86_0.tar.bz2
-  $ tar --bzip2 -xf boost_1_86_0.tar.bz2 && cd boost_1_86_0
+  $ curl -L https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz > boost-1.86.0.tar.gz
+  $ tar -zxf boost-1.86.0.tar.gz && cd boost-1.86.0
   $ ./bootstrap.sh --prefix=/usr/
   $ ./b2 --without-python
   $ sudo ./b2 --without-python install
@@ -103,8 +110,6 @@ Optional packages:
   $ sudo apt-get install bzip2 libbz2-dev
 * Linux FUSE
   $ sudo apt-get install fuse libfuse-dev
-* ZStandard compression
-  $ sudo apt-get install libzstd1-dev
 * PMDK library for storage class memory(SCM) as HDFS cache backend
   Please refer to http://pmem.io/ and https://github.com/pmem/pmdk
 
@@ -147,7 +152,7 @@ Maven build goals:
  * Run checkstyle            : mvn compile checkstyle:checkstyle
  * Install JAR in M2 cache   : mvn install
  * Deploy JAR to Maven repo  : mvn deploy
- * Run clover                : mvn test -Pclover
+ * Run JaCoCo coverage       : mvn verify -Djacoco.skip=false -Dmaven.test.failure.ignore=true --fail-at-end
  * Run Rat                   : mvn apache-rat:check
  * Build javadocs            : mvn javadoc:javadoc
  * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar][-Preleasedocs][-Pyarn-ui]
@@ -192,29 +197,6 @@ Maven build goals:
     and it ignores the -Dsnappy.prefix option. If -Dsnappy.lib isn't given, the
     bundling and building will fail.
 
-
- ZStandard build options:
-
-   ZStandard is a compression library that can be utilized by the native code.
-   It is currently an optional component, meaning that Hadoop can be built with
-   or without this dependency.
-
-  * Use -Drequire.zstd to fail the build if libzstd.so is not found.
-    If this option is not specified and the zstd library is missing.
-
-  * Use -Dzstd.prefix to specify a nonstandard location for the libzstd
-    header files and library files. You do not need this option if you have
-    installed zstandard using a package manager.
-
-  * Use -Dzstd.lib to specify a nonstandard location for the libzstd library
-    files.  Similarly to zstd.prefix, you do not need this option if you have
-    installed using a package manager.
-
-  * Use -Dbundle.zstd to copy the contents of the zstd.lib directory into
-    the final tar file. This option requires that -Dzstd.lib is also given,
-    and it ignores the -Dzstd.prefix option. If -Dzstd.lib isn't given, the
-    bundling and building will fail.
-
  OpenSSL build options:
 
    OpenSSL includes a crypto library that can be utilized by the native code.
@@ -241,6 +223,9 @@ Maven build goals:
 
   * Use -DskipTests to skip tests when running the following Maven goals:
     'package',  'install', 'deploy' or 'verify'
+  * Use -DskipJasmineTests=true to skip only the browser-driven jasmine tests in
+    hadoop-yarn-applications-catalog-webapp (e.g. on a headless machine with no
+    browser) while still running the module's other tests.
   * -Dtest=<TESTCLASSNAME>,<TESTCLASSNAME#METHODNAME>,....
   * -Dtest.exclude=<TESTCLASSNAME>
   * -Dtest.exclude.pattern=**/<TESTCLASSNAME1>.java,**/<TESTCLASSNAME2>.java
@@ -279,8 +264,25 @@ Maven build goals:
    OWASP's dependency-check plugin will scan the third party dependencies
    of this project for known CVEs (security vulnerabilities against them).
    It will produce a report in target/dependency-check-report.html. To
-   invoke, run 'mvn dependency-check:aggregate'. Note that this plugin
-   requires maven 3.1.1 or greater.
+   invoke, run 'mvn dependency-check:aggregate'.
+
+ Special plugins: JaCoCo code coverage:
+
+   Coverage is opt-in and off by default. Enable it with -Djacoco.skip=false
+   (jacoco.skip is the jacoco-maven-plugin's own skip property); the aggregate
+   report is written to hadoop-coverage/target/site/jacoco-aggregate/index.html.
+
+   It must be a full-reactor build (not -pl hadoop-coverage): report-aggregate
+   only sees modules that are part of the same reactor.
+
+   --fail-at-end keeps the reactor building/testing the modules that do not
+   depend on a hard-failing one (each writing its target/jacoco.exec) instead
+   of stopping at the first failure, so hadoop-coverage still runs
+   report-aggregate at the verify phase. -Dmaven.test.failure.ignore=true only
+   tolerates surefire *test* failures; a plugin-level hard failure (e.g. the
+   catalog-webapp jasmine/PhantomJS browser test, which cannot start a browser
+   in a headless container) would otherwise stop the reactor before the report
+   is produced.
 
  PMDK library build options:
 
@@ -390,6 +392,59 @@ Create a local staging version of the website (in /tmp/hadoop-site)
 Note that the site needs to be built in a second pass after other artifacts.
 
 ----------------------------------------------------------------------------------
+Including Cloud Connector Dependencies in Distributions:
+
+Hadoop distributions include the hadoop modules needed to work with data and services
+on cloud infrastructure
+
+However, dependencies are omitted for all cloud connectors except hadoop-azure
+(abfs:// and wasb://) and possibly hadoop-gcp (gs://) and hadoop-tos (tos://).
+For the latter two modules, it depends on shading options.
+
+For hadoop-aws the AWS SDK bundle.jar is omitted, but everything else is included.
+
+Excluding the extra binaries:
+* Keeps release artifact size below the limit of the ASF distribution network.
+* Reduces download and size overhead in docker usage.
+* Reduces the CVE attack surface and audit-related complaints about those same CVEs.
+* Reduces the risk of classpath conflict.
+
+To produce a build with the specific desired dependencies, the build must be executed
+with the relevant profile of ${module}-package alongside the -Pdist profile.
+
+For example, a build with the hadoop-aws and hadoop-azure-datalake dependencies,
+run with
+
+ mvn package -Pdist -DskipTests -Dhadoop-aws-package -Dhadoop-azure-datalake-package
+
+Available package profiles:
+  hadoop-aliyun-package
+  hadoop-aws-package
+  hadoop-azure-datalake-package
+  hadoop-bos-package
+  hadoop-cos-package
+  hadoop-gcp-package
+  hadoop-huaweicloud-package
+  hadoop-tos-package
+
+To build a complete distribution then with all cloud dependencies included:
+
+mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true \
+ -Dhadoop-aliyun-package \
+ -Dhadoop-aws-package \
+ -Dhadoop-azure-datalake-package \
+ -Dhadoop-bos-package \
+ -Dhadoop-cos-package \
+ -Dhadoop-gcp-package \
+ -Dhadoop-huaweicloud-package \
+ -Dhadoop-tos-package
+
+The resulting tar file will be too large to be distributable through ASF infrastructure.
+
+The hadoop-bos, hadoop-gcp and hadoop-tos artifacts include their dependencies as shaded
+artifacts unless the distribution is built with -DskipShade.
+
+----------------------------------------------------------------------------------
 Installing Hadoop
 
 Look for these HTML files after you build the document by the above commands.
@@ -425,23 +480,23 @@ Installing required dependencies for clean install of macOS 10.14:
 * Install Xcode Command Line Tools
   $ xcode-select --install
 * Install Homebrew
-  $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-* Install OpenJDK 8
-  $ brew tap AdoptOpenJDK/openjdk
-  $ brew cask install adoptopenjdk8
+  $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+* Install OpenJDK 17
+  $ brew install openjdk@17
 * Install maven and tools
   $ brew install maven autoconf automake cmake wget
 * Install native libraries, only openssl is required to compile native code,
 you may optionally install zlib, lz4, etc.
   $ brew install openssl
-* Protocol Buffers 3.21.12 (required to compile native code)
-  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz > protobuf-3.21.12.tar.gz
-  $ tar -zxvf protobuf-3.21.12.tar.gz && cd protobuf-3.21.12
-  $ ./autogen.sh
-  $ ./configure
-  $ make
-  $ make check
-  $ make install
+* Protocol Buffers 3.25.5 (required to build native code)
+  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.25.5.tar.gz > protobuf-3.25.5.tar.gz
+  $ curl -L https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz > abseil-cpp-20230802.1.tar.gz
+  $ tar -zxvf protobuf-3.25.5.tar.gz
+  $ tar -zxvf abseil-cpp-20230802.1.tar.gz --strip-components 1 -C protobuf-3.25.5/third_party/abseil-cpp
+  $ cd protobuf-3.25.5
+  $ cmake -S . -B build -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF
+  $ cmake --build build --parallel $(nproc)
+  $ cmake --install build
   $ protoc --version
 
 Note that building Hadoop 3.1.1/3.1.2/3.2.0 native code from source is broken
@@ -461,55 +516,46 @@ path. This is necessary at least for Homebrewed OpenSSL.
 
 ----------------------------------------------------------------------------------
 
-Building on CentOS 8
+Building on Rocky Linux 8
 
 ----------------------------------------------------------------------------------
 
 
 * Install development tools such as GCC, autotools, OpenJDK and Maven.
   $ sudo dnf group install --with-optional 'Development Tools'
-  $ sudo dnf install java-1.8.0-openjdk-devel maven
+  $ sudo dnf install java-17-openjdk-devel maven
 
 * Install python2 for building documentation.
   $ sudo dnf install python2
 
-* Install Protocol Buffers v3.21.12.
-  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz > protobuf-3.21.12.tar.gz
-  $ tar -zxvf protobuf-3.21.12.tar.gz && cd protobuf-3.21.12
-  $ ./autogen.sh
-  $ ./configure --prefix=/usr/local
-  $ make
-  $ sudo make install
+* Protocol Buffers 3.25.5 (required to build native code)
+  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.25.5.tar.gz > protobuf-3.25.5.tar.gz
+  $ curl -L https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz > abseil-cpp-20230802.1.tar.gz
+  $ tar -zxvf protobuf-3.25.5.tar.gz
+  $ tar -zxvf abseil-cpp-20230802.1.tar.gz --strip-components 1 -C protobuf-3.25.5/third_party/abseil-cpp
+  $ cd protobuf-3.25.5
+  $ cmake -S . -B build -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF
+  $ cmake --build build --parallel $(nproc)
+  $ sudo cmake --install build --prefix /usr/local
   $ cd ..
 
-* Install libraries provided by CentOS 8.
+* Install libraries provided by Rocky Linux 8.
   $ sudo dnf install libtirpc-devel zlib-devel lz4-devel bzip2-devel openssl-devel cyrus-sasl-devel libpmem-devel
 
 * Install GCC 9.3.0
   $ sudo dnf -y install gcc-toolset-9-gcc gcc-toolset-9-gcc-c++
   $ source /opt/rh/gcc-toolset-9/enable
 
-* Install CMake 3.19
-  $ curl -L https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz > cmake-3.19.0.tar.gz
-  $ tar -zxvf cmake-3.19.0.tar.gz && cd cmake-3.19.0
-  $ ./bootstrap
-  $ make -j$(nproc)
-  $ sudo make install
-
 * Install boost.
-  $ curl -L -o boost_1_86_0.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.86.0/boost_1_86_0.tar.bz2/download
-  $ tar xjf boost_1_86_0.tar.bz2
-  $ cd boost_1_86_0
+  $ curl -L -o boost-1.86.0.tar.gz https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz
+  $ tar -xzf boost-1.86.0.tar.gz
+  $ cd boost-1.86.0
   $ ./bootstrap.sh --prefix=/usr/local
   $ ./b2
   $ sudo ./b2 install
 
 * Install optional dependencies (snappy-devel).
   $ sudo dnf --enablerepo=PowerTools install snappy-devel
-
-* Install optional dependencies (libzstd-devel).
-  $ sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-  $ sudo dnf --enablerepo=epel install libzstd-devel
 
 * Install optional dependencies (isa-l).
   $ sudo dnf --enablerepo=PowerTools install nasm
@@ -528,10 +574,10 @@ Building on Windows 10
 Requirements:
 
 * Windows 10
-* JDK 1.8
-* Maven 3.0 or later (maven.apache.org)
+* JDK 17
+* Maven 3.9.15 or later (maven.apache.org, optional, a compatible version is automatically downloaded if using mvnw.cmd)
 * Boost 1.86.0 (boost.org)
-* Protocol Buffers 3.21.12 (https://github.com/protocolbuffers/protobuf/tags)
+* Protocol Buffers 3.25.5 (https://github.com/protocolbuffers/protobuf/tags)
 * CMake 3.19 or newer (cmake.org)
 * Visual Studio 2019 (visualstudio.com)
 * Windows SDK 8.1 (optional, if building CPU rate control for the container executor. Get this from

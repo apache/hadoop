@@ -28,14 +28,15 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCE_LOCAL_NODE_KEY;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests AvailableSpaceBlockPlacementPolicy with balance local.
@@ -53,7 +54,7 @@ public class TestAvailableSpaceBPPBalanceLocal {
   private static NameNode namenode;
   private static NetworkTopology cluster;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     conf = new HdfsConfiguration();
     conf.setFloat(
@@ -137,8 +138,8 @@ public class TestAvailableSpaceBPPBalanceLocal {
               .chooseTarget(FILE, 1, localNode,
                   new ArrayList<DatanodeStorageInfo>(), false, null, BLOCK_SIZE,
                   TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
-      Assert.assertEquals(1, targets.length);
-      Assert.assertEquals(localNode, targets[0].getDatanodeDescriptor());
+      assertEquals(1, targets.length);
+      assertEquals(localNode, targets[0].getDatanodeDescriptor());
     }
   }
 
@@ -154,11 +155,11 @@ public class TestAvailableSpaceBPPBalanceLocal {
                   new ArrayList<DatanodeStorageInfo>(), false, null, BLOCK_SIZE,
                   TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
 
-      Assert.assertEquals(1, targets.length);
+      assertEquals(1, targets.length);
       if (localNode == targets[0].getDatanodeDescriptor()) {
         numLocalChosen++;
       }
     }
-    Assert.assertTrue(numLocalChosen < (CHOOSE_TIMES - numLocalChosen));
+    assertTrue(numLocalChosen < (CHOOSE_TIMES - numLocalChosen));
   }
 }

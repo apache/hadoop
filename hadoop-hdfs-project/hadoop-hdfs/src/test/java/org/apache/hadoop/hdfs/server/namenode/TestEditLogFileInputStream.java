@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -44,8 +44,8 @@ import org.apache.hadoop.hdfs.util.Holder;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
 public class TestEditLogFileInputStream {
@@ -73,9 +73,9 @@ public class TestEditLogFileInputStream {
     // Read the edit log and verify that we got all of the data.
     EnumMap<FSEditLogOpCodes, Holder<Integer>> counts = FSImageTestUtil
         .countEditLogOpTypes(elis);
-    assertThat(counts.get(FSEditLogOpCodes.OP_ADD).held, is(1));
-    assertThat(counts.get(FSEditLogOpCodes.OP_SET_GENSTAMP_V1).held, is(1));
-    assertThat(counts.get(FSEditLogOpCodes.OP_CLOSE).held, is(1));
+    assertThat(counts.get(FSEditLogOpCodes.OP_ADD).held).isEqualTo(1);
+    assertThat(counts.get(FSEditLogOpCodes.OP_SET_GENSTAMP_V1).held).isEqualTo(1);
+    assertThat(counts.get(FSEditLogOpCodes.OP_CLOSE).held).isEqualTo(1);
 
     // Check that length header was picked up.
     assertEquals(FAKE_LOG_DATA.length, elis.length());
@@ -91,9 +91,9 @@ public class TestEditLogFileInputStream {
     // Read the edit log and verify that all of the data is present
     EnumMap<FSEditLogOpCodes, Holder<Integer>> counts = FSImageTestUtil
         .countEditLogOpTypes(elis);
-    assertThat(counts.get(FSEditLogOpCodes.OP_ADD).held, is(1));
-    assertThat(counts.get(FSEditLogOpCodes.OP_SET_GENSTAMP_V1).held, is(1));
-    assertThat(counts.get(FSEditLogOpCodes.OP_CLOSE).held, is(1));
+    assertThat(counts.get(FSEditLogOpCodes.OP_ADD).held).isEqualTo(1);
+    assertThat(counts.get(FSEditLogOpCodes.OP_SET_GENSTAMP_V1).held).isEqualTo(1);
+    assertThat(counts.get(FSEditLogOpCodes.OP_CLOSE).held).isEqualTo(1);
 
     assertEquals(FAKE_LOG_DATA.length, elis.length());
     elis.close();
@@ -103,7 +103,8 @@ public class TestEditLogFileInputStream {
    * Regression test for HDFS-8965 which verifies that
    * FSEditLogFileInputStream#scanOp verifies Op checksums.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testScanCorruptEditLog() throws Exception {
     Configuration conf = new Configuration();
     File editLog = new File(GenericTestUtils.getTempPath("testCorruptEditLog"));
@@ -147,13 +148,13 @@ public class TestEditLogFileInputStream {
     rwf.close();
 
     EditLogFileInputStream elis = new EditLogFileInputStream(editLog);
-    Assert.assertEquals(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION,
+    assertEquals(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION,
         elis.getVersion(true));
-    Assert.assertEquals(1, elis.scanNextOp());
+    assertEquals(1, elis.scanNextOp());
     LOG.debug("Read transaction 1 from " + editLog);
     try {
       elis.scanNextOp();
-      Assert.fail("Expected scanNextOp to fail when op checksum was corrupt.");
+      fail("Expected scanNextOp to fail when op checksum was corrupt.");
     } catch (IOException e) {
       LOG.debug("Caught expected checksum error when reading corrupt " +
           "transaction 2", e);
@@ -167,7 +168,8 @@ public class TestEditLogFileInputStream {
    * with only "-1" bytes is moved aside and does not prevent the Journal
    * node from starting.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testScanEditThatFailedDuringPreAllocate() throws Exception {
     Configuration conf = new Configuration();
     File editLog = new File(GenericTestUtils.getTempPath("testCorruptEditLog"));

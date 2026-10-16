@@ -20,7 +20,10 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.net.HttpURLConnection;
 
+import org.apache.hadoop.classification.VisibleForTesting;
+
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_TOO_MANY_REQUESTS;
 
 /**
  * Abstract Class for Retry policy to be used by {@link AbfsClient}
@@ -38,6 +41,11 @@ public abstract class AbfsRetryPolicy {
    */
   private final String retryPolicyAbbreviation;
 
+  /**
+   * Constructor to initialize max retry count and abbreviation
+   * @param maxRetryCount maximum retry count
+   * @param retryPolicyAbbreviation abbreviation for retry policy
+   */
   protected AbfsRetryPolicy(final int maxRetryCount, final String retryPolicyAbbreviation) {
     this.maxRetryCount = maxRetryCount;
     this.retryPolicyAbbreviation = retryPolicyAbbreviation;
@@ -57,6 +65,8 @@ public abstract class AbfsRetryPolicy {
     return retryCount < maxRetryCount
         && (statusCode < HTTP_CONTINUE
         || statusCode == HttpURLConnection.HTTP_CLIENT_TIMEOUT
+        || statusCode == HttpURLConnection.HTTP_GONE
+        || statusCode == HTTP_TOO_MANY_REQUESTS
         || (statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR
         && statusCode != HttpURLConnection.HTTP_NOT_IMPLEMENTED
         && statusCode != HttpURLConnection.HTTP_VERSION));
@@ -84,7 +94,8 @@ public abstract class AbfsRetryPolicy {
    * Returns maximum number of retries allowed in this retry policy
    * @return max retry count
    */
-  protected int getMaxRetryCount() {
+  @VisibleForTesting
+  public int getMaxRetryCount() {
     return maxRetryCount;
   }
 

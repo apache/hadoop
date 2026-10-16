@@ -24,8 +24,8 @@ import java.util.Map;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +43,7 @@ public class TestS3AEncryption {
     configuration.set("fs.s3a.bucket.bucket1.encryption.context", BUCKET_CONTEXT);
     configuration.set(S3_ENCRYPTION_CONTEXT, GLOBAL_CONTEXT);
     final String result = S3AEncryption.getS3EncryptionContext("bucket1", configuration);
-    Assert.assertEquals(BUCKET_CONTEXT, result);
+    Assertions.assertEquals(BUCKET_CONTEXT, result);
   }
 
   @Test
@@ -52,14 +52,14 @@ public class TestS3AEncryption {
     configuration.set("fs.s3a.bucket.bucket1.encryption.context", BUCKET_CONTEXT);
     configuration.set(S3_ENCRYPTION_CONTEXT, GLOBAL_CONTEXT);
     final String result = S3AEncryption.getS3EncryptionContext("bucket2", configuration);
-    Assert.assertEquals(GLOBAL_CONTEXT.trim(), result);
+    Assertions.assertEquals(GLOBAL_CONTEXT.trim(), result);
   }
 
   @Test
   public void testGetS3EncryptionContextNoSet() throws IOException {
     Configuration configuration = new Configuration(false);
     final String result = S3AEncryption.getS3EncryptionContext("bucket1", configuration);
-    Assert.assertEquals("", result);
+    Assertions.assertEquals("", result);
   }
 
   @Test
@@ -71,7 +71,7 @@ public class TestS3AEncryption {
     final String decoded = new String(Base64.decodeBase64(result), StandardCharsets.UTF_8);
     final TypeReference<Map<String, String>> typeRef = new TypeReference<Map<String, String>>() {};
     final Map<String, String> resultMap = new ObjectMapper().readValue(decoded, typeRef);
-    Assert.assertEquals("hadoop", resultMap.get("project"));
-    Assert.assertEquals("HADOOP-19197", resultMap.get("jira"));
+    Assertions.assertEquals("hadoop", resultMap.get("project"));
+    Assertions.assertEquals("HADOOP-19197", resultMap.get("jira"));
   }
 }

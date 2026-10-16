@@ -18,7 +18,7 @@
 
 # This script is called from the Jenkinsfile, which ultimately runs
 # the CI through Yetus.
-# We use Ubuntu Focal as the main platform for building Hadoop, thus
+# We use Ubuntu Noble as the main platform for building Hadoop, thus
 # it runs for all the PRs. Additionally, we also ensure that
 # Hadoop builds across the supported platforms whenever there's a change
 # in any of the C/C++ files, C/C++ build files or platform changes.
@@ -124,9 +124,9 @@ function run_ci() {
     YETUS_ARGS+=("--mvn-custom-repos")
     YETUS_ARGS+=("--dockermemlimit=22g")
 
-    # test with Java 8 and 11
-    YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-8-openjdk-amd64")
-    YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-11-openjdk-amd64")
+    # test with Java 17 & Java 21
+    YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-17-openjdk-amd64")
+    YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-21-openjdk-amd64")
     YETUS_ARGS+=("--multijdktests=compile")
   fi
 

@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.EnumSet;
@@ -34,10 +35,10 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Tests interaction of XAttrs with HA failover.
@@ -58,7 +59,7 @@ public class TestXAttrsWithHA {
   private NameNode nn1;
   private FileSystem fs;
 
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
@@ -78,7 +79,7 @@ public class TestXAttrsWithHA {
     cluster.transitionToActive(0);
   }
   
-  @After
+  @AfterEach
   public void shutdownCluster() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -89,7 +90,8 @@ public class TestXAttrsWithHA {
   /**
    * Test that xattrs are properly tracked by the standby
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testXAttrsTrackedOnStandby() throws Exception {
     fs.create(path).close();
     fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
@@ -105,9 +107,9 @@ public class TestXAttrsWithHA {
     cluster.transitionToActive(1);
     
     Map<String, byte[]> xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 2);
-    Assert.assertArrayEquals(value1, xattrs.get(name1));
-    Assert.assertArrayEquals(value2, xattrs.get(name2));
+    assertEquals(xattrs.size(), 2);
+    assertArrayEquals(value1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
     
     fs.delete(path, true);
   }

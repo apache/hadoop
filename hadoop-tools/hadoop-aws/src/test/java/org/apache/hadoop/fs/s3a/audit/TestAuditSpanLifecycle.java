@@ -39,6 +39,7 @@ public class TestAuditSpanLifecycle extends AbstractAuditingTest {
   private AuditSpan resetSpan;
 
   @BeforeEach
+  @Override
   public void setup() throws Exception {
     super.setup();
     resetSpan = getManager().getActiveAuditSpan();

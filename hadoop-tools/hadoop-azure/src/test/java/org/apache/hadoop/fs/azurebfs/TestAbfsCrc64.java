@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.fs.azurebfs;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.azurebfs.utils.CRC64;
 /**
@@ -32,7 +32,7 @@ public class TestAbfsCrc64 {
     final String[] testStr = {"#$", "dir_2_ac83abee", "dir_42_976df1f5"};
     final String[] expected = {"f91f7e6a837dbfa8", "203f9fefc38ae97b", "cc0d56eafe58a855"};
     for (int i = 0; i < testStr.length; i++) {
-      Assert.assertEquals(expected[i], Long.toHexString(crc64.compute(testStr[i].getBytes())));
+      Assertions.assertEquals(expected[i], Long.toHexString(crc64.compute(testStr[i].getBytes())));
     }
   }
 }

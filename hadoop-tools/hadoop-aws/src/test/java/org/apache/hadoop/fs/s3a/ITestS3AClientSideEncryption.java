@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.apache.hadoop.test.tags.ScaleTest;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
@@ -160,6 +161,7 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
    * verifying the contents of the uploaded file.
    */
   @Test
+  @ScaleTest
   public void testBigFilePutAndGet() throws IOException {
     maybeSkipTest();
     assume("Scale test disabled: to enable set property " +

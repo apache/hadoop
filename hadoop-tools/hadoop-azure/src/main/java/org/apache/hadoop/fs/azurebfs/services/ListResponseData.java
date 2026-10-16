@@ -36,6 +36,13 @@ public class ListResponseData {
   private String continuationToken;
 
   /**
+   * Default constructor for ListResponseData.
+   */
+  public ListResponseData() {
+    // do nothing
+  }
+
+  /**
    * Returns the list of VersionedFileStatus objects.
    * @return the list of VersionedFileStatus objects
    */

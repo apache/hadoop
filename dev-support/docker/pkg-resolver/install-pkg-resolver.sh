@@ -24,7 +24,7 @@ fi
 chmod a+x pkg-resolver/*.sh pkg-resolver/*.py
 chmod a+r pkg-resolver/*.json
 
-if [ "$1" == "debian:10" ]; then
+if [ "$1" == "debian:11" ]; then
   apt-get -q update
   apt-get -q install -y --no-install-recommends python3 \
     python3-pip \

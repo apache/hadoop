@@ -67,6 +67,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_MAX_INTERVAL_MS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_MAX_INTERVAL_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ENABLE_RETRY_CACHE_DEFAULT;
@@ -103,6 +105,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.text.CaseUtils;
 import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -343,8 +346,8 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.util.JsonUtils;
 import org.apache.hadoop.util.Lists;
-import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -568,6 +571,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   Daemon nnrmthread = null; // NamenodeResourceMonitor thread
 
+  private NameNodeEditLogRoller nnEditLogRollerInt;
   Daemon nnEditLogRoller = null; // NameNodeEditLogRoller thread
 
   // A daemon to periodically clean up corrupt lazyPersist files
@@ -595,6 +599,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Check interval of an active namenode's edit log roller thread 
    */
   private final int editLogRollerInterval;
+  /**
+   * Max interval between each active edit log roll, regardless of transaction threshold (as long
+   * as there are transactions). Ensures active NN always rolls at least once after a certain
+   * duration. Disabled when set to 0 or negative.
+   */
+  private final long editLogRollerMaxIntervalMs;
 
   /**
    * How frequently we scan and unlink corrupt lazyPersist files.
@@ -1005,6 +1015,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.editLogRollerInterval = conf.getInt(
           DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS,
           DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS_DEFAULT);
+      this.editLogRollerMaxIntervalMs = conf.getLong(
+          DFS_NAMENODE_EDIT_LOG_AUTOROLL_MAX_INTERVAL_MS,
+          DFS_NAMENODE_EDIT_LOG_AUTOROLL_MAX_INTERVAL_MS_DEFAULT);
 
       this.lazyPersistFileScrubIntervalSec = conf.getInt(
           DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC,
@@ -1475,8 +1488,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
       nnrmthread.start();
 
-      nnEditLogRoller = new Daemon(new NameNodeEditLogRoller(
-          editLogRollerThreshold, editLogRollerInterval));
+      nnEditLogRollerInt = new NameNodeEditLogRoller(
+          editLogRollerThreshold, editLogRollerInterval,
+          editLogRollerMaxIntervalMs);
+      nnEditLogRoller = new Daemon(nnEditLogRollerInt);
       nnEditLogRoller.start();
 
       if (lazyPersistFileScrubIntervalSec > 0) {
@@ -1507,6 +1522,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       blockManager.checkSafeMode();
       writeUnlock(RwLockMode.GLOBAL, "startActiveServices");
     }
+  }
+
+  @VisibleForTesting
+  public void setLastRollTime(long lastRoll) {
+    nnEditLogRollerInt.lastRollMs = lastRoll;
+  }
+
+  @VisibleForTesting
+  public long getLastRollTime() {
+    return nnEditLogRollerInt.lastRollMs;
   }
 
   private boolean inActiveState() {
@@ -3111,14 +3136,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     writeLock(RwLockMode.GLOBAL);
     LocatedBlock lb;
+    BlockInfo blockInfo;
     try {
       checkOperation(OperationCategory.WRITE);
-      lb = FSDirWriteFileOp.storeAllocatedBlock(
+      Pair<LocatedBlock, BlockInfo> pair = FSDirWriteFileOp.storeAllocatedBlock(
           this, src, fileId, clientName, previous, targets);
+      lb = pair.getLeft();
+      blockInfo = pair.getRight();
     } finally {
       writeUnlock(RwLockMode.GLOBAL, operationName);
     }
     getEditLog().logSync();
+    if (blockInfo != null) {
+      FSDirWriteFileOp.logAllocatedBlock(src, blockInfo);
+    }
     return lb;
   }
 
@@ -3342,6 +3373,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
+    FSPermissionChecker.setRenameToTrash(false);
     try {
       writeLock(RwLockMode.FS);
       try {
@@ -3374,6 +3406,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
+    final boolean renameToTrash = options != null
+        && Arrays.asList(options).contains(Options.Rename.TO_TRASH);
+    FSPermissionChecker.setRenameToTrash(renameToTrash);
     try {
       writeLock(RwLockMode.GLOBAL);
       try {
@@ -3390,6 +3425,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName + " (options=" +
           Arrays.toString(options) + ")", src, dst, null);
       throw e;
+    } finally {
+      FSPermissionChecker.setRenameToTrash(false);
     }
     getEditLog().logSync();
     assert res != null;
@@ -4107,6 +4144,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         boolean remove = iFile.removeLastBlock(blockToDel) != null;
         if (remove) {
           blockManager.removeBlock(storedBlock);
+          FSDirWriteFileOp.persistBlocks(dir, src, iFile, false);
         }
       } else {
         // update last block
@@ -4621,22 +4659,29 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     private boolean shouldRun = true;
     private final long rollThreshold;
     private final long sleepIntervalMs;
+    private final long maxRollIntervalMs;
+    private long lastRollMs;
 
-    public NameNodeEditLogRoller(long rollThreshold, int sleepIntervalMs) {
-        this.rollThreshold = rollThreshold;
+    NameNodeEditLogRoller(long rollThreshold, int sleepIntervalMs, long maxRollIntervalMs) {
+      this.rollThreshold = rollThreshold;
+      this.maxRollIntervalMs = maxRollIntervalMs;
+      this.lastRollMs = monotonicNow();
+      if (maxRollIntervalMs > 0) {
+        this.sleepIntervalMs = Math.min(sleepIntervalMs, maxRollIntervalMs);
+      } else {
         this.sleepIntervalMs = sleepIntervalMs;
+      }
+      LOG.info("Initializing log roller with parameters rollThreshold={}, maxRollIntervalMs={}, "
+          + "sleepIntervalMs={}", rollThreshold, maxRollIntervalMs, sleepIntervalMs);
     }
 
     @Override
     public void run() {
       while (fsRunning && shouldRun) {
         try {
-          long numEdits = getCorrectTransactionsSinceLastLogRoll();
-          if (numEdits > rollThreshold) {
-            FSNamesystem.LOG.info("NameNode rolling its own edit log because"
-                + " number of edits in open segment exceeds threshold of "
-                + rollThreshold);
+          if (shouldRoll()) {
             rollEditLog();
+            lastRollMs = Time.monotonicNow();
           }
         } catch (Exception e) {
           FSNamesystem.LOG.error("Swallowing exception in "
@@ -4650,6 +4695,22 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           break;
         }
       }
+    }
+
+    boolean tooLongSinceLastRoll(long timeSinceLastRollMs) {
+      return maxRollIntervalMs > 0 && timeSinceLastRollMs >= maxRollIntervalMs;
+    }
+
+    private boolean shouldRoll() {
+      long numEdits = getCorrectTransactionsSinceLastLogRoll();
+      long timeSinceLastRollMs = Time.monotonicNow() - lastRollMs;
+      if (numEdits > rollThreshold || (tooLongSinceLastRoll(timeSinceLastRollMs) && numEdits > 1)) {
+        FSNamesystem.LOG.info(
+            "Rolling edit logs: numEdits={}, threshold={}, timeSinceLastRollMs={}", numEdits,
+            rollThreshold, timeSinceLastRollMs);
+        return true;
+      }
+      return false;
     }
 
     public void stop() {
@@ -4953,7 +5014,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     Map<String, Object> info = new HashMap<String, Object>();
     info.put("SnapshottableDirectories", this.getNumSnapshottableDirs());
     info.put("Snapshots", this.getNumSnapshots());
-    return JSON.toString(info);
+    return JsonUtils.toString(info);
   }
 
   @Override // FSNamesystemMBean
@@ -6776,7 +6837,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           Util.getBlockPoolUsedPercentStdDev(storageReports));
       info.put(node.getXferAddrWithHostname(), innerinfo.build());
     }
-    return JSON.toString(info);
+    return JsonUtils.toString(info);
   }
 
   /**
@@ -6800,7 +6861,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .build();
       info.put(node.getXferAddrWithHostname(), innerinfo);
     }
-    return JSON.toString(info);
+    return JsonUtils.toString(info);
   }
 
   /**
@@ -6831,7 +6892,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .build();
       info.put(node.getXferAddrWithHostname(), innerinfo);
     }
-    return JSON.toString(info);
+    return JsonUtils.toString(info);
   }
 
   /**
@@ -6860,7 +6921,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .build();
       nodesMap.put(node.getXferAddrWithHostname(), attrMap);
     }
-    return JSON.toString(nodesMap);
+    return JsonUtils.toString(nodesMap);
   }
 
   private long getLastContact(DatanodeDescriptor alivenode) {
@@ -6906,7 +6967,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     statusMap.put("failed", failedDirs);
     
-    return JSON.toString(statusMap);
+    return JsonUtils.toString(statusMap);
   }
 
   @Override // NameNodeMXBean
@@ -6954,7 +7015,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     innerInfo.put("stdDev", StringUtils.format("%.2f%%", dev));
     info.put("nodeUsage", innerInfo);
 
-    return JSON.toString(info);
+    return JsonUtils.toString(info);
   }
 
   @Override  // NameNodeMXBean
@@ -6988,7 +7049,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         jasList.add(jasMap);
       }
     }
-    return JSON.toString(jasList);
+    return JsonUtils.toString(jasList);
   }
 
   @Override // NameNodeMxBean
@@ -6998,7 +7059,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         Long.toString(this.getFSImage().getLastAppliedOrWrittenTxId()));
     txnIdMap.put("MostRecentCheckpointTxId",
         Long.toString(this.getFSImage().getMostRecentCheckpointTxId()));
-    return JSON.toString(txnIdMap);
+    return JsonUtils.toString(txnIdMap);
   }
   
   @Override // NameNodeMXBean
@@ -7052,7 +7113,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   @Override  // NameNodeMXBean
   public String getCorruptFiles() {
-    return JSON.toString(getCorruptFilesList());
+    return JsonUtils.toString(getCorruptFilesList());
   }
 
   @Override // NameNodeMXBean
@@ -7173,6 +7234,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @VisibleForTesting
   public EditLogTailer getEditLogTailer() {
     return editLogTailer;
+  }
+
+  @VisibleForTesting
+  public long getStandbyLastCheckpointTime() {
+    return standbyCheckpointer.getLastCheckpointTime();
   }
   
   @VisibleForTesting
@@ -9127,7 +9193,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     Map<String, String> resultMap = new HashMap<String, String>();
     resultMap.put("isSupported", Boolean.toString(result.isSupported()));
     resultMap.put("resultMessage", result.getResultMessage());
-    return JSON.toString(resultMap);
+    return JsonUtils.toString(resultMap);
   }
 
   private ECTopologyVerifierResult getEcTopologyVerifierResultForEnabledPolicies() {

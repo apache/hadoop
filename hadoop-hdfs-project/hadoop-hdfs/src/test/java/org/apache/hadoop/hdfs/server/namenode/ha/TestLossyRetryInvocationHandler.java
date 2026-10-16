@@ -22,7 +22,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This test makes sure that when

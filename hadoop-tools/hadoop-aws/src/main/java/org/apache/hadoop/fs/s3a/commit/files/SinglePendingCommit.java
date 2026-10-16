@@ -70,7 +70,7 @@ import static org.apache.hadoop.util.StringUtils.join;
 @SuppressWarnings("unused")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class SinglePendingCommit extends PersistentCommitData<SinglePendingCommit>
+public final class SinglePendingCommit extends PersistentCommitData<SinglePendingCommit>
     implements Iterable<UploadEtag> {
 
   /**

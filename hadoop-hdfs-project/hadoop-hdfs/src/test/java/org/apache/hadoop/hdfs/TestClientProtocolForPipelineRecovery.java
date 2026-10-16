@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import java.util.function.Supplier;
 
 import org.apache.hadoop.conf.Configuration;
@@ -57,6 +56,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
@@ -66,6 +67,7 @@ import org.slf4j.LoggerFactory;
 /**
  * This tests pipeline recovery related client protocol works correct or not.
  */
+@Tag("slow")
 public class TestClientProtocolForPipelineRecovery {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestClientProtocolForPipelineRecovery.class);

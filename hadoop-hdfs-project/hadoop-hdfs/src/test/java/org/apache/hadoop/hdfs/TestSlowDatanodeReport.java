@@ -23,10 +23,10 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +51,7 @@ public class TestSlowDatanodeReport {
 
   private MiniDFSCluster cluster;
 
-  @Before
+  @BeforeEach
   public void testSetup() throws Exception {
     Configuration conf = new Configuration();
 
@@ -64,7 +64,7 @@ public class TestSlowDatanodeReport {
     cluster.waitActive();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     cluster.shutdown();
   }
@@ -78,7 +78,7 @@ public class TestSlowDatanodeReport {
         ImmutableMap.of(slowNode.getDatanodeHostname() + ":" + slowNode.getIpcPort(),
             outlierMetrics));
     DistributedFileSystem distributedFileSystem = cluster.getFileSystem();
-    Assert.assertEquals(3, distributedFileSystem.getDataNodeStats().length);
+    Assertions.assertEquals(3, distributedFileSystem.getDataNodeStats().length);
     GenericTestUtils.waitFor(() -> {
       try {
         DatanodeInfo[] slowNodeInfo = distributedFileSystem.getSlowDatanodeStats();
@@ -90,13 +90,13 @@ public class TestSlowDatanodeReport {
       }
     }, 2000, 180000, "Slow nodes could not be detected");
     LOG.info("Slow peer report: {}", cluster.getNameNode().getSlowPeersReport());
-    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().length() > 0);
-    Assert.assertTrue(
+    Assertions.assertTrue(cluster.getNameNode().getSlowPeersReport().length() > 0);
+    Assertions.assertTrue(
         cluster.getNameNode().getSlowPeersReport().contains(slowNode.getDatanodeHostname()));
-    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("15.5"));
-    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("1.245"));
-    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("2.69375"));
-    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("4.5667"));
+    Assertions.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("15.5"));
+    Assertions.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("1.245"));
+    Assertions.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("2.69375"));
+    Assertions.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("4.5667"));
   }
 
   @Test
@@ -111,7 +111,7 @@ public class TestSlowDatanodeReport {
         dataNodes.get(2).getDatanodeHostname() + ":" + dataNodes.get(2).getIpcPort(),
         outlierMetrics2));
     DistributedFileSystem distributedFileSystem = cluster.getFileSystem();
-    Assert.assertEquals(3, distributedFileSystem.getDataNodeStats().length);
+    Assertions.assertEquals(3, distributedFileSystem.getDataNodeStats().length);
     GenericTestUtils.waitFor(() -> {
       try {
         DatanodeInfo[] slowNodeInfo = distributedFileSystem.getSlowDatanodeStats();
@@ -123,15 +123,15 @@ public class TestSlowDatanodeReport {
       }
     }, 2000, 200000, "Slow nodes could not be detected");
     LOG.info("Slow peer report: {}", cluster.getNameNode().getSlowPeersReport());
-    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().length() > 0);
-    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport()
+    Assertions.assertTrue(cluster.getNameNode().getSlowPeersReport().length() > 0);
+    Assertions.assertTrue(cluster.getNameNode().getSlowPeersReport()
         .contains(dataNodes.get(1).getDatanodeHostname()));
-    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport()
+    Assertions.assertTrue(cluster.getNameNode().getSlowPeersReport()
         .contains(dataNodes.get(2).getDatanodeHostname()));
-    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("14.5"));
-    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("18.7"));
-    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("23.568204"));
-    Assert.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("22.4945"));
+    Assertions.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("14.5"));
+    Assertions.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("18.7"));
+    Assertions.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("23.568204"));
+    Assertions.assertTrue(cluster.getNameNode().getSlowPeersReport().contains("22.4945"));
   }
 
 }

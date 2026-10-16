@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
-import org.junit.Assume;
-
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
@@ -28,6 +26,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Helper class to check the state of a directory as implicit or explicit.
@@ -54,7 +53,7 @@ public final class DirectoryStateHelper {
    */
   public static boolean isImplicitDirectory(Path path, AzureBlobFileSystem fs,
       TracingContext testTracingContext) throws Exception {
-    Assume.assumeFalse(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext));
+    assumeThat(fs.getAbfsStore().getIsNamespaceEnabled(testTracingContext)).isFalse();
     path = new Path(fs.makeQualified(path).toUri().getPath());
     String relativePath = fs.getAbfsStore().getRelativePath(path);
 

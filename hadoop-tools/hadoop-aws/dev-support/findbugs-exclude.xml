@@ -86,4 +86,13 @@
     <Method name="submit"/>
     <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
   </Match>
+  <!-- Despite adding `final` as suggested, spotbugs kept complaining. -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.s3a.commit.files.PendingSet"/>
+    <Bug pattern="MC_OVERRIDABLE_METHOD_CALL_IN_READ_OBJECT"/>
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit"/>
+    <Bug pattern="MC_OVERRIDABLE_METHOD_CALL_IN_READ_OBJECT"/>
+  </Match>
 </FindBugsFilter>

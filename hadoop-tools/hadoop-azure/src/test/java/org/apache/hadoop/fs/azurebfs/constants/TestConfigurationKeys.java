@@ -32,6 +32,9 @@ public final class TestConfigurationKeys {
   public static final String FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT = "fs.azure.test.namespace.enabled";
   public static final String FS_AZURE_TEST_APPENDBLOB_ENABLED = "fs.azure.test.appendblob.enabled";
   public static final String FS_AZURE_TEST_CPK_ENABLED = "fs.azure.test.cpk.enabled";
+  public static final String FS_AZURE_SCALE_TEST_HUGE_UPLOAD = "fs.azure.scale.test.huge.upload";
+  public static final String FS_AZURE_SCALE_TEST_ENABLED = "fs.azure.scale.test.enabled";
+  public static final String SCALE_TEST_OPERATION_COUNT = "scale.test.operation.count";
 
   public static final String FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_ID = "fs.azure.account.oauth2.contributor.client.id";
   public static final String FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_SECRET = "fs.azure.account.oauth2.contributor.client.secret";
@@ -54,6 +57,9 @@ public final class TestConfigurationKeys {
   public static final String FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_TENANT_ID = "fs.azure.test.app.service.principal.tenant.id";
 
   public static final String FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID = "fs.azure.test.app.service.principal.object.id";
+
+  public static final String FS_AZURE_TEST_END_USER_TENANT_ID = "fs.azure.test.end.user.tenant.id";
+  public static final String FS_AZURE_TEST_END_USER_OBJECT_ID = "fs.azure.test.end.user.object.id";
 
   public static final String FS_AZURE_TEST_APP_ID = "fs.azure.test.app.id";
 

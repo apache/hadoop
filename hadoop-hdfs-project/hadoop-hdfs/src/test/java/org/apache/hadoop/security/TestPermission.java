@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.security;
 
-import static org.hamcrest.CoreMatchers.startsWith;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -44,7 +42,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /** Unit tests for permission */
 public class TestPermission {
@@ -227,8 +225,9 @@ public class TestPermission {
       // following dir/file creations are legal
       nnfs.mkdirs(CHILD_DIR1);
       status = nnfs.getFileStatus(CHILD_DIR1);
-      assertThat("Expect 755 = 777 (default dir) - 022 (default umask)",
-          status.getPermission().toString(), is("rwxr-xr-x"));
+      assertThat(status.getPermission().toString())
+          .as("Expect 755 = 777 (default dir) - 022 (default umask)")
+          .isEqualTo("rwxr-xr-x");
       out = nnfs.create(CHILD_FILE1);
       status = nnfs.getFileStatus(CHILD_FILE1);
       assertTrue(status.getPermission().toString().equals("rw-r--r--"));
@@ -243,8 +242,9 @@ public class TestPermission {
       // mkdirs with null permission
       nnfs.mkdirs(CHILD_DIR3, null);
       status = nnfs.getFileStatus(CHILD_DIR3);
-      assertThat("Expect 755 = 777 (default dir) - 022 (default umask)",
-          status.getPermission().toString(), is("rwxr-xr-x"));
+      assertThat(status.getPermission().toString())
+          .as("Expect 755 = 777 (default dir) - 022 (default umask)")
+          .isEqualTo("rwxr-xr-x");
 
       // following read is legal
       byte dataIn[] = new byte[FILE_LEN];
@@ -318,17 +318,20 @@ public class TestPermission {
     Path file = createFile(userfs, "testSuperCanChangeOwnerGroup");
     nnfs.setOwner(file, NOUSER, NOGROUP);
     FileStatus status = nnfs.getFileStatus(file);
-    assertThat("A super user can change owner", status.getOwner(),
-        is(NOUSER));
-    assertThat("A super user can change group", status.getGroup(),
-        is(NOGROUP));
+    assertThat(status.getOwner())
+        .as("A super user can change owner")
+        .isEqualTo(NOUSER);
+    assertThat(status.getGroup())
+        .as("A super user can change group")
+        .isEqualTo(NOGROUP);
   }
 
   private void testNonSuperCanChangeToOwnGroup() throws Exception {
     Path file = createFile(userfs, "testNonSuperCanChangeToOwnGroup");
     userfs.setOwner(file, null, GROUP_NAMES[1]);
-    assertThat("A non-super user can change a file to own group",
-        nnfs.getFileStatus(file).getGroup(), is(GROUP_NAMES[1]));
+    assertThat(nnfs.getFileStatus(file).getGroup())
+        .as("A non-super user can change a file to own group")
+        .isEqualTo(GROUP_NAMES[1]);
   }
 
   private void testNonSuperCannotChangeToOtherGroup() throws Exception {
@@ -338,8 +341,9 @@ public class TestPermission {
       fail("Expect ACE when a non-super user tries to change a file to a " +
           "group where the user does not belong.");
     } catch (AccessControlException e) {
-      assertThat(e.getMessage(), startsWith("User " +
-          userfs.getFileStatus(file).getOwner() + " does not belong to"));
+      assertThat(e.getMessage())
+          .startsWith("User " +
+              userfs.getFileStatus(file).getOwner() + " does not belong to");
     }
   }
 
@@ -351,7 +355,7 @@ public class TestPermission {
       fail("Expect ACE when a non-super user tries to set group for a file " +
           "not owned");
     } catch (AccessControlException e) {
-      assertThat(e.getMessage(), startsWith("Permission denied"));
+      assertThat(e.getMessage()).startsWith("Permission denied");
     }
   }
 
@@ -373,9 +377,9 @@ public class TestPermission {
       userfs.setOwner(file, NOUSER, null);
       fail("Expect ACE when a non-super user tries to change owner");
     } catch (AccessControlException e) {
-      assertThat(e.getMessage(), startsWith("User " +
+      assertThat(e.getMessage()).startsWith("User " +
           userfs.getFileStatus(file).getOwner() +
-          " is not a super user (non-super user cannot change owner)"));
+          " is not a super user (non-super user cannot change owner)");
     }
   }
 
@@ -386,7 +390,7 @@ public class TestPermission {
       userfs.setOwner(file, USER_NAME, null);
       fail("Expect ACE when a non-super user tries to own a file");
     } catch (AccessControlException e) {
-      assertThat(e.getMessage(), startsWith("Permission denied"));
+      assertThat(e.getMessage()).startsWith("Permission denied");
     }
   }
 
@@ -400,9 +404,9 @@ public class TestPermission {
       fail("Expect ACE or FNFE when a non-super user tries to change owner " +
           "for a non-existent file");
     } catch (AccessControlException e) {
-      assertThat(e.getMessage(), startsWith("User " +
+      assertThat(e.getMessage()).startsWith("User " +
           userfs.getFileStatus(file).getOwner() +
-          " is not a super user (non-super user cannot change owner)"));
+          " is not a super user (non-super user cannot change owner)");
     } catch (FileNotFoundException e) {
     }
   }

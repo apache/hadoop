@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -39,8 +39,8 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetFactory;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.util.DataChecksum;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * this class tests the methods of the  SimulatedFSDataset.
@@ -52,17 +52,13 @@ public class TestSimulatedFSDataset {
   static final int BLOCK_LENGTH_MULTIPLIER = 79;
   static final long FIRST_BLK_ID = 1;
 
-  private final int storageCount;
+  private int storageCount = 1;
 
-  public TestSimulatedFSDataset() {
-    this(1);
+  protected void pTestSimulatedFSDataset(int pStorageCount) {
+    this.storageCount = pStorageCount;
   }
 
-  protected TestSimulatedFSDataset(int storageCount) {
-    this.storageCount = storageCount;
-  }
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
     SimulatedFSDataset.setFactory(conf);
@@ -141,7 +137,7 @@ public class TestSimulatedFSDataset {
     ExtendedBlock b = new ExtendedBlock(bpid, FIRST_BLK_ID, 5, 0);
     try {
       assertTrue(fsdataset.getMetaDataInputStream(b) == null);
-      assertTrue("Expected an IO exception", false);
+      assertTrue(false, "Expected an IO exception");
     } catch (IOException e) {
       // ok - as expected
     }
@@ -250,7 +246,7 @@ public class TestSimulatedFSDataset {
       sfsdataset = getSimulatedFSDataset();
       sfsdataset.addBlockPool(bpid, conf);
       injectBlocksFromBlockReport(fsdataset, sfsdataset);
-      assertTrue("Expected an IO exception", false);
+      assertTrue(false, "Expected an IO exception");
     } catch (IOException e) {
       // ok - as expected
     }
@@ -261,21 +257,21 @@ public class TestSimulatedFSDataset {
     assertFalse(fsdataset.isValidBlock(b));
     try {
       fsdataset.getLength(b);
-      assertTrue("Expected an IO exception", false);
+      assertTrue(false, "Expected an IO exception");
     } catch (IOException e) {
       // ok - as expected
     }
     
     try {
       fsdataset.getBlockInputStream(b);
-      assertTrue("Expected an IO exception", false);
+      assertTrue(false, "Expected an IO exception");
     } catch (IOException e) {
       // ok - as expected
     }
     
     try {
       fsdataset.finalizeBlock(b, false);
-      assertTrue("Expected an IO exception", false);
+      assertTrue(false, "Expected an IO exception");
     } catch (IOException e) {
       // ok - as expected
     }

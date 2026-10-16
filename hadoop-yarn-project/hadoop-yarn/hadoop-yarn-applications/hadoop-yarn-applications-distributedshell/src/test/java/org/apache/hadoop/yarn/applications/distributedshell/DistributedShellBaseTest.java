@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -523,13 +524,21 @@ public abstract class DistributedShellBaseTest {
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
     conf.set("mapreduce.jobhistory.address",
         "0.0.0.0:" + ServerSocketUtil.getPort(10021, 10));
-    // Enable ContainersMonitorImpl
+    // Enable ContainersMonitorImpl so that resource utilization is tracked
+    // (needed by opportunistic container allocation below). Do NOT enable the
+    // polling-based pmem/vmem checks: these tests are not exercising memory
+    // enforcement, and their containers can legitimately exceed the tiny
+    // MIN_ALLOCATION_MB limit. Before YARN-11967 these checks were silently
+    // skipped because strictMemoryEnforcement defaulted to true; now that
+    // strictMemoryEnforcement requires yarn.nodemanager.resource.memory.enabled
+    // as well (default false), the polling check would actually run and kill
+    // the containers, breaking these tests. Keep the checks disabled here.
     conf.set(YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR,
         LinuxResourceCalculatorPlugin.class.getName());
     conf.set(YarnConfiguration.NM_CONTAINER_MON_PROCESS_TREE,
         ProcfsBasedProcessTree.class.getName());
-    conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, true);
-    conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, false);
+    conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, false);
     conf.setBoolean(
         YarnConfiguration.YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING, true);
     conf.setBoolean(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED,
@@ -545,6 +554,20 @@ public abstract class DistributedShellBaseTest {
         getTimelineVersion());
     // setup the configuration of relevant for each TimelineService version.
     customizeConfiguration(conf);
+
+    // To avoid data conflicts between unit tests caused by sharing the common directory
+    // file:/tmp/hadoop-yarn-jenkins/node-labels—such as one test reading data written by another
+    // and resulting in failures—we have optimized the directory logic.
+    // Each unit test will now generate a unique directory path based on its method name.
+    // For example:
+    // file:/tmp/hadoop-yarn-jenkins/<method-name>/node-labels
+    String nodeLabels = "file:///tmp/hadoop-yarn-" +
+        UserGroupInformation.getCurrentUser().getShortUserName() +
+        "/" + methodName + "/node-labels";
+    java.nio.file.Path nodeLabelsPath = Paths.get(nodeLabels);
+    Files.deleteIfExists(nodeLabelsPath);
+    conf.set(YarnConfiguration.FS_NODE_LABELS_STORE_ROOT_DIR, nodeLabels);
+
     // setup the yarn cluster.
     setUpYarnCluster(numNodeManagers, conf);
   }

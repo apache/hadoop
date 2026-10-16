@@ -39,6 +39,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
+import org.apache.hadoop.test.tags.ScaleTest;
 import org.apache.hadoop.util.LineReader;
 
 import org.assertj.core.api.Assertions;
@@ -61,6 +62,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disablePrefetching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getInputStreamStatistics;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getS3AInputStream;
+import static org.apache.hadoop.fs.s3a.impl.streams.InputStreamType.Classic;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticMinimum;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMaximumStatistic;
@@ -79,6 +81,7 @@ import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 /**
  * Look at the performance of S3a Input Stream Reads.
  */
+@ScaleTest
 public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestS3AInputStreamPerformance.class);
@@ -102,6 +105,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   @Override
   protected Configuration createScaleConfiguration() {
     Configuration conf = disablePrefetching(super.createScaleConfiguration());
+    conf.setEnum(INPUT_STREAM_TYPE, Classic);
     if (isUsingDefaultExternalDataFile(conf)) {
       S3ATestUtils.removeBaseAndBucketOverrides(
           conf,

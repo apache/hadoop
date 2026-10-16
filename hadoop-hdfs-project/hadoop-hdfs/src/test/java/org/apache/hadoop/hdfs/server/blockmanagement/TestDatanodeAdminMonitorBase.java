@@ -18,8 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +28,9 @@ import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TestDatanodeAdminMonitorBase {
   public static final Logger LOG = LoggerFactory.getLogger(TestDatanodeAdminMonitorBase.class);
@@ -67,8 +69,8 @@ public class TestDatanodeAdminMonitorBase {
 
     for (int i = 0; i < NUM_DATANODE; i++) {
       final DatanodeDescriptor dn = pendingNodes.poll();
-      Assert.assertNotNull(dn);
-      Assert.assertEquals(ORDERED_LAST_UPDATE_TIMES[i], dn.getLastUpdate());
+      assertNotNull(dn);
+      assertEquals(ORDERED_LAST_UPDATE_TIMES[i], dn.getLastUpdate());
     }
   }
 
@@ -83,9 +85,9 @@ public class TestDatanodeAdminMonitorBase {
         nodes.stream().sorted(DatanodeAdminMonitorBase.PENDING_NODES_QUEUE_COMPARATOR.reversed())
             .collect(Collectors.toList());
 
-    Assert.assertEquals(NUM_DATANODE, reverseOrderNodes.size());
+    assertEquals(NUM_DATANODE, reverseOrderNodes.size());
     for (int i = 0; i < NUM_DATANODE; i++) {
-      Assert.assertEquals(REVERSE_ORDER_LAST_UPDATE_TIMES[i],
+      assertEquals(REVERSE_ORDER_LAST_UPDATE_TIMES[i],
           reverseOrderNodes.get(i).getLastUpdate());
     }
   }

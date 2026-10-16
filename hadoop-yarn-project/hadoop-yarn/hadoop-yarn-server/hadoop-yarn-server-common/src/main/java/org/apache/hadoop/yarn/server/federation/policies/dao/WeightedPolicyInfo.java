@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.xml.bind.annotation.XmlAccessType;
@@ -52,8 +53,11 @@ public class WeightedPolicyInfo {
   private static final Logger LOG =
       LoggerFactory.getLogger(WeightedPolicyInfo.class);
   private static ObjectMapper mapper = new ObjectMapper();
+  @JsonProperty("routerPolicyWeights")
   private Map<SubClusterIdInfo, Float> routerPolicyWeights = new HashMap<>();
+  @JsonProperty("amrmPolicyWeights")
   private Map<SubClusterIdInfo, Float> amrmPolicyWeights = new HashMap<>();
+  @JsonProperty("headroomAlpha")
   private float headroomAlpha;
 
   public WeightedPolicyInfo() {

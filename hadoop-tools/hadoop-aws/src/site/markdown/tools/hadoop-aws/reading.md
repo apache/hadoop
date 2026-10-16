@@ -163,6 +163,15 @@ configured to use the vector IO API, it is likely to be significantly
 faster to use the classic stream and its parallel reads.
 
 
+## S3A "fadvise" input policy support: `fs.s3a.experimental.input.fadvise`
+
+The S3A Filesystem client supports the notion of input policies, similar
+to that of the Posix `fadvise()` API call. This tunes the behavior of the S3A
+client to optimise HTTP GET requests for the different use cases.
+
+See [Improving data input performance through fadvise](./performance.html#fadvise)
+for the details.
+
 ## Developer Topics
 
 ### Stream IOStatistics

@@ -702,6 +702,8 @@ public class TestRPC extends TestRpcBase {
 
     // Expect to succeed
     myConf.set(ACL_CONFIG, "*");
+    RPC.setProtocolEngine(myConf, TestRpcService.class, ProtobufRpcEngine2.class);
+
     doRPCs(myConf, false);
 
     // Reset authorization to expect failure
@@ -1941,8 +1943,12 @@ public class TestRPC extends TestRpcBase {
           proxy.ping(null, newEmptyRequest());
           fail(reqName + " didn't fail");
         } catch (ServiceException e) {
-          RemoteException re = (RemoteException)e.getCause();
-          assertEquals(expectedIOE, re.unwrapRemoteException(), reqName);
+          if (e.getCause() instanceof RemoteException) {
+            RemoteException re = (RemoteException)e.getCause();
+            assertEquals(expectedIOE, re.unwrapRemoteException(), reqName);
+          } else {
+            throw e;
+          }
         }
         // check authorizations to ensure new connection when expected,
         // then conclusively determine if connections are disconnected
@@ -2112,6 +2118,31 @@ public class TestRPC extends TestRpcBase {
     }
   }
 
+
+  /**
+   * Test that a Protobuf-only RPC server rejects requests for RpcKinds
+   * that have no registered protocols, without deserializing the payload.
+   */
+  @Test
+  @Timeout(value = 30)
+  public void testUnregisteredRpcKindRejectedWithoutDeserialization()
+      throws Exception {
+    // Standard test server: only RPC_PROTOCOL_BUFFER protocols are registered.
+    RPC.Server server = setupTestServer(conf, 1);
+    try {
+      // RPC_PROTOCOL_BUFFER has registered protocols — must be accepted.
+      assertThat(server.hasRegisteredProtocols(RPC.RpcKind.RPC_PROTOCOL_BUFFER))
+          .as("RPC_PROTOCOL_BUFFER should have registered protocols")
+          .isTrue();
+
+      // RPC_BUILTIN has no protocols registered on this server — must be rejected.
+      assertThat(server.hasRegisteredProtocols(RPC.RpcKind.RPC_BUILTIN))
+          .as("RPC_BUILTIN should have no registered protocols on a Protobuf-only server")
+          .isFalse();
+    } finally {
+      server.stop();
+    }
+  }
 
   public static void main(String[] args) throws Exception {
     new TestRPC().testCallsInternal(conf);

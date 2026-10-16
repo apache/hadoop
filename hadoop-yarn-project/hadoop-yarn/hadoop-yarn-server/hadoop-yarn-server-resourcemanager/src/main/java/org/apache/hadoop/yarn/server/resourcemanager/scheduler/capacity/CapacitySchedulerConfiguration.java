@@ -73,6 +73,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -726,9 +727,21 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
     Map<String, String> config = new HashMap<String, String>();
     String confPrefix = getQueuePrefix(queue) + ORDERING_POLICY + ".";
-    for (Map.Entry<String, String> kv : this) {
-      if (kv.getKey().startsWith(confPrefix)) {
-         config.put(kv.getKey().substring(confPrefix.length()), kv.getValue());
+    // Do not iterate over this: Configuration.iterator() copies every
+    // property on each call, once per leaf queue. Apply the same String
+    // filter under the same lock instead. The cached ConfigurationProperties
+    // is not used because set() does not invalidate it and it does not
+    // filter non-String entries.
+    Properties props = getProps();
+    synchronized (props) {
+      for (Map.Entry<Object, Object> kv : props.entrySet()) {
+        if (kv.getKey() instanceof String && kv.getValue() instanceof String) {
+          String key = (String) kv.getKey();
+          if (key.startsWith(confPrefix)) {
+            config.put(key.substring(confPrefix.length()),
+                (String) kv.getValue());
+          }
+        }
       }
     }
     orderingPolicy.configure(config);

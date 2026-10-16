@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +56,15 @@ public final class AbfsIoUtils {
         if (key == null) {
           key = "HTTP Response";
         }
-        String values = StringUtils.join(";", entry.getValue());
+        List<String> valuesList = entry.getValue();
+        if (valuesList == null) {
+          valuesList = Collections.emptyList();
+        } else {
+          valuesList = valuesList.stream()
+              .map(v -> v == null ? "" : v) // replace null with empty string
+              .collect(Collectors.toList());
+        }
+        String values = StringUtils.join(";", valuesList);
         if (key.contains("Cookie")) {
           values = "*cookie info*";
         }

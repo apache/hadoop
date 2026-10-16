@@ -1643,7 +1643,7 @@ public class DFSUtil {
    * @param alias name of the credential to retreive
    * @return String credential value or null
    */
-  static String getPassword(Configuration conf, String alias) {
+  public static String getPassword(Configuration conf, String alias) {
     String password = null;
     try {
       char[] passchars = conf.getPassword(alias);

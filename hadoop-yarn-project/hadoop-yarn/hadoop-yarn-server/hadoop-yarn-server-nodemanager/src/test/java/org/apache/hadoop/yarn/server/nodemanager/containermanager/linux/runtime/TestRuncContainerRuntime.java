@@ -64,7 +64,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.runners.Parameterized;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -156,7 +155,6 @@ public class TestRuncContainerRuntime {
   private RuncManifestToResourcesPlugin mockRuncManifestToResourcesPlugin =
       mock(HdfsManifestToResourcesPlugin.class);
 
-  @Parameterized.Parameters(name = "https={0}")
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][] {
         {true}, {false}

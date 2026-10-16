@@ -17,7 +17,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.TestProperties;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -83,7 +83,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
     config.register(new JerseyBinder());
     config.register(RMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }
@@ -156,9 +156,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
         .get(Response.class);
     JSONObject json = response.readEntity(JSONObject.class);
     JSONObject jsonAppAttempts = json.getJSONObject("appAttempts");
-    JSONObject jsonAppAttempt = jsonAppAttempts.getJSONObject("appAttempt");
-    JSONArray jsonArray = new JSONArray();
-    jsonArray.put(jsonAppAttempt);
+    JSONArray jsonArray = jsonAppAttempts.getJSONArray("appAttempt");
     JSONObject info = jsonArray.getJSONObject(0);
     String logsLink = info.getString("logsLink");
     String containerId = app1.getCurrentAppAttempt().getMasterContainer()

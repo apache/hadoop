@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.apache.hadoop.test.tags.ScaleTest;
 import org.apache.hadoop.util.functional.RemoteIterators;
 
 import org.junit.jupiter.api.Test;
@@ -68,6 +69,7 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_RE
 /**
  * Test the performance of listing files/directories.
  */
+@ScaleTest
 public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestS3ADirectoryPerformance.class);

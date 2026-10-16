@@ -25,7 +25,10 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
-import org.junit.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,6 +36,8 @@ import java.lang.reflect.Field;
 import java.util.Random;
 
 import static org.mockito.Mockito.mock;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Functional test for CGroupsResourceCalculator to compare two resource
@@ -46,9 +51,9 @@ public class TestCompareResourceCalculators {
   private String cgroupMemory = null;
   public static final long SHMEM_KB = 100 * 1024;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException, YarnException {
-    Assume.assumeTrue(SystemUtils.IS_OS_LINUX);
+    assumeTrue(SystemUtils.IS_OS_LINUX);
 
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
@@ -64,13 +69,11 @@ public class TestCompareResourceCalculators {
     } catch (ResourceHandlerException e) {
       throw new YarnException("Cannot access cgroups", e);
     }
-    Assume.assumeNotNull(module);
-    Assume.assumeNotNull(
-        ResourceHandlerModule.getCGroupsHandler()
-            .getControllerPath(CGroupsHandler.CGroupController.CPU));
-    Assume.assumeNotNull(
-        ResourceHandlerModule.getCGroupsHandler()
-            .getControllerPath(CGroupsHandler.CGroupController.MEMORY));
+    assumeTrue(module != null);
+    assumeTrue(ResourceHandlerModule.getCGroupsHandler()
+        .getControllerPath(CGroupsHandler.CGroupController.CPU) != null);
+    assumeTrue(ResourceHandlerModule.getCGroupsHandler()
+        .getControllerPath(CGroupsHandler.CGroupController.MEMORY) != null);
 
     Random random = new Random(System.currentTimeMillis());
     cgroup = Long.toString(random.nextLong());
@@ -80,14 +83,14 @@ public class TestCompareResourceCalculators {
         .getPathForCGroup(CGroupsHandler.CGroupController.MEMORY, cgroup);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws YarnException {
     stopTestProcess();
   }
 
 
   // Ignored in automated tests due to flakiness by design
-  @Ignore
+  @Disabled
   @Test
   public void testCompareResults()
       throws YarnException, InterruptedException, IOException {
@@ -118,20 +121,20 @@ public class TestCompareResourceCalculators {
     long pmem1 = metric1.getRssMemorySize(0);
     long pmem2 = metric2.getRssMemorySize(0);
     System.out.println(pmem1 + " " + pmem2);
-    Assert.assertTrue("pmem should be invalid " + pmem1 + " " + pmem2,
-            pmem1 == ResourceCalculatorProcessTree.UNAVAILABLE &&
-                    pmem2 == ResourceCalculatorProcessTree.UNAVAILABLE);
+    assertTrue(pmem1 == ResourceCalculatorProcessTree.UNAVAILABLE &&
+        pmem2 == ResourceCalculatorProcessTree.UNAVAILABLE,
+        "pmem should be invalid " + pmem1 + " " + pmem2);
     long vmem1 = metric1.getRssMemorySize(0);
     long vmem2 = metric2.getRssMemorySize(0);
     System.out.println(vmem1 + " " + vmem2);
-    Assert.assertTrue("vmem Error outside range " + vmem1 + " " + vmem2,
-            vmem1 == ResourceCalculatorProcessTree.UNAVAILABLE &&
-                    vmem2 == ResourceCalculatorProcessTree.UNAVAILABLE);
+    assertTrue(vmem1 == ResourceCalculatorProcessTree.UNAVAILABLE &&
+        vmem2 == ResourceCalculatorProcessTree.UNAVAILABLE,
+        "vmem Error outside range " + vmem1 + " " + vmem2);
     float cpu1 = metric1.getCpuUsagePercent();
     float cpu2 = metric2.getCpuUsagePercent();
     // TODO ProcfsBasedProcessTree may report negative on process exit
-    Assert.assertTrue("CPU% Error outside range " + cpu1 + " " + cpu2,
-            cpu1 == 0 && cpu2 == 0);
+    assertTrue(cpu1 == 0 && cpu2 == 0,
+        "CPU% Error outside range " + cpu1 + " " + cpu2);
   }
 
   private void compareMetrics(
@@ -145,22 +148,22 @@ public class TestCompareResourceCalculators {
     // can report a small amount after process stop
     // This is not an issue since the cgroup is deleted
     System.out.println(pmem1 + " " + (pmem2 - SHMEM_KB * 1024));
-    Assert.assertTrue("pmem Error outside range " + pmem1 + " " + pmem2,
-        Math.abs(pmem1 - (pmem2 - SHMEM_KB * 1024)) < 5000000);
+    assertTrue(Math.abs(pmem1 - (pmem2 - SHMEM_KB * 1024)) < 5000000,
+        "pmem Error outside range " + pmem1 + " " + pmem2);
     long vmem1 = metric1.getRssMemorySize(0);
     long vmem2 = metric2.getRssMemorySize(0);
     System.out.println(vmem1 + " " + (vmem2 - SHMEM_KB * 1024));
     // TODO The calculation is different and cgroup
     // can report a small amount after process stop
     // This is not an issue since the cgroup is deleted
-    Assert.assertTrue("vmem Error outside range " + vmem1 + " " + vmem2,
-        Math.abs(vmem1 - (vmem2 - SHMEM_KB * 1024)) < 5000000);
+    assertTrue(Math.abs(vmem1 - (vmem2 - SHMEM_KB * 1024)) < 5000000,
+        "vmem Error outside range " + vmem1 + " " + vmem2);
     float cpu1 = metric1.getCpuUsagePercent();
     float cpu2 = metric2.getCpuUsagePercent();
     if (cpu1 > 0) {
       // TODO ProcfsBasedProcessTree may report negative on process exit
-      Assert.assertTrue("CPU% Error outside range " + cpu1 + " " + cpu2,
-              Math.abs(cpu2 - cpu1) < 10);
+      assertTrue(Math.abs(cpu2 - cpu1) < 10,
+          "CPU% Error outside range " + cpu1 + " " + cpu2);
     }
   }
 

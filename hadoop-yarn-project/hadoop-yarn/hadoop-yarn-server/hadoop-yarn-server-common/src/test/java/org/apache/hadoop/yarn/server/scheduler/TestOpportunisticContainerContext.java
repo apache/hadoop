@@ -21,10 +21,8 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Spy;
 
 import java.util.HashMap;
@@ -32,6 +30,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.ArrayList;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 /**
  * Test cases for OpportunisticContainerContext.
@@ -45,9 +47,9 @@ public class TestOpportunisticContainerContext {
   private TreeMap<SchedulerRequestKey,
           Map<Resource, OpportunisticContainerAllocator.EnrichedResourceRequest>> outstandingOpReqs;
 
-  @Before
+  @BeforeEach
   public void setUp() {
-    opportunisticContainerContext = Mockito.spy(new OpportunisticContainerContext());
+    opportunisticContainerContext = spy(new OpportunisticContainerContext());
     outstandingOpReqs = new TreeMap<>();
   }
 
@@ -63,7 +65,7 @@ public class TestOpportunisticContainerContext {
     List<ResourceRequest> resourceRequestList = new ArrayList<>();
     resourceRequestList.add(request);
     opportunisticContainerContext.addToOutstandingReqs(resourceRequestList);
-    Assert.assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 1);
+    assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 1);
   }
 
   /**
@@ -76,12 +78,12 @@ public class TestOpportunisticContainerContext {
   public void testAddToOutstandingReqsWithZeroContainer() {
     ResourceRequest request = getResourceRequest("resource", 0);
     createOutstandingOpReqs(request, getResource());
-    Mockito.doReturn(outstandingOpReqs).when(opportunisticContainerContext)
+    doReturn(outstandingOpReqs).when(opportunisticContainerContext)
             .getOutstandingOpReqs();
     List<ResourceRequest> resourceRequestList = new ArrayList<>();
     resourceRequestList.add(request);
     opportunisticContainerContext.addToOutstandingReqs(resourceRequestList);
-    Assert.assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 1);
+    assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 1);
   }
 
   /**
@@ -96,13 +98,13 @@ public class TestOpportunisticContainerContext {
     ResourceRequest req2 = getResourceRequest(ResourceRequest.ANY, 0);
     createOutstandingOpReqs(req1, getResource());
     createOutstandingOpReqs(req2, getResource());
-    Mockito.doReturn(outstandingOpReqs).when(opportunisticContainerContext)
+    doReturn(outstandingOpReqs).when(opportunisticContainerContext)
             .getOutstandingOpReqs();
     List<ResourceRequest> resourceRequestList = new ArrayList<>();
     resourceRequestList.add(req1);
     resourceRequestList.add(req2);
     opportunisticContainerContext.addToOutstandingReqs(resourceRequestList);
-    Assert.assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 1);
+    assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 1);
   }
 
   /**
@@ -117,13 +119,13 @@ public class TestOpportunisticContainerContext {
     ResourceRequest req2 = getResourceRequest(ResourceRequest.ANY, 1);
     createOutstandingOpReqs(req1, getResource());
     createOutstandingOpReqs(req2, getResource());
-    Mockito.doReturn(outstandingOpReqs).when(opportunisticContainerContext)
+    doReturn(outstandingOpReqs).when(opportunisticContainerContext)
             .getOutstandingOpReqs();
     List<ResourceRequest> resourceRequestList = new ArrayList<>();
     resourceRequestList.add(req1);
     resourceRequestList.add(req2);
     opportunisticContainerContext.addToOutstandingReqs(resourceRequestList);
-    Assert.assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 1);
+    assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 1);
   }
 
   /**
@@ -137,12 +139,12 @@ public class TestOpportunisticContainerContext {
   public void testAddToOutstandingReqsWithZeroContainerAndNullCapability() {
     ResourceRequest request = getResourceRequestWithoutCapability();
     createOutstandingOpReqs(request, getResource());
-    Mockito.doReturn(outstandingOpReqs).when(opportunisticContainerContext)
+    doReturn(outstandingOpReqs).when(opportunisticContainerContext)
             .getOutstandingOpReqs();
     List<ResourceRequest> resourceRequestList = new ArrayList<>();
     resourceRequestList.add(request);
     opportunisticContainerContext.addToOutstandingReqs(resourceRequestList);
-    Assert.assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 1);
+    assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 1);
   }
 
   /**
@@ -155,12 +157,12 @@ public class TestOpportunisticContainerContext {
   @Test
   public void testAddToOutstandingReqsWithEmptyReqMap() {
     ResourceRequest request = getResourceRequest("resource", 0);
-    Mockito.doReturn(new TreeMap<>()).when(opportunisticContainerContext)
+    doReturn(new TreeMap<>()).when(opportunisticContainerContext)
             .getOutstandingOpReqs();
     List<ResourceRequest> resourceRequestList = new ArrayList<>();
     resourceRequestList.add(request);
     opportunisticContainerContext.addToOutstandingReqs(resourceRequestList);
-    Assert.assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 0);
+    assertEquals(opportunisticContainerContext.getOutstandingOpReqs().size(), 0);
   }
 
   private void createOutstandingOpReqs(ResourceRequest req, Resource resource) {

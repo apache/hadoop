@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.webapp;
 
 import org.glassfish.jersey.jettison.internal.entity.JettisonObjectProvider;
 import org.glassfish.jersey.test.JerseyTest;
-import org.junit.Before;
 import org.junit.jupiter.api.BeforeEach;
 
 import javax.ws.rs.client.WebTarget;
@@ -35,7 +34,6 @@ public abstract class JerseyTestBase extends JerseyTest {
   }
 
   @BeforeEach
-  @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();

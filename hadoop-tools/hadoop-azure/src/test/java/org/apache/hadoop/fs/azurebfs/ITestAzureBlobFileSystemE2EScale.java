@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -109,12 +109,10 @@ public class ITestAzureBlobFileSystemE2EScale extends
     }
 
     String stats = abfsStatistics.toString();
-    assertEquals("Bytes read in " + stats,
-        remoteData.length, abfsStatistics.getBytesRead());
-    assertEquals("bytes written in " + stats,
-        sourceData.length, abfsStatistics.getBytesWritten());
-    assertEquals("bytesRead from read() call", testBufferSize, bytesRead);
-    assertArrayEquals("round tripped data", sourceData, remoteData);
+    assertEquals(remoteData.length, abfsStatistics.getBytesRead(), "Bytes read in " + stats);
+    assertEquals(sourceData.length, abfsStatistics.getBytesWritten(), "bytes written in " + stats);
+    assertEquals(testBufferSize, bytesRead, "bytesRead from read() call");
+    assertArrayEquals(sourceData, remoteData, "round tripped data");
 
   }
 }

@@ -41,7 +41,8 @@ public abstract class SASGenerator {
   public enum AuthenticationVersion {
     Nov18("2018-11-09"),
     Dec19("2019-12-12"),
-    Feb20("2020-02-10");
+    Feb20("2020-02-10"),
+    Jul5("2025-07-05");
 
     private final String ver;
 

@@ -27,10 +27,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -43,6 +42,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test continuation token which has equal sign.
@@ -55,7 +55,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     super();
   }
 
-  @Ignore("HADOOP-16845: Invalid continuation tokens are ignored by the ADLS "
+  @Disabled("HADOOP-16845: Invalid continuation tokens are ignored by the ADLS "
       + "Gen2 service, so we are disabling this test until the service is fixed.")
   @Test
   public void testContinuationTokenHavingEqualSign() throws Exception {
@@ -66,13 +66,13 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       AbfsRestOperation op = abfsClient
           .listPath("/", true, LIST_MAX_RESULTS, "===========",
               getTestTracingContext(fs, true), null).getOp();
-      Assert.assertTrue(false);
+      Assertions.assertTrue(false);
     } catch (AbfsRestOperationException ex) {
-      Assert.assertEquals("InvalidQueryParameterValue", ex.getErrorCode().getErrorCode());
+      Assertions.assertEquals("InvalidQueryParameterValue", ex.getErrorCode().getErrorCode());
     }
   }
 
-  @Ignore("Enable this to verify the log warning message format for HostNotFoundException")
+  @Disabled("Enable this to verify the log warning message format for HostNotFoundException")
   @Test
   public void testUnknownHost() throws Exception {
     // When hitting hostName not found exception, the retry will take about 14 mins until failed.
@@ -113,7 +113,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
       if (continuationToken == null) {
         // Listing is complete and number of objects should be same as expected
-        Assertions.assertThat(list)
+        assertThat(list)
             .describedAs("AbfsClient.listPath() should return %d items"
                 + " when listMaxResults is %d, directory contains %d items and "
                 + "listing is complete",
@@ -121,7 +121,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             .hasSize(expectedListResultsSize);
       } else {
         // Listing is incomplete and number of objects can be less than expected
-        Assertions.assertThat(list)
+        assertThat(list)
             .describedAs("AbfsClient.listPath() should return %d items"
                 + " or less when listMaxResults is %d,  directory contains"
                 + " %d items and listing is incomplete",
@@ -148,7 +148,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     if (continuationToken == null) {
       // Listing is complete and number of objects should be same as expected
-      Assertions.assertThat(list)
+      assertThat(list)
           .describedAs("AbfsClient.listPath() should return %d items"
               + " when listMaxResults is %d directory contains %d items and "
               + "listing is complete", LIST_MAX_RESULTS_SERVER,
@@ -156,7 +156,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
           .hasSize(LIST_MAX_RESULTS_SERVER);
     } else {
       // Listing is incomplete and number of objects can be less than expected
-      Assertions.assertThat(list)
+      assertThat(list)
           .describedAs("AbfsClient.listPath() should return %d items"
               + " or less when listMaxResults is %d, directory contains"
               + " %d items and listing is complete", LIST_MAX_RESULTS_SERVER,

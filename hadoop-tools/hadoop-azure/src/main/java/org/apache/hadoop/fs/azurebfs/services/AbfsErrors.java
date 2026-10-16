@@ -59,11 +59,17 @@ public final class AbfsErrors {
       + "and cannot be appended to by the Azure Data Lake Storage Service API";
   public static final String CONDITION_NOT_MET = "The condition specified using "
       + "HTTP conditional header(s) is not met.";
+  public static final String ERR_READ_ON_DIRECTORY = "Read operation not permitted on a directory.";
+  public static final String ERR_OPENFILE_ON_DIRECTORY = "openFileForRead must be used with files and not directories";
+  public static final String ERR_SOFT_DELETE_NOT_SUPPORTED = "This endpoint does not support BlobStorageEvents or SoftDelete.";
+
   /**
    * Exception message on filesystem init if token-provider-auth-type configs are provided
    */
   public static final String UNAUTHORIZED_SAS
       = "Incorrect SAS token provider configured for non-hierarchical namespace account with DFS service type.";
+  public static final String UNAUTHORIZED_USER_BOUND_SAS
+      = "User bound SAS auth type is not supported on non-hierarchical namespace accounts.";
   public static final String ERR_RENAME_BLOB =
       "FNS-Blob rename was not successful for source and destination path: ";
   public static final String ERR_DELETE_BLOB =
@@ -75,7 +81,10 @@ public final class AbfsErrors {
   public static final String ERR_RENAME_RECOVERY =
       "Error while recovering from rename failure for path: ";
   public static final String ERR_BLOB_LIST_PARSING = "Parsing of XML List Response Failed in BlobClient.";
+  public static final String ERR_ARROW_LIST_PARSING = "Parsing of Apache Arrow (Photon) List Response Failed in BlobClient.";
   public static final String ERR_DFS_LIST_PARSING = "Parsing of Json List Response Failed in DfsClient.";
   public static final String INCORRECT_INGRESS_TYPE = "Ingress Type Cannot be DFS for Blob endpoint configured filesystem.";
+  public static final String ERR_INVALID_ABFS_STATE = "Invalid state for AzureBlobFilesystem. Either Filesystem was closed or not initialized.";
+  public static final String ERR_TAIL_LATENCY_REQUEST_TIMEOUT = "Request Duration Exceeded Tail Latency Threshold.";
   private AbfsErrors() {}
 }

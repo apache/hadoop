@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -221,9 +222,9 @@ class FSDirWriteFileOp {
    * If the conditions still hold, then allocate a new block with
    * the new targets, add it to the INode and to the BlocksMap.
    */
-  static LocatedBlock storeAllocatedBlock(FSNamesystem fsn, String src,
-      long fileId, String clientName, ExtendedBlock previous,
-      DatanodeStorageInfo[] targets) throws IOException {
+  static Pair<LocatedBlock, BlockInfo> storeAllocatedBlock(FSNamesystem fsn, String src,
+      long fileId, String clientName, ExtendedBlock previous, DatanodeStorageInfo[] targets)
+      throws IOException {
     long offset;
     // Run the full analysis again, since things could have changed
     // while chooseTarget() was executing.
@@ -233,19 +234,21 @@ class FSDirWriteFileOp {
                                            previous, onRetryBlock);
     final INodeFile pendingFile = fileState.inode;
     src = fileState.path;
+    LocatedBlock lb;
 
     if (onRetryBlock[0] != null) {
       if (onRetryBlock[0].getLocations().length > 0) {
         // This is a retry. Just return the last block if having locations.
-        return onRetryBlock[0];
+        lb = onRetryBlock[0];
       } else {
         // add new chosen targets to already allocated block and return
         BlockInfo lastBlockInFile = pendingFile.getLastBlock();
         lastBlockInFile.getUnderConstructionFeature().setExpectedLocations(
             lastBlockInFile, targets, pendingFile.getBlockType());
         offset = pendingFile.computeFileSize();
-        return makeLocatedBlock(fsn, lastBlockInFile, targets, offset);
+        lb = makeLocatedBlock(fsn, lastBlockInFile, targets, offset);
       }
+      return Pair.of(lb, null);
     }
 
     // commit the last block and complete it if it has minimum replicas
@@ -256,13 +259,15 @@ class FSDirWriteFileOp {
     // allocate new block, record block locations in INode.
     Block newBlock = fsn.createNewBlock(blockType);
     INodesInPath inodesInPath = INodesInPath.fromINode(pendingFile);
-    saveAllocatedBlock(fsn, src, inodesInPath, newBlock, targets, blockType);
+    BlockInfo newBlockInfo = saveAllocatedBlock(fsn, src, inodesInPath,
+        newBlock, targets, blockType);
 
     persistNewBlock(fsn, src, pendingFile);
     offset = pendingFile.computeFileSize();
 
     // Return located block
-    return makeLocatedBlock(fsn, fsn.getStoredBlock(newBlock), targets, offset);
+    lb = makeLocatedBlock(fsn, fsn.getStoredBlock(newBlock), targets, offset);
+    return Pair.of(lb, newBlockInfo);
   }
 
   static DatanodeStorageInfo[] chooseTargetForNewBlock(
@@ -781,17 +786,17 @@ class FSDirWriteFileOp {
    * @param targets target datanodes where replicas of the new block is placed
    * @throws QuotaExceededException If addition of block exceeds space quota
    */
-  static void saveAllocatedBlock(FSNamesystem fsn, String src,
+  static BlockInfo saveAllocatedBlock(FSNamesystem fsn, String src,
       INodesInPath inodesInPath, Block newBlock, DatanodeStorageInfo[] targets,
       BlockType blockType) throws IOException {
     assert fsn.hasWriteLock(RwLockMode.GLOBAL);
     BlockInfo b = addBlock(fsn.dir, src, inodesInPath, newBlock, targets,
         blockType);
-    logAllocatedBlock(src, b);
     DatanodeStorageInfo.incrementBlocksScheduled(targets);
+    return b;
   }
 
-  private static void logAllocatedBlock(String src, BlockInfo b) {
+  static void logAllocatedBlock(String src, BlockInfo b) {
     if (!NameNode.stateChangeLog.isInfoEnabled()) {
       return;
     }
@@ -803,7 +808,7 @@ class FSDirWriteFileOp {
     if (uc != null) {
       uc.appendUCPartsConcise(sb);
     }
-    sb.append(" for " + src);
+    sb.append(" for ").append(src);
     NameNode.stateChangeLog.info(sb.toString());
   }
 

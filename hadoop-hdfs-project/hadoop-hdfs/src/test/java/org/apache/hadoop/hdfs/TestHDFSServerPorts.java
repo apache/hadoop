@@ -29,15 +29,16 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.UnknownHostException;
 
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This test checks correctness of port usage by hdfs components:
@@ -247,7 +248,8 @@ public class TestHDFSServerPorts {
     return true;
   }
 
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testNameNodePorts() throws Exception {
     runTestNameNodePorts(false);
     runTestNameNodePorts(true);
@@ -280,7 +282,7 @@ public class TestHDFSServerPorts {
       started = canStartNameNode(conf2);
 
       if (withService) {
-        assertFalse("Should've failed on service port", started);
+        assertFalse(started, "Should've failed on service port");
 
         // reset conf2 since NameNode modifies it
         FileSystem.setDefaultUri(conf2, "hdfs://" + THIS_HOST);
@@ -298,7 +300,8 @@ public class TestHDFSServerPorts {
   /**
    * Verify datanode port usage.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testDataNodePorts() throws Exception {
     NameNode nn = null;
     try {
@@ -334,7 +337,8 @@ public class TestHDFSServerPorts {
   /**
    * Verify secondary namenode port usage.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testSecondaryNodePorts() throws Exception {
     NameNode nn = null;
     try {
@@ -359,44 +363,46 @@ public class TestHDFSServerPorts {
       stopNameNode(nn);
     }
   }
-    
-    /**
-     * Verify BackupNode port usage.
-     */
-    @Test(timeout = 300000)
-    public void testBackupNodePorts() throws Exception {
-      NameNode nn = null;
-      try {
-        nn = startNameNode();
 
-        Configuration backup_config = new HdfsConfiguration(config);
-        backup_config.set(
-            DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, THIS_HOST);
-        // bind http server to the same port as name-node
-        backup_config.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, 
-            backup_config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY));
+  /**
+   * Verify BackupNode port usage.
+   */
+  @SuppressWarnings("checkstyle:localvariablename")
+  @Test
+  @Timeout(value = 300)
+  public void testBackupNodePorts() throws Exception {
+    NameNode nn = null;
+    try {
+      nn = startNameNode();
 
-        LOG.info("= Starting 1 on: " + backup_config.get(
-            DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY));
+      Configuration backup_config = new HdfsConfiguration(config);
+      backup_config.set(
+          DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, THIS_HOST);
+      // bind http server to the same port as name-node
+      backup_config.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY,
+          backup_config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY));
 
-        assertFalse("Backup started on same port as Namenode", 
-                           canStartBackupNode(backup_config)); // should fail
+      LOG.info("= Starting 1 on: " + backup_config.get(
+          DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY));
 
-        // reset namenode backup address because Windows does not release
-        // port used previously properly.
-        backup_config.set(
-            DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, THIS_HOST);
+      assertFalse(canStartBackupNode(backup_config),
+          "Backup started on same port as Namenode"); // should fail
 
-        // bind http server to a different port
-        backup_config.set(
-            DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, THIS_HOST);
-        LOG.info("= Starting 2 on: " + backup_config.get(
-            DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY));
+      // reset namenode backup address because Windows does not release
+      // port used previously properly.
+      backup_config.set(
+          DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, THIS_HOST);
 
-        boolean started = canStartBackupNode(backup_config);
-        assertTrue("Backup Namenode should've started", started); // should start now
-      } finally {
-        stopNameNode(nn);
-      }
+      // bind http server to a different port
+      backup_config.set(
+          DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, THIS_HOST);
+      LOG.info("= Starting 2 on: " + backup_config.get(
+          DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY));
+
+      boolean started = canStartBackupNode(backup_config);
+      assertTrue(started, "Backup Namenode should've started"); // should start now
+    } finally {
+      stopNameNode(nn);
+    }
   }
 }

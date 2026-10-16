@@ -27,15 +27,15 @@ import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
 import org.apache.hadoop.hdfs.qjournal.client.SpyQJournalUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.io.IOException;
 
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getFileInfo;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.spy;
 
@@ -46,7 +46,7 @@ public class TestHAWithInProgressTail {
   private NameNode nn0;
   private NameNode nn1;
 
-  @Before
+  @BeforeEach
   public void startUp() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
@@ -61,7 +61,7 @@ public class TestHAWithInProgressTail {
     nn1 = cluster.getNameNode(1);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (qjmhaCluster != null) {
       qjmhaCluster.shutdown();

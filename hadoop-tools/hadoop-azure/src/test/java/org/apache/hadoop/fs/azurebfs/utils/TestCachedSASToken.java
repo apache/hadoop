@@ -24,12 +24,13 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS;
 import static java.time.temporal.ChronoUnit.SECONDS;
 import static java.time.temporal.ChronoUnit.DAYS;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test CachedSASToken.
@@ -48,12 +49,12 @@ public final class TestCachedSASToken {
     // set first time and ensure reference equality
     cachedSasToken.update(token1);
     String cachedToken = cachedSasToken.get();
-    Assert.assertTrue(token1 == cachedToken);
+    assertTrue(token1 == cachedToken);
 
     // update with same token and ensure reference equality
     cachedSasToken.update(token1);
     cachedToken = cachedSasToken.get();
-    Assert.assertTrue(token1 == cachedToken);
+    assertTrue(token1 == cachedToken);
 
     // renew and ensure reference equality
     String se2 = OffsetDateTime.now(ZoneOffset.UTC).plus(
@@ -62,7 +63,7 @@ public final class TestCachedSASToken {
     String token2 = "se=" + se2;
     cachedSasToken.update(token2);
     cachedToken = cachedSasToken.get();
-    Assert.assertTrue(token2 == cachedToken);
+    assertTrue(token2 == cachedToken);
 
     // renew and ensure reference equality with ske
     String se3 = OffsetDateTime.now(ZoneOffset.UTC).plus(
@@ -75,7 +76,7 @@ public final class TestCachedSASToken {
     String token3 = "se=" + se3 + "&ske=" + ske3;
     cachedSasToken.update(token3);
     cachedToken = cachedSasToken.get();
-    Assert.assertTrue(token3 == cachedToken);
+    assertTrue(token3 == cachedToken);
   }
 
   @Test
@@ -94,7 +95,7 @@ public final class TestCachedSASToken {
     // SASTokenProvider to get a new SAS).
     cachedSasToken.setForTesting(token, seDate);
     String cachedToken = cachedSasToken.get();
-    Assert.assertNull(cachedToken);
+    assertNull(cachedToken);
   }
 
   @Test
@@ -109,7 +110,7 @@ public final class TestCachedSASToken {
     // set expired token and ensure not cached
     cachedSasToken.update(token1);
     String cachedToken = cachedSasToken.get();
-    Assert.assertNull(cachedToken);
+    assertNull(cachedToken);
 
     String se2 = OffsetDateTime.now(ZoneOffset.UTC).plus(
         DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS * 2,
@@ -123,7 +124,7 @@ public final class TestCachedSASToken {
     // set with expired ske and ensure not cached
     cachedSasToken.update(token2);
     cachedToken = cachedSasToken.get();
-    Assert.assertNull(cachedToken);
+    assertNull(cachedToken);
 
   }
 
@@ -135,31 +136,31 @@ public final class TestCachedSASToken {
     String token1 = "se=";
     cachedSasToken.update(token1);
     String cachedToken = cachedSasToken.get();
-    Assert.assertNull(cachedToken);
+    assertNull(cachedToken);
 
     // set and ensure reference that it is not cached
     String token2 = "se=xyz";
     cachedSasToken.update(token2);
     cachedToken = cachedSasToken.get();
-    Assert.assertNull(cachedToken);
+    assertNull(cachedToken);
 
     // set and ensure reference that it is not cached
     String token3 = "se=2100-01-01T00:00:00Z&ske=";
     cachedSasToken.update(token3);
     cachedToken = cachedSasToken.get();
-    Assert.assertNull(cachedToken);
+    assertNull(cachedToken);
 
     // set and ensure reference that it is not cached
     String token4 = "se=2100-01-01T00:00:00Z&ske=xyz&";
     cachedSasToken.update(token4);
     cachedToken = cachedSasToken.get();
-    Assert.assertNull(cachedToken);
+    assertNull(cachedToken);
 
     // set and ensure reference that it is not cached
     String token5 = "se=abc&ske=xyz&";
     cachedSasToken.update(token5);
     cachedToken = cachedSasToken.get();
-    Assert.assertNull(cachedToken);
+    assertNull(cachedToken);
   }
 
   public static CachedSASToken getTestCachedSASTokenInstance() {

@@ -79,11 +79,11 @@ public class DatanodeHttpServer implements Closeable {
   static final Logger LOG = LoggerFactory.getLogger(DatanodeHttpServer.class);
   // HttpServer threads are only used for the web UI and basic servlets, so
   // set them to the minimum possible
-  private static final int HTTP_SELECTOR_THREADS = 1;
+  private static final int HTTP_SELECTOR_THREADS = 2;
   private static final int HTTP_ACCEPTOR_THREADS = 1;
   // Jetty 9.4.x: Adding one more thread to HTTP_MAX_THREADS.
   private static final int HTTP_MAX_THREADS =
-      HTTP_SELECTOR_THREADS + HTTP_ACCEPTOR_THREADS + 2;
+      HTTP_SELECTOR_THREADS + HTTP_ACCEPTOR_THREADS + 5;
   private final HttpServer2 infoServer;
   private final EventLoopGroup bossGroup;
   private final EventLoopGroup workerGroup;
@@ -164,7 +164,7 @@ public class DatanodeHttpServer implements Closeable {
                 }
                 p.addLast(
                     new ChunkedWriteHandler(),
-                    new URLDispatcher(jettyAddr, conf, confForCreate));
+                    new URLDispatcher(jettyAddr, conf, confForCreate, false));
               }
             });
 
@@ -222,7 +222,7 @@ public class DatanodeHttpServer implements Closeable {
               }
               p.addLast(
                   new ChunkedWriteHandler(),
-                  new URLDispatcher(jettyAddr, conf, confForCreate));
+                  new URLDispatcher(jettyAddr, conf, confForCreate, true));
             }
           });
     } else {
@@ -303,7 +303,9 @@ public class DatanodeHttpServer implements Closeable {
     if (httpServer != null) {
       InetSocketAddress infoAddr = DataNode.getInfoAddr(conf);
       httpAddress = getChannelLocalAddress(httpServer, infoAddr);
-      LOG.info("Listening HTTP traffic on " + httpAddress);
+      conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY,
+          NetUtils.getHostPortString(httpAddress));
+      LOG.info("Listening for HTTP traffic on {}", httpAddress);
     }
 
     if (httpsServer != null) {
@@ -312,7 +314,9 @@ public class DatanodeHttpServer implements Closeable {
               DFS_DATANODE_HTTPS_ADDRESS_KEY,
               DFS_DATANODE_HTTPS_ADDRESS_DEFAULT));
       httpsAddress = getChannelLocalAddress(httpsServer, secInfoSocAddr);
-      LOG.info("Listening HTTPS traffic on " + httpsAddress);
+      conf.set(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY,
+          NetUtils.getHostPortString(httpsAddress));
+      LOG.info("Listening for HTTPS traffic on {}", httpsAddress);
     }
   }
 

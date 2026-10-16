@@ -31,8 +31,11 @@ public class AssignedDevice implements Serializable, Comparable {
 
   private static final long serialVersionUID = -544285507952217366L;
 
-  private final Device device;
-  private final String containerId;
+  private Device device;
+  private String containerId;
+
+  public AssignedDevice() {
+  }
 
   public AssignedDevice(ContainerId cId, Device dev) {
     this.device = dev;

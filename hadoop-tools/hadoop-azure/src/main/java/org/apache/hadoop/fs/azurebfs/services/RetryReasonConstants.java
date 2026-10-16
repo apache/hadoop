@@ -36,4 +36,5 @@ public final class RetryReasonConstants {
   public static final String UNKNOWN_HOST_EXCEPTION_ABBREVIATION = "UH";
   public static final String IO_EXCEPTION_ABBREVIATION = "IOE";
   public static final String SOCKET_EXCEPTION_ABBREVIATION = "SE";
+  public static final String TAIL_LATENCY_REQUEST_TIMEOUT_ABBREVIATION = "TLT";
 }

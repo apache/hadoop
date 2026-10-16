@@ -76,13 +76,12 @@ public class Cluster {
     if (providerList == null) {
       synchronized (frameworkLoader) {
         if (providerList == null) {
-          List<ClientProtocolProvider> localProviderList =
-              new ArrayList<ClientProtocolProvider>();
+          List<ClientProtocolProvider> localProviderList = new ArrayList<>();
           try {
             for (ClientProtocolProvider provider : frameworkLoader) {
               localProviderList.add(provider);
             }
-          } catch(ServiceConfigurationError e) {
+          } catch(ServiceConfigurationError | LinkageError e) {
             LOG.info("Failed to instantiate ClientProtocolProvider, please "
                          + "check the /META-INF/services/org.apache."
                          + "hadoop.mapreduce.protocol.ClientProtocolProvider "

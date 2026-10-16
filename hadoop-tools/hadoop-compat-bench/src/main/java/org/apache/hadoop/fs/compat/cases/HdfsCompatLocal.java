@@ -21,10 +21,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.compat.common.*;
-import org.junit.Assert;
 
 import java.io.IOException;
 import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @HdfsCompatCaseGroup(name = "Local")
 public class HdfsCompatLocal extends AbstractHdfsCompatCase {
@@ -69,36 +71,36 @@ public class HdfsCompatLocal extends AbstractHdfsCompatCase {
   @HdfsCompatCase
   public void copyFromLocalFile() throws IOException {
     fs().copyFromLocalFile(localSrc, dst);
-    Assert.assertTrue(localFs.exists(localSrc));
-    Assert.assertTrue(fs().exists(dst));
+    assertTrue(localFs.exists(localSrc));
+    assertTrue(fs().exists(dst));
   }
 
   @HdfsCompatCase
   public void moveFromLocalFile() throws IOException {
     fs().moveFromLocalFile(localSrc, dst);
-    Assert.assertFalse(localFs.exists(localSrc));
-    Assert.assertTrue(fs().exists(dst));
+    assertFalse(localFs.exists(localSrc));
+    assertTrue(fs().exists(dst));
   }
 
   @HdfsCompatCase
   public void copyToLocalFile() throws IOException {
     fs().copyToLocalFile(src, localDst);
-    Assert.assertTrue(fs().exists(src));
-    Assert.assertTrue(localFs.exists(localDst));
+    assertTrue(fs().exists(src));
+    assertTrue(localFs.exists(localDst));
   }
 
   @HdfsCompatCase
   public void moveToLocalFile() throws IOException {
     fs().moveToLocalFile(src, localDst);
-    Assert.assertFalse(fs().exists(src));
-    Assert.assertTrue(localFs.exists(localDst));
+    assertFalse(fs().exists(src));
+    assertTrue(localFs.exists(localDst));
   }
 
   @HdfsCompatCase
   public void startLocalOutput() throws IOException {
     Path local = fs().startLocalOutput(dst, localDst);
     HdfsCompatUtil.createFile(localFs, local, 16);
-    Assert.assertTrue(localFs.exists(local));
+    assertTrue(localFs.exists(local));
   }
 
   @HdfsCompatCase
@@ -106,6 +108,6 @@ public class HdfsCompatLocal extends AbstractHdfsCompatCase {
     Path local = fs().startLocalOutput(dst, localDst);
     HdfsCompatUtil.createFile(localFs, local, 16);
     fs().completeLocalOutput(dst, localDst);
-    Assert.assertTrue(fs().exists(dst));
+    assertTrue(fs().exists(dst));
   }
 }

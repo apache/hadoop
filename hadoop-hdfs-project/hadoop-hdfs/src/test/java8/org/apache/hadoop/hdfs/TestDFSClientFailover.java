@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -34,6 +35,16 @@ import java.util.List;
 
 import javax.net.SocketFactory;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.NameNodeProxies;
+import org.apache.hadoop.hdfs.NameNodeProxiesClient;
+import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -55,10 +66,10 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 
@@ -73,8 +84,8 @@ public class TestDFSClientFailover {
   
   private final Configuration conf = new Configuration();
   private MiniDFSCluster cluster;
-  
-  @Before
+
+  @BeforeEach
   public void setUpCluster() throws IOException {
     cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(MiniDFSNNTopology.simpleHATopology())
@@ -82,8 +93,8 @@ public class TestDFSClientFailover {
     cluster.transitionToActive(0);
     cluster.waitActive();
   }
-  
-  @After
+
+  @AfterEach
   public void tearDownCluster() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -91,7 +102,7 @@ public class TestDFSClientFailover {
     }
   }
 
-  @After
+  @AfterEach
   public void clearConfig() {
     SecurityUtil.setTokenServiceUseIp(true);
   }
@@ -217,9 +228,9 @@ public class TestDFSClientFailover {
       fail("Successfully got proxy provider for misconfigured FS");
     } catch (IOException ioe) {
       LOG.info("got expected exception", ioe);
-      assertTrue("expected exception did not contain helpful message",
-          StringUtils.stringifyException(ioe).contains(
-          "Could not find any configured addresses for URI " + uri));
+      assertTrue(StringUtils.stringifyException(ioe)
+              .contains("Could not find any configured addresses for URI " + uri),
+          "expected exception did not contain helpful message");
     }
   }
 
@@ -233,7 +244,7 @@ public class TestDFSClientFailover {
     try {
       Field f = InetAddress.class.getDeclaredField("nameServices");
       f.setAccessible(true);
-      Assume.assumeNotNull(f);
+      assumeTrue(f != null);
       @SuppressWarnings("unchecked")
       List<NameService> nsList = (List<NameService>) f.get(null);
 
@@ -248,8 +259,7 @@ public class TestDFSClientFailover {
       LOG.info("Unable to spy on DNS. Skipping test.", t);
       // In case the JDK we're testing on doesn't work like Sun's, just
       // skip the test.
-      Assume.assumeNoException(t);
-      throw new RuntimeException(t);
+      throw new TestAbortedException(t.getMessage(), t);
     }
   }
   
@@ -296,7 +306,8 @@ public class TestDFSClientFailover {
    * Test that creating proxy doesn't ever try to DNS-resolve the logical URI.
    * Regression test for HDFS-9364.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testCreateProxyDoesntDnsResolveLogicalURI() throws IOException {
     final NameService spyNS = spyOnNameService();
     final Configuration conf = new HdfsConfiguration();
@@ -378,8 +389,8 @@ public class TestDFSClientFailover {
     SecurityUtil.setTokenServiceUseIp(false);
 
     // Logical URI should be used.
-    assertTrue("Legacy proxy providers should use logical URI.",
-        HAUtil.useLogicalUri(config, p.toUri()));
+    assertTrue(HAUtil.useLogicalUri(config, p.toUri()),
+        "Legacy proxy providers should use logical URI.");
   }
 
   /**
@@ -394,8 +405,8 @@ public class TestDFSClientFailover {
         nnUri.getHost(),
         IPFailoverProxyProvider.class.getName());
 
-    assertFalse("IPFailoverProxyProvider should not use logical URI.",
-        HAUtil.useLogicalUri(config, nnUri));
+    assertFalse(HAUtil.useLogicalUri(config, nnUri),
+        "IPFailoverProxyProvider should not use logical URI.");
   }
 
 }

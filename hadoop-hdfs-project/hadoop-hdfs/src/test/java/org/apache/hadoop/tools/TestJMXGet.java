@@ -20,8 +20,8 @@ package org.apache.hadoop.tools;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,10 +42,9 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.tools.JMXGet;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Startup and checkpoint tests
@@ -61,7 +60,7 @@ public class TestJMXGet {
   static final int blockSize = 4096;
   static final int fileSize = 8192;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     config = new HdfsConfiguration();
   }
@@ -69,7 +68,7 @@ public class TestJMXGet {
   /**
    * clean up
    */
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       if (cluster.isClusterUp()) {
@@ -101,14 +100,14 @@ public class TestJMXGet {
     String serviceName = "NameNode";
     jmx.setService(serviceName);
     jmx.init(); // default lists namenode mbeans only
-    assertTrue("error printAllValues", checkPrintAllValues(jmx));
+    assertTrue(checkPrintAllValues(jmx), "error printAllValues");
 
     //get some data from different source
     try {
       DFSTestUtil.waitForMetric(jmx, "NumLiveDataNodes", numDatanodes);
     } catch (TimeoutException e) {
-    assertEquals(String.format(WRONG_METRIC_VALUE_ERROR_MSG, "NumLiveDataNodes"),numDatanodes, Integer.parseInt(
-        jmx.getValue("NumLiveDataNodes")));
+      assertEquals(numDatanodes, Integer.parseInt(jmx.getValue("NumLiveDataNodes")),
+          String.format(WRONG_METRIC_VALUE_ERROR_MSG, "NumLiveDataNodes"));
     }
     assertGauge("CorruptBlocks", Long.parseLong(jmx.getValue("CorruptBlocks")),
                 getMetrics("FSNamesystem"));
@@ -117,7 +116,7 @@ public class TestJMXGet {
     MBeanServerConnection mbsc = ManagementFactory.getPlatformMBeanServer();
     ObjectName query = new ObjectName("Hadoop:service=" + serviceName + ",*");
     Set<ObjectName> names = mbsc.queryNames(query, null);
-    assertTrue("No beans should be registered for " + serviceName, names.isEmpty());
+    assertTrue(names.isEmpty(), "No beans should be registered for " + serviceName);
   }
   
   private static boolean checkPrintAllValues(JMXGet jmx) throws Exception {
@@ -162,13 +161,14 @@ public class TestJMXGet {
     try {
       DFSTestUtil.waitForMetric(jmx, "BytesWritten", fileSize);
     } catch (TimeoutException e) {
-      assertEquals(String.format(WRONG_METRIC_VALUE_ERROR_MSG, "BytesWritten"), fileSize, Integer.parseInt(jmx.getValue("BytesWritten")));
+      assertEquals(fileSize, Integer.parseInt(jmx.getValue("BytesWritten")),
+          String.format(WRONG_METRIC_VALUE_ERROR_MSG, "BytesWritten"));
     }
 
     cluster.shutdown();
     MBeanServerConnection mbsc = ManagementFactory.getPlatformMBeanServer();
     ObjectName query = new ObjectName("Hadoop:service=" + serviceName + ",*");
     Set<ObjectName> names = mbsc.queryNames(query, null);
-    assertTrue("No beans should be registered for " + serviceName, names.isEmpty());
+    assertTrue(names.isEmpty(), "No beans should be registered for " + serviceName);
   }
 }

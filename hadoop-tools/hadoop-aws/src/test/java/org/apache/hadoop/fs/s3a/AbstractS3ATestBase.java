@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -49,6 +50,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * An extension of the contract test base set up for S3A tests.
  */
+@IntegrationTest
 public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     implements S3ATestConstants {
   protected static final Logger LOG =

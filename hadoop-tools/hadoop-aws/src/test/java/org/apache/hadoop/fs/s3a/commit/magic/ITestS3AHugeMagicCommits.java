@@ -24,7 +24,9 @@ import java.util.Map;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +44,7 @@ import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
 import org.apache.hadoop.fs.s3a.scale.AbstractSTestS3AHugeFiles;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.apache.hadoop.test.tags.ScaleTest;
 
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.listMultipartUploads;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED;
@@ -57,6 +60,8 @@ import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.extractXAttrLongVal
  *
  * This is a scale test.
  */
+@ScaleTest
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestS3AHugeMagicCommits.class);
@@ -115,6 +120,15 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   }
 
   /**
+   * Skip this test suite when MPUS are not avaialable.
+   * @return false
+   */
+  @Override
+  protected boolean requireMultipartUploads() {
+    return true;
+  }
+
+  /**
    * Returns the path to the commit metadata file, not that of the huge file.
    * @return a file in the job dir
    */
@@ -136,6 +150,7 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     LOG.info("Aborted {} uploads under {}", count, key);
   }
 
+  @Test
   @Override
   public void test_030_postCreationAssertions() throws Throwable {
     describe("Committing file");
@@ -191,21 +206,25 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     describe("Skipping: %s", text);
   }
 
+  @Test
   @Override
   public void test_040_PositionedReadHugeFile() {
     skipQuietly("test_040_PositionedReadHugeFile");
   }
 
+  @Test
   @Override
   public void test_050_readHugeFile() {
     skipQuietly("readHugeFile");
   }
 
+  @Test
   @Override
   public void test_100_renameHugeFile() {
     skipQuietly("renameHugeFile");
   }
 
+  @Test
   @Override
   public void test_800_DeleteHugeFiles() throws IOException {
     if (getFileSystem() != null) {

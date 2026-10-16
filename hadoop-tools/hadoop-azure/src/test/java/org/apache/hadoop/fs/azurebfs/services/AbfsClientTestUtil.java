@@ -24,13 +24,16 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
 import org.assertj.core.api.Assertions;
@@ -39,6 +42,8 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
@@ -47,16 +52,22 @@ import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.ITestAzureBlobFileSystemListStatus.TEST_CONTINUATION_TOKEN;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPLICATION_XML;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCKLIST;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.BLOCK_BLOB_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.STAR;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.IF_MATCH;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.IF_NONE_MATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_BLOB_CONTENT_MD5;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_BLOB_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_TRANSACTION_ID;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_COPY_SOURCE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_CLOSE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_COMP;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.PutBlob;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.PutBlockList;
 import static org.apache.hadoop.fs.azurebfs.services.AuthType.OAuth;
 import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.EXPONENTIAL_RETRY_POLICY_ABBREVIATION;
@@ -139,14 +150,36 @@ public final class AbfsClientTestUtil {
    * @throws Exception           If an error occurs while setting up the mock operation.
    */
   public static void setMockAbfsRestOperationForFlushOperation(
-      final AbfsClient spiedClient, String eTag, String blockListXml, FunctionRaisingIOE<AbfsHttpOperation, AbfsHttpOperation> functionRaisingIOE)
+      final AbfsClient spiedClient,
+      String eTag,
+      String blockListXml,
+      AbfsOutputStream os,
+      FunctionRaisingIOE<AbfsHttpOperation, AbfsHttpOperation> functionRaisingIOE)
       throws Exception {
-    List<AbfsHttpHeader> requestHeaders = ITestAbfsClient.getTestRequestHeaders(spiedClient);
+    List<AbfsHttpHeader> requestHeaders = ITestAbfsClient.getTestRequestHeaders(
+        spiedClient);
+    String blobMd5 = null;
+    MessageDigest blobDigest = os.getFullBlobContentMd5();
+    if (blobDigest != null) {
+      try {
+        MessageDigest clonedMd5 = (MessageDigest) blobDigest.clone();
+        byte[] digest = clonedMd5.digest();
+        if (digest != null && digest.length != 0) {
+          blobMd5 = Base64.getEncoder().encodeToString(digest);
+        }
+      } catch (CloneNotSupportedException ignored) {
+      }
+    }
     byte[] buffer = blockListXml.getBytes(StandardCharsets.UTF_8);
     requestHeaders.add(new AbfsHttpHeader(CONTENT_LENGTH, String.valueOf(buffer.length)));
     requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, APPLICATION_XML));
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
-    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_CONTENT_MD5, spiedClient.computeMD5Hash(buffer, 0, buffer.length)));
+    requestHeaders.add(new AbfsHttpHeader(
+        X_MS_BLOB_CONTENT_MD5,
+        (spiedClient.isFullBlobChecksumValidationEnabled() && blobMd5 != null)
+            ? blobMd5
+            : spiedClient.computeMD5Hash(buffer, 0, buffer.length)
+    ));
     final AbfsUriQueryBuilder abfsUriQueryBuilder = spiedClient.createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, BLOCKLIST);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(false));
@@ -163,6 +196,115 @@ public final class AbfsClientTestUtil {
             Mockito.anyString(), Mockito.any(URL.class), Mockito.anyList(),
             Mockito.nullable(byte[].class), Mockito.anyInt(), Mockito.anyInt(),
             Mockito.nullable(String.class));
+
+    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, functionRaisingIOE);
+  }
+
+  /**
+   * Sets up a mocked {@link AbfsRestOperation} for a create (PutBlob) operation
+   * in the Azure Blob File System (ABFS).
+   * <p>
+   * This method is intended for use in testing scenarios where the behavior of
+   * a create request needs to be simulated. It configures a mock
+   * {@link AbfsRestOperation} with the appropriate request headers and parameters
+   * for a {@code PutBlob} call, and applies the provided {@code functionRaisingIOE}
+   * to customize the behavior of the underlying {@link AbfsHttpOperation}.
+   * <p>
+   *
+   * @param spiedClient        the spied instance of {@link AbfsClient} used
+   *                           for making HTTP requests
+   * @param functionRaisingIOE a function that customizes the behavior of the
+   *                           {@link AbfsRestOperation}'s associated
+   *                           {@link AbfsHttpOperation}, enabling the simulation
+   *                           of error conditions or special responses
+   * @throws Exception         if an error occurs while setting up the mocked
+   *                           operation
+   */
+  public static void setMockAbfsRestOperationForCreateOperation(
+      final AbfsClient spiedClient,
+      FunctionRaisingIOE<AbfsHttpOperation, AbfsHttpOperation> functionRaisingIOE)
+      throws Exception {
+    List<AbfsHttpHeader> requestHeaders = ITestAbfsClient.getTestRequestHeaders(
+        spiedClient);
+    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_TYPE, BLOCK_BLOB_TYPE));
+    requestHeaders.add(new AbfsHttpHeader(CONTENT_LENGTH, AbfsHttpConstants.ZERO));
+    requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, APPLICATION_XML));
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = spiedClient.createDefaultUriQueryBuilder();
+    final URL url = spiedClient.createRequestUrl("/test/file", abfsUriQueryBuilder.toString());
+    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
+        PutBlob, spiedClient, HTTP_METHOD_PUT,
+        url,
+        requestHeaders,
+        spiedClient.getAbfsConfiguration()));
+
+    Mockito.doReturn(abfsRestOperation)
+        .when(spiedClient)
+        .getAbfsRestOperation(eq(AbfsRestOperationType.PutBlob),
+            Mockito.anyString(), Mockito.any(URL.class), Mockito.anyList());
+
+    addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, functionRaisingIOE);
+  }
+
+  /**
+   * Sets up a mocked {@link AbfsRestOperation} for a CopyBlob operation
+   * in the Azure Blob File System (ABFS).
+   * <p>
+   * This method is intended for use in testing scenarios where the behavior of
+   * a copyBlob request needs to be simulated. It configures a mock
+   * {@link AbfsRestOperation} with the appropriate request headers and parameters
+   * for a {@code CopyBlob} call, and applies the provided {@code functionRaisingIOE}
+   * to customize the behavior of the underlying {@link AbfsHttpOperation}.
+   * <p>
+   *
+   * @param spiedClient        the spied instance of {@link AbfsClient} used
+   *                           for making HTTP requests
+   * @param srcPath            the source blob path
+   * @param dstPath            the destination blob path
+   * @param functionRaisingIOE a function that customizes the behavior of the
+   *                           {@link AbfsRestOperation}'s associated
+   *                           {@link AbfsHttpOperation}, enabling the simulation
+   *                           of error conditions or special responses
+   * @throws Exception         if an error occurs while setting up the mocked
+   *                           operation
+   */
+  public static void setMockAbfsRestOperationForCopyBlobOperation(
+      final AbfsClient spiedClient,
+      final Path srcPath,
+      final Path dstPath,
+      FunctionRaisingIOE<AbfsHttpOperation, AbfsHttpOperation> functionRaisingIOE)
+      throws Exception {
+
+    // Prepare headers
+    List<AbfsHttpHeader> requestHeaders = ITestAbfsClient.getTestRequestHeaders(spiedClient);
+
+    // Add CopyBlob specific headers
+    AbfsUriQueryBuilder abfsUriQueryBuilderDst = spiedClient.createDefaultUriQueryBuilder();
+    AbfsUriQueryBuilder abfsUriQueryBuilderSrc = new AbfsUriQueryBuilder();
+
+    String dstBlobRelativePath = dstPath.toUri().getPath();
+    String srcBlobRelativePath = srcPath.toUri().getPath();
+
+    final URL url = spiedClient.createRequestUrl(
+        dstBlobRelativePath, abfsUriQueryBuilderDst.toString());
+    final String sourcePathUrl = spiedClient.createRequestUrl(
+        srcBlobRelativePath, abfsUriQueryBuilderSrc.toString()).toString();
+
+    requestHeaders.add(new AbfsHttpHeader(X_MS_COPY_SOURCE, sourcePathUrl));
+    requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, STAR));
+
+    // Spy on the real CopyBlob operation
+    AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
+        AbfsRestOperationType.CopyBlob,
+        spiedClient,
+        HTTP_METHOD_PUT,
+        url,
+        requestHeaders,
+        spiedClient.getAbfsConfiguration()));
+
+    Mockito.doReturn(abfsRestOperation)
+        .when(spiedClient)
+        .getAbfsRestOperation(eq(AbfsRestOperationType.CopyBlob),
+            Mockito.nullable(String.class), Mockito.any(URL.class), Mockito.anyList());
 
     addMockBehaviourToRestOpAndHttpOp(abfsRestOperation, functionRaisingIOE);
   }
@@ -370,7 +512,7 @@ public final class AbfsClientTestUtil {
    * @param clientTransactionId An array to hold the generated transaction ID.
    */
   public static void mockAddClientTransactionIdToHeader(AbfsDfsClient abfsDfsClient,
-      String[] clientTransactionId) {
+      String[] clientTransactionId) throws AzureBlobFileSystemException {
     Mockito.doAnswer(addClientTransactionId -> {
       clientTransactionId[0] = UUID.randomUUID().toString();
       List<AbfsHttpHeader> headers = addClientTransactionId.getArgument(0);

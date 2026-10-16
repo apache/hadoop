@@ -88,7 +88,7 @@ public final class UploadContentProviders {
   public static BaseContentProvider<BufferedInputStream> fileContentProvider(
       File file,
       long offset,
-      final int size,
+      final long size,
       final Supplier<Boolean> isOpen) {
 
     return new FileWithOffsetContentProvider(file, offset, size, isOpen);
@@ -203,7 +203,7 @@ public final class UploadContentProviders {
     /**
      * Size of the data.
      */
-    private final int size;
+    private final long size;
 
     /**
      * Probe to check if the stream is open.
@@ -235,7 +235,7 @@ public final class UploadContentProviders {
      * Constructor.
      * @param size size of the data. Must be non-negative.
      */
-    protected BaseContentProvider(int size) {
+    protected BaseContentProvider(long size) {
       this(size, null);
     }
 
@@ -244,7 +244,7 @@ public final class UploadContentProviders {
      * @param size size of the data. Must be non-negative.
      * @param isOpen optional predicate to check if the stream is open.
      */
-    protected BaseContentProvider(int size, @Nullable Supplier<Boolean> isOpen) {
+    protected BaseContentProvider(long size, @Nullable Supplier<Boolean> isOpen) {
       checkArgument(size >= 0, "size is negative: %s", size);
       this.size = size;
       this.isOpen = isOpen;
@@ -311,7 +311,7 @@ public final class UploadContentProviders {
      * Size as set by constructor parameter.
      * @return size of the data
      */
-    public int getSize() {
+    public long getSize() {
       return size;
     }
 
@@ -385,11 +385,11 @@ public final class UploadContentProviders {
     private FileWithOffsetContentProvider(
         final File file,
         final long offset,
-        final int size,
+        final long size,
         @Nullable final Supplier<Boolean> isOpen) {
       super(size, isOpen);
       this.file = requireNonNull(file);
-      checkArgument(offset >= 0, "Offset is negative: %s", offset);
+      checkArgument(offset >= 0, "Offset is negative: %d", offset);
       this.offset = offset;
     }
 
@@ -402,7 +402,7 @@ public final class UploadContentProviders {
      */
     private FileWithOffsetContentProvider(final File file,
         final long offset,
-        final int size) {
+        final long size) {
       this(file, offset, size, null);
     }
 
@@ -482,7 +482,10 @@ public final class UploadContentProviders {
       // set the buffer up from reading from the beginning
       blockBuffer.limit(initialPosition);
       blockBuffer.position(0);
-      return new ByteBufferInputStream(getSize(), blockBuffer);
+      long size = getSize();
+      // Shouldn't happen since constructor takes an int.
+      checkState(size <= Integer.MAX_VALUE, "Size too large for ByteBufferInputStream: %s", size);
+      return new ByteBufferInputStream((int)size, blockBuffer);
     }
 
     @Override
@@ -546,7 +549,7 @@ public final class UploadContentProviders {
       super(size, isOpen);
       this.bytes = bytes;
       this.offset = offset;
-      checkArgument(offset >= 0, "Offset is negative: %s", offset);
+      checkArgument(offset >= 0, "Offset is negative: %d", offset);
       final int length = bytes.length;
       checkArgument((offset + size) <= length,
           "Data to read [%d-%d] is past end of array %s",
@@ -556,7 +559,11 @@ public final class UploadContentProviders {
 
     @Override
     protected ByteArrayInputStream createNewStream() {
-      return new ByteArrayInputStream(bytes, offset, getSize());
+      long size = getSize();
+      // Shouldn't happen since constructor takes an int.
+      checkState(size <= Integer.MAX_VALUE,
+          "Size too large for ByteArrayContentProvider: %d", size);
+      return new ByteArrayInputStream(bytes, offset, (int)size);
     }
 
     @Override

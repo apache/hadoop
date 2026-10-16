@@ -40,12 +40,12 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestFedAppReportFetcher {
 
@@ -66,7 +66,7 @@ public class TestFedAppReportFetcher {
   private static FedAppReportFetcher fetcher;
   private final String appNotFoundExceptionMsg = "APP NOT FOUND";
 
-  @After
+  @AfterEach
   public void cleanUp() {
     history = null;
     fetcher = null;
@@ -132,16 +132,16 @@ public class TestFedAppReportFetcher {
         .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
     Mockito.verify(appManager2, Mockito.times(1))
         .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
-    Assert.assertNull("HistoryManager should be null as AHS is disabled", history);
+    Assertions.assertNull(history, "HistoryManager should be null as AHS is disabled");
   }
 
   @Test
   public void testGetRmAppPageUrlBase() throws IOException, YarnException {
     testHelper(true);
     String scheme = WebAppUtils.getHttpSchemePrefix(conf);
-    Assert.assertEquals(fetcher.getRmAppPageUrlBase(appId1),
+    Assertions.assertEquals(fetcher.getRmAppPageUrlBase(appId1),
         StringHelper.pjoin(scheme + clusterInfo1.getRMWebServiceAddress(), "cluster", "app"));
-    Assert.assertEquals(fetcher.getRmAppPageUrlBase(appId2),
+    Assertions.assertEquals(fetcher.getRmAppPageUrlBase(appId2),
         StringHelper.pjoin(scheme + clusterInfo2.getRMWebServiceAddress(), "cluster", "app"));
   }
 

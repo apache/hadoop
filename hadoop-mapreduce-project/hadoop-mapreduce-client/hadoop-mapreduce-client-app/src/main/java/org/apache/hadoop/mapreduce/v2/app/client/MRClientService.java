@@ -81,6 +81,7 @@ import org.apache.hadoop.mapreduce.v2.app.webapp.AMWebApp;
 import org.apache.hadoop.mapreduce.v2.app.webapp.AMWebServices;
 import org.apache.hadoop.mapreduce.v2.app.webapp.App;
 import org.apache.hadoop.mapreduce.v2.app.webapp.JAXBContextResolver;
+import org.apache.hadoop.mapreduce.v2.app.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -94,7 +95,6 @@ import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -152,7 +152,7 @@ public class MRClientService extends AbstractService implements ClientService {
           MRJobConfig.MR_AM_WEBAPP_HTTPS_CLIENT_AUTH,
           MRJobConfig.DEFAULT_MR_AM_WEBAPP_HTTPS_CLIENT_AUTH);
       webApp =
-          WebApps.$for("mapreduce", AppContext.class, appContext, "ws")
+          WebApps.$for("mapreduce", AppContext.class, appContext, "rm-ws")
             .withHttpPolicy(conf, httpPolicy)
             .withPortRange(conf, MRJobConfig.MR_AM_WEBAPP_PORT_RANGE)
             .needsClientAuth(needsClientAuth)
@@ -451,11 +451,11 @@ public class MRClientService extends AbstractService implements ClientService {
 
   protected ResourceConfig configure() {
     ResourceConfig config = new ResourceConfig();
-    config.packages("org.apache.hadoop.mapreduce.v2.app.webapp");
     config.register(new JerseyBinder());
     config.register(AMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     return config;
   }
 

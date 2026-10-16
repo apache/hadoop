@@ -28,8 +28,18 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 
 import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ipc.RemoteException;
+import java.lang.reflect.Method;
+import java.util.EnumSet;
 
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_ENABLE_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ASYNC_RPC_HANDLER_COUNT_KEY;
@@ -38,6 +48,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.async.utils.AsyncU
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Testing the asynchronous RPC functionality of the router.
@@ -97,5 +108,11 @@ public class TestRouterAsyncRpc extends TestRouterRpc {
     assertDoesNotThrow(() -> {
       rndRouter.getFileSystem().getDelegationToken(ugi.getShortUserName());
     });
+  }
+
+  @Test
+  public void testProxyGetHAServiceStateAsync() throws Exception {
+    HAServiceState state = getRouterProtocol().getHAServiceState();
+    assertNotNull(state);
   }
 }

@@ -406,6 +406,12 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
           container.getAllocatedResource().getMemorySize());
       entityInfo.put(ContainerMetricsConstants.ALLOCATED_VCORE_INFO,
           container.getAllocatedResource().getVirtualCores());
+      Map<String, Map<String, Object>> customResources =
+          TimelineUtils.getCustomResourceInfo(container.getAllocatedResource());
+      if (!customResources.isEmpty()) {
+        entityInfo.put(ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO,
+            customResources);
+      }
       entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_INFO,
           container.getAllocatedNode().getHost());
       entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_INFO,

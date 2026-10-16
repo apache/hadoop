@@ -18,21 +18,10 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-main</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
   <description>Apache Hadoop Main</description>
   <name>Apache Hadoop Main</name>
   <packaging>pom</packaging>
-
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>com.cenqua.clover</groupId>
-        <artifactId>clover</artifactId>
-        <!-- Use the version needed by maven-clover-plugin -->
-        <version>3.0.2</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
 
   <distributionManagement>
     <repository>
@@ -83,7 +72,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
 
   <properties>
     <!-- required as child projects with different version can't use ${project.version} -->
-    <hadoop.version>3.5.0-SNAPSHOT</hadoop.version>
+    <hadoop.version>3.6.0-SNAPSHOT</hadoop.version>
+
+    <!-- Skip JaCoCo instrumentation/reporting by default; enable with
+         -Djacoco.skip=false. jacoco.skip is the jacoco-maven-plugin's own skip
+         property; we only set its default here. Defined in hadoop-main (not
+         only in hadoop-project) so modules that inherit directly from
+         hadoop-main, such as hadoop-coverage, resolve it too. -->
+    <jacoco.skip>true</jacoco.skip>
 
     <docker.image>apache/hadoop:${project.version}</docker.image>
 
@@ -104,31 +100,50 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <maven-stylus-skin.version>1.5</maven-stylus-skin.version>
     <maven-antrun-plugin.version>1.7</maven-antrun-plugin.version>
     <maven-assembly-plugin.version>2.4</maven-assembly-plugin.version>
-    <maven-dependency-plugin.version>3.0.2</maven-dependency-plugin.version>
+    <maven-dependency-plugin.version>3.8.1</maven-dependency-plugin.version>
     <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
     <restrict-imports.enforcer.version>2.0.0</restrict-imports.enforcer.version>
-    <maven-javadoc-plugin.version>3.0.1</maven-javadoc-plugin.version>
+    <maven-javadoc-plugin.version>3.8.0</maven-javadoc-plugin.version>
     <maven-gpg-plugin.version>1.5</maven-gpg-plugin.version>
     <maven-remote-resources-plugin.version>1.5</maven-remote-resources-plugin.version>
     <maven-resources-plugin.version>3.0.1</maven-resources-plugin.version>
     <apache-rat-plugin.version>0.12</apache-rat-plugin.version>
     <wagon-ssh.version>2.4</wagon-ssh.version>
-    <clover-maven-plugin.version>4.4.1</clover-maven-plugin.version>
+    <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
     <maven-bundle-plugin.version>2.5.0</maven-bundle-plugin.version>
     <lifecycle-mapping.version>1.0.0</lifecycle-mapping.version>
-    <maven-checkstyle-plugin.version>3.1.0</maven-checkstyle-plugin.version>
-    <checkstyle.version>8.29</checkstyle.version>
-    <dependency-check-maven.version>7.1.1</dependency-check-maven.version>
-    <spotbugs.version>4.2.2</spotbugs.version>
-    <spotbugs-maven-plugin.version>4.2.0</spotbugs-maven-plugin.version>
+    <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
+    <checkstyle.version>11.1.0</checkstyle.version>
+    <dependency-check-maven.version>12.2.2</dependency-check-maven.version>
+    <spotbugs.version>4.9.7</spotbugs.version>
+    <spotbugs-maven-plugin.version>4.9.7.0</spotbugs-maven-plugin.version>
     <jsonschema2pojo-maven-plugin.version>1.1.1</jsonschema2pojo-maven-plugin.version>
     <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
-    <cyclonedx.version>2.7.10</cyclonedx.version>
+    <cyclonedx.version>2.9.1</cyclonedx.version>
     <docker-maven-plugin.version>0.29.0</docker-maven-plugin.version>
 
     <shell-executable>bash</shell-executable>
 
     <leveldbjni.group>org.fusesource.leveldbjni</leveldbjni.group>
+
+    <!--
+     Surefire option to not fail a build if -Dtest=NAME doesn't find a
+     test called NAME. This is needed when running integration tests through
+     failsafe, as setting -Dtest=none is the way to stop surefire
+     running all unit tests before the it.test option is picked up.
+    -->
+    <surefire.failIfNoSpecifiedTests>false</surefire.failIfNoSpecifiedTests>
+
+    <!-- define the Java language version used by the compiler -->
+    <javac.version>17</javac.version>
+
+    <!-- The java version enforced by the maven enforcer -->
+    <!-- more complex patterns can be used here, such as
+       [${javac.version})
+    for an open-ended enforcement
+    -->
+    <enforced.java.version>[${javac.version},)</enforced.java.version>
+    <enforced.maven.version>[3.9.15,)</enforced.maven.version>
   </properties>
 
   <modules>
@@ -141,11 +156,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <module>hadoop-yarn-project</module>
     <module>hadoop-mapreduce-project</module>
     <module>hadoop-tools</module>
-    <module>hadoop-dist</module>
     <module>hadoop-minicluster</module>
     <module>hadoop-client-modules</module>
     <module>hadoop-build-tools</module>
     <module>hadoop-cloud-storage-project</module>
+    <module>hadoop-dist</module>
   </modules>
 
   <build>
@@ -168,10 +183,10 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           <configuration>
             <rules>
               <requireMavenVersion>
-                <version>[3.0.2,)</version>
+                <version>${enforced.maven.version}</version>
               </requireMavenVersion>
               <requireJavaVersion>
-                <version>[1.8,)</version>
+                <version>${enforced.java.version}</version>
               </requireJavaVersion>
             </rules>
           </configuration>
@@ -313,6 +328,17 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                     <bannedImports>
                       <bannedImport>org.apache.commons.logging.**</bannedImport>
                     </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                     <includeTestCode>true</includeTestCode>
+                     <reason>Use JUnit5</reason>
+                     <bannedImports>
+                        <bannedImport>org.junit.**</bannedImport>
+                     </bannedImports>
+                     <allowedImports>
+                        <allowedImport>org.junit.jupiter.**</allowedImport>
+                        <allowedImport>org.junit.platform.**</allowedImport>
+                     </allowedImports>
                   </restrictImports>
                 </rules>
               </configuration>
@@ -459,9 +485,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           </configuration>
         </plugin>
         <plugin>
-          <groupId>org.openclover</groupId>
-          <artifactId>clover-maven-plugin</artifactId>
-          <version>${clover-maven-plugin.version}</version>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <version>${jacoco-maven-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.felix</groupId>
@@ -496,6 +522,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           <groupId>org.owasp</groupId>
           <artifactId>dependency-check-maven</artifactId>
           <version>${dependency-check-maven.version}</version>
+          <configuration>
+            <!-- often misidentied native binaries as .net native binaries then looks for .Net tooling to scan them -->
+            <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
+            <!-- requires separate sonatype account and sometimes fails if not present -->
+            <ossindexAnalyzerEnabled>false</ossindexAnalyzerEnabled>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>com.github.spotbugs</groupId>
@@ -518,6 +550,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>${maven-compiler-plugin.version}</version>
+          <configuration>
+            <release>${javac.version}</release>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -577,8 +612,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <exclude>.gitignore</exclude>
             <exclude>.git/**</exclude>
             <exclude>.github/pull_request_template.md</exclude>
+            <exclude>AGENTS.md</exclude>
+            <exclude>SECURITY.md</exclude>
             <exclude>.idea/**</exclude>
+            <exclude>.mvn/*.config</exclude>
             <exclude>**/build/**</exclude>
+            <exclude>**/dependency-reduced-pom.xml</exclude>
             <exclude>**/patchprocess/**</exclude>
             <exclude>**/*.js</exclude>
             <exclude>licenses/**</exclude>
@@ -586,6 +625,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <exclude>dev-support/docker/pkg-resolver/packages.json</exclude>
             <exclude>dev-support/docker/pkg-resolver/platforms.json</exclude>
             <exclude>dev-support/docker/vcpkg/vcpkg.json</exclude>
+            <exclude>hadoop-hdfs-project/hadoop-hdfs-rbf/src/main/java/org/apache/hadoop/hdfs/server/federation/metrics/JSON.java</exclude>
             <exclude>**/target/**</exclude>
          </excludes>
        </configuration>
@@ -617,8 +657,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
              dependencies of this project for known CVEs (security
              vulnerabilities against them). It will produce a report
              in target/dependency-check-report.html. To invoke, run
-             'mvn dependency-check:aggregate'. Note that this plugin
-             requires maven 3.1.1 or greater.
+             'mvn dependency-check:aggregate'.
         -->
         <groupId>org.owasp</groupId>
         <artifactId>dependency-check-maven</artifactId>
@@ -648,9 +687,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           <reportSet>
             <id>aggregate</id>
             <configuration>
-              <maxmemory>1024m</maxmemory>
               <quiet>true</quiet>
               <verbose>false</verbose>
+              <legacyMode>true</legacyMode>
               <source>${maven.compile.source}</source>
               <charset>${maven.compile.encoding}</charset>
               <reportOutputDirectory>${project.build.directory}/site</reportOutputDirectory>
@@ -683,8 +722,15 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                   <version>${project.version}</version>
                 </docletArtifact>
               </docletArtifacts>
-              <useStandardDocletOptions>true</useStandardDocletOptions>
-
+              <additionalJOptions>
+                <!-- To fix doclet runtime error -->
+                <additionalJOption>-J--add-exports=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalJOption>
+              </additionalJOptions>
+              <additionalOptions>
+                <!-- To fix doclet compile error -->
+                <additionalOption>--add-exports</additionalOption>
+                <additionalOption>jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalOption>
+              </additionalOptions>
               <!-- switch on dependency-driven aggregation -->
               <includeDependencySources>false</includeDependencySources>
 
@@ -692,7 +738,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                 <!-- include ONLY dependencies I control -->
                 <dependencySourceInclude>org.apache.hadoop:hadoop-annotations</dependencySourceInclude>
               </dependencySourceIncludes>
-
+              <additionalDependencies>
+                <additionalDependency>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-hdfs</artifactId>
+                  <version>${project.version}</version>
+                  <classifier>tests</classifier>
+                </additionalDependency>
+              </additionalDependencies>
             </configuration>
             <reports>
               <report>aggregate</report>
@@ -717,6 +770,25 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
   </reporting>
 
   <profiles>
+    <!-- The coverage aggregate module joins the reactor only when coverage is
+         explicitly requested (-Djacoco.skip=false). Keeping it out of the
+         unconditional <modules> means normal install/site/deploy/package builds
+         neither resolve its (reactor-wide) dependency list nor run its guard,
+         so the default build is unaffected and coverage stays opt-in. The
+         documented coverage command already passes -Djacoco.skip=false,
+         so it still builds as a full reactor that includes hadoop-coverage. -->
+    <profile>
+      <id>coverage</id>
+      <activation>
+        <property>
+          <name>jacoco.skip</name>
+          <value>false</value>
+        </property>
+      </activation>
+      <modules>
+        <module>hadoop-coverage</module>
+      </modules>
+    </profile>
     <profile>
       <id>src</id>
       <activation>
@@ -812,78 +884,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                 <phase>verify</phase>
                 <goals>
                   <goal>sign</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>clover</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-        <property>
-          <name>clover</name>
-        </property>
-      </activation>
-      <properties>
-        <cloverDatabase>${project.build.directory}/clover/hadoop-coverage.db</cloverDatabase>
-        <!-- NB: This additional parametrization is made in order
-             to be able to re-define these properties with "-Dk=v" maven options.
-             By some reason the expressions declared in clover
-             docs like "${maven.clover.generateHtml}" do not work in that way.
-             However, the below properties are confirmed to work: e.g.
-             -DcloverGenHtml=false switches off the Html generation.
-             The default values provided here exactly correspond to Clover defaults, so
-             the behavior is 100% backwards compatible. -->
-        <cloverAlwaysReport>true</cloverAlwaysReport>
-        <cloverGenHtml>true</cloverGenHtml>
-        <cloverGenXml>true</cloverGenXml>
-        <cloverGenHistorical>false</cloverGenHistorical>
-      </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.openclover</groupId>
-            <artifactId>clover-maven-plugin</artifactId>
-            <configuration>
-              <includesAllSourceRoots>false</includesAllSourceRoots>
-              <includesTestSourceRoots>true</includesTestSourceRoots>
-              <cloverDatabase>${cloverDatabase}</cloverDatabase>
-              <targetPercentage>50%</targetPercentage>
-              <outputDirectory>${project.build.directory}/clover</outputDirectory>
-              <alwaysReport>${cloverAlwaysReport}</alwaysReport>
-              <generateHtml>${cloverGenHtml}</generateHtml>
-              <generateXml>${cloverGenXml}</generateXml>
-              <generateHistorical>${cloverGenHistorical}</generateHistorical>
-              <excludes>
-                <exclude>**/examples/**/*.java</exclude>
-                <exclude>**/hamlet/*.java</exclude>
-                <exclude>**/ha/proto/*.java</exclude>
-                <exclude>**/protocol/proto/*.java</exclude>
-                <exclude>**/compiler/generated/*.java</exclude>
-                <exclude>**/protobuf/*.java</exclude>
-                <exclude>**/v2/proto/*.java</exclude>
-                <exclude>**/yarn/proto/*.java</exclude>
-                <exclude>**/security/proto/*.java</exclude>
-                <exclude>**/tools/proto/*.java</exclude>
-                <exclude>**/hs/proto/*.java</exclude>
-              </excludes>
-            </configuration>
-            <executions>
-              <execution>
-                <id>clover-setup</id>
-                <phase>process-sources</phase>
-                <goals>
-                  <goal>setup</goal>
-                </goals>
-              </execution>
-              <execution>
-                <id>clover</id>
-                <phase>test</phase>
-                <goals>
-                  <goal>clover</goal>
                 </goals>
               </execution>
             </executions>

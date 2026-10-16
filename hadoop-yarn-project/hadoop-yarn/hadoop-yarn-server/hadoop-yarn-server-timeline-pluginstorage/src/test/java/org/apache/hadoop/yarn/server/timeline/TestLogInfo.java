@@ -77,6 +77,7 @@ public class TestLogInfo {
 
   @BeforeEach
   public void setup() throws Exception {
+    prepareCleanTestRootDir();
     config.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, TEST_ROOT_DIR.toString());
     HdfsConfiguration hdfsConfig = new HdfsConfiguration();
     hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig).numDataNodes(1).build();
@@ -106,7 +107,24 @@ public class TestLogInfo {
     jsonGenerator.close();
     outStream.close();
     outStreamDomain.close();
+
+    FileSystem hdfsFs = hdfsCluster.getFileSystem();
+    if (hdfsFs.exists(TEST_ROOT_DIR)) {
+      hdfsFs.delete(TEST_ROOT_DIR, true);
+    }
     hdfsCluster.shutdown();
+
+    FileSystem localFs = FileSystem.getLocal(config);
+    if (localFs.exists(TEST_ROOT_DIR)) {
+        localFs.delete(TEST_ROOT_DIR, true);
+    }
+  }
+  /**
+   * Creates a fresh test root directory after cleanup.
+   */
+  private void prepareCleanTestRootDir() throws IOException {
+      FileSystem localFs = FileSystem.getLocal(config);
+      localFs.mkdirs(TEST_ROOT_DIR);
   }
 
   @Test

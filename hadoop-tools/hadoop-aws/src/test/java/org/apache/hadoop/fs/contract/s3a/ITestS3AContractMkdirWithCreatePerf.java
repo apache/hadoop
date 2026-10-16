@@ -26,23 +26,26 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.test.tags.IntegrationTest;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_PERFORMANCE_TESTS_ENABLED;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 
 /**
  * Test mkdir operations on S3A with create performance mode.
  */
+@IntegrationTest
 public class ITestS3AContractMkdirWithCreatePerf extends AbstractContractMkdirTest {
 
   @Override
   protected Configuration createConfiguration() {
-    return setPerformanceFlags(
-        super.createConfiguration(),
-        "create,mkdir");
+    final Configuration conf = super.createConfiguration();
+    disableFilesystemCaching(conf);
+    return setPerformanceFlags(conf, "create,mkdir");
   }
 
   @Override

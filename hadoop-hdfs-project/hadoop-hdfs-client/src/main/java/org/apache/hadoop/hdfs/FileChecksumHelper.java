@@ -666,6 +666,17 @@ final class FileChecksumHelper {
             bgIdx--; // repeat at bgIdx-th block
             setRefetchBlocks(true);
           }
+        } catch (InvalidEncryptionKeyException iee) {
+          if (bgIdx > getLastRetriedIndex()) {
+            LOG.debug("Got invalid encryption key error in response to "
+                    + "OP_BLOCK_GROUP_CHECKSUM for file {} for block {} from "
+                    + "datanode {}. Will retry the block once.",
+                getSrc(), block, datanodes[j]);
+            setLastRetriedIndex(bgIdx);
+            done = true; // actually it's not done; but we'll retry
+            bgIdx--; // repeat at bgIdx-th block
+            getClient().clearDataEncryptionKey();
+          }
         } catch (IOException ie) {
           LOG.warn("src={}" + ", datanodes[{}]={}",
               getSrc(), j, datanodes[j], ie);

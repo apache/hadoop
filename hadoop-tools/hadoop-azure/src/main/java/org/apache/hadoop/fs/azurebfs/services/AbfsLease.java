@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,7 +71,7 @@ public final class AbfsLease {
   private volatile boolean leaseFreed;
   private volatile String leaseID = null;
   private volatile Throwable exception = null;
-  private volatile int acquireRetryCount = 0;
+  private AtomicInteger acquireRetryCount = new AtomicInteger(0);
   private volatile ListenableScheduledFuture<AbfsRestOperation> future = null;
   private final long leaseRefreshDuration;
   private final int leaseRefreshDurationInSeconds;
@@ -197,7 +198,7 @@ public final class AbfsLease {
           if (RetryPolicy.RetryAction.RetryDecision.RETRY
               == retryPolicy.shouldRetry(null, numRetries, 0, true).action) {
             LOG.debug("Failed to acquire lease on {}, retrying: {}", path, throwable);
-            acquireRetryCount++;
+            acquireRetryCount.incrementAndGet();
             acquireLease(retryPolicy, numRetries + 1, retryInterval,
                 retryInterval, eTag, tracingContext);
           } else {
@@ -289,7 +290,7 @@ public final class AbfsLease {
    */
   @VisibleForTesting
   public int getAcquireRetryCount() {
-    return acquireRetryCount;
+    return acquireRetryCount.get();
   }
 
   /**

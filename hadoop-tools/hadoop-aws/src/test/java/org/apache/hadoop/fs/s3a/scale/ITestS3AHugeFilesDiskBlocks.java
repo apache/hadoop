@@ -19,11 +19,13 @@
 package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.test.tags.ScaleTest;
 
 /**
  * Use {@link Constants#FAST_UPLOAD_BUFFER_DISK} for buffering.
  * Also uses direct buffers for the vector IO.
  */
+@ScaleTest
 public class ITestS3AHugeFilesDiskBlocks extends AbstractSTestS3AHugeFiles {
 
   protected String getBlockOutputBufferName() {

@@ -57,6 +57,7 @@
         <exclude>**/file:/**</exclude>
         <exclude>**/SecurityAuth.audit*</exclude>
         <exclude>patchprocess/**</exclude>
+        <exclude>**/auth-keys.xml</exclude>
       </excludes>
     </fileSet>
   </fileSets>

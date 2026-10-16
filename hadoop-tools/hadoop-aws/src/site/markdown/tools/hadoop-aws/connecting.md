@@ -144,6 +144,9 @@ the cost of a HEAD request, and caches it.
 Please note that some endpoint and region settings that require cross region access
 are complex and improving over time. Hence, they may be considered unstable.
 
+*Important:* do not use `auto`, `ec2`, or `sdk` as these may be used
+in the future for specific region-binding algorithms.
+
 If you are working with third party stores, please check [third party stores in detail](third_party_stores.html).
 
 ### <a name="timeouts"></a> Network timeouts

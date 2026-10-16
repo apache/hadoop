@@ -18,9 +18,9 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -45,15 +45,15 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil.ExitException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
-@RunWith(Parameterized.class)
+@MethodSource("data")
+@ParameterizedClass
 public class TestEditLogJournalFailures {
 
   private int editsPerformed = 0;
@@ -61,7 +61,6 @@ public class TestEditLogJournalFailures {
   private FileSystem fs;
   private boolean useAsyncEdits;
 
-  @Parameters
   public static Collection<Object[]> data() {
     Collection<Object[]> params = new ArrayList<Object[]>();
     params.add(new Object[]{Boolean.FALSE});
@@ -84,7 +83,7 @@ public class TestEditLogJournalFailures {
    * Create the mini cluster for testing and sub in a custom runtime so that
    * edit log journal failures don't actually cause the JVM to exit.
    */
-  @Before
+  @BeforeEach
   public void setUpMiniCluster() throws IOException {
     setUpMiniCluster(getConf(), true);
   }
@@ -97,7 +96,7 @@ public class TestEditLogJournalFailures {
     fs = cluster.getFileSystem();
   }
   
-  @After
+  @AfterEach
   public void shutDownMiniCluster() throws IOException {
     if (fs != null) {
       fs.close();

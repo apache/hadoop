@@ -538,6 +538,9 @@ public class LogsCLI extends Configured implements Tool {
           JSONArray array = new JSONArray();
           String entity = response.readEntity(String.class);
           JSONObject json = new JSONObject(entity);
+          if (json.has("containerLogsInfoes")) {
+            json = json.getJSONObject("containerLogsInfoes");
+          }
           if (!json.has("containerLogsInfo")) {
             return logFileInfos;
           }
@@ -1531,6 +1534,7 @@ public class LogsCLI extends Configured implements Tool {
           }
           // check if a URL is reachable
           checkUrlConnectivity(uri);
+          return;
         } catch (Exception e) {
           leftRetries--;
           if (leftRetries <= 0) {

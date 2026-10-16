@@ -395,37 +395,53 @@ public class DFSStripedInputStream extends DFSInputStream {
       throw new IOException("Stream closed");
     }
 
+    // Number of bytes already read into buffer.
+    int result = 0;
     int len = strategy.getTargetLength();
     CorruptedBlocks corruptedBlocks = new CorruptedBlocks();
     if (pos < getFileLength()) {
-      try {
-        if (pos > blockEnd) {
-          blockSeekTo(pos);
-        }
-        int realLen = (int) Math.min(len, (blockEnd - pos + 1L));
-        synchronized (infoLock) {
-          if (locatedBlocks.isLastBlockComplete()) {
-            realLen = (int) Math.min(realLen,
-                locatedBlocks.getFileLength() - pos);
+      int retries = 2;
+      boolean isRetryRead = false;
+      while (retries > 0) {
+        try {
+          if (pos > blockEnd || isRetryRead) {
+            blockSeekTo(pos);
           }
-        }
+          int realLen = (int) Math.min(len, (blockEnd - pos + 1L));
+          synchronized (infoLock) {
+            if (locatedBlocks.isLastBlockComplete()) {
+              realLen = (int) Math.min(realLen,
+                  locatedBlocks.getFileLength() - pos);
+            }
+          }
 
-        /** Number of bytes already read into buffer */
-        int result = 0;
-        while (result < realLen) {
-          if (!curStripeRange.include(getOffsetInBlockGroup())) {
-            readOneStripe(corruptedBlocks);
+          while (result < realLen) {
+            if (!curStripeRange.include(getOffsetInBlockGroup())) {
+              DFSClientFaultInjector.get().failWhenReadWithStrategy(isRetryRead);
+              readOneStripe(corruptedBlocks);
+            }
+            int ret = copyToTargetBuf(strategy, realLen - result);
+            result += ret;
+            pos += ret;
+            len -= ret;
           }
-          int ret = copyToTargetBuf(strategy, realLen - result);
-          result += ret;
-          pos += ret;
+          return result;
+        } catch (IOException ioe) {
+          retries--;
+          if (retries > 0) {
+            DFSClient.LOG.info(
+                "DFSStripedInputStream read meets exception:{}, will retry again.",
+                ioe.toString());
+            isRetryRead = true;
+          } else {
+            throw ioe;
+          }
+        } finally {
+          // Check if need to report block replicas corruption either read
+          // was successful or ChecksumException occurred.
+          reportCheckSumFailure(corruptedBlocks, getCurrentBlockLocationsLength(),
+              true);
         }
-        return result;
-      } finally {
-        // Check if need to report block replicas corruption either read
-        // was successful or ChecksumException occurred.
-        reportCheckSumFailure(corruptedBlocks, getCurrentBlockLocationsLength(),
-            true);
       }
     }
     return -1;

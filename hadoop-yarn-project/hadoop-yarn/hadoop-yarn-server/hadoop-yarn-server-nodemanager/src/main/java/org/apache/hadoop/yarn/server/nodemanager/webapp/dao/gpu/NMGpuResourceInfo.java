@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 import java.util.List;
 
 /**
@@ -34,6 +35,7 @@ import java.util.List;
  */
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
+@XmlType(name = "NMGpuResourceInfo")
 public class NMGpuResourceInfo extends NMResourceInfo {
   GpuDeviceInformation gpuDeviceInformation;
 

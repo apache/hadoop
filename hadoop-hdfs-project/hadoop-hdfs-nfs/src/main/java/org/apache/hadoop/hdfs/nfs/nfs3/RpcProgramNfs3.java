@@ -177,7 +177,9 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         Nfs3Constant.VERSION, Nfs3Constant.VERSION, registrationSocket,
         allowInsecurePorts, config.getInt(
                 NfsConfigKeys.NFS_UDP_CLIENT_PORTMAP_TIMEOUT_MILLIS_KEY,
-                NfsConfigKeys.NFS_UDP_CLIENT_PORTMAP_TIMEOUT_MILLIS_DEFAULT));
+                NfsConfigKeys.NFS_UDP_CLIENT_PORTMAP_TIMEOUT_MILLIS_DEFAULT),
+        config.get(NfsConfigKeys.DFS_NFS_SERVER_BIND_HOST_KEY,
+                NfsConfigKeys.DFS_NFS_SERVER_BIND_HOST_DEFAULT));
 
     this.config = config;
     config.set(FsPermission.UMASK_LABEL, "000");

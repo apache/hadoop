@@ -40,7 +40,7 @@ public class JavaProcess {
     String javaBin =
         javaHome + File.separator + "bin" + File.separator + "java";
     String classpath = System.getProperty("java.class.path");
-    classpath = classpath.concat("./src/test/resources");
+    classpath = classpath + File.pathSeparator + "./src/test/resources";
     if (addClassPaths != null) {
       for (String addClasspath : addClassPaths) {
         classpath = classpath.concat(File.pathSeparatorChar + addClasspath);
@@ -60,7 +60,7 @@ public class JavaProcess {
     String javaHome = System.getProperty("java.home");
     String javaBin = javaHome + File.separator + "bin" + File.separator + "java";
     String classpath = System.getProperty("java.class.path");
-    classpath = classpath.concat("./src/test/resources");
+    classpath = classpath + File.pathSeparator + "./src/test/resources";
     if (addClassPaths != null) {
       for (String addClasspath : addClassPaths) {
         classpath = classpath.concat(File.pathSeparatorChar + addClasspath);
@@ -73,6 +73,16 @@ public class JavaProcess {
     builder.redirectOutput(output);
     builder.redirectError(output);
     process = builder.start();
+  }
+
+  /**
+   * Asks the process to terminate without waiting for it to exit, so several
+   * processes can run their shutdown hooks at the same time.
+   */
+  public void destroy() {
+    if (process != null) {
+      process.destroy();
+    }
   }
 
   public void stop() throws InterruptedException {

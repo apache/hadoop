@@ -37,7 +37,7 @@ import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.FutureIO;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.AssumptionViolatedException;
+import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -565,19 +565,19 @@ public class ContractTestUtils extends Assertions {
    * exception for the Junit test runner to mark as failed.
    * @param message text message
    * @param failure what failed
-   * @throws AssumptionViolatedException always
+   * @throws TestAbortedException always
    */
   public static void downgrade(String message, Throwable failure) {
     LOG.warn("Downgrading test " + message, failure);
-    AssumptionViolatedException ave =
-        new AssumptionViolatedException(failure, null);
+    TestAbortedException ave =
+        new TestAbortedException(null, failure);
     throw ave;
   }
 
   /**
    * report an overridden test as unsupported.
    * @param message message to use in the text
-   * @throws AssumptionViolatedException always
+   * @throws TestAbortedException always
    */
   public static void unsupported(String message) {
     skip(message);
@@ -586,11 +586,11 @@ public class ContractTestUtils extends Assertions {
   /**
    * report a test has been skipped for some reason.
    * @param message message to use in the text
-   * @throws AssumptionViolatedException always
+   * @throws TestAbortedException always
    */
   public static void skip(String message) {
     LOG.info("Skipping: {}", message);
-    throw new AssumptionViolatedException(message);
+    throw new TestAbortedException(message);
   }
 
   /**

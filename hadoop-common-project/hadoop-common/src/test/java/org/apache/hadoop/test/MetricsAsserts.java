@@ -449,8 +449,8 @@ public class MetricsAsserts {
    */
   public static void assertTag(String name, String expected,
       MetricsRecordBuilder rb) {
-    assertEquals("Bad Tag for metric " + name,
-        expected, getStringTag(name, rb));
+    assertEquals(expected, getStringTag(name, rb),
+        "Bad Tag for metric " + name);
   }
 
   /**

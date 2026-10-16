@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -45,7 +45,8 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.TestDNFencing.RandomDeleterPolicy;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.function.Supplier;
 
@@ -69,7 +70,8 @@ public class TestRBWBlockInvalidation {
    * datanode, namenode should ask to invalidate that corrupted block and
    * schedule replication for one more replica for that under replicated block.
    */
-  @Test(timeout=600000)
+  @Test
+  @Timeout(value = 600)
   public void testBlockInvalidationWhenRBWReplicaMissedInDN()
       throws IOException, InterruptedException {
     // This test cannot pass on Windows due to file locking enforcement.  It will
@@ -112,8 +114,8 @@ public class TestRBWBlockInvalidation {
         }
         Thread.sleep(100);
       }
-      assertEquals("There should be less than 2 replicas in the "
-          + "liveReplicasMap", 1, liveReplicas);
+      assertEquals(1, liveReplicas,
+          "There should be less than 2 replicas in the " + "liveReplicasMap");
       
       while (true) {
         if ((liveReplicas =
@@ -124,7 +126,7 @@ public class TestRBWBlockInvalidation {
         }
         Thread.sleep(100);
       }
-      assertEquals("There should be two live replicas", 2, liveReplicas);
+      assertEquals(2, liveReplicas, "There should be two live replicas");
 
       while (true) {
         Thread.sleep(100);
@@ -146,7 +148,8 @@ public class TestRBWBlockInvalidation {
    * were RWR replicas with out-of-date genstamps, the NN could accidentally
    * delete good replicas instead of the bad replicas.
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testRWRInvalidation() throws Exception {
     Configuration conf = new HdfsConfiguration();
 

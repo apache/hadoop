@@ -26,10 +26,11 @@ public class ListingBenchmark {
 
   public static void main(String[] args) throws IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(0)
         .format(true)
-        .build();
-    NameNode nn = cluster.getNameNode();
+        .build()) {
+      NameNode nn = cluster.getNameNode();
+    }
   }
 }

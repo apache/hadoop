@@ -19,18 +19,19 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SaverContext.DeduplicationMap;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestDeduplicationMap {
   @Test
   public void testDeduplicationMap() {
     DeduplicationMap<String> m = DeduplicationMap.newMap();
-    Assert.assertEquals(1, m.getId("1"));
-    Assert.assertEquals(2, m.getId("2"));
-    Assert.assertEquals(3, m.getId("3"));
-    Assert.assertEquals(1, m.getId("1"));
-    Assert.assertEquals(2, m.getId("2"));
-    Assert.assertEquals(3, m.getId("3"));
+    assertEquals(1, m.getId("1"));
+    assertEquals(2, m.getId("2"));
+    assertEquals(3, m.getId("3"));
+    assertEquals(1, m.getId("1"));
+    assertEquals(2, m.getId("2"));
+    assertEquals(3, m.getId("3"));
   }
 }

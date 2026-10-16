@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -187,6 +188,24 @@ public class TestGenericWritable {
     FooGenericWritable generic = new FooGenericWritable();
     generic.set(foo);
     assertEquals(foo, generic.get());
+  }
+
+  /**
+   * A type index that falls outside the registered types array is reported as
+   * an {@link IOException}.
+   */
+  @Test
+  public void testReadFieldsRejectsOutOfRangeType() throws Exception {
+    DataOutputBuffer out = new DataOutputBuffer();
+    out.writeByte(0xff);
+    out.close();
+    try (DataInputBuffer in = new DataInputBuffer()) {
+      in.reset(out.getData(), out.getLength());
+      FooGenericWritable generic = new FooGenericWritable();
+      generic.setConf(conf);
+      intercept(IOException.class, "out of range", () ->
+          generic.readFields(in));
+    }
   }
 
 }

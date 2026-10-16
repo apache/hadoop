@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.net.BindException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -549,25 +550,50 @@ public final class HttpServer2 implements FilterContainer {
       }
 
       for (URI ep : endpoints) {
-        final ServerConnector connector;
+        //
+        // To enable dual-stack or IPv6 support, use InetAddress
+        // .getAllByName(hostname) to resolve the IP addresses of a host.
+        // When the system property java.net.preferIPv4Stack is set to true,
+        // only IPv4 addresses are returned, and any IPv6 addresses are
+        // ignored, so no extra check is needed to exclude IPv6.
+        // When java.net.preferIPv4Stack is false, both IPv4 and IPv6
+        // addresses may be returned, and any IPv6 addresses will also be
+        // added as connectors.
+        // To disable IPv4, you need to configure the OS at the system level.
+        //
+        InetAddress[] addresses = InetAddress.getAllByName(ep.getHost());
+        server = addConnectors(
+            ep, addresses, server, httpConfig, backlogSize, idleTimeout);
+      }
+      server.loadListeners();
+      return server;
+    }
+
+    @VisibleForTesting
+    HttpServer2 addConnectors(
+        URI ep, InetAddress[] addresses, HttpServer2 server,
+        HttpConfiguration httpConfig, int backlogSize, int idleTimeout){
+      for (InetAddress addr : addresses) {
+        ServerConnector connector;
         String scheme = ep.getScheme();
         if (HTTP_SCHEME.equals(scheme)) {
-          connector = createHttpChannelConnector(server.webServer,
-              httpConfig);
+          connector = createHttpChannelConnector(
+              server.webServer, httpConfig);
         } else if (HTTPS_SCHEME.equals(scheme)) {
-          connector = createHttpsChannelConnector(server.webServer,
-              httpConfig);
+          connector = createHttpsChannelConnector(
+              server.webServer, httpConfig);
         } else {
           throw new HadoopIllegalArgumentException(
               "unknown scheme for endpoint:" + ep);
         }
-        connector.setHost(ep.getHost());
+        LOG.debug("Adding connector to WebServer for address {}",
+            addr.getHostAddress());
+        connector.setHost(addr.getHostAddress());
         connector.setPort(ep.getPort() == -1 ? 0 : ep.getPort());
         connector.setAcceptQueueSize(backlogSize);
         connector.setIdleTimeout(idleTimeout);
         server.addListener(connector);
       }
-      server.loadListeners();
       return server;
     }
 
@@ -680,34 +706,32 @@ public final class HttpServer2 implements FilterContainer {
     private void setEnabledProtocols(SslContextFactory sslContextFactory) {
       String enabledProtocols = conf.get(SSLFactory.SSL_ENABLED_PROTOCOLS_KEY,
           SSLFactory.SSL_ENABLED_PROTOCOLS_DEFAULT);
-      if (!enabledProtocols.equals(SSLFactory.SSL_ENABLED_PROTOCOLS_DEFAULT)) {
-        // Jetty 9.2.4.v20141103 and above excludes certain protocols by
-        // default. Remove the user enabled protocols from the exclude list,
-        // and add them into the include list.
-        String[] jettyExcludedProtocols =
-            sslContextFactory.getExcludeProtocols();
-        String[] enabledProtocolsArray =
-            StringUtils.getTrimmedStrings(enabledProtocols);
-        List<String> enabledProtocolsList =
-            Arrays.asList(enabledProtocolsArray);
+      // Jetty 9.2.4.v20141103 and above excludes certain protocols by
+      // default. Remove the user enabled protocols from the exclude list,
+      // and add them into the include list.
+      String[] jettyExcludedProtocols =
+          sslContextFactory.getExcludeProtocols();
+      String[] enabledProtocolsArray =
+          StringUtils.getTrimmedStrings(enabledProtocols);
+      List<String> enabledProtocolsList =
+          Arrays.asList(enabledProtocolsArray);
 
-        List<String> resetExcludedProtocols = new ArrayList<>();
-        for (String jettyExcludedProtocol: jettyExcludedProtocols) {
-          if (!enabledProtocolsList.contains(jettyExcludedProtocol)) {
-            resetExcludedProtocols.add(jettyExcludedProtocol);
-          } else {
-            LOG.debug("Removed {} from exclude protocol list",
-                jettyExcludedProtocol);
-          }
+      List<String> resetExcludedProtocols = new ArrayList<>();
+      for (String jettyExcludedProtocol: jettyExcludedProtocols) {
+        if (!enabledProtocolsList.contains(jettyExcludedProtocol)) {
+          resetExcludedProtocols.add(jettyExcludedProtocol);
+        } else {
+          LOG.debug("Removed {} from exclude protocol list",
+              jettyExcludedProtocol);
         }
-
-        sslContextFactory.setExcludeProtocols(
-            resetExcludedProtocols.toArray(new String[0]));
-        LOG.info("Reset exclude protocol list: {}", resetExcludedProtocols);
-
-        sslContextFactory.setIncludeProtocols(enabledProtocolsArray);
-        LOG.info("Enabled protocols: {}", enabledProtocols);
       }
+
+      sslContextFactory.setExcludeProtocols(
+          resetExcludedProtocols.toArray(new String[0]));
+      LOG.info("Reset exclude protocol list: {}", resetExcludedProtocols);
+
+      sslContextFactory.setIncludeProtocols(enabledProtocolsArray);
+      LOG.info("Enabled protocols: {}", enabledProtocols);
     }
   }
 
@@ -743,6 +767,7 @@ public final class HttpServer2 implements FilterContainer {
       throws IOException {
 
     Preconditions.checkNotNull(webAppContext);
+    webAppContext.getErrorHandler().setShowStacks(LOG.isTraceEnabled());
 
     int maxThreads = conf.getInt(HTTP_MAX_THREADS_KEY, -1);
     // If HTTP_MAX_THREADS is not configured, QueueThreadPool() will use the
@@ -1423,11 +1448,18 @@ public final class HttpServer2 implements FilterContainer {
           // Create metrics source for each HttpServer2 instance.
           // Use port number to make the metrics source name unique.
           int port = -1;
+          int acceptorThreads = 0;
+          int selectorThreads = 0;
           for (ServerConnector connector : listeners) {
-            port = connector.getLocalPort();
-            break;
+            if (port == -1) {
+              port = connector.getLocalPort();
+            }
+            acceptorThreads += connector.getAcceptors();
+            selectorThreads += connector.getSelectorManager().getSelectorCount();
           }
-          metrics = HttpServer2Metrics.create(statsHandler, port);
+          metrics = HttpServer2Metrics.create(statsHandler, port,
+              (QueuedThreadPool) webServer.getThreadPool(),
+              acceptorThreads, selectorThreads);
         }
       } catch (IOException ex) {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);

@@ -309,6 +309,46 @@ public class TestAmFilter {
 
   }
 
+  @Test
+  @Timeout(5000)
+  void testTraceAndTrackBlocked() throws Exception {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(AmIpFilter.PROXY_HOST, proxyHost);
+    params.put(AmIpFilter.PROXY_URI_BASE, proxyUri);
+    FilterConfig config = new DummyFilterConfig(params);
+
+    AmIpFilter testFilter = new AmIpFilter();
+    testFilter.init(config);
+
+    final AtomicBoolean chainCalled = new AtomicBoolean(false);
+    FilterChain chain = new FilterChain() {
+      @Override
+      public void doFilter(ServletRequest servletRequest,
+          ServletResponse servletResponse) throws IOException, ServletException {
+        chainCalled.set(true);
+      }
+    };
+
+    HttpServletResponseForTest response = new HttpServletResponseForTest();
+
+    HttpServletRequest traceRequest = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(traceRequest.getMethod()).thenReturn("TRACE");
+    Mockito.when(traceRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+    testFilter.doFilter(traceRequest, response, chain);
+    assertEquals(HttpServletResponse.SC_METHOD_NOT_ALLOWED, response.status);
+    assertFalse(chainCalled.get());
+
+    response.status = 0;
+    chainCalled.set(false);
+
+    HttpServletRequest trackRequest = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(trackRequest.getMethod()).thenReturn("TRACK");
+    Mockito.when(trackRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+    testFilter.doFilter(trackRequest, response, chain);
+    assertEquals(HttpServletResponse.SC_METHOD_NOT_ALLOWED, response.status);
+    assertFalse(chainCalled.get());
+  }
+
   private class HttpServletResponseForTest implements HttpServletResponse {
     String redirectLocation = "";
     int status;
@@ -368,12 +408,12 @@ public class TestAmFilter {
 
     @Override
     public void sendError(int sc, String msg) throws IOException {
-
+      this.status = sc;
     }
 
     @Override
     public void sendError(int sc) throws IOException {
-
+      this.status = sc;
     }
 
     @Override

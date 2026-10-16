@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
@@ -69,12 +70,15 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Timeout.ThreadMode.SEPARATE_THREAD;
 
+@Timeout(value=10, unit = TimeUnit.SECONDS, threadMode = SEPARATE_THREAD)
 public class TestPipeApplication {
   private static File workSpace = new File("target",
           TestPipeApplication.class.getName() + "-workSpace");
@@ -614,7 +618,8 @@ public class TestPipeApplication {
     if (clazz == null) {
       os.write(("ls ").getBytes());
     } else {
-      os.write(("java -cp " + classpath + " " + clazz).getBytes());
+      // On Java 8 java.home returns "${JAVA_HOME}/jre", but that's good enough for this test
+      os.write((System.getProperty("java.home") + "/bin/java -cp " + classpath + " " + clazz).getBytes());
     }
     os.flush();
     os.close();

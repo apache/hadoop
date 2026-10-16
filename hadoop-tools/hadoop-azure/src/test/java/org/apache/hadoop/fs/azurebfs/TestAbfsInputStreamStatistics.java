@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamStatisticsImpl;
 
@@ -48,8 +48,8 @@ public class TestAbfsInputStreamStatistics extends AbstractAbfsIntegrationTest {
      * Since we incremented the bytesReadFromBuffer OPERATIONS times, this
      * should be the expected value.
      */
-    assertEquals("Mismatch in bytesReadFromBuffer value", OPERATIONS,
-        abfsInputStreamStatistics.getBytesReadFromBuffer());
+    assertEquals(OPERATIONS, abfsInputStreamStatistics.getBytesReadFromBuffer(),
+        "Mismatch in bytesReadFromBuffer value");
 
   }
 }

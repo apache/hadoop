@@ -20,18 +20,22 @@ package org.apache.hadoop.yarn.server.resourcemanager.federation;
 
 import java.io.StringWriter;
 
+import javax.ws.rs.core.MediaType;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Marshaller;
+
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbeatRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+
+import org.eclipse.persistence.jaxb.MarshallerProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.glassfish.jersey.jettison.JettisonJaxbContext;
-import org.glassfish.jersey.jettison.JettisonMarshaller;
 
 /**
  * Periodic heart beat from a <code>ResourceManager</code> participating in
@@ -48,12 +52,18 @@ public class FederationStateStoreHeartbeat implements Runnable {
   private final FederationStateStore stateStoreService;
   private final ResourceScheduler rs;
   private String capability;
+  private JAXBContextResolver resolver;
 
-  public FederationStateStoreHeartbeat(SubClusterId subClusterId,
-      FederationStateStore stateStoreClient, ResourceScheduler scheduler) {
+  public FederationStateStoreHeartbeat(
+      SubClusterId subClusterId,
+      FederationStateStore stateStoreClient,
+      ResourceScheduler scheduler,
+      JAXBContextResolver resolver
+  ) {
     this.stateStoreService = stateStoreClient;
     this.subClusterId = subClusterId;
     this.rs = scheduler;
+    this.resolver = resolver;
     LOG.info("Initialized Federation membership for cluster with timestamp: {}. ",
         ResourceManager.getClusterTimeStamp());
   }
@@ -66,12 +76,11 @@ public class FederationStateStoreHeartbeat implements Runnable {
     try {
       // get the current state
       ClusterMetricsInfo clusterMetricsInfo = new ClusterMetricsInfo(rs);
-
-      JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(ClusterMetricsInfo.class);
-      JettisonMarshaller jsonMarshaller = jettisonJaxbContext.createJsonMarshaller();
+      JAXBContext context = resolver.getContext(ClusterMetricsInfo.class);
+      Marshaller marshaller = context.createMarshaller();
+      marshaller.setProperty(MarshallerProperties.MEDIA_TYPE, MediaType.APPLICATION_JSON);
       StringWriter stringWriter = new StringWriter();
-      jsonMarshaller.marshallToJSON(clusterMetricsInfo, stringWriter);
-
+      marshaller.marshal(clusterMetricsInfo, stringWriter);
       capability = stringWriter.toString();
     } catch (Exception e) {
       LOG.warn("Exception while trying to generate cluster state,"

@@ -117,9 +117,12 @@ class TaggedInputSplit extends InputSplit implements Configurable, Writable {
 
   @SuppressWarnings("unchecked")
   public void readFields(DataInput in) throws IOException {
-    inputSplitClass = (Class<? extends InputSplit>) readClass(in);
-    inputFormatClass = (Class<? extends InputFormat<?, ?>>) readClass(in);
-    mapperClass = (Class<? extends Mapper<?, ?, ?, ?>>) readClass(in);
+    inputSplitClass = (Class<? extends InputSplit>) readClass(in,
+        InputSplit.class);
+    inputFormatClass = (Class<? extends InputFormat<?, ?>>) readClass(in,
+        InputFormat.class);
+    mapperClass = (Class<? extends Mapper<?, ?, ?, ?>>) readClass(in,
+        Mapper.class);
     inputSplit = (InputSplit) ReflectionUtils
        .newInstance(inputSplitClass, conf);
     SerializationFactory factory = new SerializationFactory(conf);
@@ -128,10 +131,10 @@ class TaggedInputSplit extends InputSplit implements Configurable, Writable {
     inputSplit = (InputSplit)deserializer.deserialize(inputSplit);
   }
 
-  private Class<?> readClass(DataInput in) throws IOException {
+  private Class<?> readClass(DataInput in, Class<?> xface) throws IOException {
     String className = StringInterner.weakIntern(Text.readString(in));
     try {
-      return conf.getClassByName(className);
+      return ReflectionUtils.loadUninitedClass(conf, className, xface);
     } catch (ClassNotFoundException e) {
       throw new RuntimeException("readObject can't find class", e);
     }

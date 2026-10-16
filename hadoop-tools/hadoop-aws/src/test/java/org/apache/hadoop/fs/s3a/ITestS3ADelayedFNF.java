@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.test.LambdaTestUtils;
 
-import org.junit.Assume;
 import org.junit.jupiter.api.Test;
 
 import java.io.FileNotFoundException;
@@ -36,6 +35,7 @@ import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_INTERVAL;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Tests behavior of a FileNotFound error that happens after open(), i.e. on
@@ -68,9 +68,9 @@ public class ITestS3ADelayedFNF extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     ChangeDetectionPolicy changeDetectionPolicy =
         fs.getChangeDetectionPolicy();
-    Assume.assumeFalse("FNF not expected when using a bucket with"
-            + " object versioning",
-        changeDetectionPolicy.getSource() == Source.VersionId);
+    assumeThat(changeDetectionPolicy.getSource())
+        .as("FNF not expected when using a bucket with object versioning")
+        .isNotEqualTo(Source.VersionId);
 
     Path p = path("some-file");
     ContractTestUtils.createFile(fs, p, false, new byte[] {20, 21, 22});

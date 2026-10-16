@@ -28,6 +28,8 @@ import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 
+import org.apache.hadoop.test.tags.LoadTest;
+import org.apache.hadoop.test.tags.ScaleTest;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -78,6 +80,8 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEG
  * @see <a href="https://github.com/steveloughran/datasets/releases/tag/tag_2018-09-17-aws">
  *   AWS STS login throttling statistics</a>
  */
+@LoadTest
+@ScaleTest
 public class ILoadTestSessionCredentials extends S3AScaleTestBase {
 
   private static final Logger LOG =

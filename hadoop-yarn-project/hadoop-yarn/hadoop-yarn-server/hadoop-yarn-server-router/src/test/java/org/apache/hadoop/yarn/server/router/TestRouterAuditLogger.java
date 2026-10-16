@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.yarn.server.router;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,9 +38,8 @@ import org.apache.hadoop.thirdparty.protobuf.RpcController;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -56,7 +56,8 @@ public class TestRouterAuditLogger {
   private static final ApplicationId APPID = mock(ApplicationId.class);
   private static final SubClusterId SUBCLUSTERID = mock(SubClusterId.class);
 
-  @Before public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp() throws Exception {
     when(APPID.toString()).thenReturn("app_1");
     when(SUBCLUSTERID.toString()).thenReturn("sc0");
   }
@@ -202,8 +203,8 @@ public class TestRouterAuditLogger {
             throws ServiceException {
       // Ensure clientId is received
       byte[] clientId = Server.getClientId();
-      Assert.assertNotNull(clientId);
-      Assert.assertEquals(ClientId.BYTE_LENGTH, clientId.length);
+      assertNotNull(clientId);
+      assertEquals(ClientId.BYTE_LENGTH, clientId.length);
       // test with ip set
       testSuccessLogFormat(true);
       testFailureLogFormat(true);

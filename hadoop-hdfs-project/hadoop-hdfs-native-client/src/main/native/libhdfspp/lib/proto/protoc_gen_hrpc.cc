@@ -48,7 +48,6 @@ private:
 
 bool StubGenerator::Generate(const FileDescriptor *file, const std::string &,
                              GeneratorContext *ctx, std::string *) const {
-  namespace pb = ::google::protobuf;
   std::unique_ptr<ZeroCopyOutputStream> os(
       ctx->Open(StripProto(file->name()) + ".hrpc.inl"));
   Printer out(os.get(), '$');

@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.io.IOUtils;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -36,6 +37,7 @@ import java.net.URI;
 
 import static org.apache.hadoop.fs.StreamCapabilities.ABORTABLE_STREAM;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertCompleteAbort;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertNoopAbort;
 
@@ -64,6 +66,16 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
     conf.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
     conf.set(FAST_UPLOAD_BUFFER, getBlockOutputBufferName());
     return conf;
+  }
+
+  @Override
+  @BeforeEach
+  public void setup() throws Exception {
+    super.setup();
+
+    skipIfNotEnabled(getFileSystem().getConf(),
+        MULTIPART_UPLOADS_ENABLED,
+        "Store has disabled multipart uploads; skipping tests");
   }
 
   protected String getBlockOutputBufferName() {

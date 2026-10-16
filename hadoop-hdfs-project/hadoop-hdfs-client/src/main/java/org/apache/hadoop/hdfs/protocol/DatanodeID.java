@@ -302,6 +302,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
     setIpAndXferPort(nodeReg.getIpAddr(), nodeReg.getIpAddrBytes(),
         nodeReg.getXferPort());
     hostName = nodeReg.getHostName();
+    hostNameBytes = nodeReg.getHostNameBytes();
     peerHostName = nodeReg.getPeerHostName();
     infoPort = nodeReg.getInfoPort();
     infoSecurePort = nodeReg.getInfoSecurePort();

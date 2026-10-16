@@ -198,6 +198,16 @@ public final class AWSCredentialProviderList implements AwsCredentialsProvider,
         lastException = e;
         LOG.debug("No credentials provided by {}: {}",
             provider, e.toString(), e);
+      } catch (Exception e) {
+        // convert any other exception into SDKException.
+        // This is required because some credential provider like
+        // WebIdentityTokenFileCredentialsProvider might throw
+        // exceptions other than SdkException.
+        if (e.getMessage() != null) {
+          lastException = SdkException.create(e.getMessage(), e);
+        }
+        LOG.debug("No credentials provided by {}: {}",
+            provider, e.toString(), e);
       }
     }
 

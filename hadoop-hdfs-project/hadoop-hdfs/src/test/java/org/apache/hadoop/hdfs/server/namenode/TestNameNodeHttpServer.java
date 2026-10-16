@@ -33,15 +33,16 @@ import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(value = Parameterized.class)
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@MethodSource("policy")
+@ParameterizedClass
 public class TestNameNodeHttpServer {
   private static final String BASEDIR = GenericTestUtils
       .getTempPath(TestNameNodeHttpServer.class.getSimpleName());
@@ -50,7 +51,6 @@ public class TestNameNodeHttpServer {
   private static Configuration conf;
   private static URLConnectionFactory connectionFactory;
 
-  @Parameters
   public static Collection<Object[]> policy() {
     Object[][] params = new Object[][] { { HttpConfig.Policy.HTTP_ONLY },
         { HttpConfig.Policy.HTTPS_ONLY }, { HttpConfig.Policy.HTTP_AND_HTTPS } };
@@ -64,7 +64,7 @@ public class TestNameNodeHttpServer {
     this.policy = policy;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
@@ -81,7 +81,7 @@ public class TestNameNodeHttpServer {
         KeyStoreTestUtil.getServerSSLConfigFileName());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     FileUtil.fullyDelete(new File(BASEDIR));
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
@@ -98,15 +98,14 @@ public class TestNameNodeHttpServer {
       server = new NameNodeHttpServer(conf, null, addr);
       server.start();
 
-      Assert.assertTrue(implies(policy.isHttpEnabled(),
+      assertTrue(implies(policy.isHttpEnabled(),
           canAccess("http", server.getHttpAddress())));
-      Assert.assertTrue(implies(!policy.isHttpEnabled(),
+      assertTrue(implies(!policy.isHttpEnabled(),
           server.getHttpAddress() == null));
 
-      Assert.assertTrue(implies(policy.isHttpsEnabled(),
+      assertTrue(implies(policy.isHttpsEnabled(),
           canAccess("https", server.getHttpsAddress())));
-      Assert.assertTrue(implies(!policy.isHttpsEnabled(),
-          server.getHttpsAddress() == null));
+      assertTrue(implies(!policy.isHttpsEnabled(), server.getHttpsAddress() == null));
 
     } finally {
       if (server != null) {

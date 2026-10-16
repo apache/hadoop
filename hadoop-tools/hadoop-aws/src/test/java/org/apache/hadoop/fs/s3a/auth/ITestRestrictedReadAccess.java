@@ -49,6 +49,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_ARN;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfS3ExpressBucket;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Effects;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Statement;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.directory;
@@ -88,7 +89,9 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * To simplify maintenance, the operations tested are broken up into
  * their own methods, with fields used to share the restricted role and
  * created paths.
- *
+ * <p>
+ * Test are skipped if no assumed role was provided, or if the test bucket
+ * is an S3Express bucket, whose permissions model is different.
  */
 public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
 
@@ -161,6 +164,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
   public void setup() throws Exception {
     super.setup();
     assumeRoleTests();
+    skipIfS3ExpressBucket(getConfiguration());
   }
 
   @AfterEach

@@ -21,17 +21,22 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Contract test for vectored reads through ABFS connector.
  */
+@ParameterizedClass(name="buffer-{0}")
+@MethodSource("params")
 public class ITestAbfsFileSystemContractVectoredRead
     extends AbstractContractVectoredReadTest {
 
   private final boolean isSecure;
   private final ABFSContractTestBinding binding;
 
-  public ITestAbfsFileSystemContractVectoredRead() throws Exception {
+  public ITestAbfsFileSystemContractVectoredRead(final String bufferType) throws Exception {
+    super(bufferType);
     this.binding = new ABFSContractTestBinding();
     this.isSecure = binding.isSecureMode();
   }

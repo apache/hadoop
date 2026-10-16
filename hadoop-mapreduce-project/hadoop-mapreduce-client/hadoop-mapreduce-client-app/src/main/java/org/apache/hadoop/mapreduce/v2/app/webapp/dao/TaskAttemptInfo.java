@@ -125,8 +125,4 @@ public abstract class TaskAttemptInfo {
   public String getNote() {
     return this.diagnostics;
   }
-
-  public String getType() {
-    return type;
-  }
 }

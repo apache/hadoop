@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNodes.newResource;
 import static org.apache.hadoop.yarn.webapp.Params.TITLE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -71,6 +72,7 @@ import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -416,5 +418,24 @@ public class TestRMWebApp {
         start(new RMWebApp(mockRm(2500, 8, 8, 8*GiB))).joinThread();
     WebApps.$for("yarn", new TestRMWebApp()).at(8888).inDevMode().
         start(new RMWebApp(mockFifoRm(10, 1, 4, 8*GiB))).joinThread();
+  }
+
+  @Test
+  public void testCustomWebServiceClass() {
+    RMWebApp rmWebApp = new RMWebApp(mock(ResourceManager.class));
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.YARN_WEBAPP_CUSTOM_WEBSERVICE_CLASS,
+        "org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebApp$CustomRMWebServices");
+
+    ResourceConfig resourceConfig = rmWebApp.resourceConfig(conf);
+
+    assertTrue(resourceConfig.isRegistered(CustomRMWebServices.class));
+    assertFalse(resourceConfig.isRegistered(RMWebServices.class));
+  }
+
+  private class CustomRMWebServices extends RMWebServices {
+    public CustomRMWebServices(ResourceManager rm, Configuration conf) {
+      super(rm, conf);
+    }
   }
 }

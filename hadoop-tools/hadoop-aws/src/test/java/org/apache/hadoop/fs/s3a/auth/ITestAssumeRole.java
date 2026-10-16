@@ -86,6 +86,10 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
 /**
  * Tests use of assumed roles.
  * Only run if an assumed role is provided.
+ * <p>
+ * S3Express buckets only support access restrictions at the bucket level,
+ * rather than at paths underneath.
+ * All partial permission tests are disabled.
  */
 @SuppressWarnings("ThrowableNotThrown")
 public class ITestAssumeRole extends AbstractS3ATestBase {
@@ -97,6 +101,8 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
   private static final Statement STATEMENT_ALL_BUCKET_READ_ACCESS
       = statement(true, S3_ALL_BUCKETS, S3_BUCKET_READ_OPERATIONS);
+
+  public static final String MALFORMED_POLICY_DOCUMENT = "MalformedPolicyDocument";
 
   /**
    * test URI, built in setup.
@@ -201,9 +207,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_ARN, roleARN);
     conf.set(ASSUMED_ROLE_SESSION_NAME, "valid");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "45m");
-    // disable create session so there's no need to
-    // add a role policy for it.
-    disableCreateSession(conf);
 
     bindRolePolicy(conf, RESTRICTED_POLICY);
     return conf;
@@ -243,13 +246,13 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
   @Test
   public void testAssumeRoleFSBadPolicy() throws Exception {
-    describe("Attemnpt to create the FS with malformed JSON");
+    describe("Attempt to create the FS with malformed JSON");
     Configuration conf = createAssumedRoleConfig();
     // add some malformed JSON
     conf.set(ASSUMED_ROLE_POLICY,  "}");
     expectFileSystemCreateFailure(conf,
         AWSBadRequestException.class,
-        "JSON");
+        MALFORMED_POLICY_DOCUMENT);
   }
 
   @Test
@@ -260,7 +263,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_POLICY, "{'json':'but not what AWS wants}");
     expectFileSystemCreateFailure(conf,
         AWSBadRequestException.class,
-        "Syntax errors in policy");
+        MALFORMED_POLICY_DOCUMENT);
   }
 
   @Test
@@ -462,12 +465,15 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   public void testReadOnlyOperations() throws Throwable {
 
     describe("Restrict role to read only");
+    skipIfS3ExpressBucket(getConfiguration());
     Configuration conf = createAssumedRoleConfig();
 
     bindRolePolicy(conf,
         policy(
             statement(false, S3_ALL_BUCKETS, S3_PATH_WRITE_OPERATIONS),
-            STATEMENT_ALL_S3, STATEMENT_ALLOW_KMS_RW));
+            STATEMENT_ALL_S3,
+            STATEMENT_S3EXPRESS,
+            STATEMENT_ALLOW_KMS_RW));
     Path path = methodPath();
     roleFS = (S3AFileSystem) path.getFileSystem(conf);
     // list the root path, expect happy
@@ -505,6 +511,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
     describe("Attempt writing to paths where a role only has"
         + " write access to a subdir of the bucket");
+    skipIfS3ExpressBucket(getConfiguration());
     Path restrictedDir = methodPath();
     Path child = new Path(restrictedDir, "child");
     // the full FS
@@ -567,6 +574,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   @Test
   public void testRestrictedCommitActions() throws Throwable {
     describe("Attempt commit operations against a path with restricted rights");
+    skipIfS3ExpressBucket(getConfiguration());
     Configuration conf = createAssumedRoleConfig();
     final int uploadPartSize = 5 * 1024 * 1024;
 
@@ -704,12 +712,14 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   @Test
   public void testPartialDelete() throws Throwable {
     describe("delete with part of the child tree read only; multidelete");
+    skipIfS3ExpressBucket(getConfiguration());
     executePartialDelete(createAssumedRoleConfig(), false);
   }
 
   @Test
   public void testPartialDeleteSingleDelete() throws Throwable {
     describe("delete with part of the child tree read only");
+    skipIfS3ExpressBucket(getConfiguration());
     executePartialDelete(createAssumedRoleConfig(), true);
   }
 
@@ -722,6 +732,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   @Test
   public void testBulkDeleteWithReadWriteAccess() throws Throwable {
     describe("Bulk delete with read write access");
+    skipIfS3ExpressBucket(getConfiguration());
     executeBulkDeleteOnSomeReadOnlyFiles(createAssumedRoleConfig());
   }
 
@@ -811,6 +822,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
           throws JsonProcessingException {
     bindRolePolicyStatements(assumedRoleConfig, STATEMENT_ALLOW_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
+        STATEMENT_S3EXPRESS,
         new Statement(Effects.Deny)
             .addActions(S3_PATH_WRITE_OPERATIONS)
             .addResources(directory(readOnlyDir))

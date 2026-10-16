@@ -19,15 +19,16 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -46,13 +47,12 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.MetricsAsserts;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for DataNodeVolumeMetrics.
  */
+@Timeout(300)
 public class TestDataNodeVolumeMetrics {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestDataNodeVolumeMetrics.class);
@@ -60,9 +60,6 @@ public class TestDataNodeVolumeMetrics {
   private static final int BLOCK_SIZE = 1024;
   private static final short REPL = 1;
   private static final int NUM_DATANODES = 1;
-
-  @Rule
-  public Timeout timeout = new Timeout(300000);
 
   @Test
   public void testVolumeMetrics() throws Exception {
@@ -105,7 +102,7 @@ public class TestDataNodeVolumeMetrics {
       }
 
       ArrayList<DataNode> dns = cluster.getDataNodes();
-      assertTrue("DN1 should be up", dns.get(0).isDatanodeUp());
+      assertTrue(dns.get(0).isDatanodeUp(), "DN1 should be up");
       final File dn1Vol2 = cluster.getInstanceStorageDir(0, 1);
 
       DataNodeTestUtils.injectDataDirFailure(dn1Vol2);

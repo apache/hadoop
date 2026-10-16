@@ -1481,7 +1481,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * @param quiet should exceptions be swallowed.
    * @param overwrite should the existing file be overwritten
    * @return the path of a file, if successfully saved
-   * @throws IOException if a failure occured and quiet==false
+   * @throws IOException if a failure occurred and quiet==false
    */
   private static Path maybeSaveSummary(
       String activeStage,

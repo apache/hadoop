@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.mapred.nativetask.util.BytesUtil;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestBytesUtil {
 

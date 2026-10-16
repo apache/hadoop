@@ -23,6 +23,8 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.yarn.webapp.WebApp;
 
+import com.google.inject.servlet.RequestScoped;
+
 import javax.servlet.Filter;
 
 /**
@@ -38,9 +40,11 @@ public class AMWebApp extends WebApp implements AMParams {
 
   @Override
   public void setup() {
+    bind(App.class).in(RequestScoped.class);
     bind(AppContext.class).toInstance(appContext);
     route("/", AppController.class);
     route("/app", AppController.class);
+    route("/mapreduce", AppController.class);
     route(pajoin("/job", JOB_ID), AppController.class, "job");
     route(pajoin("/conf", JOB_ID), AppController.class, "conf");
     route(pajoin("/jobcounters", JOB_ID), AppController.class, "jobCounters");

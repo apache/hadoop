@@ -28,14 +28,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 
 /**
  * Tests for ACL operation through FileContext APIs
  */
 public class TestFileContextAcl extends FSAclBaseTest {
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     conf = new Configuration();
     startCluster();

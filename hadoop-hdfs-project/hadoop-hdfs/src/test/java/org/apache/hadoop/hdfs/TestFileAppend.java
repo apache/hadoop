@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -58,8 +59,8 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * This class tests the building blocks that are needed to
@@ -137,8 +138,8 @@ public class TestFileAppend{
 
       // Get a handle to the datanode
       DataNode[] dn = cluster.listDataNodes();
-      assertTrue("There should be only one datanode but found " + dn.length,
-                  dn.length == 1);
+      assertTrue(
+                 dn.length == 1, "There should be only one datanode but found " + dn.length);
 
       LocatedBlocks locations = client.getNamenode().getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
@@ -161,8 +162,8 @@ public class TestFileAppend{
       for (int i = 0; i < blocks.size(); i++) {
         ExtendedBlock b = blocks.get(i).getBlock();
         System.out.println("breakHardlinksIfNeeded detaching block " + b);
-        assertTrue("breakHardlinksIfNeeded(" + b + ") should have returned true",
-            FsDatasetTestUtil.breakHardlinksIfNeeded(fsd, b));
+        assertTrue(FsDatasetTestUtil.breakHardlinksIfNeeded(fsd, b),
+            "breakHardlinksIfNeeded(" + b + ") should have returned true");
       }
 
       // Since the blocks were already detached earlier, these calls should
@@ -171,8 +172,8 @@ public class TestFileAppend{
         ExtendedBlock b = blocks.get(i).getBlock();
         System.out.println("breakHardlinksIfNeeded re-attempting to " +
                 "detach block " + b);
-        assertTrue("breakHardlinksIfNeeded(" + b + ") should have returned false",
-            FsDatasetTestUtil.breakHardlinksIfNeeded(fsd, b));
+        assertTrue(FsDatasetTestUtil.breakHardlinksIfNeeded(fsd, b),
+            "breakHardlinksIfNeeded(" + b + ") should have returned false");
       }
     } finally {
       client.close();
@@ -290,20 +291,22 @@ public class TestFileAppend{
    * 
    * @throws FileNotFoundException as the result
    */
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testFileNotFound() throws IOException {
-    Configuration conf = new HdfsConfiguration();
-    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
-        .build();
-    FileSystem fs = cluster.getFileSystem();
-    try {
-      Path file1 = new Path("/nonexistingfile.dat");
-      fs.append(file1);
-    } finally {
-      fs.close();
-      cluster.shutdown();
-    }
+    assertThrows(FileNotFoundException.class, () -> {
+      Configuration conf = new HdfsConfiguration();
+      File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+      MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
+          .build();
+      FileSystem fs = cluster.getFileSystem();
+      try {
+        Path file1 = new Path("/nonexistingfile.dat");
+        fs.append(file1);
+      } finally {
+        fs.close();
+        cluster.shutdown();
+      }
+    });
   }
 
   /** Test two consecutive appends on a file with a full block. */
@@ -335,10 +338,10 @@ public class TestFileAppend{
       
       //2nd append should get AlreadyBeingCreatedException
       fs1.append(p);
-      Assert.fail();
+      fail();
     } catch(RemoteException re) {
       AppendTestUtil.LOG.info("Got an exception:", re);
-      Assert.assertEquals(AlreadyBeingCreatedException.class.getName(),
+      assertEquals(AlreadyBeingCreatedException.class.getName(),
           re.getClassName());
     } finally {
       fs2.close();
@@ -376,10 +379,10 @@ public class TestFileAppend{
 
       // 2nd append should get AlreadyBeingCreatedException
       fs1.append(p);
-      Assert.fail();
+      fail();
     } catch(RemoteException re) {
       AppendTestUtil.LOG.info("Got an exception:", re);
-      Assert.assertEquals(AlreadyBeingCreatedException.class.getName(),
+      assertEquals(AlreadyBeingCreatedException.class.getName(),
           re.getClassName());
     } finally {
       fs2.close();
@@ -428,13 +431,13 @@ public class TestFileAppend{
         fileLen += appendLen;
       }
 
-      Assert.assertEquals(fileLen, fs.getFileStatus(p).getLen());
+      assertEquals(fileLen, fs.getFileStatus(p).getLen());
       final byte[] actual = new byte[fileLen];
       final FSDataInputStream in = fs.open(p);
       in.readFully(actual);
       in.close();
       for(int i = 0; i < fileLen; i++) {
-        Assert.assertEquals(data[i], actual[i]);
+        assertEquals(data[i], actual[i]);
       }
     } finally {
       fs.close();
@@ -662,7 +665,8 @@ public class TestFileAppend{
     }
   }
   
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testAppendCorruptedBlock() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
@@ -675,7 +679,7 @@ public class TestFileAppend{
       Path fileName = new Path("/appendCorruptBlock");
       DFSTestUtil.createFile(fs, fileName, 512, (short) 1, 0);
       DFSTestUtil.waitReplication(fs, fileName, (short) 1);
-      Assert.assertTrue("File not created", fs.exists(fileName));
+      assertTrue(fs.exists(fileName), "File not created");
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, fileName);
       cluster.corruptBlockOnDataNodes(block);
       DFSTestUtil.appendFile(fs, fileName, "appendCorruptBlock");
@@ -684,7 +688,8 @@ public class TestFileAppend{
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(value = 10)
   public void testConcurrentAppendRead()
       throws IOException, TimeoutException, InterruptedException {
     // Create a finalized replica and append to it
@@ -707,7 +712,7 @@ public class TestFileAppend{
       Path fileName = new Path("/appendCorruptBlock");
       DFSTestUtil.createFile(fs, fileName, initialFileLength, (short) 1, 0);
       DFSTestUtil.waitReplication(fs, fileName, (short) 1);
-      Assert.assertTrue("File not created", fs.exists(fileName));
+      assertTrue(fs.exists(fileName), "File not created");
 
       // Call FsDatasetImpl#append to append the block file,
       // which converts it to a rbw replica.
@@ -738,7 +743,7 @@ public class TestFileAppend{
       // checksum, rather than on-disk checksum. Otherwise it will see a
       // checksum mismatch error.
       final byte[] readBlock = DFSTestUtil.readFileBuffer(fs, fileName);
-      assertEquals("should have read only one byte!", 1, readBlock.length);
+      assertEquals(1, readBlock.length, "should have read only one byte!");
     } finally {
       cluster.shutdown();
     }

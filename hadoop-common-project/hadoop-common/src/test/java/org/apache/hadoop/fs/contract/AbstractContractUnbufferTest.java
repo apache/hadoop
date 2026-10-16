@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.contract;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,13 +27,20 @@ import java.util.Arrays;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.tags.FlakyTest;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.readNBytes;
 
 /**
  * Contract tests for {@link org.apache.hadoop.fs.CanUnbuffer#unbuffer}.
+ * Some of these test cases can fail if the FS read() call returns less
+ * than requested, which is a valid (possibly correct) implementation
+ * of {@code InputStream.read(buffer[])} which may return only those bytes
+ * which can be returned without blocking for more data.
  */
+@FlakyTest("buffer underflow")
 public abstract class AbstractContractUnbufferTest extends AbstractFSContractTestBase {
 
   private Path file;
@@ -105,6 +113,7 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
     }
   }
 
+
   @Test
   public void testUnbufferMultipleReads() throws IOException {
     describe("unbuffer a file multiple times");
@@ -138,10 +147,12 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
                                       int startIndex)
           throws IOException {
     byte[] streamData = new byte[length];
-    assertEquals(length, stream.read(streamData),
-        "failed to read expected number of bytes from "
-        + "stream. This may be transient");
+    final int read = readNBytes(stream, streamData, 0, length);
+    Assertions.assertThat(read)
+        .describedAs("failed to read expected number of bytes from stream. %s", stream)
+        .isEqualTo(length);
     byte[] validateFileBytes;
+
     if (startIndex == 0 && length == fileBytes.length) {
       validateFileBytes = fileBytes;
     } else {

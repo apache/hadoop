@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Random;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStreamStatisticsImpl;
@@ -50,15 +50,15 @@ public class TestAbfsOutputStreamStatistics
         new AbfsOutputStreamStatisticsImpl();
 
     //Test for zero bytes uploaded.
-    assertEquals("Mismatch in number of bytes failed to upload", 0,
-        abfsOutputStreamStatistics.getBytesUploadFailed());
+    assertEquals(0, abfsOutputStreamStatistics.getBytesUploadFailed(),
+        "Mismatch in number of bytes failed to upload");
 
     //Populating small random value for bytesFailed.
     int randomBytesFailed = new Random().nextInt(LOW_RANGE_FOR_RANDOM_VALUE);
     abfsOutputStreamStatistics.uploadFailed(randomBytesFailed);
     //Test for bytes failed to upload.
-    assertEquals("Mismatch in number of bytes failed to upload",
-        randomBytesFailed, abfsOutputStreamStatistics.getBytesUploadFailed());
+    assertEquals(randomBytesFailed, abfsOutputStreamStatistics.getBytesUploadFailed(),
+        "Mismatch in number of bytes failed to upload");
 
     //Reset statistics for the next test.
     abfsOutputStreamStatistics = new AbfsOutputStreamStatisticsImpl();
@@ -74,8 +74,8 @@ public class TestAbfsOutputStreamStatistics
       expectedBytesFailed += randomBytesFailed;
     }
     //Test for bytes failed to upload.
-    assertEquals("Mismatch in number of bytes failed to upload",
-        expectedBytesFailed, abfsOutputStreamStatistics.getBytesUploadFailed());
+    assertEquals(expectedBytesFailed, abfsOutputStreamStatistics.getBytesUploadFailed(),
+        "Mismatch in number of bytes failed to upload");
   }
 
   /**
@@ -91,14 +91,14 @@ public class TestAbfsOutputStreamStatistics
         new AbfsOutputStreamStatisticsImpl();
 
     //Test for initial value of timeSpentWaitTask.
-    assertEquals("Mismatch in time spent on waiting for tasks to complete", 0,
-        abfsOutputStreamStatistics.getTimeSpentOnTaskWait());
+    assertEquals(0, abfsOutputStreamStatistics.getTimeSpentOnTaskWait(),
+        "Mismatch in time spent on waiting for tasks to complete");
 
     abfsOutputStreamStatistics
         .timeSpentTaskWait();
     //Test for one op call value of timeSpentWaitTask.
-    assertEquals("Mismatch in time spent on waiting for tasks to complete",
-        1, abfsOutputStreamStatistics.getTimeSpentOnTaskWait());
+    assertEquals(1, abfsOutputStreamStatistics.getTimeSpentOnTaskWait(),
+        "Mismatch in time spent on waiting for tasks to complete");
 
     //Reset statistics for the next test.
     abfsOutputStreamStatistics = new AbfsOutputStreamStatisticsImpl();
@@ -115,9 +115,8 @@ public class TestAbfsOutputStreamStatistics
      * Test to check correct value of timeSpentTaskWait after OPERATIONS
      * number of op calls.
      */
-    assertEquals("Mismatch in time spent on waiting for tasks to complete",
-        OPERATIONS,
-        abfsOutputStreamStatistics.getTimeSpentOnTaskWait());
+    assertEquals(OPERATIONS, abfsOutputStreamStatistics.getTimeSpentOnTaskWait(),
+        "Mismatch in time spent on waiting for tasks to complete");
   }
 
   /**
@@ -133,14 +132,14 @@ public class TestAbfsOutputStreamStatistics
         new AbfsOutputStreamStatisticsImpl();
 
     //Test for shrinking queue zero time.
-    assertEquals("Mismatch in queue shrunk operations", 0,
-        abfsOutputStreamStatistics.getQueueShrunkOps());
+    assertEquals(0, abfsOutputStreamStatistics.getQueueShrunkOps(),
+        "Mismatch in queue shrunk operations");
 
     abfsOutputStreamStatistics.queueShrunk();
 
     //Test for shrinking queue 1 time.
-    assertEquals("Mismatch in queue shrunk operations", 1,
-        abfsOutputStreamStatistics.getQueueShrunkOps());
+    assertEquals(1, abfsOutputStreamStatistics.getQueueShrunkOps(),
+        "Mismatch in queue shrunk operations");
 
     //Reset statistics for the next test.
     abfsOutputStreamStatistics = new AbfsOutputStreamStatisticsImpl();
@@ -156,8 +155,7 @@ public class TestAbfsOutputStreamStatistics
     /*
      * Test for random times incrementing queue shrunk operations.
      */
-    assertEquals("Mismatch in queue shrunk operations",
-        randomQueueValues * OPERATIONS,
-        abfsOutputStreamStatistics.getQueueShrunkOps());
+    assertEquals(randomQueueValues * OPERATIONS, abfsOutputStreamStatistics.getQueueShrunkOps(),
+        "Mismatch in queue shrunk operations");
   }
 }

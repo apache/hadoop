@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,12 +30,14 @@ import java.util.Collection;
 
 import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.initializeCluster;
 import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.tearDownCluster;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Test online recovery with files with deleted blocks. This test is
  * parameterized.
  */
-@RunWith(Parameterized.class)
+@Timeout(300)
+@Tag("slow")
 public class TestReadStripedFileWithDecodingDeletedData {
   static final Logger LOG =
       LoggerFactory.getLogger(TestReadStripedFileWithDecodingDeletedData.class);
@@ -45,21 +45,17 @@ public class TestReadStripedFileWithDecodingDeletedData {
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem dfs;
 
-  @Rule
-  public Timeout globalTimeout = new Timeout(300000);
-
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     cluster = initializeCluster();
     dfs = cluster.getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     tearDownCluster(cluster);
   }
 
-  @Parameterized.Parameters
   public static Collection<Object[]> getParameters() {
     return ReadStripedFileWithDecodingHelper.getParameters();
   }
@@ -68,19 +64,22 @@ public class TestReadStripedFileWithDecodingDeletedData {
   private int dataDelNum;
   private int parityDelNum;
 
-  public TestReadStripedFileWithDecodingDeletedData(int fileLength, int
-      dataDelNum, int parityDelNum) {
-    this.fileLength = fileLength;
-    this.dataDelNum = dataDelNum;
-    this.parityDelNum = parityDelNum;
+  public void initTestReadStripedFileWithDecodingDeletedData(int pFileLength, int
+      pDataDelNum, int pParityDelNum) {
+    this.fileLength = pFileLength;
+    this.dataDelNum = pDataDelNum;
+    this.parityDelNum = pParityDelNum;
   }
 
   /**
    * Delete tolerable number of block before reading.
    * Verify the decoding works correctly.
    */
-  @Test
-  public void testReadCorruptedDataByDeleting() throws IOException {
+  @ParameterizedTest
+  @MethodSource("getParameters")
+  public void testReadCorruptedDataByDeleting(int pFileLength, int
+      pDataDelNum, int pParityDelNum) throws IOException {
+    initTestReadStripedFileWithDecodingDeletedData(pFileLength, pDataDelNum, pParityDelNum);
     String src = "/deleted_" + dataDelNum + "_" + parityDelNum;
     ReadStripedFileWithDecodingHelper.testReadWithBlockCorrupted(cluster,
         dfs, src, fileLength, dataDelNum, parityDelNum, true);

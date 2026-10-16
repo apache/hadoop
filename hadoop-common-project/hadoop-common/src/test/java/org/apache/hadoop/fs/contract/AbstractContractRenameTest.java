@@ -147,6 +147,22 @@ public abstract class AbstractContractRenameTest extends
   }
 
   @Test
+  public void testRenameEmptyDir() throws Throwable {
+    describe("Verify renaming an empty directory to a new path works");
+    FileSystem fs = getFileSystem();
+    Path emptySrc = path("testRenameEmptyDir/src");
+    Path emptyDest = path("testRenameEmptyDir/dest");
+    mkdirs(emptySrc.getParent());
+    fs.mkdirs(emptySrc);
+    assertIsDirectory(emptySrc);
+    boolean renamed = rename(emptySrc, emptyDest);
+    assertTrue(renamed, "rename(emptyDir, newPath) should return true");
+    assertIsDirectory(emptyDest);
+    assertPathDoesNotExist("source empty dir should not exist after rename",
+        emptySrc);
+  }
+
+  @Test
   public void testRenameDirIntoExistingDir() throws Throwable {
     describe("Verify renaming a dir into an existing dir puts it"
         + " underneath"

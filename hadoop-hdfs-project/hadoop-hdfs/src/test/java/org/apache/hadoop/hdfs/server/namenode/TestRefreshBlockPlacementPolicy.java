@@ -29,9 +29,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.net.Node;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -41,7 +41,7 @@ import java.util.Set;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test refresh block placement policy.
@@ -67,7 +67,7 @@ public class TestRefreshBlockPlacementPolicy {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     config = new Configuration();
     config.setClass(DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
@@ -78,7 +78,7 @@ public class TestRefreshBlockPlacementPolicy {
     cluster.waitActive();
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws IOException {
     cluster.shutdown();
   }

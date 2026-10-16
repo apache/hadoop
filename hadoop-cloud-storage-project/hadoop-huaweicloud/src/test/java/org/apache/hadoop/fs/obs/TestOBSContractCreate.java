@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.obs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractCreateTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.junit.Assume;
+
+import org.junit.jupiter.api.Disabled;
 
 /**
  * Create test cases on obs file system.
@@ -33,13 +34,13 @@ public class TestOBSContractCreate extends AbstractContractCreateTest {
     return new OBSContract(conf);
   }
 
+  @Disabled
   @Override
   public void testCreatedFileIsImmediatelyVisible() {
-    Assume.assumeTrue("unsupport.", false);
   }
 
+  @Disabled
   @Override
   public void testCreatedFileIsVisibleOnFlush() {
-    Assume.assumeTrue("unsupport", false);
   }
 }

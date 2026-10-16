@@ -285,6 +285,15 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
     }
   }
 
+  @Override
+  public void recordAsyncHandlerQueueSize(String nsId, int queueSize) {
+    if (nameserviceRPCMetricsMap != null) {
+      NameserviceRPCMetrics nameserviceMetrics = nameserviceRPCMetricsMap.get(nsId);
+      if (nameserviceMetrics != null) {
+        nameserviceMetrics.setAsyncHandlerQueueSize(queueSize);
+      }
+    }
+  }
 
   /**
    * Get time between we receiving the operation and sending it to the Namenode.

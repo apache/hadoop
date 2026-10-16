@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.security;
-import static org.junit.Assume.assumeTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.util.Arrays;
 import java.util.List;

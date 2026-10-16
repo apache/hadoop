@@ -40,13 +40,11 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * This test verifies NameNode behavior when it gets unexpected block reports
@@ -68,7 +66,7 @@ public class TestBlockHasMultipleReplicasOnSameDN {
   private DFSClient client;
   private String bpid;
 
-  @Before
+  @BeforeEach
   public void startUpCluster() throws IOException {
     conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf)
@@ -79,7 +77,7 @@ public class TestBlockHasMultipleReplicasOnSameDN {
     bpid = cluster.getNamesystem().getBlockPoolId();
   }
 
-  @After
+  @AfterEach
   public void shutDownCluster() throws IOException {
     if (cluster != null) {
       fs.close();
@@ -142,8 +140,8 @@ public class TestBlockHasMultipleReplicasOnSameDN {
     // Make sure that each block has two replicas, one on each DataNode.
     for (LocatedBlock locatedBlock : locatedBlocks.getLocatedBlocks()) {
       DatanodeInfo[] locations = locatedBlock.getLocations();
-      assertThat(locations.length, is((int) NUM_DATANODES));
-      assertThat(locations[0].getDatanodeUuid(), not(locations[1].getDatanodeUuid()));
+      assertThat(locations.length).isEqualTo((int) NUM_DATANODES);
+      assertThat(locations[0].getDatanodeUuid()).isNotEqualTo(locations[1].getDatanodeUuid());
     }
   }
 }

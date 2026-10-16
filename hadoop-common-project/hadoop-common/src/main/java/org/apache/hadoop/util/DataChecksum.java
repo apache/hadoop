@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,18 +22,14 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.function.LongToIntFunction;
 import java.util.zip.CRC32;
+import java.util.zip.CRC32C;
 import java.util.zip.Checksum;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 
 /**
  * This class provides interface and utilities for processing checksums for
@@ -50,9 +46,6 @@ public class DataChecksum implements Checksum {
   public static final int CHECKSUM_DEFAULT = 3; 
   public static final int CHECKSUM_MIXED   = 4;
 
-  private static final Logger LOG = LoggerFactory.getLogger(DataChecksum.class);
-  private static volatile boolean useJava9Crc32C = Shell.isJavaVersionAtLeast(9);
- 
   /** The checksum types */
   public enum Type {
     NULL  (CHECKSUM_NULL, 0),
@@ -85,8 +78,7 @@ public class DataChecksum implements Checksum {
   }
 
   /**
-   * Create a Crc32 Checksum object. The implementation of the Crc32 algorithm
-   * is chosen depending on the platform.
+   * Create a Crc32 Checksum object.
    *
    * @return Checksum.
    */
@@ -94,21 +86,8 @@ public class DataChecksum implements Checksum {
     return new CRC32();
   }
 
-
-  /**
-   * The flag is volatile to avoid synchronization here.
-   * Re-entrancy is unlikely except in failure mode (and inexpensive).
-   */
   static Checksum newCrc32C() {
-    try {
-      return useJava9Crc32C ? Java9Crc32CFactory.createChecksum()
-          : new PureJavaCrc32C();
-    } catch (ExceptionInInitializerError | RuntimeException e) {
-      // should not happen
-      LOG.error("CRC32C creation failed, switching to PureJavaCrc32C", e);
-      useJava9Crc32C = false;
-      return new PureJavaCrc32C();
-    }
+    return new CRC32C();
   }
 
   /**
@@ -118,15 +97,14 @@ public class DataChecksum implements Checksum {
    * @return the int representation of the polynomial associated with the
    *     CRC {@code type}, suitable for use with further CRC arithmetic.
    */
-  public static int getCrcPolynomialForType(Type type) {
+  static LongToIntFunction getModFunction(Type type) {
     switch (type) {
     case CRC32:
-      return CrcUtil.GZIP_POLYNOMIAL;
+      return PureJavaCrc32::mod;
     case CRC32C:
-      return CrcUtil.CASTAGNOLI_POLYNOMIAL;
+      return PureJavaCrc32C::mod;
     default:
-      throw new IllegalArgumentException(
-          "No CRC polynomial could be associated with type: " + type);
+      throw new IllegalArgumentException("Unexpected type: " + type);
     }
   }
 
@@ -636,37 +614,5 @@ public class DataChecksum implements Checksum {
     public void update(byte[] b, int off, int len) {}
     @Override
     public void update(int b) {}
-  };
-
-  /**
-   * Holds constructor handle to let it be initialized on demand.
-   */
-  private static class Java9Crc32CFactory {
-    private static final MethodHandle NEW_CRC32C_MH;
-
-    static {
-      MethodHandle newCRC32C = null;
-      try {
-        newCRC32C = MethodHandles.publicLookup()
-            .findConstructor(
-                Class.forName("java.util.zip.CRC32C"),
-                MethodType.methodType(void.class)
-            );
-      } catch (ReflectiveOperationException e) {
-        // Should not reach here.
-        throw new RuntimeException(e);
-      }
-      NEW_CRC32C_MH = newCRC32C;
-    }
-
-    public static Checksum createChecksum() {
-      try {
-        // Should throw nothing
-        return (Checksum) NEW_CRC32C_MH.invoke();
-      } catch (Throwable t) {
-        throw (t instanceof RuntimeException) ? (RuntimeException) t
-            : new RuntimeException(t);
-      }
-    }
-  };
+  }
 }

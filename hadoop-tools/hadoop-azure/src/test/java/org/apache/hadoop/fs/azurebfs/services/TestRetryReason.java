@@ -23,8 +23,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
@@ -44,12 +43,13 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_T
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_JDK_MESSAGE;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.SOCKET_EXCEPTION_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.UNKNOWN_HOST_EXCEPTION_ABBREVIATION;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestRetryReason {
 
   @Test
   public void test4xxStatusRetryReason() {
-    Assertions.assertThat(RetryReason.getAbbreviation(null, HTTP_FORBIDDEN, null))
+    assertThat(RetryReason.getAbbreviation(null, HTTP_FORBIDDEN, null))
         .describedAs("Abbreviation for 4xx should be equal to 4xx")
         .isEqualTo(HTTP_FORBIDDEN + "");
   }
@@ -57,13 +57,13 @@ public class TestRetryReason {
   @Test
   public void testConnectionResetRetryReason() {
     SocketException connReset = new SocketException(CONNECTION_RESET_MESSAGE.toUpperCase());
-    Assertions.assertThat(RetryReason.getAbbreviation(connReset, null, null)).isEqualTo(CONNECTION_RESET_ABBREVIATION);
+    assertThat(RetryReason.getAbbreviation(connReset, null, null)).isEqualTo(CONNECTION_RESET_ABBREVIATION);
   }
 
   @Test
   public void testConnectionTimeoutRetryReason() {
     SocketTimeoutException connectionTimeoutException = new SocketTimeoutException(CONNECTION_TIMEOUT_JDK_MESSAGE);
-    Assertions.assertThat(RetryReason.getAbbreviation(connectionTimeoutException, null, null)).isEqualTo(
+    assertThat(RetryReason.getAbbreviation(connectionTimeoutException, null, null)).isEqualTo(
         CONNECTION_TIMEOUT_ABBREVIATION
     );
   }
@@ -71,63 +71,63 @@ public class TestRetryReason {
   @Test
   public void testReadTimeoutRetryReason() {
     SocketTimeoutException connectionTimeoutException = new SocketTimeoutException(READ_TIMEOUT_JDK_MESSAGE);
-    Assertions.assertThat(RetryReason.getAbbreviation(connectionTimeoutException, null, null)).isEqualTo(
+    assertThat(RetryReason.getAbbreviation(connectionTimeoutException, null, null)).isEqualTo(
         READ_TIMEOUT_ABBREVIATION
     );
   }
 
   @Test
   public void testEgressLimitRetryReason() {
-    Assertions.assertThat(RetryReason.getAbbreviation(null, HTTP_UNAVAILABLE, EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage())).isEqualTo(
+    assertThat(RetryReason.getAbbreviation(null, HTTP_UNAVAILABLE, EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage())).isEqualTo(
         EGRESS_LIMIT_BREACH_ABBREVIATION
     );
   }
 
   @Test
   public void testIngressLimitRetryReason() {
-    Assertions.assertThat(RetryReason.getAbbreviation(null, HTTP_UNAVAILABLE, INGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage())).isEqualTo(
+    assertThat(RetryReason.getAbbreviation(null, HTTP_UNAVAILABLE, INGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage())).isEqualTo(
         INGRESS_LIMIT_BREACH_ABBREVIATION
     );
   }
 
   @Test
   public void testOperationLimitRetryReason() {
-    Assertions.assertThat(RetryReason.getAbbreviation(null, HTTP_UNAVAILABLE, TPS_OVER_ACCOUNT_LIMIT.getErrorMessage())).isEqualTo(
+    assertThat(RetryReason.getAbbreviation(null, HTTP_UNAVAILABLE, TPS_OVER_ACCOUNT_LIMIT.getErrorMessage())).isEqualTo(
         TPS_LIMIT_BREACH_ABBREVIATION
     );
   }
 
   @Test
   public void test503UnknownRetryReason() {
-    Assertions.assertThat(RetryReason.getAbbreviation(null, HTTP_UNAVAILABLE, null)).isEqualTo(
+    assertThat(RetryReason.getAbbreviation(null, HTTP_UNAVAILABLE, null)).isEqualTo(
         "503"
     );
   }
 
   @Test
   public void test500RetryReason() {
-    Assertions.assertThat(RetryReason.getAbbreviation(null, HTTP_INTERNAL_ERROR, null)).isEqualTo(
+    assertThat(RetryReason.getAbbreviation(null, HTTP_INTERNAL_ERROR, null)).isEqualTo(
         "500"
     );
   }
 
   @Test
   public void testUnknownHostRetryReason() {
-    Assertions.assertThat(RetryReason.getAbbreviation(new UnknownHostException(), null, null)).isEqualTo(
+    assertThat(RetryReason.getAbbreviation(new UnknownHostException(), null, null)).isEqualTo(
         UNKNOWN_HOST_EXCEPTION_ABBREVIATION
     );
   }
 
   @Test
   public void testUnknownIOExceptionRetryReason() {
-    Assertions.assertThat(RetryReason.getAbbreviation(new IOException(), null, null)).isEqualTo(
+    assertThat(RetryReason.getAbbreviation(new IOException(), null, null)).isEqualTo(
         IO_EXCEPTION_ABBREVIATION
     );
   }
 
   @Test
   public void testUnknownSocketException() {
-    Assertions.assertThat(RetryReason.getAbbreviation(new SocketException(), null, null)).isEqualTo(
+    assertThat(RetryReason.getAbbreviation(new SocketException(), null, null)).isEqualTo(
         SOCKET_EXCEPTION_ABBREVIATION
     );
   }

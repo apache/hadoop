@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -222,5 +223,21 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
       }
     }
     return contentLength;
+  }
+
+  /**
+   * Closes the throttling intercept and releases associated resources.
+   * This method closes both the read and write throttling analyzers.
+   *
+   * @throws IOException if an I/O error occurs during cleanup
+   */
+  @Override
+  public void close() throws IOException {
+    if (readThrottler != null) {
+      readThrottler.close();
+    }
+    if (writeThrottler != null) {
+      writeThrottler.close();
+    }
   }
 }

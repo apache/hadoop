@@ -137,6 +137,9 @@ public final class AbfsHttpConstants {
   public static final String HASH = "#";
   public static final String TRUE = "true";
   public static final String ZERO = "0";
+  public static final String UNDERSCORE = "_";
+  public static final String OPENING_SQUARE_BRACKET = "[";
+  public static final String CLOSING_SQUARE_BRACKET = "]";
 
   public static final String PLUS_ENCODE = "%20";
   public static final String FORWARD_SLASH_ENCODE = "%2F";
@@ -147,6 +150,13 @@ public final class AbfsHttpConstants {
   public static final String APPLICATION_JSON = "application/json";
   public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
   public static final String APPLICATION_XML = "application/xml";
+  /**
+   * Apache Arrow IPC stream media type requested from and returned by the
+   * Photon (Arrow-based ListBlob) listing path.
+   */
+  public static final String APPLICATION_APACHE_ARROW_STREAM =
+      "application/vnd.apache.arrow.stream";
+  public static final String APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
   public static final String XMS_PROPERTIES_ENCODING_ASCII = "ISO-8859-1";
   public static final String XMS_PROPERTIES_ENCODING_UNICODE = "UTF-8";
 
@@ -165,6 +175,13 @@ public final class AbfsHttpConstants {
   // The HTTP 100 Continue informational status response code indicates that everything so far
   // is OK and that the client should continue with the request or ignore it if it is already finished.
   public static final String HUNDRED_CONTINUE = "100-continue";
+  /**
+   * HTTP status code indicating that the server has received too many requests and the client should
+   * qualify for retrying the operation, as described in the Microsoft Azure documentation.
+   * @see "https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#error-handling"
+   */
+  public static final int HTTP_TOO_MANY_REQUESTS = 429;
+  public static final int HTTP_INVALID_RANGE = 416;
 
   public static final char CHAR_FORWARD_SLASH = '/';
   public static final char CHAR_EXCLAMATION_POINT = '!';
@@ -173,6 +190,8 @@ public final class AbfsHttpConstants {
   public static final char CHAR_EQUALS = '=';
   public static final char CHAR_STAR = '*';
   public static final char CHAR_PLUS = '+';
+
+  public static final int SPLIT_NO_LIMIT = -1;
 
   /**
    * Specifies the version of the REST protocol used for processing the request.
@@ -185,7 +204,9 @@ public final class AbfsHttpConstants {
     DEC_12_2019("2019-12-12"),
     APR_10_2021("2021-04-10"),
     AUG_03_2023("2023-08-03"),
-    NOV_04_2024("2024-11-04");
+    NOV_04_2024("2024-11-04"),
+    JUL_05_2025("2025-07-05"),
+    JUN_06_2026("2026-06-06");
 
     private final String xMsApiVersion;
 
@@ -199,7 +220,13 @@ public final class AbfsHttpConstants {
     }
 
     public static ApiVersion getCurrentVersion() {
-      return NOV_04_2024;
+      // Bumped to JUN_06_2026 to support the Photon (Apache Arrow) ListBlobs
+      // changes, which require this newer REST (x-ms-version) contract. This
+      // intentionally raises the default x-ms-version for the whole ABFS driver
+      // rather than only the Photon/ListBlobs path. This has been validated
+      // across all endpoint/operation combinations, so bumping the global
+      // default is safe.
+      return JUN_06_2026;
     }
   }
 
@@ -216,6 +243,7 @@ public final class AbfsHttpConstants {
   public static final String XML_TAG_RESOURCE_TYPE = "ResourceType";
   public static final String XML_TAG_INVALID_XML = "Invalid XML";
   public static final String XML_TAG_HDI_ISFOLDER = "hdi_isfolder";
+  public static final String XML_TAG_HDI_PERMISSION = "hdi_permission";
   public static final String XML_TAG_ETAG = "Etag";
   public static final String XML_TAG_LAST_MODIFIED_TIME = "Last-Modified";
   public static final String XML_TAG_CREATION_TIME   = "Creation-Time";
@@ -236,6 +264,58 @@ public final class AbfsHttpConstants {
   public static final String XML_TAG_COMMITTED_BLOCKS = "CommittedBlocks";
   public static final String XML_TAG_BLOCK_NAME = "Block";
   public static final String PUT_BLOCK_LIST = "PutBlockList";
+  // ===== List Containers (Blob Endpoint) XML Tags =====
+  public static final String XML_TAG_CONTAINERS = "Containers";
+  public static final String XML_TAG_CONTAINER = "Container";
+  public static final String XML_TAG_VERSION = "Version";
+  public static final String XML_TAG_DELETED = "Deleted";
+  public static final String XML_TAG_PREFIX = "Prefix";
+  public static final String XML_TAG_MARKER = "Marker";
+  public static final String XML_TAG_MAX_RESULTS = "MaxResults";
+  public static final String XML_TAG_LEASE_STATUS = "LeaseStatus";
+  public static final String XML_TAG_LEASE_STATE = "LeaseState";
+  public static final String XML_TAG_LEASE_DURATION = "LeaseDuration";
+  public static final String XML_TAG_PUBLIC_ACCESS = "PublicAccess";
+  public static final String XML_TAG_HAS_IMMUTABILITY_POLICY = "HasImmutabilityPolicy";
+  public static final String XML_TAG_HAS_LEGAL_HOLD = "HasLegalHold";
+  public static final String XML_TAG_DELETED_TIME = "DeletedTime";
+  public static final String XML_TAG_REMAINING_RETENTION_DAYS = "RemainingRetentionDays";
+
+  // ===== Photon (Arrow-based ListBlob) column names =====
+  // Column names expected in the Arrow ListBlobs schema. Matching is done
+  // case-insensitively so minor casing differences in the service schema are
+  // tolerated. Unknown columns are ignored and missing columns are treated as
+  // absent values.
+  public static final String ARROW_COL_NAME = "Name";
+  public static final String ARROW_COL_ETAG = "Etag";
+  public static final String ARROW_COL_CONTENT_LENGTH = "Content-Length";
+  public static final String ARROW_COL_LAST_MODIFIED = "Last-Modified";
+  public static final String ARROW_COL_CREATION_TIME = "Creation-Time";
+  public static final String ARROW_COL_RESOURCE_TYPE = "ResourceType";
+  public static final String ARROW_COL_IS_DIRECTORY = "IsDirectory";
+  public static final String ARROW_COL_OWNER = "Owner";
+  public static final String ARROW_COL_GROUP = "Group";
+  public static final String ARROW_COL_PERMISSIONS = "Permissions";
+  public static final String ARROW_COL_ACL = "Acl";
+  // Column carrying the blob user metadata as an Arrow map of key/value pairs.
+  // On the Blob endpoint an empty directory is a zero-byte marker blob whose
+  // only directory indicator is the hdi_isfolder entry inside this map.
+  public static final String ARROW_COL_METADATA = "Metadata";
+  // Copy-related columns, mirrored from the XML ListBlobs Properties so the
+  // Arrow (Photon) path populates the same fields as the XML path.
+  public static final String ARROW_COL_COPY_ID = "CopyId";
+  public static final String ARROW_COL_COPY_STATUS = "CopyStatus";
+  public static final String ARROW_COL_COPY_SOURCE = "CopySource";
+  public static final String ARROW_COL_COPY_PROGRESS = "CopyProgress";
+  public static final String ARROW_COL_COPY_COMPLETION_TIME = "CopyCompletionTime";
+  public static final String ARROW_COL_COPY_STATUS_DESCRIPTION =
+      "CopyStatusDescription";
+  // ResourceType value used by the Arrow response for an implicit directory
+  // (the equivalent of an XML <BlobPrefix> entry).
+  public static final String ARROW_RESOURCE_TYPE_BLOB_PREFIX = "blobprefix";
+  // Key under which the continuation token is expected in the Arrow schema
+  // custom metadata.
+  public static final String ARROW_METADATA_NEXT_MARKER = "NextMarker";
 
   /**
    * Value that differentiates categories of the HTTP status.

@@ -44,6 +44,7 @@ import static org.apache.hadoop.fs.s3a.MultipartTestUtils.assertNoUploadsAt;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.clearAnyUploads;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.countUploadsAt;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createPartUpload;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
@@ -129,6 +130,7 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testUploads() throws Throwable {
+    assumeMultipartUploads(getFileSystem().getConf());
     S3AFileSystem fs = getFileSystem();
     Path path = methodPath();
     Path file = new Path(path, UPLOAD_NAME);
@@ -173,13 +175,16 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
     }
   }
 
+
   @Test
   public void testUploadListByAge() throws Throwable {
     S3AFileSystem fs = getFileSystem();
     Path path = methodPath();
     Path file = new Path(path, UPLOAD_NAME);
+    assumeMultipartUploads(getFileSystem().getConf());
 
     describe("Cleaning up any leftover uploads from previous runs.");
+
 
     // 1. Make sure key doesn't already exist
     clearAnyUploads(fs, path);

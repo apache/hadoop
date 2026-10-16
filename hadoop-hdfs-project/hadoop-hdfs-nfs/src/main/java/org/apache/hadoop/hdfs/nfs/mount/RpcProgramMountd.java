@@ -87,7 +87,9 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
         NfsConfigKeys.DFS_NFS_MOUNTD_PORT_DEFAULT), PROGRAM, VERSION_1,
         VERSION_3, registrationSocket, allowInsecurePorts, config.getInt(
               NfsConfigKeys.NFS_UDP_CLIENT_PORTMAP_TIMEOUT_MILLIS_KEY,
-              NfsConfigKeys.NFS_UDP_CLIENT_PORTMAP_TIMEOUT_MILLIS_DEFAULT));
+              NfsConfigKeys.NFS_UDP_CLIENT_PORTMAP_TIMEOUT_MILLIS_DEFAULT),
+        config.get(NfsConfigKeys.DFS_NFS_SERVER_BIND_HOST_KEY,
+              NfsConfigKeys.DFS_NFS_SERVER_BIND_HOST_DEFAULT));
     this.config = config;
     exports = new HashMap<>();
     addExports();

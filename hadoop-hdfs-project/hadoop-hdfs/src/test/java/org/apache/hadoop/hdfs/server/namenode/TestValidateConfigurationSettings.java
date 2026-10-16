@@ -25,13 +25,16 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.BindException;
 import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * This class tests the validation of the configuration object when passed 
@@ -39,7 +42,7 @@ import java.util.Random;
  */
 public class TestValidateConfigurationSettings {
 
-  @After
+  @AfterEach
   public void cleanUp() {
     FileUtil.fullyDeleteContents(new File(MiniDFSCluster.getBaseDirectory()));
   }
@@ -49,37 +52,41 @@ public class TestValidateConfigurationSettings {
    * an exception
    * is thrown when trying to re-use the same port
    */
-  @Test(expected = BindException.class, timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testThatMatchingRPCandHttpPortsThrowException() 
       throws IOException {
+    assertThrows(BindException.class, () -> {
+      NameNode nameNode = null;
+      try {
+        Configuration conf = new HdfsConfiguration();
+        File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
+        conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+            nameDir.getAbsolutePath());
 
-    NameNode nameNode = null;
-    try {
-      Configuration conf = new HdfsConfiguration();
-      File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
-      conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
-          nameDir.getAbsolutePath());
+        Random rand = new Random();
+        final int port = 30000 + rand.nextInt(30000);
 
-      Random rand = new Random();
-      final int port = 30000 + rand.nextInt(30000);
-
-      // set both of these to the same port. It should fail.
-      FileSystem.setDefaultUri(conf, "hdfs://localhost:" + port);
-      conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:" + port);
-      DFSTestUtil.formatNameNode(conf);
-      nameNode = new NameNode(conf);
-    } finally {
-      if (nameNode != null) {
-        nameNode.stop();
+        // set both of these to the same port. It should fail.
+        FileSystem.setDefaultUri(conf, "hdfs://localhost:" + port);
+        conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:" + port);
+        DFSTestUtil.formatNameNode(conf);
+        nameNode = new NameNode(conf);
+      } finally {
+        if (nameNode != null) {
+          nameNode.stop();
+        }
       }
-    }
+    });
+
   }
 
   /**
    * Tests setting the rpc port to a different as the web port that an 
    * exception is NOT thrown 
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testThatDifferentRPCandHttpPortsAreOK() 
       throws IOException {
 
@@ -117,7 +124,8 @@ public class TestValidateConfigurationSettings {
    * HDFS-3013: NameNode format command doesn't pick up
    * dfs.namenode.name.dir.NameServiceId configuration.
    */
-  @Test(timeout = 300000)
+  @Test
+  @Timeout(value = 300)
   public void testGenericKeysForNameNodeFormat()
       throws IOException {
     Configuration conf = new HdfsConfiguration();

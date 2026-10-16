@@ -23,8 +23,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.util.Lists;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.Path;
 
@@ -35,7 +35,7 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 /**
  * Tests for {@link MagicCommitPaths} path operations.
  */
-public class TestMagicCommitPaths extends Assert {
+public class TestMagicCommitPaths extends Assertions {
 
   private static final List<String> MAGIC_AT_ROOT =
       list(MAGIC_PATH_PREFIX);
@@ -176,9 +176,11 @@ public class TestMagicCommitPaths extends Assert {
         finalDestination(l(MAGIC_PATH_PREFIX, "2", "3.txt")));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testFinalDestinationMagicNoChild() {
-    finalDestination(l(MAGIC_PATH_PREFIX));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      finalDestination(l(MAGIC_PATH_PREFIX));
+    });
   }
 
   @Test
@@ -186,9 +188,11 @@ public class TestMagicCommitPaths extends Assert {
     finalDestination(l(MAGIC_PATH_PREFIX, BASE, "3.txt"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testFinalDestinationBaseNoChild() {
-    assertEquals(l(), finalDestination(l(MAGIC_PATH_PREFIX, BASE)));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      assertEquals(l(), finalDestination(l(MAGIC_PATH_PREFIX, BASE)));
+    });
   }
 
   @Test
@@ -235,8 +239,8 @@ public class TestMagicCommitPaths extends Assert {
 
   private void assertPathSplits(String pathString, String[] expected) {
     Path path = new Path(pathString);
-    assertArrayEquals("From path " + path, expected,
-        splitPathToElements(path).toArray());
+    assertArrayEquals(expected,
+        splitPathToElements(path).toArray(), "From path " + path);
   }
 
   private void assertListEquals(String[] expected, List<String> actual) {

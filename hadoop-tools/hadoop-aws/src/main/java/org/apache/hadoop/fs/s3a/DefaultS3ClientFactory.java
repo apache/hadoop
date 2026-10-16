@@ -21,15 +21,19 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
+import org.apache.hadoop.fs.s3a.impl.LazySharedThreadPoolHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.awscore.util.AwsHostNameUtils;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
+import software.amazon.awssdk.core.checksums.ResponseChecksumValidation;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
@@ -41,6 +45,7 @@ import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
 import software.amazon.awssdk.metrics.LoggingMetricPublisher;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin;
+import software.amazon.awssdk.services.s3.LegacyMd5Plugin;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
@@ -60,17 +65,23 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_KEEPALIVE;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CLIENT_SHARED_THREADPOOL_KEEPALIVE;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CLIENT_SHARED_THREADPOOL_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CROSS_REGION_ACCESS_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_DEFAULT_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_CLASS_NAME;
 import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_ENABLED_DEFAULT;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
-import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
 import static org.apache.hadoop.fs.s3a.auth.SignerFactory.createHttpSigner;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AUTH_SCHEME_AWS_SIGV_4;
@@ -93,6 +104,46 @@ public class DefaultS3ClientFactory extends Configured
 
   private static final Pattern VPC_ENDPOINT_PATTERN =
           Pattern.compile("^(?:.+\\.)?([a-z0-9-]+)\\.vpce\\.amazonaws\\.(?:com|com\\.cn)$");
+
+  /**
+   * Shared executor for S3 sync clients.
+   */
+  private static final LazySharedThreadPoolHolder S3_SYNC_EXECUTOR =
+      new LazySharedThreadPoolHolder(
+          AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED,
+          AWS_S3_CLIENT_SHARED_THREADPOOL_SIZE,
+          AWS_S3_CLIENT_SHARED_THREADPOOL_KEEPALIVE,
+          "s3a-s3-sync-scheduler");
+
+  /**
+   * Shared executor for S3 async clients.
+   */
+  private static final LazySharedThreadPoolHolder S3_ASYNC_EXECUTOR =
+      new LazySharedThreadPoolHolder(
+          AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_ENABLED,
+          AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_SIZE,
+          AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_KEEPALIVE,
+          "s3a-s3-async-scheduler");
+
+  /**
+   * Get the shared executor holder for S3 sync clients.
+   * This is for testing only.
+   * @return the holder
+   */
+  @VisibleForTesting
+  static LazySharedThreadPoolHolder s3SyncExecutorHolder() {
+    return S3_SYNC_EXECUTOR;
+  }
+
+  /**
+   * Get the shared executor holder for S3 async clients.
+   * This is for testing only.
+   * @return the holder
+   */
+  @VisibleForTesting
+  static LazySharedThreadPoolHolder s3AsyncExecutorHolder() {
+    return S3_ASYNC_EXECUTOR;
+  }
 
   /**
    * Subclasses refer to this.
@@ -202,15 +253,40 @@ public class DefaultS3ClientFactory extends Configured
 
     configureEndpointAndRegion(builder, parameters, conf);
 
+    // add a plugin to add a Content-MD5 header.
+    // this is required when performing some operations with third party stores
+    // (for example: bulk delete), and is somewhat harmless when working with AWS S3.
+    if (parameters.isMd5HeaderEnabled()) {
+      LOG.debug("MD5 header enabled");
+      builder.addPlugin(LegacyMd5Plugin.create());
+    }
+
+    //when to calculate request checksums.
+    final RequestChecksumCalculation checksumCalculation =
+        parameters.isChecksumCalculationEnabled()
+            ? RequestChecksumCalculation.WHEN_SUPPORTED
+            : RequestChecksumCalculation.WHEN_REQUIRED;
+    LOG.debug("Using checksum calculation policy: {}", checksumCalculation);
+    builder.requestChecksumCalculation(checksumCalculation);
+
+    // response checksum validation. Slow, even with CRC32 checksums.
+    final ResponseChecksumValidation checksumValidation;
+    checksumValidation = parameters.isChecksumValidationEnabled()
+        ? ResponseChecksumValidation.WHEN_SUPPORTED
+        : ResponseChecksumValidation.WHEN_REQUIRED;
+    LOG.debug("Using checksum validation policy: {}", checksumValidation);
+    builder.responseChecksumValidation(checksumValidation);
+
     maybeApplyS3AccessGrantsConfigurations(builder, conf);
 
     S3Configuration serviceConfiguration = S3Configuration.builder()
         .pathStyleAccessEnabled(parameters.isPathStyleAccess())
-        .checksumValidationEnabled(parameters.isChecksumValidationEnabled())
         .build();
 
-    final ClientOverrideConfiguration.Builder override =
-        createClientOverrideConfiguration(parameters, conf);
+    final ClientOverrideConfiguration.Builder override = createClientOverrideConfiguration(
+        parameters,
+        conf,
+        builder instanceof S3AsyncClientBuilder);
 
     S3BaseClientBuilder<BuilderT, ClientT> s3BaseClientBuilder = builder
         .overrideConfiguration(override.build())
@@ -239,13 +315,14 @@ public class DefaultS3ClientFactory extends Configured
    * Create an override configuration for an S3 client.
    * @param parameters parameter object
    * @param conf configuration object
-   * @throws IOException any IOE raised, or translated exception
-   * @throws RuntimeException some failures creating an http signer
+   * @param isAsync true for async client, false for sync client
    * @return the override configuration
    * @throws IOException any IOE raised, or translated exception
+   * @throws RuntimeException some failures creating an http signer
    */
   protected ClientOverrideConfiguration.Builder createClientOverrideConfiguration(
-      S3ClientCreationParameters parameters, Configuration conf) throws IOException {
+      S3ClientCreationParameters parameters, Configuration conf, boolean isAsync)
+      throws IOException {
     final ClientOverrideConfiguration.Builder clientOverrideConfigBuilder =
         AWSClientConfig.createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3);
 
@@ -275,6 +352,13 @@ public class DefaultS3ClientFactory extends Configured
 
     final RetryPolicy.Builder retryPolicyBuilder = AWSClientConfig.createRetryPolicyBuilder(conf);
     clientOverrideConfigBuilder.retryPolicy(retryPolicyBuilder.build());
+
+    ScheduledExecutorService executor = isAsync
+        ? S3_ASYNC_EXECUTOR.get(conf)
+        : S3_SYNC_EXECUTOR.get(conf);
+    if (executor != null) {
+      clientOverrideConfigBuilder.scheduledExecutorService(executor);
+    }
 
     return clientOverrideConfigBuilder;
   }

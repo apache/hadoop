@@ -993,8 +993,8 @@ public class TestDelegationTokenRenewer {
     when(mockContext.getDelegationTokenRenewer()).thenReturn(localDtr);
     localDtr.init(conf);
     localDtr.start();
-    // submit a job that blocks during renewal                                 
-    Thread submitThread = new Thread() {                                       
+    // submit a job that blocks during renewal
+    Thread submitThread = new Thread() {
       @Override                                                                
       public void run() {
         localDtr.addApplicationAsync(mock(ApplicationId.class),

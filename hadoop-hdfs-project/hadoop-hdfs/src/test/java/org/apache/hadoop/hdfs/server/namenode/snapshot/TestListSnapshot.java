@@ -26,16 +26,17 @@ import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.
     DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Tests listSnapshot.
@@ -51,7 +52,7 @@ public class TestListSnapshot {
   FSNamesystem fsn;
   DistributedFileSystem hdfs;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.setBoolean(DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED, true);
@@ -63,7 +64,7 @@ public class TestListSnapshot {
     hdfs.mkdirs(dir1);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -74,7 +75,8 @@ public class TestListSnapshot {
   /**
    * Test listing all the snapshottable directories.
    */
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testListSnapshot() throws Exception {
     fsn.getSnapshotManager().setAllowNestedSnapshots(true);
 
@@ -106,10 +108,8 @@ public class TestListSnapshot {
     hdfs.createSnapshot(dir1, "s0");
     snapshotStatuses = hdfs.getSnapshotListing(dir1);
     assertEquals(1, snapshotStatuses.length);
-    assertEquals("s0", snapshotStatuses[0].getDirStatus().
-        getLocalName());
-    assertEquals(SnapshotTestHelper.getSnapshotRoot(dir1, "s0"),
-        snapshotStatuses[0].getFullPath());
+    assertEquals("s0", snapshotStatuses[0].getDirStatus().getLocalName());
+    assertEquals(SnapshotTestHelper.getSnapshotRoot(dir1, "s0"), snapshotStatuses[0].getFullPath());
     // snapshot id is zero
     assertEquals(0, snapshotStatuses[0].getSnapshotID());
     // Create a snapshot for dir1

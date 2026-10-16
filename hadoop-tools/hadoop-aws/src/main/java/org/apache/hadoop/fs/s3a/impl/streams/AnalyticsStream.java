@@ -21,13 +21,26 @@ package org.apache.hadoop.fs.s3a.impl.streams;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.function.IntFunction;
+import java.util.Optional;
 
+import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecretOperations;
 import software.amazon.s3.analyticsaccelerator.S3SeekableInputStreamFactory;
 import software.amazon.s3.analyticsaccelerator.S3SeekableInputStream;
+import software.amazon.s3.analyticsaccelerator.common.ObjectRange;
+import software.amazon.s3.analyticsaccelerator.request.EncryptionSecrets;
 import software.amazon.s3.analyticsaccelerator.request.ObjectMetadata;
+import software.amazon.s3.analyticsaccelerator.request.StreamAuditContext;
 import software.amazon.s3.analyticsaccelerator.util.InputPolicy;
 import software.amazon.s3.analyticsaccelerator.util.OpenStreamInformation;
 import software.amazon.s3.analyticsaccelerator.util.S3URI;
+import software.amazon.s3.analyticsaccelerator.util.RequestCallback;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +50,11 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.VectoredReadUtils;
+
+import static org.apache.hadoop.fs.VectoredReadUtils.LOG_BYTE_BUFFER_RELEASED;
+
 
 /**
  * Analytics stream creates a stream using aws-analytics-accelerator-s3. This stream supports
@@ -55,6 +73,7 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
       final S3SeekableInputStreamFactory s3SeekableInputStreamFactory) throws IOException {
     super(InputStreamType.Analytics, parameters);
     S3ObjectAttributes s3Attributes = parameters.getObjectAttributes();
+
     this.inputStream = s3SeekableInputStreamFactory.createStream(S3URI.of(s3Attributes.getBucket(),
         s3Attributes.getKey()), buildOpenStreamInformation(parameters));
     getS3AStreamStatistics().streamOpened(InputStreamType.Analytics);
@@ -63,6 +82,9 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
   @Override
   public int read() throws IOException {
     throwIfClosed();
+
+    getS3AStreamStatistics().readOperationStarted(getPos(), 1);
+
     int bytesRead;
     try {
       bytesRead = inputStream.read();
@@ -70,6 +92,11 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
       onReadFailure(ioe);
       throw ioe;
     }
+
+    if (bytesRead != -1) {
+      incrementBytesRead(1);
+    }
+
     return bytesRead;
   }
 
@@ -105,6 +132,8 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
    */
   public int readTail(byte[] buf, int off, int len) throws IOException {
     throwIfClosed();
+    getS3AStreamStatistics().readOperationStarted(getPos(), len);
+
     int bytesRead;
     try {
       bytesRead = inputStream.readTail(buf, off, len);
@@ -112,12 +141,20 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
       onReadFailure(ioe);
       throw ioe;
     }
+
+    if (bytesRead > 0) {
+      incrementBytesRead(bytesRead);
+    }
+
     return bytesRead;
   }
 
   @Override
   public int read(byte[] buf, int off, int len) throws IOException {
     throwIfClosed();
+
+    getS3AStreamStatistics().readOperationStarted(getPos(), len);
+
     int bytesRead;
     try {
       bytesRead = inputStream.read(buf, off, len);
@@ -125,9 +162,48 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
       onReadFailure(ioe);
       throw ioe;
     }
+
+    if (bytesRead > 0) {
+      incrementBytesRead(bytesRead);
+    }
+
     return bytesRead;
   }
 
+  /**
+   * Pass to {@link #readVectored(List, IntFunction, Consumer)}
+   * with the {@link VectoredReadUtils#LOG_BYTE_BUFFER_RELEASED} releaser.
+   * {@inheritDoc}
+   */
+  @Override
+  public void readVectored(List<? extends FileRange> ranges,
+                                        IntFunction<ByteBuffer> allocate) throws IOException {
+    readVectored(ranges, allocate, LOG_BYTE_BUFFER_RELEASED);
+  }
+
+  /**
+   * Pass to {@link #readVectored(List, IntFunction, Consumer)}
+   * with the {@link VectoredReadUtils#LOG_BYTE_BUFFER_RELEASED} releaser.
+   * {@inheritDoc}
+   */
+  @Override
+  public void readVectored(final List<? extends FileRange> ranges,
+                           final IntFunction<ByteBuffer> allocate,
+                           final Consumer<ByteBuffer> release) throws IOException {
+    LOG.debug("AAL: Starting vectored read on path {} for ranges {} ", getPathStr(), ranges);
+    throwIfClosed();
+
+    List<ObjectRange> objectRanges = new ArrayList<>();
+
+    for (FileRange range : ranges) {
+      CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
+      ObjectRange objectRange = new ObjectRange(result, range.getOffset(), range.getLength());
+      objectRanges.add(objectRange);
+      range.setData(result);
+    }
+
+    inputStream.readVectored(objectRanges, allocate, release);
+  }
 
   @Override
   public boolean seekToNewSource(long l) throws IOException {
@@ -151,6 +227,7 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
 
   @Override
   protected void abortInFinalizer() {
+    getS3AStreamStatistics().streamLeaked();
     try {
       close();
     } catch (IOException ignored) {
@@ -194,16 +271,32 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
   }
 
   private OpenStreamInformation buildOpenStreamInformation(ObjectReadParameters parameters) {
+
+    final RequestCallback requestCallback = new AnalyticsRequestCallback(getS3AStreamStatistics());
+
     OpenStreamInformation.OpenStreamInformationBuilder openStreamInformationBuilder =
         OpenStreamInformation.builder()
             .inputPolicy(mapS3AInputPolicyToAAL(parameters.getContext()
-            .getInputPolicy()));
+            .getInputPolicy()))
+            .requestCallback(requestCallback);
 
     if (parameters.getObjectAttributes().getETag() != null) {
       openStreamInformationBuilder.objectMetadata(ObjectMetadata.builder()
           .contentLength(parameters.getObjectAttributes().getLen())
           .etag(parameters.getObjectAttributes().getETag()).build());
     }
+
+
+    if (parameters.getEncryptionSecrets().getEncryptionMethod() == S3AEncryptionMethods.SSE_C) {
+      EncryptionSecretOperations.getSSECustomerKey(parameters.getEncryptionSecrets())
+              .ifPresent(base64customerKey -> openStreamInformationBuilder.encryptionSecrets(
+              EncryptionSecrets.builder().sseCustomerKey(Optional.of(base64customerKey)).build()));
+    }
+
+    openStreamInformationBuilder.streamAuditContext(StreamAuditContext.builder()
+                    .operationName(parameters.getAuditSpan().getOperationName())
+                    .spanId(parameters.getAuditSpan().getSpanId())
+                    .build());
 
     return openStreamInformationBuilder.build();
   }
@@ -233,6 +326,18 @@ public class AnalyticsStream extends ObjectInputStream implements StreamCapabili
   protected void throwIfClosed() throws IOException {
     if (closed) {
       throw new IOException(getKey() + ": " + FSExceptionMessages.STREAM_IS_CLOSED);
+    }
+  }
+
+  /**
+   * Increment the bytes read counter if there is a stats instance
+   * and the number of bytes read is more than zero.
+   * @param bytesRead number of bytes read
+   */
+  private void incrementBytesRead(long bytesRead) {
+    getS3AStreamStatistics().bytesRead(bytesRead);
+    if (getContext().getStats() != null && bytesRead > 0) {
+      getContext().getStats().incrementBytesRead(bytesRead);
     }
   }
 }

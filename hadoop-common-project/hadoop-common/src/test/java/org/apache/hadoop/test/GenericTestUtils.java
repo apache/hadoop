@@ -221,8 +221,9 @@ public abstract class GenericTestUtils {
       prop = DEFAULT_TEST_DATA_DIR;
     }
     File dir = new File(prop).getAbsoluteFile();
-    dir.mkdirs();
-    assertExists(dir);
+    if (dir.mkdirs() && !dir.exists()) {
+      throw new IllegalStateException("Directory " + dir + " not created");
+    }
     return dir;
   }
 
@@ -334,9 +335,8 @@ public abstract class GenericTestUtils {
     if (msg == null) {
       throw new AssertionError(E_NULL_THROWABLE_STRING, t);
     }
-    if (expectedText != null && !msg.contains(expectedText)) {
-      String prefix = org.apache.commons.lang3.StringUtils.isEmpty(message)
-          ? "" : (message + ": ");
+    if (expectedText != null && !msg.toLowerCase().contains(expectedText.toLowerCase())) {
+      final String prefix = message == null || message.isEmpty() ? "" : message + ": ";
       throw new AssertionError(
           String.format("%s Expected to find '%s' %s: %s",
               prefix, expectedText, E_UNEXPECTED_EXCEPTION,
@@ -736,6 +736,28 @@ public abstract class GenericTestUtils {
       }
     }
     return false;
+  }
+
+  /**
+   * Count the live threads whose name matches the given pattern.
+   * @param pattern a Pattern object used to match thread names
+   * @return the number of live threads whose name matches the pattern
+   */
+  public static int countThreadsMatching(Pattern pattern) {
+    ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+
+    ThreadInfo[] infos =
+        threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
+    int count = 0;
+    for (ThreadInfo info : infos) {
+      if (info == null) {
+        continue;
+      }
+      if (pattern.matcher(info.getThreadName()).matches()) {
+        count++;
+      }
+    }
+    return count;
   }
 
   /**

@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-mapreduce-client</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.5.0-SNAPSHOT</version>
+    <version>3.6.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-mapreduce-client-nativetask</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
   <name>Apache Hadoop MapReduce NativeTask</name>
 
   <properties>
@@ -56,7 +56,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.lz4</groupId>
+      <groupId>at.yawk.lz4</groupId>
       <artifactId>lz4-java</artifactId>
       <scope>test</scope>
     </dependency>
@@ -78,11 +78,6 @@
     <dependency>
       <groupId>org.junit.platform</groupId>
       <artifactId>junit-platform-launcher</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.vintage</groupId>
-      <artifactId>junit-vintage-engine</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -130,10 +125,6 @@
         <snappy.lib></snappy.lib>
         <snappy.include></snappy.include>
         <require.snappy>false</require.snappy>
-        <zstd.prefix></zstd.prefix>
-        <zstd.lib></zstd.lib>
-        <zstd.include></zstd.include>
-        <require.zstd>false</require.zstd>
       </properties>
       <build>
         <plugins>
@@ -151,8 +142,7 @@
                     <requireOS>
                       <family>mac</family>
                       <family>unix</family>
-                      <message>native build only supported on Mac or
-                        Unix</message>
+                      <message>native build only supported on Mac or Unix</message>
                     </requireOS>
                   </rules>
                   <fail>true</fail>
@@ -202,10 +192,6 @@
                     <CUSTOM_SNAPPY_PREFIX>${snappy.prefix}</CUSTOM_SNAPPY_PREFIX>
                     <CUSTOM_SNAPPY_LIB>${snappy.lib}</CUSTOM_SNAPPY_LIB>
                     <CUSTOM_SNAPPY_INCLUDE>${snappy.include}</CUSTOM_SNAPPY_INCLUDE>
-                    <REQUIRE_ZSTD>${require.zstd}</REQUIRE_ZSTD>
-                    <CUSTOM_ZSTD_PREFIX>${zstd.prefix}</CUSTOM_ZSTD_PREFIX>
-                    <CUSTOM_ZSTD_LIB>${zstd.lib}</CUSTOM_ZSTD_LIB>
-                    <CUSTOM_ZSTD_INCLUDE>${zstd.include}</CUSTOM_ZSTD_INCLUDE>
                   </vars>
                 </configuration>
               </execution>

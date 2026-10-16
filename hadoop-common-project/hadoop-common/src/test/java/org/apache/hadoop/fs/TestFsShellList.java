@@ -66,9 +66,12 @@ public class TestFsShellList {
     String[] lsArgv = new String[]{"-ls", testRootDir.toString()};
     assertThat(shell.run(lsArgv)).isEqualTo(0);
 
-    createFile(new Path(testRootDir, "abc\bd\tef"));
+    if (!Path.WINDOWS) {
+      createFile(new Path(testRootDir, "abc\bd\tef"));
+      createFile(new Path(testRootDir, "qq\r123"));
+    }
+
     createFile(new Path(testRootDir, "ghi"));
-    createFile(new Path(testRootDir, "qq\r123"));
     lsArgv = new String[]{"-ls", testRootDir.toString()};
     assertThat(shell.run(lsArgv)).isEqualTo(0);
 

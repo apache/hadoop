@@ -30,6 +30,7 @@ import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -99,6 +100,7 @@ public abstract class AbstractContractMultipartUploaderTest extends
   }
 
   @Override
+  @AfterEach
   public void teardown() throws Exception {
     MultipartUploader uploader = getUploader(1);
     if (uploader != null) {

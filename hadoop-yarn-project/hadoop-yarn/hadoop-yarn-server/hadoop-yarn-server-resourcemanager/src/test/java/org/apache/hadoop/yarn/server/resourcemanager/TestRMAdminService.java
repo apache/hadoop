@@ -91,6 +91,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_PROXY_USER_PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration.NODES;
 import static org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration.PREFIX;
@@ -242,6 +244,76 @@ public class TestRMAdminService {
     int maxAppsAfter = cs.getConfiguration().getMaximumSystemApplications();
     assertEquals(maxAppsAfter, 5000);
     assertTrue(maxAppsAfter != maxAppsBefore);
+  }
+
+  @Test
+  public void testFailedAdminRefreshQueuesKeepsOldConfiguration()
+      throws Exception {
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+    uploadDefaultConfiguration();
+    CapacitySchedulerConfiguration csConf = twoQueueConfiguration(50f, 50f);
+    csConf.setMaximumSystemApplications(1111);
+    uploadConfiguration(csConf, "capacity-scheduler.xml");
+
+    rm = new MockRM(configuration);
+    rm.init(configuration);
+    rm.start();
+    CapacityScheduler cs = (CapacityScheduler) rm.getRMContext().getScheduler();
+
+    CapacitySchedulerConfiguration invalid = twoQueueConfiguration(80f, 30f);
+    invalid.setMaximumSystemApplications(2222);
+    uploadConfiguration(invalid, "capacity-scheduler.xml");
+
+    YarnException e = assertThrows(YarnException.class,
+        () -> rm.adminService.refreshQueues(RefreshQueuesRequest.newInstance()));
+    assertTrue(e.getMessage().contains("Illegal capacity sum of 1.1"),
+        e.getMessage());
+    assertEquals(1111, cs.getConfiguration().getMaximumSystemApplications());
+    assertEquals(0.5f, cs.getQueue("root.a").getCapacity(), 1e-6f);
+  }
+
+  @Test
+  public void testAdminRefreshQueuesResolvesVariablesAgain()
+      throws Exception {
+    String variable = "test.rm.admin.refresh.max.apps";
+    String key = CapacitySchedulerConfiguration.PREFIX
+        + "root.a.maximum-applications";
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+    uploadDefaultConfiguration();
+    CapacitySchedulerConfiguration csConf = twoQueueConfiguration(50f, 50f);
+    csConf.set(key, "${" + variable + "}");
+    uploadConfiguration(csConf, "capacity-scheduler.xml");
+
+    try {
+      System.setProperty(variable, "10");
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+      CapacityScheduler cs =
+          (CapacityScheduler) rm.getRMContext().getScheduler();
+      assertEquals(10, ((LeafQueue) cs.getQueue("root.a")).getMaxApplications());
+
+      // The uploaded file is unchanged, only the substituted value differs.
+      System.setProperty(variable, "20");
+      rm.adminService.refreshQueues(RefreshQueuesRequest.newInstance());
+      assertEquals(20, ((LeafQueue) cs.getQueue("root.a")).getMaxApplications());
+      assertEquals("${" + variable + "}", cs.getConfiguration().getRaw(key));
+    } finally {
+      System.clearProperty(variable);
+    }
+  }
+
+  private static CapacitySchedulerConfiguration twoQueueConfiguration(
+      float capacityA, float capacityB) {
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration(new Configuration(false), false);
+    QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    csConf.setQueues(root, new String[] {"a", "b"});
+    csConf.setCapacity(root.createNewLeaf("a"), capacityA);
+    csConf.setCapacity(root.createNewLeaf("b"), capacityB);
+    return csConf;
   }
 
   @Test

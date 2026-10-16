@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -34,7 +34,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestDFSRename {
   static int countLease(MiniDFSCluster cluster) {
@@ -136,7 +137,8 @@ public class TestDFSRename {
    * Check the blocks of dst file are cleaned after rename with overwrite
    * Restart NN to check the rename successfully
    */
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testRenameWithOverwrite() throws Exception {
     final short replFactor = 2;
     final long blockSize = 512;
@@ -194,9 +196,9 @@ public class TestDFSRename {
       dfs.rename(path, new Path("/dir1"),
           new Rename[] {Rename.OVERWRITE, Rename.TO_TRASH});
       String auditOut = auditLog.getOutput();
-      assertTrue("Rename should have both OVERWRITE and TO_TRASH "
-              + "flags at namenode but had only " + auditOut,
-          auditOut.contains("options=[OVERWRITE, TO_TRASH]"));
+      assertTrue(auditOut.contains("options=[OVERWRITE, TO_TRASH]"),
+          "Rename should have both OVERWRITE and TO_TRASH "
+              + "flags at namenode but had only " + auditOut);
     }
   }
 }

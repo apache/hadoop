@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
 
   printf("\nDetermining user details\n");
   char* username = strdup(getpwuid(getuid())->pw_name);
-  struct passwd *username_info = check_user(username);
+  struct serialized_passwd *username_info = check_user(username);
   printf("\nSetting NM UID\n");
   set_nm_uid(username_info->pw_uid, username_info->pw_gid);
 

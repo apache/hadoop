@@ -22,16 +22,18 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
 import static org.apache.hadoop.hdfs.server.namenode.FSNamesystem.DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 /**
  * Test Rename with ordered snapshot deletion.
  */
@@ -41,7 +43,7 @@ public class TestRenameWithOrderedSnapshotDeletion {
   private DistributedFileSystem hdfs;
   private MiniDFSCluster cluster;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     final Configuration conf = new Configuration();
     conf.setBoolean(DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED, true);
@@ -52,7 +54,7 @@ public class TestRenameWithOrderedSnapshotDeletion {
     hdfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -60,7 +62,8 @@ public class TestRenameWithOrderedSnapshotDeletion {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60)
   public void testRename() throws Exception {
     final Path dir1 = new Path("/dir1");
     final Path dir2 = new Path("/dir2");
@@ -101,10 +104,9 @@ public class TestRenameWithOrderedSnapshotDeletion {
   private void validateRename(Path src, Path dest) {
     try {
       hdfs.rename(src, dest);
-      Assert.fail("Expected exception not thrown.");
+      fail("Expected exception not thrown.");
     } catch (IOException ioe) {
-      Assert.assertTrue(ioe.getMessage().contains("are not under the" +
-          " same snapshot root."));
+      assertTrue(ioe.getMessage().contains("are not under the" + " same snapshot root."));
     }
   }
 }

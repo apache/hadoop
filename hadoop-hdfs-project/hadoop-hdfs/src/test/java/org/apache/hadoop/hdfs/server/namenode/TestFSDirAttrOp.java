@@ -24,14 +24,15 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.io.FileNotFoundException;
 import java.util.Random;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
@@ -97,56 +98,57 @@ public class TestFSDirAttrOp {
 
   @Test
   public void testUnprotectedSetPermissions() throws Exception {
-    assertTrue("setPermissions return true for updated permissions",
-        unprotectedSetAttributes((short) 0777, (short) 0));
-    assertFalse("setPermissions should return false for same permissions",
-        unprotectedSetAttributes((short) 0777, (short) 0777));
+    assertTrue(unprotectedSetAttributes((short) 0777, (short) 0),
+        "setPermissions return true for updated permissions");
+    assertFalse(unprotectedSetAttributes((short) 0777, (short) 0777),
+        "setPermissions should return false for same permissions");
   }
 
   @Test
   public void testUnprotectedSetOwner() throws Exception {
-    assertTrue("SetOwner should return true for a new user",
-        unprotectedSetAttributes((short) 0777, (short) 0777, "user1",
-            "user2", true));
-    assertFalse("SetOwner should return false for same user",
-        unprotectedSetAttributes((short) 0777, (short) 0777, "user1",
-            "user1", true));
+    assertTrue(unprotectedSetAttributes((short) 0777, (short) 0777, "user1", "user2",
+            true),
+        "SetOwner should return true for a new user");
+    assertFalse(unprotectedSetAttributes((short) 0777, (short) 0777, "user1", "user1",
+            true),
+        "SetOwner should return false for same user");
   }
 
   @Test
   public void testUnprotectedSetTimes() throws Exception {
     // atime < access time + precision
-    assertFalse("SetTimes should not update access time "
-          + "because it's within the last precision interval",
-        unprotectedSetTimes(100, 0, 1000, -1, false));
+    assertFalse(unprotectedSetTimes(100, 0, 1000, -1, false),
+        "SetTimes should not update access time "
+            + "because it's within the last precision interval");
 
     // atime = access time + precision
-    assertFalse("SetTimes should not update access time "
-          + "because it's within the last precision interval",
-        unprotectedSetTimes(1000, 0, 1000, -1, false));
+    assertFalse(unprotectedSetTimes(1000, 0, 1000, -1, false),
+        "SetTimes should not update access time "
+            + "because it's within the last precision interval");
 
     // atime > access time + precision
-    assertTrue("SetTimes should update access time",
-        unprotectedSetTimes(1011, 10, 1000, -1, false));
+    assertTrue(unprotectedSetTimes(1011, 10, 1000, -1, false),
+        "SetTimes should update access time");
 
     // atime < access time + precision, but force is set
-    assertTrue("SetTimes should update access time",
-        unprotectedSetTimes(100, 0, 1000, -1, true));
+    assertTrue(unprotectedSetTimes(100, 0, 1000, -1, true),
+        "SetTimes should update access time");
 
     // atime < access time + precision, but mtime is set
-    assertTrue("SetTimes should update access time",
-        unprotectedSetTimes(100, 0, 1000, 1, false));
+    assertTrue(unprotectedSetTimes(100, 0, 1000, 1, false),
+        "SetTimes should update access time");
   }
 
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testUnprotectedSetTimesFNFE()
       throws FileNotFoundException {
-    FSDirectory fsd = Mockito.mock(FSDirectory.class);
-    INodesInPath iip = Mockito.mock(INodesInPath.class);
+    assertThrows(FileNotFoundException.class, () -> {
+      FSDirectory fsd = Mockito.mock(FSDirectory.class);
+      INodesInPath iip = Mockito.mock(INodesInPath.class);
+      when(fsd.hasWriteLock()).thenReturn(Boolean.TRUE);
+      when(iip.getLastINode()).thenReturn(null);
+      FSDirAttrOp.unprotectedSetTimes(fsd, iip, 0, 0, false);
+    });
 
-    when(fsd.hasWriteLock()).thenReturn(Boolean.TRUE);
-    when(iip.getLastINode()).thenReturn(null);
-
-    FSDirAttrOp.unprotectedSetTimes(fsd, iip, 0, 0, false);
   }
 }

@@ -65,5 +65,13 @@ public final class SaslMechanismFactory {
     return HADOOP_SECURITY_SASL_MECHANISM_DEFAULT.equals(saslMechanism);
   }
 
+  public static boolean isDigestMechanism(String saslMechanism) {
+    return saslMechanism.startsWith("DIGEST-");
+  }
+
   private SaslMechanismFactory() {}
+
+  public static void main(String[] args) {
+    System.out.println("SASL_MECHANISM = " + getMechanism());
+  }
 }

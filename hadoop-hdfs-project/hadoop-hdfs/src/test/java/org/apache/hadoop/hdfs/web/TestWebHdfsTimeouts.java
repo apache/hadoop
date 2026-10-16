@@ -52,8 +52,8 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.Timeout;
+import org.opentest4j.TestAbortedException;
 
 /**
  * This test suite checks that WebHdfsFileSystem sets connection timeouts and
@@ -408,7 +408,7 @@ public class TestWebHdfsTimeouts {
 
   private void assumeBacklogConsumed() {
     if (failedToConsumeBacklog) {
-      throw new AssumptionViolatedException(
+      throw new TestAbortedException(
           "failed to fill up connection backlog.");
     }
   }

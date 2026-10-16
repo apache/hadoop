@@ -27,29 +27,32 @@ if [ $? -eq 1 ]; then
   exit 1
 fi
 
-default_version="3.21.12"
+default_version="3.25.5"
 version_to_install=$default_version
 if [ -n "$2" ]; then
   version_to_install="$2"
 fi
 
-if [ "$version_to_install" != "3.21.12" ]; then
+if [ "$version_to_install" != "3.25.5" ]; then
   echo "WARN: Don't know how to install version $version_to_install, installing the default version $default_version instead"
   version_to_install=$default_version
 fi
 
-if [ "$version_to_install" == "3.21.12" ]; then
+if [ "$version_to_install" == "3.25.5" ]; then
   # hadolint ignore=DL3003
   mkdir -p /opt/protobuf-src &&
     curl -L -s -S \
-      https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz \
+      https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.25.5.tar.gz \
       -o /opt/protobuf.tar.gz &&
     tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src &&
+    curl -L -s -S \
+      https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz \
+      -o /opt/abseil-cpp.tar.gz &&
+    tar xzf /opt/abseil-cpp.tar.gz --strip-components 1 -C /opt/protobuf-src/third_party/abseil-cpp &&
     cd /opt/protobuf-src &&
-    ./autogen.sh &&
-    ./configure --prefix=/opt/protobuf &&
-    make "-j$(nproc)" &&
-    make install &&
+    cmake -S . -B build -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF &&
+    cmake --build build --parallel $(nproc) &&
+    cmake --install build --prefix /opt/protobuf &&
     cd /root &&
     rm -rf /opt/protobuf-src
 else

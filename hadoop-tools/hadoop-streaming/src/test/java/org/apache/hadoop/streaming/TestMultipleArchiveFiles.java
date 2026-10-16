@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.jupiter.api.AfterEach;
 
 /**
  * This class tests cacheArchive option of streaming
@@ -79,6 +80,23 @@ public class TestMultipleArchiveFiles extends TestStreaming
   protected void setInputOutput() {
     inputFile = INPUT_FILE;
     outDir = OUTPUT_DIR;
+  }
+
+  @Override
+  @AfterEach
+  public void tearDown() {
+    try {
+      super.tearDown();
+    } finally {
+      if (mr != null) {
+        mr.shutdown();
+        mr = null;
+      }
+      if (dfs != null) {
+        dfs.shutdown();
+        dfs = null;
+      }
+    }
   }
 
   protected void createInput() throws IOException

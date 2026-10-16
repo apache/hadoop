@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.time.Duration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +62,12 @@ public class IAMInstanceCredentialsProvider
 
   private static final Logger LOG =
       LoggerFactory.getLogger(IAMInstanceCredentialsProvider.class);
+
+  /**
+   * How far in advance of credential expiry must IAM credentials be refreshed.
+   * See HADOOP-19181. S3A: IAMCredentialsProvider throttling results in AWS auth failures
+   */
+  public static final Duration TIME_BEFORE_EXPIRY = Duration.ofMinutes(5);
 
   /**
    * The credentials provider.
@@ -130,8 +137,12 @@ public class IAMInstanceCredentialsProvider
         // close it to shut down any thread
         iamCredentialsProvider.close();
         isContainerCredentialsProvider = false;
+
+        // create an async credentials provider with a safe credential
+        // expiry time.
         iamCredentialsProvider = InstanceProfileCredentialsProvider.builder()
                 .asyncCredentialUpdateEnabled(true)
+                .staleTime(TIME_BEFORE_EXPIRY)
                 .build();
         return iamCredentialsProvider.resolveCredentials();
       } else {
