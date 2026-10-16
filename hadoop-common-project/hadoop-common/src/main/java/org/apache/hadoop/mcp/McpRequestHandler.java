@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mcp.McpSchema.ServerCapabilities;
@@ -79,7 +81,7 @@ public final class McpRequestHandler {
   }
 
   public McpHttpResponse requestBodyTooLargeResponse() {
-    return jsonRpcResponses.error(null, McpJsonRpc.INVALID_REQUEST,
+    return jsonRpcResponses.transportError(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE,
         McpJsonRpc.REQUEST_BODY_TOO_LARGE_MESSAGE);
   }
 
