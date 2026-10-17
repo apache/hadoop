@@ -801,6 +801,17 @@ public abstract class AbstractCSQueue implements CSQueue {
       return Resources.min(resourceCalculator, clusterResource,
           queueMaxResource, currentResourceLimits.getLimit());
     } else if (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY) {
+      if (queueContext.getConfiguration()
+          .isNonExclusiveLabelQueueLimitEnabled()) {
+        // Respect queue's max capacity on the partition when it is
+        // configured. Queues without capacity configured on the label
+        // (effective max capacity is none) keep the old behavior below,
+        // so that idle resource on the partition can still be leveraged.
+        Resource queueMaxResource = getQueueMaxResource(nodePartition);
+        if (!queueMaxResource.equals(Resources.none())) {
+          return queueMaxResource;
+        }
+      }
       // When we doing non-exclusive resource allocation, maximum capacity of
       // all queues on this label equals to total resource with the label.
       return labelManager.getResourceByLabel(nodePartition, clusterResource);
@@ -839,7 +850,10 @@ public abstract class AbstractCSQueue implements CSQueue {
       // - When doing IGNORE_PARTITION_EXCLUSIVITY allocation, we will not respect
       // queue's max capacity, queue's max capacity on the partition will be
       // considered to be 100%. Which is a queue can use all resource in the
-      // partition.
+      // partition. Unless
+      // yarn.scheduler.capacity.non-exclusive-label.queue-limit-enable is set
+      // and the queue has max capacity configured on the partition, in that
+      // case queue's max capacity will be respected as well.
       // Doing this because: for non-exclusive allocation, we make sure there's
       // idle resource on the partition, to avoid wastage, such resource will be
       // leveraged as much as we can, and preemption policy will reclaim it back
