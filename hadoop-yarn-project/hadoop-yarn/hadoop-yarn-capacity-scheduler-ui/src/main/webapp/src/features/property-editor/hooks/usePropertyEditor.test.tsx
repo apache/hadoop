@@ -34,6 +34,7 @@ vi.mock('sonner', () => ({
     error: vi.fn(),
     success: vi.fn(),
     warning: vi.fn(),
+    info: vi.fn(),
   },
 }));
 
