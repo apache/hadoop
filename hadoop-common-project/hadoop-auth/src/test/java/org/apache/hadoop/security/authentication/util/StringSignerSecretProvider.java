@@ -15,7 +15,6 @@ package org.apache.hadoop.security.authentication.util;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
-import javax.servlet.ServletContext;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -34,7 +33,7 @@ class StringSignerSecretProvider extends SignerSecretProvider {
   public StringSignerSecretProvider() {}
 
   @Override
-  public void init(Properties config, ServletContext servletContext,
+  public void initialize(Properties config, SecretProviderContext context,
           long tokenValidity) throws Exception {
     String signatureSecret = config.getProperty(
             AuthenticationFilter.SIGNATURE_SECRET, null);
