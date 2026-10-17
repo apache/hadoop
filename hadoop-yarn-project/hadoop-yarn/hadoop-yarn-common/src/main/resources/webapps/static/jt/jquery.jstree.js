@@ -19,7 +19,8 @@
 
 // top wrapper to prevent multiple inclusion (is this OK?)
 (function () { if(jQuery && jQuery.jstree) { return; }
-  var is_ie6 = false, is_ie7 = false, is_ff2 = false;
+  var is_ie6 = false, is_ie7 = false, is_ff2 = false,
+    isFunction = function(value) { return typeof value === "function"; };
 
 /*
  * jsTree core
@@ -115,7 +116,7 @@
       if(settings.substring(0, 1) == '_') { return returnValue; }
       this.each(function() {
         var instance = instances[$.data(this, "jstree-instance-id")],
-          methodValue = (instance && $.isFunction(instance[settings])) ? instance[settings].apply(instance, args) : instance;
+          methodValue = (instance && isFunction(instance[settings])) ? instance[settings].apply(instance, args) : instance;
           if(typeof methodValue !== "undefined" && (settings.indexOf("is_") === 0 || (methodValue !== true && methodValue !== false))) { returnValue = methodValue; return false; }
       });
     }
@@ -139,7 +140,7 @@
         // store the jstree instance id to the container element
         $.data(this, "jstree-instance-id", instance_id);
         // clean up all plugins
-        b.plugins = $.isArray(b.plugins) ? b.plugins : $.jstree.defaults.plugins.slice();
+        b.plugins = Array.isArray(b.plugins) ? b.plugins : $.jstree.defaults.plugins.slice();
         b.plugins.unshift("core");
         // only unique plugins
         b.plugins = b.plugins.sort().join(",,").replace(/(,|^)([^,]+)(,,\2)+(,|$)/g,"$1$2$4").replace(/,,+/g,",").replace(/,$/,"").split(",");
@@ -255,7 +256,7 @@
     },
     rollback : function (rb) {
       if(rb) {
-        if(!$.isArray(rb)) { rb = [ rb ]; }
+        if(!Array.isArray(rb)) { rb = [ rb ]; }
         $.each(rb, function (i, val) {
           instances[val.i].set_rollback(val.h, val.d);
         });
@@ -385,7 +386,7 @@
                   var th = $(this);
                   if(th.data("jstree")) {
                     $.each(th.data("jstree"), function (plugin, values) {
-                      if(t.data[plugin] && $.isFunction(t["_" + plugin + "_notify"])) {
+                      if(t.data[plugin] && isFunction(t["_" + plugin + "_notify"])) {
                         t["_" + plugin + "_notify"].call(t, th, values);
                       }
                     });
@@ -569,10 +570,10 @@
         obj = this._get_node(obj);
         if(obj === -1) { return this.get_container().find("> ul > li:first-child"); }
         if(!obj.length) { return false; }
-        if(strict) { return (obj.nextAll("li").size() > 0) ? obj.nextAll("li:eq(0)") : false; }
+        if(strict) { return (obj.nextAll("li").length > 0) ? obj.nextAll("li:eq(0)") : false; }
 
         if(obj.hasClass("jstree-open")) { return obj.find("li:eq(0)"); }
-        else if(obj.nextAll("li").size() > 0) { return obj.nextAll("li:eq(0)"); }
+        else if(obj.nextAll("li").length > 0) { return obj.nextAll("li:eq(0)"); }
         else { return obj.parentsUntil(".jstree","li").next("li").eq(0); }
       },
       _get_prev    : function (obj, strict) {
@@ -740,10 +741,10 @@
         if(js.metadata) { d.data(js.metadata); }
         if(js.state) { d.addClass("jstree-" + js.state); }
         if(!js.data) { js.data = this._get_string("new_node"); }
-        if(!$.isArray(js.data)) { tmp = js.data; js.data = []; js.data.push(tmp); }
+        if(!Array.isArray(js.data)) { tmp = js.data; js.data = []; js.data.push(tmp); }
         $.each(js.data, function (i, m) {
           tmp = $("<a />");
-          if($.isFunction(m)) { m = m.call(this, js); }
+          if(isFunction(m)) { m = m.call(this, js); }
           if(typeof m == "string") { tmp.attr('href','#')[ s.html_titles ? "html" : "text" ](m); }
           else {
             if(!m.attr) { m.attr = {}; }
@@ -1652,12 +1653,12 @@
       _is_loaded : function (obj) {
         var s = this._get_settings().json_data;
         obj = this._get_node(obj);
-        return obj == -1 || !obj || (!s.ajax && !s.progressive_render && !$.isFunction(s.data)) || obj.is(".jstree-open, .jstree-leaf") || obj.children("ul").children("li").length > 0;
+        return obj == -1 || !obj || (!s.ajax && !s.progressive_render && !isFunction(s.data)) || obj.is(".jstree-open, .jstree-leaf") || obj.children("ul").children("li").length > 0;
       },
       refresh : function (obj) {
         obj = this._get_node(obj);
         var s = this._get_settings().json_data;
-        if(obj && obj !== -1 && s.progressive_unload && ($.isFunction(s.data) || !!s.ajax)) {
+        if(obj && obj !== -1 && s.progressive_unload && (isFunction(s.data) || !!s.ajax)) {
           obj.removeData("jstree-children");
         }
         return this.__call_old();
@@ -1686,7 +1687,7 @@
         switch(!0) {
           case (!s.data && !s.ajax): throw "Neither data nor ajax settings supplied.";
           // function option added here for easier model integration (also supporting async - see callback)
-          case ($.isFunction(s.data)):
+          case (isFunction(s.data)):
             s.data.call(this, obj, $.proxy(function (d) {
               d = this._parse_json(d, obj);
               if(!d) {
@@ -1738,7 +1739,7 @@
             success_func = function (d, t, x) {
               var sf = this.get_settings().json_data.ajax.success;
               if(sf) { d = sf.call(this,d,t,x) || d; }
-              if(d === "" || (d && d.toString && d.toString().replace(/^[\s\n]+$/,"") === "") || (!$.isArray(d) && !$.isPlainObject(d))) {
+              if(d === "" || (d && d.toString && d.toString().replace(/^[\s\n]+$/,"") === "") || (!Array.isArray(d) && !$.isPlainObject(d))) {
                 return error_func.call(this, x, t, "");
               }
               d = this._parse_json(d, obj);
@@ -1769,8 +1770,8 @@
             s.ajax.error = error_func;
             s.ajax.success = success_func;
             if(!s.ajax.dataType) { s.ajax.dataType = "json"; }
-            if($.isFunction(s.ajax.url)) { s.ajax.url = s.ajax.url.call(this, obj); }
-            if($.isFunction(s.ajax.data)) { s.ajax.data = s.ajax.data.call(this, obj); }
+            if(isFunction(s.ajax.url)) { s.ajax.url = s.ajax.url.call(this, obj); }
+            if(isFunction(s.ajax.data)) { s.ajax.data = s.ajax.data.call(this, obj); }
             $.ajax(s.ajax);
             break;
         }
@@ -1786,7 +1787,7 @@
         if(s.progressive_unload && obj && obj !== -1) {
           obj.data("jstree-children", d);
         }
-        if($.isArray(js)) {
+        if(Array.isArray(js)) {
           d = $();
           if(!js.length) { return false; }
           for(i = 0, j = js.length; i < j; i++) {
@@ -1801,10 +1802,10 @@
           if(js.attr) { d.attr(js.attr); }
           if(js.metadata) { d.data(js.metadata); }
           if(js.state) { d.addClass("jstree-" + js.state); }
-          if(!$.isArray(js.data)) { tmp = js.data; js.data = []; js.data.push(tmp); }
+          if(!Array.isArray(js.data)) { tmp = js.data; js.data = []; js.data.push(tmp); }
           $.each(js.data, function (i, m) {
             tmp = $("<a />");
-            if($.isFunction(m)) { m = m.call(this, js); }
+            if(isFunction(m)) { m = m.call(this, js); }
             if(typeof m == "string") { tmp.attr('href','#')[ t ? "html" : "text" ](m); }
             else {
               if(!m.attr) { m.attr = {}; }
@@ -1827,7 +1828,7 @@
             }
             else {
               if(s.progressive_unload) { d.data("jstree-children", js.children); }
-              if($.isArray(js.children) && js.children.length) {
+              if(Array.isArray(js.children) && js.children.length) {
                 tmp = this._parse_json(js.children, obj, true);
                 if(tmp.length) {
                   ul2 = $("<ul />");
@@ -1852,9 +1853,9 @@
           tmp1, tmp2, li, a, t, lang;
         obj = this._get_node(obj);
         if(!obj || obj === -1) { obj = this.get_container().find("> ul > li"); }
-        li_attr = $.isArray(li_attr) ? li_attr : [ "id", "class" ];
+        li_attr = Array.isArray(li_attr) ? li_attr : [ "id", "class" ];
         if(!is_callback && this.data.types) { li_attr.push(s.types.type_attr); }
-        a_attr = $.isArray(a_attr) ? a_attr : [ ];
+        a_attr = Array.isArray(a_attr) ? a_attr : [ ];
 
         obj.each(function () {
           li = $(this);
@@ -1879,7 +1880,7 @@
               (t.children("ins").get(0).className && t.children("ins").get(0).className.replace(/jstree[^ ]*|$/ig,'').length)
             ) {
               lang = false;
-              if($.inArray("languages", s.plugins) !== -1 && $.isArray(s.languages) && s.languages.length) {
+              if($.inArray("languages", s.plugins) !== -1 && Array.isArray(s.languages) && s.languages.length) {
                 $.each(s.languages, function (l, lv) {
                   if(t.hasClass(lv)) {
                     lang = lv;
@@ -1891,7 +1892,7 @@
               $.each(a_attr, function (k, z) {
                 tmp2.attr[z] = (" " + (t.attr(z) || "")).replace(/ jstree[^ ]*/ig,'').replace(/\s+$/ig," ").replace(/^ /,"").replace(/ $/,"");
               });
-              if($.inArray("languages", s.plugins) !== -1 && $.isArray(s.languages) && s.languages.length) {
+              if($.inArray("languages", s.plugins) !== -1 && Array.isArray(s.languages) && s.languages.length) {
                 $.each(s.languages, function (k, z) {
                   if(t.hasClass(z)) { tmp2.language = z; return true; }
                 });
@@ -1935,7 +1936,7 @@
         var langs = this._get_settings().languages,
           st = false,
           selector = ".jstree-" + this.get_index() + ' a';
-        if(!$.isArray(langs) || langs.length === 0) { return false; }
+        if(!Array.isArray(langs) || langs.length === 0) { return false; }
         if($.inArray(i,langs) == -1) {
           if(!!langs[i]) { i = langs[i]; }
           else { return false; }
@@ -1955,7 +1956,7 @@
       _get_string : function (key, lang) {
         var langs = this._get_settings().languages,
           s = this._get_settings().core.strings;
-        if($.isArray(langs) && langs.length) {
+        if(Array.isArray(langs) && langs.length) {
           lang = (lang && $.inArray(lang,langs) != -1) ? lang : this.data.languages.current_language;
         }
         if(s[lang] && s[lang][key]) { return s[lang][key]; }
@@ -1964,10 +1965,10 @@
       },
       get_text : function (obj, lang) {
         obj = this._get_node(obj) || this.data.ui.last_selected;
-        if(!obj.size()) { return false; }
+        if(!obj.length) { return false; }
         var langs = this._get_settings().languages,
           s = this._get_settings().core.html_titles;
-        if($.isArray(langs) && langs.length) {
+        if(Array.isArray(langs) && langs.length) {
           lang = (lang && $.inArray(lang,langs) != -1) ? lang : this.data.languages.current_language;
           obj = obj.children("a." + lang);
         }
@@ -1984,11 +1985,11 @@
       },
       set_text : function (obj, val, lang) {
         obj = this._get_node(obj) || this.data.ui.last_selected;
-        if(!obj.size()) { return false; }
+        if(!obj.length) { return false; }
         var langs = this._get_settings().languages,
           s = this._get_settings().core.html_titles,
           tmp;
-        if($.isArray(langs) && langs.length) {
+        if(Array.isArray(langs) && langs.length) {
           lang = (lang && $.inArray(lang,langs) != -1) ? lang : this.data.languages.current_language;
           obj = obj.children("a." + lang);
         }
@@ -2010,7 +2011,7 @@
           str = "/* languages css */",
           selector = ".jstree-" + this.get_index() + ' a',
           ln;
-        if($.isArray(langs) && langs.length) {
+        if(Array.isArray(langs) && langs.length) {
           this.data.languages.current_language = langs[0];
           for(ln = 0; ln < langs.length; ln++) {
             str += selector + "." + langs[ln] + " {";
@@ -2025,7 +2026,7 @@
           var langs = this._get_settings().languages,
             a = t.children("a"),
             ln;
-          if($.isArray(langs) && langs.length) {
+          if(Array.isArray(langs) && langs.length) {
             for(ln = 0; ln < langs.length; ln++) {
               if(!a.is("." + langs[ln])) {
                 t.append(a.eq(0).clone().removeClass(langs.join(" ")).addClass(langs[ln]));
@@ -3007,11 +3008,11 @@
     }
     if(typeof window.DOMParser !== "undefined" && typeof window.XMLHttpRequest !== "undefined" && typeof window.XSLTProcessor !== "undefined") {
       processor = new XSLTProcessor();
-      support = $.isFunction(processor.transformDocument) ? (typeof window.XMLSerializer !== "undefined") : true;
+      support = isFunction(processor.transformDocument) ? (typeof window.XMLSerializer !== "undefined") : true;
       if(!support) { return false; }
       xml = new DOMParser().parseFromString(xml, "text/xml");
       xsl = new DOMParser().parseFromString(xsl, "text/xml");
-      if($.isFunction(processor.transformDocument)) {
+      if(isFunction(processor.transformDocument)) {
         rs = document.implementation.createDocument("", "", null);
         processor.transformDocument(xml, xsl, rs, null);
         callback.call(null, new XMLSerializer().serializeToString(rs));
@@ -3184,7 +3185,7 @@
       _is_loaded : function (obj) {
         var s = this._get_settings().xml_data;
         obj = this._get_node(obj);
-        return obj == -1 || !obj || (!s.ajax && !$.isFunction(s.data)) || obj.is(".jstree-open, .jstree-leaf") || obj.children("ul").children("li").size() > 0;
+        return obj == -1 || !obj || (!s.ajax && !isFunction(s.data)) || obj.is(".jstree-open, .jstree-leaf") || obj.children("ul").children("li").length > 0;
       },
       load_node_xml : function (obj, s_call, e_call) {
         var s = this.get_settings().xml_data,
@@ -3198,7 +3199,7 @@
         }
         switch(!0) {
           case (!s.data && !s.ajax): throw "Neither data nor ajax settings supplied.";
-          case ($.isFunction(s.data)):
+          case (isFunction(s.data)):
             s.data.call(this, obj, $.proxy(function (d) {
               this.parse_xml(d, $.proxy(function (d) {
                 if(d) {
@@ -3305,8 +3306,8 @@
             s.ajax.error = error_func;
             s.ajax.success = success_func;
             if(!s.ajax.dataType) { s.ajax.dataType = "xml"; }
-            if($.isFunction(s.ajax.url)) { s.ajax.url = s.ajax.url.call(this, obj); }
-            if($.isFunction(s.ajax.data)) { s.ajax.data = s.ajax.data.call(this, obj); }
+            if(isFunction(s.ajax.url)) { s.ajax.url = s.ajax.url.call(this, obj); }
+            if(isFunction(s.ajax.data)) { s.ajax.data = s.ajax.data.call(this, obj); }
             $.ajax(s.ajax);
             break;
         }
@@ -3324,10 +3325,10 @@
         if(!is_callback) { is_callback = 0; }
         obj = this._get_node(obj);
         if(!obj || obj === -1) { obj = this.get_container().find("> ul > li"); }
-        li_attr = $.isArray(li_attr) ? li_attr : [ "id", "class" ];
+        li_attr = Array.isArray(li_attr) ? li_attr : [ "id", "class" ];
         if(!is_callback && this.data.types && $.inArray(s.types.type_attr, li_attr) === -1) { li_attr.push(s.types.type_attr); }
 
-        a_attr = $.isArray(a_attr) ? a_attr : [ ];
+        a_attr = Array.isArray(a_attr) ? a_attr : [ ];
 
         if(!is_callback) {
           if(s.xml_data.get_include_preamble) {
@@ -3429,7 +3430,7 @@
     },
     _fn : {
       search : function (str, skip_async) {
-        if($.trim(str) === "") { this.clear_search(); return; }
+        if(str.trim() === "") { this.clear_search(); return; }
         var s = this.get_settings().search,
           t = this,
           error_func = function () { },
@@ -3448,8 +3449,8 @@
           s.ajax.context = this;
           s.ajax.error = error_func;
           s.ajax.success = success_func;
-          if($.isFunction(s.ajax.url)) { s.ajax.url = s.ajax.url.call(this, str); }
-          if($.isFunction(s.ajax.data)) { s.ajax.data = s.ajax.data.call(this, str); }
+          if(isFunction(s.ajax.url)) { s.ajax.url = s.ajax.url.call(this, str); }
+          if(isFunction(s.ajax.data)) { s.ajax.data = s.ajax.data.call(this, str); }
           if(!s.ajax.data) { s.ajax.data = { "search_string" : str }; }
           if(!s.ajax.dataType || /^json/.exec(s.ajax.dataType)) { s.ajax.dataType = "json"; }
           $.ajax(s.ajax);
@@ -3596,7 +3597,7 @@
       return str.length > 10 ? str : false;
     },
     exec  : function (i) {
-      if($.isFunction($.vakata.context.func[i])) {
+      if(isFunction($.vakata.context.func[i])) {
         // if is string - eval and call it!
         $.vakata.context.func[i].call($.vakata.context.data, $.vakata.context.par);
         return true;
@@ -3769,7 +3770,7 @@
           y = o.top + this.data.core.li_height;
         }
         i = obj.data("jstree") && obj.data("jstree").contextmenu ? obj.data("jstree").contextmenu : s.items;
-        if($.isFunction(i)) { i = i.call(this, obj); }
+        if(isFunction(i)) { i = i.call(this, obj); }
         this.data.contextmenu = true;
         $.vakata.context.show(i, a, x, y, this, obj, this._get_settings().core.rtl);
         if(this.data.themes) { $.vakata.context.cnt.attr("class", "jstree-" + this.data.themes.theme + "-context"); }
@@ -3904,7 +3905,7 @@
           else if(!!s.types[t] && typeof s.types[t][rule] !== "undefined") { v = s.types[t][rule]; }
           else if(!!s.types["default"] && typeof s.types["default"][rule] !== "undefined") { v = s.types["default"][rule]; }
         }
-        if($.isFunction(v)) { v = v.call(this, obj); }
+        if(isFunction(v)) { v = v.call(this, obj); }
         if(rule === "max_depth" && obj !== -1 && opts !== false && s.max_depth !== -2 && v !== 0) {
           // also include the node itself - otherwise if root node it is not checked
           obj.children("a:eq(0)").parentsUntil(".jstree","li").each(function (i) {
@@ -3931,7 +3932,7 @@
           ch = 0, d = 1, t;
 
         if(vc === "none") { return false; }
-        if($.isArray(vc) && m.ot && m.ot._get_type) {
+        if(Array.isArray(vc) && m.ot && m.ot._get_type) {
           m.o.each(function () {
             if($.inArray(m.ot._get_type(this), vc) === -1) { d = false; return false; }
           });
@@ -3968,7 +3969,7 @@
           if(typeof js === "string") { js = { data : js }; }
           if(!js) { js = {}; }
           if(vc === "none") { return false; }
-          if($.isArray(vc)) {
+          if(Array.isArray(vc)) {
             if(!js.attr || !js.attr[s.type_attr]) {
               if(!js.attr) { js.attr = {}; }
               js.attr[s.type_attr] = vc[0];
@@ -4011,7 +4012,7 @@
       load_node : function (obj, s_call, e_call) { var _this = this; this.load_node_html(obj, function () { _this.__callback({ "obj" : _this._get_node(obj) }); s_call.call(this); }, e_call); },
       _is_loaded : function (obj) {
         obj = this._get_node(obj);
-        return obj == -1 || !obj || (!this._get_settings().html_data.ajax && !$.isFunction(this._get_settings().html_data.data)) || obj.is(".jstree-open, .jstree-leaf") || obj.children("ul").children("li").size() > 0;
+        return obj == -1 || !obj || (!this._get_settings().html_data.ajax && !isFunction(this._get_settings().html_data.data)) || obj.is(".jstree-open, .jstree-leaf") || obj.children("ul").children("li").length > 0;
       },
       load_node_html : function (obj, s_call, e_call) {
         var d,
@@ -4024,7 +4025,7 @@
           else { obj.data("jstree-is-loading",true); }
         }
         switch(!0) {
-          case ($.isFunction(s.data)):
+          case (isFunction(s.data)):
             s.data.call(this, obj, $.proxy(function (d) {
               if(d && d !== "" && d.toString && d.toString().replace(/^[\s\n]+$/,"") !== "") {
                 d = $(d);
@@ -4125,8 +4126,8 @@
             s.ajax.error = error_func;
             s.ajax.success = success_func;
             if(!s.ajax.dataType) { s.ajax.dataType = "html"; }
-            if($.isFunction(s.ajax.url)) { s.ajax.url = s.ajax.url.call(this, obj); }
-            if($.isFunction(s.ajax.data)) { s.ajax.data = s.ajax.data.call(this, obj); }
+            if(isFunction(s.ajax.url)) { s.ajax.url = s.ajax.url.call(this, obj); }
+            if(isFunction(s.ajax.data)) { s.ajax.data = s.ajax.data.call(this, obj); }
             $.ajax(s.ajax);
             break;
         }
@@ -4488,7 +4489,7 @@
       obj = obj || {};
       inter = [].concat(inter);
       $.each(inter, function (i, v) {
-        if(!$.isFunction(obj[v])) { valid = false; return false; }
+        if(!isFunction(obj[v])) { valid = false; return false; }
       });
       return valid;
     };
@@ -4519,14 +4520,14 @@
           s = this._get_settings(),
           _this = this;
 
-        if(!$.isArray(data)) { data = [data]; }
+        if(!Array.isArray(data)) { data = [data]; }
         $.each(data, function (i, nd) {
           var r = nd.getProps() || {};
           r.attr = nd.getAttr() || {};
           if(nd.getChildrenCount()) { r.state = "closed"; }
           r.data = nd.getName();
-          if(!$.isArray(r.data)) { r.data = [r.data]; }
-          if(_this.data.types && $.isFunction(nd.getType)) {
+          if(!Array.isArray(r.data)) { r.data = [r.data]; }
+          if(_this.data.types && isFunction(nd.getType)) {
             r.attr[s.types.type_attr] = nd.getType();
           }
           if(r.attr.id && s.model.id_prefix) { r.attr.id = s.model.id_prefix + r.attr.id; }
