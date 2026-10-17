@@ -24,6 +24,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -52,7 +54,7 @@ public class DistCpContext {
   }
 
   public void setSourcePaths(List<Path> sourcePaths) {
-    this.sourcePaths = sourcePaths;
+    this.sourcePaths = sourcePaths == null ? null : new ArrayList<>(sourcePaths);
   }
 
   /**
@@ -60,7 +62,7 @@ public class DistCpContext {
    * to the {@link #options}.
    */
   public List<Path> getSourcePaths() {
-    return sourcePaths;
+    return sourcePaths == null ? null : Collections.unmodifiableList(sourcePaths);
   }
 
   public Path getSourceFileListing() {
