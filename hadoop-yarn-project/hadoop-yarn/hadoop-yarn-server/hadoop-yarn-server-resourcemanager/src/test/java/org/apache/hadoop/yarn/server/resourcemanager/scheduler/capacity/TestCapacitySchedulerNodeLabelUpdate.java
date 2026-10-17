@@ -131,10 +131,11 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     conf2.setCapacity(aa3, 20);
     conf2.setCapacity(aa4, 20);
     conf2.setAccessibleNodeLabels(a, ImmutableSet.of("x", "y", "z"));
+    conf2.setAccessibleNodeLabels(b, ImmutableSet.of("x", "y", "z"));
     conf2.setAccessibleNodeLabels(aa1, ImmutableSet.of("x", "y"));
     conf2.setAccessibleNodeLabels(aa2, ImmutableSet.of("y"));
     conf2.setAccessibleNodeLabels(aa3, ImmutableSet.of("x", "y", "z"));
-    conf2.setAccessibleNodeLabels(aa4, ImmutableSet.of("x", "y"));
+    conf2.setAccessibleNodeLabels(aa4, ImmutableSet.of("x", "y", "z"));
     conf2.setCapacityByLabel(a, "x", 50);
     conf2.setCapacityByLabel(a, "y", 50);
     conf2.setCapacityByLabel(a, "z", 50);
