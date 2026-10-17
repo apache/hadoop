@@ -44,6 +44,9 @@ public final class FedBalanceConfigs {
       "hdfs.fedbalance.procedure.scheduler.journal.uri";
   public static final String JOB_PREFIX = "JOB-";
   public static final String TMP_TAIL = ".tmp";
+  public static final String PRESERVE_ACL_ENABLED =
+      "hdfs.fedbalance.preserve.acl.enabled";
+  public static final boolean PRESERVE_ACL_ENABLED_DEFAULT = true;
 
   private FedBalanceConfigs(){}
 }
