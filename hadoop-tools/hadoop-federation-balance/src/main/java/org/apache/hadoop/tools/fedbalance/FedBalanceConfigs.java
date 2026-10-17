@@ -44,6 +44,24 @@ public final class FedBalanceConfigs {
       "hdfs.fedbalance.procedure.scheduler.journal.uri";
   public static final String JOB_PREFIX = "JOB-";
   public static final String TMP_TAIL = ".tmp";
+  /**
+   * Sentinel path that gates leaving the incremental DistCp stage.
+   */
+  public static final String TIME_WINDOW_SENTINEL_PATH =
+      "hdfs.fedbalance.time.window.sentinel.path";
+  /**
+   * Default value for {@link #TIME_WINDOW_SENTINEL_PATH}.
+   */
+  public static final String TIME_WINDOW_SENTINEL_PATH_DEFAULT = "";
+  /**
+   * Sentinel path that allows force-closing open files.
+   */
+  public static final String FORCE_CLOSE_SENTINEL_PATH =
+      "hdfs.fedbalance.force.close.sentinel.path";
+  /**
+   * Default value for {@link #FORCE_CLOSE_SENTINEL_PATH}.
+   */
+  public static final String FORCE_CLOSE_SENTINEL_PATH_DEFAULT = "";
 
   private FedBalanceConfigs(){}
 }
