@@ -24,7 +24,7 @@ import com.qcloud.cos.utils.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.cosn.Constants;
 
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 import java.net.URI;
 
 /**

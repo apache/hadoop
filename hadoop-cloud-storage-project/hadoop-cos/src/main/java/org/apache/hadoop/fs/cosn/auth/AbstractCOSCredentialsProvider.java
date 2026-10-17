@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.cosn.auth;
 import com.qcloud.cos.auth.COSCredentialsProvider;
 import org.apache.hadoop.conf.Configuration;
 
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 import java.net.URI;
 
 /**
