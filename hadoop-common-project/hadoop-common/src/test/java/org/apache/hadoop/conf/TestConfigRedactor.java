@@ -72,6 +72,19 @@ public class TestConfigRedactor {
         "ssl.server.keystore.keypassword",
         "ssl.server.keystore.password",
         "httpfs.ssl.keystore.pass",
+        "fs.obs.secret.key",
+        "fs.obs.session.token",
+        "fs.oss.accessKeySecret",
+        "fs.oss.securityToken",
+        "fs.cosn.userinfo.secretKey",
+        "fs.tos.secret-access-key",
+        "fs.tos.bucket.BUCKET.secret-access-key",
+        "fs.tos.session-token",
+        "fs.tos.bucket.BUCKET.session-token",
+        "fs.bos.secret.access.key",
+        "fs.bos.bucket.BUCKET.secret.access.key",
+        "fs.bos.session.token.key",
+        "fs.bos.bucket.BUCKET.session.token.key",
         "hadoop.security.sensitive-config-keys"
     );
     for (String key : sensitiveKeys) {
