@@ -69,6 +69,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -178,6 +179,112 @@ public class TestAppLogAggregatorImpl {
     verifyLogAggregationWithExpectedFiles2DeleteAndUpload(
         applicationId, containerId, week, recoveredLogInitedTimeMillis,
         logFiles, new HashSet<File>());
+  }
+
+  /**
+   * Regression test for YARN-11963. A single aggregation cycle that covers
+   * more than one container must schedule the deletion of the uploaded log
+   * files of every container in the cycle, not just those of the container
+   * that happened to be processed last.
+   */
+  @Test
+  public void testAggregatorDeletesUploadedLogsOfEveryContainerInACycle()
+      throws Exception {
+    final ApplicationId applicationId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 0);
+    final ApplicationAttemptId attemptId =
+        ApplicationAttemptId.newInstance(applicationId, 0);
+    final ContainerId firstContainerId =
+        ContainerId.newContainerId(attemptId, 1);
+    final ContainerId secondContainerId =
+        ContainerId.newContainerId(attemptId, 2);
+
+    // create artificial log files for two distinct containers
+    final File appLogDir = new File(LOCAL_LOG_DIR, applicationId.toString());
+    final File firstContainerLogDir =
+        new File(appLogDir, firstContainerId.toString());
+    final File secondContainerLogDir =
+        new File(appLogDir, secondContainerId.toString());
+    firstContainerLogDir.mkdirs();
+    secondContainerLogDir.mkdirs();
+    final Set<File> firstContainerLogFiles =
+        createContainerLogFiles(firstContainerLogDir, 3);
+    final Set<File> secondContainerLogFiles =
+        createContainerLogFiles(secondContainerLogDir, 3);
+
+    final Set<String> filesExpected2Delete = new HashSet<>();
+    for (File file: firstContainerLogFiles) {
+      filesExpected2Delete.add(file.getAbsolutePath());
+    }
+    for (File file: secondContainerLogFiles) {
+      filesExpected2Delete.add(file.getAbsolutePath());
+    }
+
+    // Collect the paths of every deletion task scheduled during the cycle.
+    // Checking only the first invocation of delete() would not catch the
+    // bug: the buggy implementation kept a single DeletionTask reference
+    // that each container overwrote, so it still issued one delete() call -
+    // just with the wrong, and incomplete, set of paths.
+    final Set<String> filesActually2Delete = new HashSet<>();
+    final DeletionService deletionService =
+        createDeletionServiceCapturingAllDeletions(filesActually2Delete);
+
+    final YarnConfiguration config = new YarnConfiguration();
+    config.setLong(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, 10000);
+
+    LogAggregationTFileController format =
+        spy(new LogAggregationTFileController());
+    format.initialize(config, "TFile");
+
+    final Context context = createContext(config);
+    final AppLogAggregatorInTest appLogAggregator =
+        createAppLogAggregator(applicationId, LOCAL_LOG_DIR.getAbsolutePath(),
+            config, context, -1, deletionService, format);
+
+    appLogAggregator.startContainerLogAggregation(
+        new ContainerLogContext(firstContainerId, ContainerType.TASK, 0));
+    appLogAggregator.startContainerLogAggregation(
+        new ContainerLogContext(secondContainerId, ContainerType.TASK, 0));
+    // set app finished flag first
+    appLogAggregator.finishLogAggregation();
+    appLogAggregator.run();
+
+    // Assert containment rather than set equality: on top of the per
+    // container deletion tasks, the aggregator also schedules the
+    // application log directory itself for cleanup once the application
+    // has finished.
+    for (String file: filesExpected2Delete) {
+      assertTrue(filesActually2Delete.contains(file),
+          "Expected the uploaded log file " + file + " to be scheduled for "
+              + "deletion, but the scheduled paths were "
+              + filesActually2Delete);
+    }
+  }
+
+  /**
+   * Create a DeletionService that records the paths of every FileDeletionTask
+   * handed to its delete method, across all invocations, into the given set.
+   * @param deletedPaths the set collecting the absolute paths seen
+   * @return the recording DeletionService mock
+   */
+  private static DeletionService createDeletionServiceCapturingAllDeletions(
+      final Set<String> deletedPaths) {
+    DeletionService recordingDeletionService = mock(DeletionService.class);
+    doAnswer(new Answer<Void>() {
+        @Override
+        public Void answer(InvocationOnMock invocationOnMock) {
+          for (Object taskArgument: invocationOnMock.getArguments()) {
+            FileDeletionTask task = (FileDeletionTask) taskArgument;
+            for (Path path: task.getBaseDirs()) {
+              deletedPaths.add(
+                  new File(path.toUri().getRawPath()).getAbsolutePath());
+            }
+          }
+          return null;
+        }
+      }).when(recordingDeletionService).delete(any(FileDeletionTask.class));
+
+    return recordingDeletionService;
   }
 
   /**
