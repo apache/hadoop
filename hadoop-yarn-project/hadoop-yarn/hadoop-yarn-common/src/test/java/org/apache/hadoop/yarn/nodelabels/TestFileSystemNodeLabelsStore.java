@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
@@ -39,9 +40,7 @@ import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
   MockNodeLabelManager mgr = null;
@@ -390,5 +389,74 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     Mockito.verify(store.getFs(), Mockito.times(
         expectedNumOfCalls)).mkdirs(Mockito.any(Path
         .class));
+  }
+
+  /**
+   * Test mergeMirrorAndEditLog correctly merges mirror and edit log.
+   *
+   * Test flow:
+   * 1. Add labels [p1, p2] and node-to-labels mapping
+   * 2. Stop manager to finalize current state to disk
+   * 3. Restart manager - this triggers mergeMirrorAndEditLog during init
+   * 4. Add more labels [p3, p4], remove label p2, and modify node-to-labels mapping
+   * 5. Stop and restart again
+   * 6. Verify final state has correct merged labels [p1, p3, p4, p5]
+   */
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testMergeMirrorAndEditLog() throws Exception {
+    initTestFileSystemNodeLabelsStore(FileSystemNodeLabelsStore.class.getCanonicalName());
+    // Step 1: Add initial labels and node-to-labels mapping
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p1", "p2"));
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p1"),
+        toNodeId("n2"), toSet("p2")));
+
+    // Step 2: Stop manager
+    mgr.stop();
+
+    // Step 3: Restart manager - triggers mergeMirrorAndEditLog
+    conf.setBoolean(YarnConfiguration.FS_NODE_LABELS_STORE_MERGE_ENABLED, true);
+    mgr = new MockNodeLabelManager();
+    mgr.init(conf);
+    mgr.start();
+
+    // Verify state after first restart
+    assertEquals(2, mgr.getClusterNodeLabelNames().size());
+    assertTrue(mgr.getClusterNodeLabelNames().containsAll(
+        Arrays.asList("p1", "p2")));
+    assertMapContains(mgr.getNodeLabels(), ImmutableMap.of(
+        toNodeId("n1"), toSet("p1"),
+        toNodeId("n2"), toSet("p2")));
+
+    // Step 4: Add more labels, remove label, and modify node-to-labels mapping
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p3", "p4", "p5"));
+    mgr.removeFromClusterNodeLabels(toSet("p2"));
+    // Modify node-to-labels: n1 keeps p1, n3 added with p4, n4 added with p5
+    mgr.replaceLabelsOnNode(ImmutableMap.of(
+        toNodeId("n1"), toSet("p1"),
+        toNodeId("n3"), toSet("p4"),
+        toNodeId("n4"), toSet("p5")));
+
+    // Step 5: Stop and restart again
+    mgr.stop();
+    mgr = new MockNodeLabelManager();
+    conf.setBoolean(YarnConfiguration.FS_NODE_LABELS_STORE_MERGE_ENABLED, true);
+    mgr.init(conf);
+    mgr.start();
+
+    // Step 6: Verify final state after second restart
+    // Expected: p1 (kept), p3 (added), p4 (added), p5 (added), p2 (removed)
+    assertEquals(4, mgr.getClusterNodeLabelNames().size());
+    assertTrue(mgr.getClusterNodeLabelNames().containsAll(
+        Arrays.asList("p1", "p3", "p4", "p5")));
+
+    // Node-to-labels mapping should be correctly merged
+    // n1 has p1; n3 has p4; n4 has p5; n2 should be removed (p2 was removed)
+    assertMapContains(mgr.getNodeLabels(), ImmutableMap.of(
+        toNodeId("n1"), toSet("p1"),
+        toNodeId("n3"), toSet("p4"),
+        toNodeId("n4"), toSet("p5")));
+    assertFalse(mgr.getNodeLabels().containsKey(toNodeId("n2")),
+        "n2 should not have any labels after p2 removal");
   }
 }
