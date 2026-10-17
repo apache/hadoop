@@ -535,7 +535,10 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = "fs.azure.apache.http.client.max.io.exception.retries";
   /**Maximum ApacheHttpClient-connection cache size at filesystem level: {@value}*/
-  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE = "fs.azure.apache.http.client.max.cache.size";
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_DEFAULT_CACHE_SIZE
+      = "fs.azure.apache.http.client.max.default.cache.size";
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_NON_DEFAULT_CACHE_SIZE
+      = "fs.azure.apache.http.client.max.non.default.cache.size";
   /**
    * Defines number of connections to establish during warmup phase
    * of ApacheHttpClient connection cache: {@value}
@@ -644,6 +647,28 @@ public final class ConfigurationKeys {
    * Maximum number of retries for an operation when tail latency based timeout occur: {@value}
    */
   public static final String FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT = "fs.azure.tail.latency.max.retry.count";
+
+  /**
+   * Maximum time layout information will be persisted in the cache after all the input streams are closed.
+   */
+  public static final String FS_AZURE_BLOB_LAYOUT_CACHE_EVICTION_MINS = "fs.azure.blob.layout.cache.eviction.mins";
+
+  /**
+   * Maximum number of blob layouts kept in the cache per JVM.
+   */
+  public static final String FS_AZURE_BLOB_LAYOUT_CACHE_MAX_COUNT = "fs.azure.blob.layout.cache.max.count";
+
+  /**
+   * Whether the data locality is enabled for the account or not.
+   */
+  public static final String FS_AZURE_ENABLE_DATA_LOCALITY = "fs.azure.enable.data.locality";
+
+  /**
+   * Maximum wait time in milliseconds for fetching blob layout information from
+   * the server. If the layout information is not fetched within this time,
+   * the request will be failed with timeout exception and flow will proceed without data locality optimization. {@value}
+   */
+  public static final String FS_AZURE_BLOB_LAYOUT_FETCH_TIMEOUT_MILLIS = "fs.azure.blob.layout.fetch.timeout.millis";
 
   /**
    * Configuration key to control the vectored read strategy used by ABFS: {@value}

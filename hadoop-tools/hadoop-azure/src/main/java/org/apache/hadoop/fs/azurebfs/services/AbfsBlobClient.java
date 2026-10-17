@@ -92,6 +92,9 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_BLOB_LAYOUT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_BLOB_WITHOUT_ENDPOINT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_BLOB_WITH_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_FALLBACK_COUNT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_LISTING_LATENCY;
@@ -125,6 +128,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MET
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.LATEST_BLOCK_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.LAYOUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.LEASE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.LIST;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.METADATA;
@@ -147,11 +151,14 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XML_VERS
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XMS_PROPERTIES_ENCODING_ASCII;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XMS_PROPERTIES_ENCODING_UNICODE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ZERO;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.ACCEPT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_MD5;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.HOST;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.IF_MATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.IF_NONE_MATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.LAST_MODIFIED;
@@ -1380,6 +1387,52 @@ public class AbfsBlobClient extends AbfsClient {
     return op;
   }
 
+    /**
+     * Retrieves the blob layout information for the specified path.
+     * This method is used to get the layout details of a blob, such as its structure or configuration.
+     *
+     * @param path the path of the blob whose layout is to be retrieved.
+     * @param start starting position of the file
+     * @param end ending position of the file
+     * @param eTag file eTag
+     * @param continuation continuation token for paginated calls.
+     * @param tracingContext for tracing the service call.
+     * @return the executed AbfsRestOperation containing the response from the server.
+     * @throws AzureBlobFileSystemException if the operation fails.
+     */
+    public AbfsRestOperation getBlobLayout(final String path,
+      final long start,
+      final long end,
+      final String eTag,
+      final String continuation,
+      final TracingContext tracingContext)
+      throws AzureBlobFileSystemException {
+    if (getAbfsCounters() != null) {
+      getAbfsCounters().incrementCounter(CALL_GET_BLOB_LAYOUT, 1);
+    }
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    AbfsHttpHeader rangeHeader = new AbfsHttpHeader(RANGE, String.format(
+        "bytes=%d-%d", start, end));
+    requestHeaders.add(rangeHeader);
+    if (StringUtils.isNotEmpty(eTag)) {
+      requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
+    }
+
+    final AbfsUriQueryBuilder abfsUriQueryBuilder
+        = createDefaultUriQueryBuilder();
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, LAYOUT);
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_MARKER, continuation);
+    appendSASTokenToQuery(path, SASTokenProvider.GET_PROPERTIES_OPERATION,
+        abfsUriQueryBuilder);
+
+    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
+    final AbfsRestOperation op = getAbfsRestOperation(
+        AbfsRestOperationType.GetBlobLayout,
+        HTTP_METHOD_GET, url, requestHeaders);
+    op.execute(tracingContext);
+    return op;
+  }
+
   /**
    * Get Rest Operation for API
    * <a href="../../../../site/markdown/blobEndpoint.md#get-blob">Get Blob</a>.
@@ -1406,6 +1459,9 @@ public class AbfsBlobClient extends AbfsClient {
       final String cachedSasToken,
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
+    if (getAbfsCounters() != null) {
+      getAbfsCounters().incrementCounter(CALL_GET_BLOB_WITHOUT_ENDPOINT, 1);
+    }
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     AbfsHttpHeader rangeHeader = new AbfsHttpHeader(RANGE, String.format(
         "bytes=%d-%d", position, position + bufferLength - 1));
@@ -1443,6 +1499,83 @@ public class AbfsBlobClient extends AbfsClient {
 
     // Verify the MD5 hash returned by server holds valid on the data received.
     if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {
+      verifyCheckSumForRead(buffer, op.getResult(), bufferOffset);
+    }
+
+    return op;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public AbfsRestOperation read(String path,
+      long position,
+      byte[] buffer,
+      int bufferOffset,
+      int bufferLength,
+      String eTag,
+      String cachedSasToken,
+      ContextEncryptionAdapter contextEncryptionAdapter,
+      TracingContext tracingContext,
+      String endpointUrl) throws AzureBlobFileSystemException {
+    if (getAbfsCounters() != null) {
+      getAbfsCounters().incrementCounter(CALL_GET_BLOB_WITH_ENDPOINT, 1);
+    }
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    AbfsHttpHeader rangeHeader = new AbfsHttpHeader(RANGE, String.format(
+        "bytes=%d-%d", position, position + bufferLength - 1));
+    requestHeaders.add(rangeHeader);
+    requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
+    requestHeaders.add(
+        new AbfsHttpHeader(HOST, getAbfsConfiguration().getAccountName()
+            .replace(ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME)));
+
+    // Add request priority header for prefetch reads
+    addRequestPriorityForPrefetch(requestHeaders, tracingContext);
+
+    // Add request header to fetch MD5 Hash of data returned by server.
+    if (isChecksumValidationEnabled(requestHeaders, rangeHeader,
+        bufferLength)) {
+      requestHeaders.add(new AbfsHttpHeader(X_MS_RANGE_GET_CONTENT_MD5, TRUE));
+    }
+
+    final AbfsUriQueryBuilder abfsUriQueryBuilder
+        = createDefaultUriQueryBuilder();
+    String sasTokenForReuse = appendSASTokenToQuery(path,
+        SASTokenProvider.READ_OPERATION,
+        abfsUriQueryBuilder, cachedSasToken);
+    // Retrieve the read thread pool metrics from the ABFS counters.
+    AbfsReadResourceUtilizationMetrics readResourceUtilizationMetrics
+        = retrieveReadResourceUtilizationMetrics();
+    // If metrics are available, record them in the tracing context for diagnostics or logging.
+    if (readResourceUtilizationMetrics != null) {
+      String readMetrics = readResourceUtilizationMetrics.toString();
+      tracingContext.setResourceUtilizationMetricResults(readMetrics);
+      if (!readMetrics.isEmpty()) {
+        readResourceUtilizationMetrics.markPushed();
+      }
+    }
+
+    URL readEndpointUrl;
+    try {
+      readEndpointUrl = new URL(endpointUrl + getFileSystem());
+    } catch (MalformedURLException e) {
+      readEndpointUrl = getBaseUrl();
+    }
+    URL url = createRequestUrl(readEndpointUrl, path,
+        abfsUriQueryBuilder.toString());
+
+    final AbfsRestOperation op = getAbfsRestOperation(
+        AbfsRestOperationType.GetBlob,
+        HTTP_METHOD_GET, url, requestHeaders,
+        buffer, bufferOffset, bufferLength,
+        sasTokenForReuse);
+    op.execute(tracingContext);
+
+    // Verify the MD5 hash returned by server holds valid on the data received.
+    if (isChecksumValidationEnabled(requestHeaders, rangeHeader,
+        bufferLength)) {
       verifyCheckSumForRead(buffer, op.getResult(), bufferOffset);
     }
 

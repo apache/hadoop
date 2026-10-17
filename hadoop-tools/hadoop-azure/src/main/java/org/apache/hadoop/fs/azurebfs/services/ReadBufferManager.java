@@ -66,10 +66,26 @@ public abstract class ReadBufferManager {
    * @param requestedOffset the offset in the remote file to start reading
    * @param requestedLength the number of bytes to read from file
    * @param tracingContext the tracing context for diagnostics
+   * @param endpoint host endpoint to read data
    */
   abstract void queueReadAhead(AbfsInputStream stream,
       long requestedOffset,
       int requestedLength,
+      TracingContext tracingContext, String endpoint);
+
+  /**
+   * Queues read-ahead requests for each layout chunk when data layout is present.
+   *
+   * @param stream the input stream requesting the read-ahead
+   * @param requestedOffset the offset in the remote file to start reading
+   * @param requestedLength the number of bytes to read from the file
+   * @param segment the list of blob ranges representing layout chunks
+   * @param tracingContext the tracing context for diagnostics
+   */
+  abstract void queueReadAhead(AbfsInputStream stream,
+      long requestedOffset,
+      int requestedLength,
+      List<BlobLayout.BlobRange> segment,
       TracingContext tracingContext);
 
   /**
