@@ -127,47 +127,50 @@ public class TestZKDelegationTokenSecretManager {
 
   public void testMultiNodeOperationsImpl(boolean setZeroRetry) throws Exception {
     for (int i = 0; i < TEST_RETRIES; i++) {
-      DelegationTokenManager tm1, tm2 = null;
+      DelegationTokenManager tm1 = null, tm2 = null;
       String connectString = zkServer.getConnectString();
       Configuration conf = getSecretConf(connectString);
       if (setZeroRetry) {
           conf.setInt(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_NUM_RETRIES, 0);
       }
-      tm1 = new DelegationTokenManager(conf, new Text("bla"));
-      tm1.init();
-      tm2 = new DelegationTokenManager(conf, new Text("bla"));
-      tm2.init();
-
-      Token<DelegationTokenIdentifier> token =
-          (Token<DelegationTokenIdentifier>) tm1.createToken(
-              UserGroupInformation.getCurrentUser(), "foo");
-      assertNotNull(token);
-      tm2.verifyToken(token);
-      tm2.renewToken(token, "foo");
-      tm1.verifyToken(token);
-      tm1.cancelToken(token, "foo");
       try {
-        verifyTokenFail(tm2, token);
-        fail("Expected InvalidToken");
-      } catch (SecretManager.InvalidToken it) {
-        // Ignore
-      }
+        tm1 = new DelegationTokenManager(conf, new Text("bla"));
+        tm1.init();
+        tm2 = new DelegationTokenManager(conf, new Text("bla"));
+        tm2.init();
 
-      token = (Token<DelegationTokenIdentifier>) tm2.createToken(
-          UserGroupInformation.getCurrentUser(), "bar");
-      assertNotNull(token);
-      tm1.verifyToken(token);
-      tm1.renewToken(token, "bar");
-      tm2.verifyToken(token);
-      tm2.cancelToken(token, "bar");
-      try {
-        verifyTokenFail(tm1, token);
-        fail("Expected InvalidToken");
-      } catch (SecretManager.InvalidToken it) {
-        // Ignore
+        Token<DelegationTokenIdentifier> token =
+            (Token<DelegationTokenIdentifier>) tm1.createToken(
+                UserGroupInformation.getCurrentUser(), "foo");
+        assertNotNull(token);
+        tm2.verifyToken(token);
+        tm2.renewToken(token, "foo");
+        tm1.verifyToken(token);
+        tm1.cancelToken(token, "foo");
+        try {
+          verifyTokenFail(tm2, token);
+          fail("Expected InvalidToken");
+        } catch (SecretManager.InvalidToken it) {
+          // Ignore
+        }
+
+        token = (Token<DelegationTokenIdentifier>) tm2.createToken(
+            UserGroupInformation.getCurrentUser(), "bar");
+        assertNotNull(token);
+        tm1.verifyToken(token);
+        tm1.renewToken(token, "bar");
+        tm2.verifyToken(token);
+        tm2.cancelToken(token, "bar");
+        try {
+          verifyTokenFail(tm1, token);
+          fail("Expected InvalidToken");
+        } catch (SecretManager.InvalidToken it) {
+          // Ignore
+        }
+      } finally {
+        destroyIfNotNull(tm1, conf);
+        destroyIfNotNull(tm2, conf);
       }
-      verifyDestroy(tm1, conf);
-      verifyDestroy(tm2, conf);
     }
   }
 
@@ -178,70 +181,75 @@ public class TestZKDelegationTokenSecretManager {
     for (int i = 0; i < TEST_RETRIES; i++) {
       String connectString = zkServer.getConnectString();
       Configuration conf = getSecretConf(connectString);
-      DelegationTokenManager tm1 = new DelegationTokenManager(conf, new Text("bla"));
-      tm1.init();
-      Token<DelegationTokenIdentifier> token1 =
-          (Token<DelegationTokenIdentifier>) tm1.createToken(
-              UserGroupInformation.getCurrentUser(), "foo");
-      assertNotNull(token1);
-      Token<DelegationTokenIdentifier> token2 =
-          (Token<DelegationTokenIdentifier>) tm1.createToken(
-              UserGroupInformation.getCurrentUser(), "bar");
-      assertNotNull(token2);
-      Token<DelegationTokenIdentifier> token3 =
-          (Token<DelegationTokenIdentifier>) tm1.createToken(
-              UserGroupInformation.getCurrentUser(), "boo");
-      assertNotNull(token3);
-
-      tm1.verifyToken(token1);
-      tm1.verifyToken(token2);
-      tm1.verifyToken(token3);
-
-      // Cancel one token
-      tm1.cancelToken(token1, "foo");
-
-      // Start second node after some time..
-      Thread.sleep(1000);
-      DelegationTokenManager tm2 = new DelegationTokenManager(conf, new Text("bla"));
-      tm2.init();
-
-      tm2.verifyToken(token2);
-      tm2.verifyToken(token3);
+      DelegationTokenManager tm1 = null, tm2 = null, tm3 = null;
       try {
-        verifyTokenFail(tm2, token1);
-        fail("Expected InvalidToken");
-      } catch (SecretManager.InvalidToken it) {
-        // Ignore
+        tm1 = new DelegationTokenManager(conf, new Text("bla"));
+        tm1.init();
+        Token<DelegationTokenIdentifier> token1 =
+            (Token<DelegationTokenIdentifier>) tm1.createToken(
+                UserGroupInformation.getCurrentUser(), "foo");
+        assertNotNull(token1);
+        Token<DelegationTokenIdentifier> token2 =
+            (Token<DelegationTokenIdentifier>) tm1.createToken(
+                UserGroupInformation.getCurrentUser(), "bar");
+        assertNotNull(token2);
+        Token<DelegationTokenIdentifier> token3 =
+            (Token<DelegationTokenIdentifier>) tm1.createToken(
+                UserGroupInformation.getCurrentUser(), "boo");
+        assertNotNull(token3);
+
+        tm1.verifyToken(token1);
+        tm1.verifyToken(token2);
+        tm1.verifyToken(token3);
+
+        // Cancel one token
+        tm1.cancelToken(token1, "foo");
+
+        // Start second node after some time..
+        Thread.sleep(1000);
+        tm2 = new DelegationTokenManager(conf, new Text("bla"));
+        tm2.init();
+
+        tm2.verifyToken(token2);
+        tm2.verifyToken(token3);
+        try {
+          verifyTokenFail(tm2, token1);
+          fail("Expected InvalidToken");
+        } catch (SecretManager.InvalidToken it) {
+          // Ignore
+        }
+
+        // Create a new token thru the new ZKDTSM
+        Token<DelegationTokenIdentifier> token4 =
+            (Token<DelegationTokenIdentifier>) tm2.createToken(
+                UserGroupInformation.getCurrentUser(), "xyz");
+        assertNotNull(token4);
+        tm2.verifyToken(token4);
+        tm1.verifyToken(token4);
+
+        // Bring down tm2
+        verifyDestroy(tm2, conf);
+        tm2 = null;
+
+        // Start third node after some time..
+        Thread.sleep(1000);
+        tm3 = new DelegationTokenManager(conf, new Text("bla"));
+        tm3.init();
+
+        tm3.verifyToken(token2);
+        tm3.verifyToken(token3);
+        tm3.verifyToken(token4);
+        try {
+          verifyTokenFail(tm3, token1);
+          fail("Expected InvalidToken");
+        } catch (SecretManager.InvalidToken it) {
+          // Ignore
+        }
+      } finally {
+        destroyIfNotNull(tm3, conf);
+        destroyIfNotNull(tm1, conf);
+        destroyIfNotNull(tm2, conf);
       }
-
-      // Create a new token thru the new ZKDTSM
-      Token<DelegationTokenIdentifier> token4 =
-          (Token<DelegationTokenIdentifier>) tm2.createToken(
-              UserGroupInformation.getCurrentUser(), "xyz");
-      assertNotNull(token4);
-      tm2.verifyToken(token4);
-      tm1.verifyToken(token4);
-
-      // Bring down tm2
-      verifyDestroy(tm2, conf);
-
-      // Start third node after some time..
-      Thread.sleep(1000);
-      DelegationTokenManager tm3 = new DelegationTokenManager(conf, new Text("bla"));
-      tm3.init();
-
-      tm3.verifyToken(token2);
-      tm3.verifyToken(token3);
-      tm3.verifyToken(token4);
-      try {
-        verifyTokenFail(tm3, token1);
-        fail("Expected InvalidToken");
-      } catch (SecretManager.InvalidToken it) {
-        // Ignore
-      }
-
-      verifyDestroy(tm3, conf);
-      verifyDestroy(tm1, conf);
     }
   }
 
@@ -249,49 +257,51 @@ public class TestZKDelegationTokenSecretManager {
   @Test
   @Order(6)
   public void testMultiNodeCompeteForSeqNum() throws Exception {
-    DelegationTokenManager tm1, tm2 = null;
+    DelegationTokenManager tm1 = null, tm2 = null;
     String connectString = zkServer.getConnectString();
     Configuration conf = getSecretConf(connectString);
     conf.setInt(
         ZKDelegationTokenSecretManager.ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE, 1000);
-    tm1 = new DelegationTokenManager(conf, new Text("bla"));
-    tm1.init();
+    try {
+      tm1 = new DelegationTokenManager(conf, new Text("bla"));
+      tm1.init();
 
-    Token<DelegationTokenIdentifier> token1 =
-        (Token<DelegationTokenIdentifier>) tm1.createToken(
-            UserGroupInformation.getCurrentUser(), "foo");
-    assertNotNull(token1);
-    AbstractDelegationTokenIdentifier id1 =
-        tm1.getDelegationTokenSecretManager().decodeTokenIdentifier(token1);
-    assertEquals(1, id1.getSequenceNumber(), "Token seq should be the same");
-    Token<DelegationTokenIdentifier> token2 =
-        (Token<DelegationTokenIdentifier>) tm1.createToken(
-            UserGroupInformation.getCurrentUser(), "foo");
-    assertNotNull(token2);
-    AbstractDelegationTokenIdentifier id2 =
-        tm1.getDelegationTokenSecretManager().decodeTokenIdentifier(token2);
-    assertEquals(2, id2.getSequenceNumber(), "Token seq should be the same");
+      Token<DelegationTokenIdentifier> token1 =
+          (Token<DelegationTokenIdentifier>) tm1.createToken(
+              UserGroupInformation.getCurrentUser(), "foo");
+      assertNotNull(token1);
+      AbstractDelegationTokenIdentifier id1 =
+          tm1.getDelegationTokenSecretManager().decodeTokenIdentifier(token1);
+      assertEquals(1, id1.getSequenceNumber(), "Token seq should be the same");
+      Token<DelegationTokenIdentifier> token2 =
+          (Token<DelegationTokenIdentifier>) tm1.createToken(
+              UserGroupInformation.getCurrentUser(), "foo");
+      assertNotNull(token2);
+      AbstractDelegationTokenIdentifier id2 =
+          tm1.getDelegationTokenSecretManager().decodeTokenIdentifier(token2);
+      assertEquals(2, id2.getSequenceNumber(), "Token seq should be the same");
 
-    tm2 = new DelegationTokenManager(conf, new Text("bla"));
-    tm2.init();
+      tm2 = new DelegationTokenManager(conf, new Text("bla"));
+      tm2.init();
 
-    Token<DelegationTokenIdentifier> token3 =
-        (Token<DelegationTokenIdentifier>) tm2.createToken(
-            UserGroupInformation.getCurrentUser(), "foo");
-    assertNotNull(token3);
-    AbstractDelegationTokenIdentifier id3 =
-        tm2.getDelegationTokenSecretManager().decodeTokenIdentifier(token3);
-    assertEquals(1001, id3.getSequenceNumber(), "Token seq should be the same");
-    Token<DelegationTokenIdentifier> token4 =
-        (Token<DelegationTokenIdentifier>) tm2.createToken(
-            UserGroupInformation.getCurrentUser(), "foo");
-    assertNotNull(token4);
-    AbstractDelegationTokenIdentifier id4 =
-        tm2.getDelegationTokenSecretManager().decodeTokenIdentifier(token4);
-    assertEquals(1002, id4.getSequenceNumber(), "Token seq should be the same");
-
-    verifyDestroy(tm1, conf);
-    verifyDestroy(tm2, conf);
+      Token<DelegationTokenIdentifier> token3 =
+          (Token<DelegationTokenIdentifier>) tm2.createToken(
+              UserGroupInformation.getCurrentUser(), "foo");
+      assertNotNull(token3);
+      AbstractDelegationTokenIdentifier id3 =
+          tm2.getDelegationTokenSecretManager().decodeTokenIdentifier(token3);
+      assertEquals(1001, id3.getSequenceNumber(), "Token seq should be the same");
+      Token<DelegationTokenIdentifier> token4 =
+          (Token<DelegationTokenIdentifier>) tm2.createToken(
+              UserGroupInformation.getCurrentUser(), "foo");
+      assertNotNull(token4);
+      AbstractDelegationTokenIdentifier id4 =
+          tm2.getDelegationTokenSecretManager().decodeTokenIdentifier(token4);
+      assertEquals(1002, id4.getSequenceNumber(), "Token seq should be the same");
+    } finally {
+      destroyIfNotNull(tm1, conf);
+      destroyIfNotNull(tm2, conf);
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -302,16 +312,19 @@ public class TestZKDelegationTokenSecretManager {
       DelegationTokenManager tm1 = null;
       String connectString = zkServer.getConnectString();
       Configuration conf = getSecretConf(connectString);
-      tm1 = new DelegationTokenManager(conf, new Text("foo"));
-      tm1.init();
+      try {
+        tm1 = new DelegationTokenManager(conf, new Text("foo"));
+        tm1.init();
 
-      Token<DelegationTokenIdentifier> token =
-          (Token<DelegationTokenIdentifier>)
-          tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
-      assertNotNull(token);
-      tm1.renewToken(token, "foo");
-      tm1.verifyToken(token);
-      verifyDestroy(tm1, conf);
+        Token<DelegationTokenIdentifier> token =
+            (Token<DelegationTokenIdentifier>)
+            tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
+        assertNotNull(token);
+        tm1.renewToken(token, "foo");
+        tm1.verifyToken(token);
+      } finally {
+        destroyIfNotNull(tm1, conf);
+      }
     }
   }
 
@@ -323,21 +336,24 @@ public class TestZKDelegationTokenSecretManager {
       DelegationTokenManager tm1 = null;
       String connectString = zkServer.getConnectString();
       Configuration conf = getSecretConf(connectString);
-      tm1 = new DelegationTokenManager(conf, new Text("foo"));
-      tm1.init();
-
-      Token<DelegationTokenIdentifier> token =
-          (Token<DelegationTokenIdentifier>)
-          tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
-      assertNotNull(token);
-      tm1.cancelToken(token, "foo");
       try {
-        verifyTokenFail(tm1, token);
-        fail("Expected InvalidToken");
-      } catch (SecretManager.InvalidToken it) {
-        it.printStackTrace();
+        tm1 = new DelegationTokenManager(conf, new Text("foo"));
+        tm1.init();
+
+        Token<DelegationTokenIdentifier> token =
+            (Token<DelegationTokenIdentifier>)
+            tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
+        assertNotNull(token);
+        tm1.cancelToken(token, "foo");
+        try {
+          verifyTokenFail(tm1, token);
+          fail("Expected InvalidToken");
+        } catch (SecretManager.InvalidToken it) {
+          it.printStackTrace();
+        }
+      } finally {
+        destroyIfNotNull(tm1, conf);
       }
-      verifyDestroy(tm1, conf);
     }
   }
 
@@ -351,6 +367,13 @@ public class TestZKDelegationTokenSecretManager {
             ZKDelegationTokenSecretManager.ZK_DTSM_ZK_SHUTDOWN_TIMEOUT,
             ZKDelegationTokenSecretManager.ZK_DTSM_ZK_SHUTDOWN_TIMEOUT_DEFAULT);
     Thread.sleep(timeout * 3);
+  }
+
+  protected void destroyIfNotNull(DelegationTokenManager tm, Configuration conf)
+      throws Exception {
+    if (tm != null) {
+      verifyDestroy(tm, conf);
+    }
   }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -371,19 +394,24 @@ public class TestZKDelegationTokenSecretManager {
     conf.setLong(DelegationTokenManager.RENEW_INTERVAL, updateIntervalSeconds);
 
     conf.setLong(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_SHUTDOWN_TIMEOUT, shutdownTimeoutMillis);
-    tm1 = new DelegationTokenManager(conf, new Text("foo"));
-    tm1.init();
+    try {
+      tm1 = new DelegationTokenManager(conf, new Text("foo"));
+      tm1.init();
 
-    Token<DelegationTokenIdentifier> token =
-      (Token<DelegationTokenIdentifier>)
-    tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
-    assertNotNull(token);
-    tm1.destroy();
+      Token<DelegationTokenIdentifier> token =
+        (Token<DelegationTokenIdentifier>)
+      tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
+      assertNotNull(token);
+    } finally {
+      if (tm1 != null) {
+        tm1.destroy();
+      }
+    }
   }
 
   @Test
   public void testACLs() throws Exception {
-    DelegationTokenManager tm1;
+    DelegationTokenManager tm1 = null;
     String connectString = zkServer.getConnectString();
     Configuration conf = getSecretConf(connectString);
     RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
@@ -411,16 +439,20 @@ public class TestZKDelegationTokenSecretManager {
         .build();
     curatorFramework.start();
     ZKDelegationTokenSecretManager.setCurator(curatorFramework);
-    tm1 = new DelegationTokenManager(conf, new Text("bla"));
-    tm1.init();
+    try {
+      tm1 = new DelegationTokenManager(conf, new Text("bla"));
+      tm1.init();
 
-    // check ACL
-    String workingPath = conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH);
-    verifyACL(curatorFramework, "/" + workingPath, digestACL);
-
-    tm1.destroy();
-    ZKDelegationTokenSecretManager.setCurator(null);
-    curatorFramework.close();
+      // check ACL
+      String workingPath = conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH);
+      verifyACL(curatorFramework, "/" + workingPath, digestACL);
+    } finally {
+      if (tm1 != null) {
+        tm1.destroy();
+      }
+      ZKDelegationTokenSecretManager.setCurator(null);
+      curatorFramework.close();
+    }
   }
 
   private void verifyACL(CuratorFramework curatorFramework,
@@ -591,21 +623,25 @@ public class TestZKDelegationTokenSecretManager {
         build();
     curatorFramework.start();
 
-    String workingPath = "/" + conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH,
-        ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT) + "/ZKDTSMRoot-Test";
-    CreateBuilder createBuilder = curatorFramework.create();
-    ProtectACLCreateModeStatPathAndBytesable<String> createModeStat =
-        createBuilder.creatingParentContainersIfNeeded();
-    createModeStat.forPath(workingPath);
+    try {
+      String workingPath = "/" + conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH,
+          ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT) + "/ZKDTSMRoot-Test";
+      CreateBuilder createBuilder = curatorFramework.create();
+      ProtectACLCreateModeStatPathAndBytesable<String> createModeStat =
+          createBuilder.creatingParentContainersIfNeeded();
+      createModeStat.forPath(workingPath);
 
-    // Check if the created NameSpace exists.
-    Stat stat = curatorFramework.checkExists().forPath(workingPath);
-    assertNotNull(stat);
+      // Check if the created NameSpace exists.
+      Stat stat = curatorFramework.checkExists().forPath(workingPath);
+      assertNotNull(stat);
 
-    // Repeated creation will throw NodeExists exception
-    LambdaTestUtils.intercept(KeeperException.class,
-        "KeeperErrorCode = NodeExists for "+workingPath,
-        () -> createModeStat.forPath(workingPath));
+      // Repeated creation will throw NodeExists exception
+      LambdaTestUtils.intercept(KeeperException.class,
+          "KeeperErrorCode = NodeExists for "+workingPath,
+          () -> createModeStat.forPath(workingPath));
+    } finally {
+      curatorFramework.close();
+    }
   }
 
   @Test
