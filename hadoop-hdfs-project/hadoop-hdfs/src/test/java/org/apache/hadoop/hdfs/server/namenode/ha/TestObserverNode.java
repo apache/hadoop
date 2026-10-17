@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -275,6 +276,131 @@ public class TestObserverNode {
     dfs.getFileStatus(testPath2);
     dfs.getFileStatus(testPath2);
     assertSentTo(nnIdx);
+  }
+
+  /**
+   * Verify that a NameNode starts as Observer when the per-NameNode scoped key
+   * {@code dfs.namenode.observer.enabled.<nsId>.<nnId>} is set to true,
+   * even without the global key being set.
+   */
+  @Test
+  public void testPerNNScopedConfigStartupAsObserver() throws Exception {
+    int nnIdx = dfsCluster.getNumNameNodes() - 1;
+    MiniDFSCluster.NameNodeInfo nnInfo = dfsCluster.getNameNodeInfos()[nnIdx];
+    String nsId = nnInfo.getNameserviceId();
+    String nnId = nnInfo.getNamenodeId();
+    String perNnKey = DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_OBSERVER_ENABLED_KEY, nsId, nnId);
+    Configuration nnConf = dfsCluster.getConfiguration(nnIdx);
+    String origGlobal = nnConf.get(DFS_NAMENODE_OBSERVER_ENABLED_KEY);
+
+    try {
+      dfsCluster.transitionToStandby(nnIdx);
+      assertTrue(dfsCluster.getNameNode(nnIdx).isStandbyState(),
+              "NN should be standby before restart");
+
+      nnConf.unset(DFS_NAMENODE_OBSERVER_ENABLED_KEY);
+      nnConf.setBoolean(perNnKey, true);
+
+      dfsCluster.restartNameNode(nnIdx);
+      dfsCluster.waitNameNodeUp(nnIdx);
+
+      assertTrue(dfsCluster.getNameNode(nnIdx).isObserverState(),
+              "NN should start as Observer when per-NN scoped config is true");
+    } finally {
+      nnConf.unset(perNnKey);
+      if (origGlobal != null) {
+        nnConf.set(DFS_NAMENODE_OBSERVER_ENABLED_KEY, origGlobal);
+      }
+      if (!dfsCluster.getNameNode(nnIdx).isObserverState()) {
+        dfsCluster.transitionToObserver(nnIdx);
+      }
+    }
+  }
+
+  /**
+   * Regression test: a Standby NN must NOT start as Observer just because
+   * the per-NN key for a sibling Observer NN is present in the shared config.
+   * Simulates a 4-NN HA cluster (1 Active, 2 Standby, 1 Observer) where
+   * hdfs-site.xml contains {@code dfs.namenode.observer.enabled.<nsId>.<observerNnId>=true}
+   * on every host, but only the designated Observer NN should honour it.
+   */
+  @Test
+  public void testPerNNScopedConfigDoesNotAffectSiblingNN() throws Exception {
+    int observerIdx = dfsCluster.getNumNameNodes() - 1;
+    int standbyIdx = 1;
+    MiniDFSCluster.NameNodeInfo observerInfo = dfsCluster.getNameNodeInfos()[observerIdx];
+    String nsId = observerInfo.getNameserviceId();
+    String observerNnId = observerInfo.getNamenodeId();
+    String observerPerNnKey = DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_OBSERVER_ENABLED_KEY, nsId, observerNnId);
+    Configuration standbyConf = dfsCluster.getConfiguration(standbyIdx);
+    String origStandbyGlobal = standbyConf.get(DFS_NAMENODE_OBSERVER_ENABLED_KEY);
+
+    try {
+      dfsCluster.transitionToStandby(observerIdx);
+
+      // Simulate shared hdfs-site.xml: the observer's per-NN key lands in the
+      // standby NN's config too, but there is no global observer key.
+      standbyConf.unset(DFS_NAMENODE_OBSERVER_ENABLED_KEY);
+      standbyConf.setBoolean(observerPerNnKey, true);
+
+      dfsCluster.restartNameNode(standbyIdx);
+      dfsCluster.waitNameNodeUp(standbyIdx);
+
+      assertTrue(dfsCluster.getNameNode(standbyIdx).isStandbyState(),
+              "Standby NN must NOT become Observer because of a sibling NN's per-NN key");
+    } finally {
+      standbyConf.unset(observerPerNnKey);
+      if (origStandbyGlobal != null) {
+        standbyConf.set(DFS_NAMENODE_OBSERVER_ENABLED_KEY, origStandbyGlobal);
+      }
+      if (!dfsCluster.getNameNode(observerIdx).isObserverState()) {
+        dfsCluster.transitionToObserver(observerIdx);
+      }
+    }
+  }
+
+  /**
+   * Verify that a per-NN scoped key set to {@code false} takes precedence over
+   * the global {@code dfs.namenode.observer.enabled=true}, allowing operators
+   * to pin a specific NN as Standby even when the global flag is enabled.
+   */
+  @Test
+  public void testPerNNScopedFalseOverridesGlobalTrue() throws Exception {
+    int nnIdx = dfsCluster.getNumNameNodes() - 1;
+    MiniDFSCluster.NameNodeInfo nnInfo = dfsCluster.getNameNodeInfos()[nnIdx];
+    String nsId = nnInfo.getNameserviceId();
+    String nnId = nnInfo.getNamenodeId();
+    String perNnKey = DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_OBSERVER_ENABLED_KEY, nsId, nnId);
+    Configuration nnConf = dfsCluster.getConfiguration(nnIdx);
+    String origGlobal = nnConf.get(DFS_NAMENODE_OBSERVER_ENABLED_KEY);
+
+    try {
+      dfsCluster.transitionToStandby(nnIdx);
+      assertTrue(dfsCluster.getNameNode(nnIdx).isStandbyState(),
+              "NN should be standby before restart");
+
+      nnConf.setBoolean(DFS_NAMENODE_OBSERVER_ENABLED_KEY, true);
+      nnConf.setBoolean(perNnKey, false);
+
+      dfsCluster.restartNameNode(nnIdx);
+      dfsCluster.waitNameNodeUp(nnIdx);
+
+      assertTrue(dfsCluster.getNameNode(nnIdx).isStandbyState(),
+              "NN should start as Standby when per-NN scoped config overrides global to false");
+    } finally {
+      nnConf.unset(perNnKey);
+      if (origGlobal != null) {
+        nnConf.set(DFS_NAMENODE_OBSERVER_ENABLED_KEY, origGlobal);
+      } else {
+        nnConf.unset(DFS_NAMENODE_OBSERVER_ENABLED_KEY);
+      }
+      if (!dfsCluster.getNameNode(nnIdx).isObserverState()) {
+        dfsCluster.transitionToObserver(nnIdx);
+      }
+    }
   }
 
   @Test
