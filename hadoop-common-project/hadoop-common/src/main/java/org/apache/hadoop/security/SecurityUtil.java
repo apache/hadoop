@@ -54,6 +54,7 @@ import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ZKUtil;
@@ -507,21 +508,22 @@ public final class SecurityUtil {
   /**
    * Perform the given action as the daemon's login user. If the login
    * user cannot be determined, this will log a FATAL error and exit
-   * the whole JVM.
+   * the whole JVM via {@link ExitUtil#terminate(int, Throwable)}.
    *
    * @param action action.
    * @param <T> generic type T.
    * @return generic type T.
    */
-  public static <T> T doAsLoginUserOrFatal(PrivilegedAction<T> action) { 
+  public static <T> T doAsLoginUserOrFatal(PrivilegedAction<T> action) {
     if (UserGroupInformation.isSecurityEnabled()) {
-      UserGroupInformation ugi = null;
-      try { 
+      UserGroupInformation ugi;
+      try {
         ugi = UserGroupInformation.getLoginUser();
       } catch (IOException e) {
         LOG.error("Exception while getting login user", e);
-        e.printStackTrace();
-        Runtime.getRuntime().exit(-1);
+        ExitUtil.terminate(-1, e);
+        // Not reached: terminate() either exits the JVM or throws.
+        throw new IllegalStateException(e);
       }
       return ugi.doAs(action);
     } else {
