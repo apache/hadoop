@@ -20,9 +20,12 @@ import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.junit.jupiter.api.Test;
 
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
+import java.util.Scanner;
 
 public class TestPseudoAuthenticator {
 
@@ -67,7 +70,9 @@ public class TestPseudoAuthenticator {
       conn.connect();
       assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, conn.getResponseCode());
       assertTrue(conn.getHeaderFields().containsKey("WWW-Authenticate"));
-      assertEquals("Authentication required", conn.getResponseMessage());
+      // Jetty 12 sends the canonical reason phrase whatever the server sets,
+      // so the detail is read out of the body instead.
+      assertTrue(readBody(conn).contains("Authentication required"));
     } finally {
       auth.stop();
     }
@@ -103,6 +108,19 @@ public class TestPseudoAuthenticator {
     AuthenticatorTestCase.setAuthenticationHandlerConfig(
             getAuthenticationHandlerConfiguration(false));
     auth._testAuthentication(new PseudoAuthenticator(), true);
+  }
+
+  private static String readBody(HttpURLConnection conn) {
+    InputStream in = conn.getErrorStream() != null
+        ? conn.getErrorStream() : null;
+    if (in == null) {
+      return "";
+    }
+    try (Scanner scanner = new Scanner(in, StandardCharsets.UTF_8.name())) {
+      // \A matches only at the start of input, so the whole body is one token.
+      scanner.useDelimiter("\\A");
+      return scanner.hasNext() ? scanner.next() : "";
+    }
   }
 
 }

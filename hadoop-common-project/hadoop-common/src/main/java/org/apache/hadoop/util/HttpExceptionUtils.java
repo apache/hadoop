@@ -19,6 +19,7 @@ package org.apache.hadoop.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.security.authentication.util.ResponseDetail;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
@@ -134,6 +135,11 @@ public class HttpExceptionUtils {
    * <p>
    * <b>NOTE:</b> this method will throw the deserialized exception even if not
    * declared in the <code>throws</code> of the method signature.
+   * <p>
+   * When the response does not carry the JSON envelope - a container error
+   * page, say - the detail is taken from the body via
+   * {@link ResponseDetail#of}, because that is where a servlet's reason now
+   * is: Jetty 12 no longer puts one in the HTTP reason phrase.
    *
    * @param conn the <code>HttpURLConnection</code>.
    * @param expectedStatus the expected HTTP status code.
@@ -145,10 +151,14 @@ public class HttpExceptionUtils {
       int expectedStatus) throws IOException {
     if (conn.getResponseCode() != expectedStatus) {
       Exception toThrow;
-      InputStream es = null;
+      byte[] body = null;
       try {
-        es = conn.getErrorStream();
-        Map json = JsonSerialization.mapReader().readValue(es);
+        try (InputStream es = conn.getErrorStream()) {
+          if (es != null) {
+            body = es.readAllBytes();
+          }
+        }
+        Map json = JsonSerialization.mapReader().readValue(body);
         json = (Map) json.get(ERROR_JSON);
         String exClass = (String) json.get(ERROR_CLASSNAME_JSON);
         String exMsg = (String) json.get(ERROR_MESSAGE_JSON);
@@ -175,16 +185,8 @@ public class HttpExceptionUtils {
       } catch (Exception ex) {
         toThrow = new IOException(String.format(
             "HTTP status [%d], message [%s], URL [%s], exception [%s]",
-            conn.getResponseCode(), conn.getResponseMessage(), conn.getURL(),
-            ex.toString()), ex);
-      } finally {
-        if (es != null) {
-          try {
-            es.close();
-          } catch (IOException ex) {
-            //ignore
-          }
-        }
+            conn.getResponseCode(), ResponseDetail.of(body, conn),
+            conn.getURL(), ex.toString()), ex);
       }
       throwEx(toThrow);
     }

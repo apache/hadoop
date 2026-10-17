@@ -32,6 +32,7 @@ import javax.xml.bind.UnmarshalException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 
@@ -61,8 +62,7 @@ public class GenericExceptionHandler implements ExceptionMapper<Exception> {
     if (e instanceof javax.ws.rs.NotFoundException) {
       return ((javax.ws.rs.NotFoundException) e).getResponse();
     }
-    // clear content type
-    response.setContentType(null);
+    JettyUtils.clearContentType(response);
 
     // Convert exception
     if (e instanceof RemoteException) {
