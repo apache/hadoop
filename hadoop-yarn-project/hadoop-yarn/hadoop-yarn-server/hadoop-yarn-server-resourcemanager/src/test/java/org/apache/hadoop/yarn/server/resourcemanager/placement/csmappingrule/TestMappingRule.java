@@ -131,6 +131,11 @@ public class TestMappingRule {
         "u:%user:root.%primary_group", matching, "root.developer");
     evaluateLegacyStringTestcase(
         "u:%user:root.%primary_group", mismatching, "root.tester");
+
+    evaluateLegacyStringTestcase(
+        "u:alice,bob:root.shared", matching, "root.shared");
+    evaluateLegacyStringTestcase(
+        "u:alice,bob:root.shared", mismatching, null);
   }
 
   @Test
