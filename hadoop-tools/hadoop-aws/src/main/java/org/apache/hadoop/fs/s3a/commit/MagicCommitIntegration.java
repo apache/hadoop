@@ -109,11 +109,13 @@ public class MagicCommitIntegration extends AbstractStoreOperation {
             Statistic.COMMITTER_MAGIC_FILES_CREATED);
         if (isTrackMagicCommitsInMemoryEnabled(getStoreContext().getConfiguration())) {
           tracker = new InMemoryMagicCommitTracker(path, getStoreContext().getBucket(),
-              key, destKey, pendingsetPath, owner.getWriteOperationHelper(),
+              key, destKey, pendingsetPath,
+              owner.createWriteOperationHelper(owner.getActiveAuditSpan()),
               trackerStatistics);
         } else {
           tracker = new S3MagicCommitTracker(path, getStoreContext().getBucket(),
-              key, destKey, pendingsetPath, owner.getWriteOperationHelper(),
+              key, destKey, pendingsetPath,
+              owner.createWriteOperationHelper(owner.getActiveAuditSpan()),
               trackerStatistics);
         }
         LOG.debug("Created {}", tracker);
