@@ -104,6 +104,16 @@ public class DfsClientShmManager implements Closeable {
      */
     private boolean loading = false;
 
+    /**
+     * The thread that is currently loading a shared memory segment, or null
+     * if no loading is in progress.  Used to detect re-entrant calls from
+     * the same thread (e.g. when NativeIO class initialization triggers an
+     * HDFS read, which re-enters allocSlot on the same thread).
+     *
+     * Protected by the manager lock.
+     */
+    private Thread loadingThread = null;
+
     EndpointShmManager (DatanodeInfo datanode) {
       this.datanode = datanode;
     }
@@ -240,11 +250,23 @@ public class DfsClientShmManager implements Closeable {
         // There are no free slots.  If someone is loading more slots, wait
         // for that to finish.
         if (loading) {
+          if (Thread.currentThread() == loadingThread) {
+            // The same thread that is already loading a segment has re-entered
+            // allocSlot (e.g. NativeIO.POSIX class initialization triggered an
+            // HDFS read via the context ClassLoader, which called back into
+            // this method on the same thread).  Waiting would deadlock because
+            // this thread is the one responsible for signalling finishedLoading.
+            // Return null so the caller falls back to a non-short-circuit read.
+            LOG.debug("{}: re-entrant allocSlot call detected on loading thread;"
+                + " skipping short-circuit shm to avoid deadlock.", this);
+            return null;
+          }
           LOG.trace("{}: waiting for loading to finish...", this);
           finishedLoading.awaitUninterruptibly();
         } else {
           // Otherwise, load the slot ourselves.
           loading = true;
+          loadingThread = Thread.currentThread();
           lock.unlock();
           DfsClientShm shm;
           try {
@@ -259,6 +281,7 @@ public class DfsClientShmManager implements Closeable {
           } finally {
             lock.lock();
             loading = false;
+            loadingThread = null;
             finishedLoading.signalAll();
           }
           if (shm.isDisconnected()) {
