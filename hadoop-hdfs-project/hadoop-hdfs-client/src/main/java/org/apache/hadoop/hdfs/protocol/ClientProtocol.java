@@ -804,7 +804,9 @@ public interface ClientProtocol {
   int GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX = 6;
   int GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX = 7;
   int GET_STATS_PENDING_DELETION_BLOCKS_IDX = 8;
-  int STATS_ARRAY_LENGTH = 9;
+  int GET_STATS_BADLY_DISTRIBUTED_BLOCKS_IDX = 9;
+  int GET_STATS_NORMAL_LOW_REDUNDANCY_BLOCKS_IDX = 10;
+  int STATS_ARRAY_LENGTH = 11;
 
   /**
    * Get an array of aggregated statistics combining blocks of both type
