@@ -39,6 +39,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.server.AuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.AuthenticationToken;
+import org.apache.hadoop.security.authentication.server.JettyAuthenticationHelper;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
@@ -262,6 +263,9 @@ public abstract class DelegationTokenAuthenticationHandler
                   HttpServletResponse.SC_FORBIDDEN, ex);
               return false;
             }
+          }
+          if (requestUgi != null) {
+            JettyAuthenticationHelper.publishRemoteUser(request, requestUgi.getShortUserName());
           }
           Map map = null;
           switch (dtOp) {
