@@ -952,10 +952,14 @@ The switch to turn S3A auditing on or off.
 
 ### Configuring Custom Headers for AWS Service Clients
 
-You can set custom headers for S3 and STS requests. These headers are set on client level, and will be sent for all requests made to these services.
+You can set custom headers for S3 and STS requests. Headers can be set on client level and request type level.
+Client level headers are sent for all requests made through the client. Request type level headers are sent for
+requests of the respective type only.
+
+#### Client Level Headers
 
 **Configuration Properties:**
-- `fs.s3a.client.s3.custom.headers`: Custom headers for S3 service requests.
+- `fs.s3a.client.s3.custom.headers`: Sets custom headers for S3 service requests.
 - `fs.s3a.client.sts.custom.headers`: Sets custom headers for all requests to AWS STS.
 
 **Header Format:**
@@ -970,6 +974,33 @@ Custom headers should be specified as key-value pairs, separated by `=`. Multipl
 
 <property>
     <name>fs.s3a.client.sts.custom.headers</name>
+    <value>Header1=Value1;Value2,Header2=Value1</value>
+</property>
+```
+
+#### Request-type Level Headers
+
+**Configuration Properties:**
+- `fs.s3a.client.s3.custom.headers.request.REQUEST`: Sets custom headers for S3 service requests of type `REQUEST`.
+- `fs.s3a.client.sts.custom.headers.request.REQUEST`: Sets custom headers for all requests to AWS STS of type `REQUEST`.
+
+Note: `REQUEST` refers to the AWS S3 and STS request name. These request type names are case-insensitive.
+See <a href="https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/model/S3Request.html">subclasses of S3Request</a>
+and <a href="https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/sts/model/StsRequest.html">subclasses of StsRequest</a>
+for all existing requests.
+
+**Header Format:**
+Custom headers should be specified as key-value pairs, separated by `=`. Multiple values for a single header can be separated by `;`. Multiple headers can be separated by `,`.
+
+
+```xml
+<property>
+    <name>fs.s3a.client.s3.custom.headers.request.ListObjectsV2Request</name>
+    <value>Header1=Value1</value>
+</property>
+
+<property>
+    <name>fs.s3a.client.sts.custom.headers.request.deleteobjectrequest</name>
     <value>Header1=Value1;Value2,Header2=Value1</value>
 </property>
 ```
