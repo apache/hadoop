@@ -239,10 +239,10 @@ com.google.api-client:google-api-client:2.7.2
 com.google.api:gax:2.64.2
 com.google.api:gax-grpc:2.64.2
 com.google.api:gax-httpjson:2.64.2
-com.google.api.grpc:gapic-google-cloud-storage-v2:2.52.0
-com.google.api.grpc:grpc-google-cloud-storage-v2:2.52.0
+com.google.api.grpc:gapic-google-cloud-storage-v2:2.62.0
+com.google.api.grpc:grpc-google-cloud-storage-v2:2.62.0
 com.google.api.grpc:proto-google-cloud-monitoring-v3:3.52.0
-com.google.api.grpc:proto-google-cloud-storage-v2:2.52.0
+com.google.api.grpc:proto-google-cloud-storage-v2:2.62.0
 com.google.api.grpc:proto-google-common-protos:2.55.2
 com.google.api.grpc:proto-google-iam-v1:1.50.2
 com.google.apis:google-api-services-storage:v1-rev20250420-2.0.0
@@ -263,6 +263,7 @@ com.google.json-simple:json-simple:1.1.1
 com.google.guava:failureaccess:1.0
 com.google.guava:failureaccess:1.0.2
 com.google.guava:guava:33.4.8-jre
+com.google.guava:guava:33.5.0-jre
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
 com.google.http-client:google-http-client-apache-v2:1.46.3
 com.google.http-client:google-http-client-appengine:1.46.3
@@ -299,7 +300,7 @@ io.grpc:grpc-googleapis:1.70.0
 io.grpc:grpc-grpclb:1.70.0
 io.grpc:grpc-inprocess:1.70.0
 io.grpc:grpc-netty:1.69.0
-io.grpc:grpc-netty-shaded:1.70.0
+io.grpc:grpc-netty-shaded:1.76.2
 io.grpc:grpc-opentelemetry:1.70.0
 io.grpc:grpc-protobuf:1.69.0
 io.grpc:grpc-protobuf:1.70.0
@@ -474,6 +475,7 @@ com.google.auth:google-auth-library-credentials:1.33.1
 com.google.auth:google-auth-library-oauth2-http:1.33.1
 com.google.protobuf:protobuf-java:2.5.0
 com.google.protobuf:protobuf-java:3.25.5
+com.google.protobuf:protobuf-java:3.25.8
 com.google.re2j:re2j:1.1
 com.jcraft:jsch:0.1.55
 com.thoughtworks.paranamer:paranamer:2.3
