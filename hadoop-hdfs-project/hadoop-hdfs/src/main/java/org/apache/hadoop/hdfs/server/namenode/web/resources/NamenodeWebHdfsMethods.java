@@ -65,6 +65,7 @@ import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -115,7 +116,6 @@ import org.apache.hadoop.hdfs.web.resources.*;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ExternalCall;
-import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.Credentials;
@@ -184,18 +184,18 @@ public class NamenodeWebHdfsMethods {
 
   private static NamenodeProtocols getRPCServer(NameNode namenode)
       throws IOException {
-     final NamenodeProtocols np = namenode.getRpcServer();
-     if (np == null) {
-       throw new RetriableException("Namenode is in startup mode");
-     }
-     return np;
+    final NamenodeProtocols np = namenode.getRpcServer();
+    if (np == null) {
+      throw NameNodeUtils.startupModeException(namenode);
+    }
+    return np;
   }
 
   protected ClientProtocol getRpcClientProtocol() throws IOException {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
     final ClientProtocol cp = namenode.getRpcServer();
     if (cp == null) {
-      throw new RetriableException("Namenode is in startup mode");
+      throw NameNodeUtils.startupModeException(namenode);
     }
     return cp;
   }

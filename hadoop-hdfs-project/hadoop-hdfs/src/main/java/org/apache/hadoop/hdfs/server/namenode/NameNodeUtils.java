@@ -24,9 +24,12 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.ipc.RetriableException;
+import org.apache.hadoop.ipc.StandbyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 
@@ -40,6 +43,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 @InterfaceAudience.Private
 public final class NameNodeUtils {
   public static final Logger LOG = LoggerFactory.getLogger(NameNodeUtils.class);
+
+  public static final String STARTUP_MODE = "Namenode is in startup mode";
 
   /**
    * Return the namenode address that will be used by clients to access this
@@ -116,6 +121,21 @@ public final class NameNodeUtils {
     } else {
       // the port is missing or 0. Figure out real bind address later.
       return null;
+    }
+  }
+
+  /**
+   * Build the exception to throw when the NameNode receives a request while
+   * its RPC server is not yet available (e.g. fsimage loading). Returns a
+   * {@link StandbyException} when this NameNode is not in active state so the
+   * client fails over to the peer NameNode; otherwise a
+   * {@link RetriableException} so the client retries against the same node.
+   */
+  public static IOException startupModeException(NameNode namenode) {
+    if (!namenode.isActiveState()) {
+      return new StandbyException(STARTUP_MODE);
+    } else {
+      return new RetriableException(STARTUP_MODE);
     }
   }
 
