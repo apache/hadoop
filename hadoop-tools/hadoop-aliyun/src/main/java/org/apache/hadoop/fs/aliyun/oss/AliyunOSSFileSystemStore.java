@@ -55,6 +55,10 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.VersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +76,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import com.aliyun.oss.common.comm.SignVersion;
 
@@ -85,6 +90,8 @@ import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 public class AliyunOSSFileSystemStore {
   public static final Logger LOG =
       LoggerFactory.getLogger(AliyunOSSFileSystemStore.class);
+  private static final int MAX_MULTIPART_COMPLETE_RETRY_LIMIT = 10;
+  private static final long MAX_MULTIPART_COMPLETE_RETRY_DELAY = 10_000;
   private String username;
   private FileSystem.Statistics statistics;
   private OSSClient ossClient;
@@ -93,6 +100,7 @@ public class AliyunOSSFileSystemStore {
   private int maxKeys;
   private String serverSideEncryptionAlgorithm;
   private boolean useListV1;
+  private RetryPolicy multipartCompleteRetryPolicy;
 
   public void initialize(URI uri, Configuration conf, String user,
                          FileSystem.Statistics stat) throws IOException {
@@ -106,6 +114,21 @@ public class AliyunOSSFileSystemStore {
     clientConf.setProtocol(secureConnections ? Protocol.HTTPS : Protocol.HTTP);
     clientConf.setMaxErrorRetry(conf.getInt(MAX_ERROR_RETRIES_KEY,
         MAX_ERROR_RETRIES_DEFAULT));
+    int retryLimit = conf.getInt(MULTIPART_COMPLETE_RETRY_LIMIT_KEY,
+        MULTIPART_COMPLETE_RETRY_LIMIT_DEFAULT);
+    Preconditions.checkArgument(retryLimit >= 0
+            && retryLimit <= MAX_MULTIPART_COMPLETE_RETRY_LIMIT,
+        "%s must be between 0 and %s", MULTIPART_COMPLETE_RETRY_LIMIT_KEY,
+        MAX_MULTIPART_COMPLETE_RETRY_LIMIT);
+    long retryInterval = conf.getTimeDuration(
+        MULTIPART_COMPLETE_RETRY_INTERVAL_KEY,
+        MULTIPART_COMPLETE_RETRY_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
+    Preconditions.checkArgument(retryInterval > 0
+            && retryInterval <= (Long.MAX_VALUE >> retryLimit),
+        "%s must be positive and not overflow after %s retries",
+        MULTIPART_COMPLETE_RETRY_INTERVAL_KEY, retryLimit);
+    multipartCompleteRetryPolicy = RetryPolicies.exponentialBackoffRetry(
+        retryLimit, retryInterval, TimeUnit.MILLISECONDS);
     clientConf.setConnectionTimeout(conf.getInt(ESTABLISH_TIMEOUT_KEY,
         ESTABLISH_TIMEOUT_DEFAULT));
     clientConf.setSocketTimeout(conf.getInt(SOCKET_TIMEOUT_KEY,
@@ -399,11 +422,8 @@ public class AliyunOSSFileSystemStore {
         statistics.incrementBytesWritten(size);
         partETags.add(partCopyResult.getPartETag());
       }
-      CompleteMultipartUploadRequest completeMultipartUploadRequest =
-          new CompleteMultipartUploadRequest(bucketName, dstKey,
-              uploadId, partETags);
       CompleteMultipartUploadResult completeMultipartUploadResult =
-          ossClient.completeMultipartUpload(completeMultipartUploadRequest);
+          completeMultipartUpload(dstKey, uploadId, partETags);
       LOG.debug(completeMultipartUploadResult.getETag());
       return true;
     } catch (OSSException | ClientException e) {
@@ -763,7 +783,47 @@ public class AliyunOSSFileSystemStore {
     CompleteMultipartUploadRequest completeMultipartUploadRequest =
         new CompleteMultipartUploadRequest(bucketName, key, uploadId,
             partETags);
-    return ossClient.completeMultipartUpload(completeMultipartUploadRequest);
+    for (int retries = 0; ; retries++) {
+      try {
+        return submitCompleteMultipartUpload(completeMultipartUploadRequest);
+      } catch (OSSException e) {
+        // A response with this error code means OSS rejected the request.
+        // Do not retry timeouts or other failures: Complete is not idempotent.
+        if (!"QpsLimitExceeded".equals(e.getErrorCode())) {
+          throw e;
+        }
+        RetryAction action;
+        try {
+          action = multipartCompleteRetryPolicy.shouldRetry(
+              e, retries, 0, false);
+        } catch (Exception policyFailure) {
+          e.addSuppressed(policyFailure);
+          throw e;
+        }
+        if (action.action != RetryAction.RetryDecision.RETRY) {
+          throw e;
+        }
+        LOG.warn("OSS throttled multipart completion of {} (retry {})",
+            key, retries + 1);
+        try {
+          sleepBeforeCompleteRetry(Math.min(action.delayMillis,
+              MAX_MULTIPART_COMPLETE_RETRY_DELAY));
+        } catch (InterruptedException interrupted) {
+          Thread.currentThread().interrupt();
+          throw new ClientException("Interrupted while retrying OSS multipart "
+              + "completion of " + key, interrupted);
+        }
+      }
+    }
+  }
+
+  CompleteMultipartUploadResult submitCompleteMultipartUpload(
+      CompleteMultipartUploadRequest request) {
+    return ossClient.completeMultipartUpload(request);
+  }
+
+  void sleepBeforeCompleteRetry(long delayMillis) throws InterruptedException {
+    Thread.sleep(delayMillis);
   }
 
   /**
