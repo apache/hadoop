@@ -109,9 +109,15 @@ public class CGroupsResourceCalculator extends AbstractCGroupsResourceCalculator
     super(
         pid,
         Arrays.asList(CPU_STAT + "#user", CPU_STAT + "#system"),
-        MEM_STAT,
-        MEMSW_STAT
+        MEM_STAT
     );
+  }
+
+  @Override
+  protected long calculateVirtualMemory() {
+    // In cgroup v1 memory.memsw.usage_in_bytes already accounts for
+    // memory + swap, i.e. the virtual memory of the process tree.
+    return getStat(MEMSW_STAT);
   }
 
   @Override
