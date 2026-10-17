@@ -56,6 +56,7 @@ public class DockerContainerDeletionTask extends DeletionTask
     LinuxContainerExecutor exec = ((LinuxContainerExecutor)
         getDeletionService().getContainerExecutor());
     exec.removeDockerContainer(containerId);
+    deletionTaskFinished();
   }
 
   /**
