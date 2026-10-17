@@ -35,6 +35,59 @@
   </div>
 {{/if}}
 
+<div class="col-md-12 margin-bottom-20">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      Collect Application Diagnostic bundle
+    </div>
+    <div class="panel-body">
+      <p class="text-muted">
+        Runs on the Resource Manager for this application and may take several minutes. The download is a
+        ZIP folder (named from the application id and collection time). Each item below is saved as its own
+        file inside that folder.
+      </p>
+      <ul class="text-muted" style="margin-bottom: 10px;">
+        <li>Application info and application attempts (cluster REST)</li>
+        <li>Aggregated application logs (<code>yarn logs -applicationId</code>)</li>
+        <li>ResourceManager and NodeManager log excerpts for the application run window</li>
+        <li>Application JStack and NodeManager JStack (three samples each, from the application NodeManager)</li>
+      </ul>
+      <p class="text-muted" style="margin-bottom: 0;">
+        <strong>JStack:</strong> requires NodeManager JStack REST to be enabled:
+        set <code>yarn.nodemanager.jstack-endpoints.enabled</code> to <code>true</code> in
+        <code>yarn-site.xml</code> (default is <code>false</code>), then restart NodeManagers. JStack
+        collection works best while application containers are still running on that NodeManager; otherwise
+        those files may be empty or show an error message.
+      </p>
+
+      {{#if diagnosticCollectError}}
+        <div class="alert alert-danger alert-dismissible" role="alert">
+          <button type="button" class="close" aria-label="Close" {{action "dismissDiagnosticCollectError"}}>
+            <span aria-hidden="true">&times;</span>
+          </button>
+          <strong>{{diagnosticCollectError}}</strong>
+        </div>
+      {{/if}}
+
+      {{#if isCollectingApplicationDiagnostic}}
+        <div class="margin-bottom-10">
+          <img src="assets/images/spinner.gif" alt="Loading...">
+          <span class="margin-left-15">Collecting diagnostics on the Resource Manager…</span>
+        </div>
+      {{/if}}
+
+      <button
+        type="button"
+        class="btn btn-primary"
+        disabled={{isCollectingApplicationDiagnostic}}
+        {{action "collectApplicationDiagnostic"}}
+      >
+        Download Application Diagnostic bundle (ZIP)
+      </button>
+    </div>
+  </div>
+</div>
+
 {{#if model.app.diagnostics}}
   <div class="col-md-12 margin-bottom-20">
     {{#if model.app.isFailed}}
