@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -142,7 +143,7 @@ public class TestAbsoluteResourceWithAutoQueue
 
     // Set default capacities like normal configuration.
     if (isCapacityNeeded) {
-      csConf.setCapacity(A_QUEUE_PATH, 50f);
+      csConf.setCapacity(A_QUEUE_PATH, 25f);
       csConf.setCapacity(B_QUEUE_PATH, 25f);
       csConf.setCapacity(C_QUEUE_PATH, 25f);
       csConf.setCapacity(D_QUEUE_PATH, 25f);
@@ -293,7 +294,7 @@ public class TestAbsoluteResourceWithAutoQueue
 
   @Test
   public void testValidateLeafQueueTemplateConfigurations() {
-    assertThrows(Exception.class, () -> {
+    Exception e = assertThrows(Exception.class, () -> {
       CapacitySchedulerConfiguration csConf = setupSimpleQueueConfiguration(true);
 
       csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -303,6 +304,8 @@ public class TestAbsoluteResourceWithAutoQueue
       fail("Exception should be thrown as leaf queue template configuration is "
           + "not same as Parent configuration");
     });
+    assertEquals("Managed Parent Queue root.queueC config type is different from leaf "
+        + "queue template config type", ExceptionUtils.getRootCause(e).getMessage());
   }
 
   @Test

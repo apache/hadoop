@@ -24,7 +24,9 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import javax.inject.Singleton;
 import javax.servlet.FilterConfig;
@@ -63,6 +65,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -113,6 +119,7 @@ public class TestAHSWebServices extends JerseyTestBase {
   private static final String[] USERS = new String[]{"foo", "bar"};
   private static final int MAX_APPS = 6;
   private static Configuration conf;
+  private static TimelineStore timelineStore;
   private static FileSystem fs;
   private static final String remoteLogRootDir = "target/logs/";
   private static final String rootLogDir = "target/LocalLogs";
@@ -153,6 +160,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     conf = new YarnConfiguration();
     TimelineStore store =
         TestApplicationHistoryManagerOnTimelineStore.createStore(MAX_APPS);
+    timelineStore = store;
     TimelineACLsManager aclsManager = new TimelineACLsManager(conf);
     aclsManager.setTimelineStore(store);
     TimelineDataManager dataManager =
@@ -563,6 +571,69 @@ public class TestAHSWebServices extends JerseyTestBase {
         "container_0_0001_01_000001/user1", container.getString("logUrl"));
     assertEquals(ContainerState.COMPLETE.toString(),
         container.getString("containerState"));
+  }
+
+  @MethodSource("rounds")
+  @ParameterizedTest
+  void testCustomContainerResources(int round) throws Exception {
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    Configuration resourceConf = new YarnConfiguration();
+    resourceConf.set(YarnConfiguration.RESOURCE_TYPES, "yarn.io/gpu");
+    ResourceUtils.resetResourceTypes(resourceConf);
+    TimelineEntity entity = new TimelineEntity();
+    entity.setEntityType(ContainerMetricsConstants.ENTITY_TYPE);
+    entity.setEntityId(containerId.toString());
+    entity.setDomainId(TimelineDataManager.DEFAULT_DOMAIN_ID);
+    Map<String, Object> allocation = new HashMap<>();
+    allocation.put("value", 2);
+    allocation.put("units", "");
+    entity.addOtherInfo(ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO,
+        Collections.singletonMap("yarn.io/gpu", allocation));
+    TimelineEntities entities = new TimelineEntities();
+    entities.addEntity(entity);
+    try {
+      timelineStore.put(entities);
+      when(request.getRemoteUser()).thenReturn(USERS[round]);
+      WebTarget containers = targetWithJsonObject().path("ws/v1/applicationhistory/apps")
+          .path(appId.toString()).path("appattempts").path(attemptId.toString())
+          .path("containers").queryParam("user.name", USERS[round]);
+      for (boolean list : new boolean[]{false, true}) {
+        WebTarget target = list ? containers : containers.path(containerId.toString());
+        try (Response response = target.request(MediaType.APPLICATION_JSON).get()) {
+          if (round == 1) {
+            assertResponseStatusCode(FORBIDDEN, response.getStatusInfo());
+            continue;
+          }
+          JSONObject json = response.readEntity(JSONObject.class);
+          JSONArray reports = list
+              ? json.getJSONObject("containers").getJSONArray("container")
+              : new JSONArray().put(json.getJSONObject("container"));
+          boolean found = false;
+          for (int index = 0; index < reports.length(); index++) {
+            JSONObject report = reports.getJSONObject(index);
+            if (containerId.toString().equals(report.getString("containerId"))) {
+              JSONArray resources = report.getJSONObject("allocatedResources")
+                  .getJSONArray("entry");
+              for (int resourceIndex = 0; resourceIndex < resources.length(); resourceIndex++) {
+                JSONObject resource = resources.getJSONObject(resourceIndex);
+                if ("yarn.io/gpu".equals(resource.getString("key"))) {
+                  assertEquals(2, resource.getLong("value"));
+                  found = true;
+                }
+              }
+            }
+          }
+          assertTrue(found);
+        }
+      }
+    } finally {
+      entity.addOtherInfo(ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO,
+          Collections.emptyMap());
+      timelineStore.put(entities);
+      ResourceUtils.resetResourceTypes(new YarnConfiguration());
+    }
   }
 
   @MethodSource("rounds")
