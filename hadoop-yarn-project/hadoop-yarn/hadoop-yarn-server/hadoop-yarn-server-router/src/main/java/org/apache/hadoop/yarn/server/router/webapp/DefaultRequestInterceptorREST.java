@@ -109,6 +109,14 @@ public class DefaultRequestInterceptorREST
   }
 
   @Override
+  public void shutdown() {
+    if (client != null) {
+      client.close();
+    }
+    super.shutdown();
+  }
+
+  @Override
   public ClusterInfo get() {
     return getClusterInfo();
   }
