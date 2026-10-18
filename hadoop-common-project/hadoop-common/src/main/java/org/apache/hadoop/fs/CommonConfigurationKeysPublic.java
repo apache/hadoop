@@ -1122,5 +1122,26 @@ public class CommonConfigurationKeysPublic {
    */
   public static final String HADOOP_MCP_SESSION_MAX_KEY = "hadoop.mcp.session.max";
   public static final int HADOOP_MCP_SESSION_MAX_DEFAULT = 1000;
+
+  /**
+   * Maximum number of MCP tool calls per session within one rate-limit window; 0 or less
+   * disables the limit.
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_MCP_SESSION_TOOL_CALL_LIMIT_KEY =
+      "hadoop.mcp.session.tool-call.limit";
+  public static final int HADOOP_MCP_SESSION_TOOL_CALL_LIMIT_DEFAULT = 600;
+
+  /**
+   * Length of the MCP tool-call rate-limit window.
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_MCP_SESSION_TOOL_CALL_WINDOW_MS_KEY =
+      "hadoop.mcp.session.tool-call.window.ms";
+  public static final long HADOOP_MCP_SESSION_TOOL_CALL_WINDOW_MS_DEFAULT = 60 * 1000L;
 }
 

@@ -46,19 +46,37 @@ final class McpSessionStore implements Closeable {
 
   private final int maxSessions;
   private final Timer timer;
+  private final int toolCallLimit;
+  private final long toolCallWindowMs;
   private final Cache<String, McpSession> sessions;
 
+  /** Creates a store whose sessions have no tool-call rate limit. */
+  @VisibleForTesting
   McpSessionStore(long sessionTimeoutMs, int maxSessions, Timer timer) {
+    this(sessionTimeoutMs, maxSessions, timer, 0, 0);
+  }
+
+  /**
+   * @param toolCallLimit tool calls allowed per session within one window; 0 or less
+   *     disables the limit
+   * @param toolCallWindowMs length of the tool-call rate-limit window
+   */
+  McpSessionStore(long sessionTimeoutMs, int maxSessions, Timer timer, int toolCallLimit,
+      long toolCallWindowMs) {
     if (sessionTimeoutMs <= 0) {
       throw new IllegalArgumentException("sessionTimeoutMs must be positive: " + sessionTimeoutMs);
     }
     if (maxSessions <= 0) {
       throw new IllegalArgumentException("maxSessions must be positive: " + maxSessions);
     }
+    if (toolCallLimit > 0 && toolCallWindowMs <= 0) {
+      throw new IllegalArgumentException("toolCallWindowMs must be positive: "
+          + toolCallWindowMs);
+    }
     this.maxSessions = maxSessions;
     this.timer = timer;
-    // maximumSize() is deliberately not used: it would evict a live session to make room,
-    // whereas a full store must reject the new session instead.
+    this.toolCallLimit = toolCallLimit;
+    this.toolCallWindowMs = toolCallWindowMs;
     this.sessions = CacheBuilder.newBuilder()
         .expireAfterAccess(sessionTimeoutMs, TimeUnit.MILLISECONDS)
         .ticker(new Ticker() {
@@ -78,7 +96,8 @@ final class McpSessionStore implements Closeable {
   McpSession create(String negotiatedProtocolVersion, Map<String, Object> clientInfo,
       Map<String, Object> clientCapabilities) {
     McpSession session = new McpSession(UUID.randomUUID().toString(),
-        negotiatedProtocolVersion, clientInfo, clientCapabilities, timer.now());
+        negotiatedProtocolVersion, clientInfo, clientCapabilities, timer.now(),
+        new McpRateLimiter(toolCallLimit, toolCallWindowMs));
     synchronized (this) {
       // Drop expired sessions first so they don't count against capacity.
       sessions.cleanUp();

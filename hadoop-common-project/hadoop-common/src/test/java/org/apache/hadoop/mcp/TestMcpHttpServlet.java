@@ -27,9 +27,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.util.FakeTimer;
 import org.junit.jupiter.api.Test;
 
@@ -96,7 +102,7 @@ public class TestMcpHttpServlet {
 
   @Test
   public void testToolsCall() throws Exception {
-    McpServer server = McpServer.sync(JSON_MAPPER)
+    McpServer server = McpServer.sync(JSON_MAPPER, new Configuration())
         .serverInfo("test-server", "1.0")
         .capabilities(McpSchema.ServerCapabilities.withTools())
         .toolCall(McpSchema.Tool.of("echo", "Echo input", JSON_MAPPER,
@@ -132,7 +138,7 @@ public class TestMcpHttpServlet {
 
   @Test
   public void testToolHandlerExceptionReturnsErrorResult() throws Exception {
-    McpServer server = McpServer.sync(JSON_MAPPER)
+    McpServer server = McpServer.sync(JSON_MAPPER, new Configuration())
         .serverInfo("test-server", "1.0")
         .capabilities(McpSchema.ServerCapabilities.withTools())
         .toolCall(McpSchema.Tool.of("boom", "Throws", JSON_MAPPER,
@@ -158,7 +164,7 @@ public class TestMcpHttpServlet {
 
   @Test
   public void testToolHandlerExceptionWithoutMessageUsesFallback() throws Exception {
-    McpServer server = McpServer.sync(JSON_MAPPER)
+    McpServer server = McpServer.sync(JSON_MAPPER, new Configuration())
         .serverInfo("test-server", "1.0")
         .capabilities(McpSchema.ServerCapabilities.withTools())
         .toolCall(McpSchema.Tool.of("fail", "Throws without message", JSON_MAPPER,
@@ -230,8 +236,8 @@ public class TestMcpHttpServlet {
     assertTrue(body.has("result"));
   }
 
-  private static McpServer buildEchoServer() {
-    return McpServer.sync(JSON_MAPPER)
+  private static McpServer buildEchoServer(Configuration conf) {
+    return McpServer.sync(JSON_MAPPER, conf)
         .serverInfo("test-server", "1.0")
         .capabilities(McpSchema.ServerCapabilities.withTools())
         .toolCall(McpSchema.Tool.of("echo", "Echo input", JSON_MAPPER,
@@ -240,8 +246,61 @@ public class TestMcpHttpServlet {
         .build();
   }
 
+  private static McpServer buildEchoServer() {
+    return buildEchoServer(new Configuration());
+  }
+
+  private static final String ECHO_TOOLS_REQUEST =
+      "{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"tools/call\",\"params\":{\"name\":\"echo\"}}";
+
+  /** A configuration allowing {@code limit} tool calls per session per minute. */
+  private static Configuration createRateLimitConfiguration(int limit) {
+    Configuration conf = new Configuration();
+    conf.setInt(CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_TOOL_CALL_LIMIT_KEY, limit);
+    return conf;
+  }
+
+  @Test
+  public void testToolCallOverRateLimitReturnsError() throws Exception {
+    McpServer server = buildEchoServer(createRateLimitConfiguration(2));
+    String sessionId = handshake(server);
+
+    assertTrue(sendRequest(server, ECHO_TOOLS_REQUEST, sessionId).body().has("result"));
+    assertTrue(sendRequest(server, ECHO_TOOLS_REQUEST, sessionId).body().has("result"));
+    McpHttpResponse response = sendRequest(server, ECHO_TOOLS_REQUEST, sessionId);
+
+    // The session is still healthy, so this is a JSON-RPC error, not an HTTP one.
+    assertEquals(200, response.status());
+    assertEquals(9, response.body().get("id").asInt());
+    assertEquals(McpJsonRpc.SERVER_ERROR_RATE_LIMITED,
+        response.body().get("error").get("code").asInt());
+  }
+
+  @Test
+  public void testRateLimitIsPerSession() throws Exception {
+    McpServer server = buildEchoServer(createRateLimitConfiguration(1));
+    String first = handshake(server);
+    String second = handshake(server);
+
+    sendRequest(server, ECHO_TOOLS_REQUEST, first);
+    assertTrue(sendRequest(server, ECHO_TOOLS_REQUEST, first).body().has("error"));
+
+    assertTrue(sendRequest(server, ECHO_TOOLS_REQUEST, second).body().has("result"));
+  }
+
+  @Test
+  public void testRateLimitDoesNotApplyToOtherMethods() throws Exception {
+    McpServer server = buildEchoServer(createRateLimitConfiguration(1));
+    String sessionId = handshake(server);
+    sendRequest(server, ECHO_TOOLS_REQUEST, sessionId);
+
+    assertTrue(sendRequest(server, TOOLS_LIST_REQUEST, sessionId).body().has("result"));
+    assertTrue(sendRequest(server,
+        "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"ping\"}", sessionId).body().has("result"));
+  }
+
   private static McpServer buildServer() {
-    return McpServer.sync(JSON_MAPPER)
+    return McpServer.sync(JSON_MAPPER, new Configuration())
         .serverInfo("test-server", "1.0")
         .build();
   }
@@ -369,7 +428,9 @@ public class TestMcpHttpServlet {
 
   @Test
   public void testInitializeAtCapacityLimitReturnsServerError() throws Exception {
-    McpServer server = McpServer.sync(JSON_MAPPER).maxSessions(1).build();
+    Configuration conf = new Configuration();
+    conf.setInt(CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_MAX_KEY, 1);
+    McpServer server = McpServer.sync(JSON_MAPPER, conf).build();
     initialize(server);
 
     McpHttpResponse response = sendRequest(server, INITIALIZE_REQUEST, null);
@@ -437,8 +498,9 @@ public class TestMcpHttpServlet {
   @Test
   public void testSessionExpiresAfterIdleTimeout() throws Exception {
     FakeTimer timer = new FakeTimer();
-    McpServer server = McpServer.sync(JSON_MAPPER)
-        .sessionTimeout(1000)
+    Configuration conf = new Configuration();
+    conf.setLong(CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_TIMEOUT_MS_KEY, 1000);
+    McpServer server = McpServer.sync(JSON_MAPPER, conf)
         .timer(timer)
         .build();
     String sessionId = handshake(server);
@@ -566,16 +628,22 @@ public class TestMcpHttpServlet {
     return request;
   }
 
+  private static HttpServletResponse mockResponse() throws IOException {
+    HttpServletResponse response = mock(HttpServletResponse.class);
+    when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+    return response;
+  }
+
   @Test
   public void testDeleteTerminatesSession() throws Exception {
     McpServer server = buildEchoServer();
     String sessionId = handshake(server);
     HttpServletRequest request = mockRequest(null, sessionId);
-    HttpServletResponse response = mock(HttpServletResponse.class);
+    HttpServletResponse response = mockResponse();
 
     createServlet(server).doDelete(request, response);
 
-    verify(response).setStatus(205);
+    verify(response).setStatus(204);
     assertNull(getSession(server, sessionId));
     assertEquals(404, sendRequest(server, TOOLS_LIST_REQUEST, sessionId).status());
   }
@@ -584,7 +652,7 @@ public class TestMcpHttpServlet {
   public void testDeleteWithoutSessionHeaderReturns400() throws Exception {
     McpServer server = buildServer();
     HttpServletRequest request = mockRequest(null, null);
-    HttpServletResponse response = mock(HttpServletResponse.class);
+    HttpServletResponse response = mockResponse();
 
     createServlet(server).doDelete(request, response);
 
@@ -595,7 +663,7 @@ public class TestMcpHttpServlet {
   public void testDeleteUnknownSessionReturns404() throws Exception {
     McpServer server = buildServer();
     HttpServletRequest request = mockRequest(null, "no-such-session");
-    HttpServletResponse response = mock(HttpServletResponse.class);
+    HttpServletResponse response = mockResponse();
 
     createServlet(server).doDelete(request, response);
 
@@ -606,7 +674,7 @@ public class TestMcpHttpServlet {
   public void testPostWithOriginReturns403() throws Exception {
     McpServer server = buildServer();
     HttpServletRequest request = mockRequest("http://different.origin", null);
-    HttpServletResponse response = mock(HttpServletResponse.class);
+    HttpServletResponse response = mockResponse();
 
     createServlet(server).doPost(request, response);
 
@@ -620,7 +688,7 @@ public class TestMcpHttpServlet {
     McpServer server = buildServer();
     String sessionId = handshake(server);
     HttpServletRequest request = mockRequest("http://different.origin", sessionId);
-    HttpServletResponse response = mock(HttpServletResponse.class);
+    HttpServletResponse response = mockResponse();
 
     createServlet(server).doDelete(request, response);
 

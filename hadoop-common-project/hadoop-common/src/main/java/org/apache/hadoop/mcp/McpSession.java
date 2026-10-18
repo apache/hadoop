@@ -44,14 +44,17 @@ public final class McpSession {
   private final long creationTimeMs;
   private final AtomicReference<McpSessionState> state =
       new AtomicReference<>(McpSessionState.INITIALIZING);
+  private final McpRateLimiter mcpRateLimiter;
 
   McpSession(String id, String negotiatedProtocolVersion, Map<String, Object> clientInfo,
-      Map<String, Object> clientCapabilities, long creationTimeMs) {
+      Map<String, Object> clientCapabilities, long creationTimeMs,
+      McpRateLimiter mcpRateLimiter) {
     this.id = id;
     this.negotiatedProtocolVersion = negotiatedProtocolVersion;
     this.clientInfo = clientInfo;
     this.clientCapabilities = clientCapabilities;
     this.creationTimeMs = creationTimeMs;
+    this.mcpRateLimiter = mcpRateLimiter;
   }
 
   public String getId() {
@@ -89,5 +92,9 @@ public final class McpSession {
    */
   boolean markReady() {
     return state.compareAndSet(McpSessionState.INITIALIZING, McpSessionState.READY);
+  }
+
+  McpRateLimiter getMcpRateLimiter() {
+    return mcpRateLimiter;
   }
 }

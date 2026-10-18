@@ -103,7 +103,7 @@ public class TestMcpHttpServer {
       "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}";
 
   private static McpServer buildToolServer() {
-    return McpServer.sync(JSON_MAPPER)
+    return McpServer.sync(JSON_MAPPER, new Configuration())
         .serverInfo("test-server", "1.0")
         .capabilities(McpSchema.ServerCapabilities.withTools())
         .toolCall(McpSchema.Tool.of("echo", "Echo input", JSON_MAPPER,
@@ -157,7 +157,7 @@ public class TestMcpHttpServer {
 
   @Test
   public void testPlainHttpServerRespondsToInitialize() throws Exception {
-    McpServer server = McpServer.sync(JSON_MAPPER)
+    McpServer server = McpServer.sync(JSON_MAPPER, new Configuration())
         .serverInfo("test-server", "1.0")
         .capabilities(McpSchema.ServerCapabilities.withTools())
         .build();
@@ -178,7 +178,7 @@ public class TestMcpHttpServer {
 
   @Test
   public void testStandaloneServerRespondsToInitialize() throws Exception {
-    McpServer server = McpServer.sync(JSON_MAPPER)
+    McpServer server = McpServer.sync(JSON_MAPPER, new Configuration())
         .serverInfo("test-server", "1.0")
         .capabilities(McpSchema.ServerCapabilities.withTools())
         .build();
@@ -210,7 +210,7 @@ public class TestMcpHttpServer {
 
   @Test
   public void testEmptyBodyReturnsParseError() throws Exception {
-    McpServer server = McpServer.sync(JSON_MAPPER)
+    McpServer server = McpServer.sync(JSON_MAPPER, new Configuration())
         .serverInfo("test-server", "1.0")
         .build();
 
@@ -227,7 +227,7 @@ public class TestMcpHttpServer {
 
   @Test
   public void testMalformedJsonReturnsParseError() throws Exception {
-    McpServer server = McpServer.sync(JSON_MAPPER)
+    McpServer server = McpServer.sync(JSON_MAPPER, new Configuration())
         .serverInfo("test-server", "1.0")
         .build();
 

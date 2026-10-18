@@ -157,6 +157,10 @@ public final class McpRequestHandler {
       if (session.getState() != McpSessionState.READY) {
         return sessionNotReadyResponse(idNode);
       }
+      if (!session.getMcpRateLimiter().tryAcquire()) {
+        return jsonRpcResponses.error(idNode, McpJsonRpc.SERVER_ERROR_RATE_LIMITED,
+            McpJsonRpc.RATE_LIMITED_MESSAGE);
+      }
       return toolsCallResponse(idNode, params, context);
     default:
       return jsonRpcResponses.error(idNode, McpJsonRpc.METHOD_NOT_FOUND,

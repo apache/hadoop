@@ -48,6 +48,8 @@ public final class McpJsonRpc {
   public static final int SERVER_ERROR_CAPACITY_LIMIT = -32000;
   /** Implementation-defined server error: the session has not completed initialization. */
   public static final int SERVER_ERROR_SESSION_NOT_READY = -32001;
+  /** Implementation-defined server error: the session's tool-call rate limit was reached. */
+  public static final int SERVER_ERROR_RATE_LIMITED = -32002;
 
   public static final String PARSE_ERROR_MESSAGE = "Parse error";
   public static final String INVALID_REQUEST_MESSAGE = "Invalid Request";
@@ -60,6 +62,7 @@ public final class McpJsonRpc {
   public static final String UNSUPPORTED_PROTOCOL_VERSION_MESSAGE =
       "Unsupported " + PROTOCOL_VERSION_HEADER;
   public static final String ORIGIN_NOT_ALLOWED_MESSAGE = "Origin not allowed";
+  public static final String RATE_LIMITED_MESSAGE = "Tool call rate limit exceeded";
   public static final String SESSION_NOT_READY_MESSAGE =
       "Session has not completed initialization";
   public static final String CAPACITY_LIMIT_MESSAGE =

@@ -98,6 +98,29 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.mcp.session.tool-call.limit</name>
+  <value>600</value>
+  <description>
+    Maximum number of MCP tool calls a session may make within one window of
+    hadoop.mcp.session.tool-call.window.ms. Further calls in the same window
+    are rejected with a JSON-RPC server error (-32002). 0 or less disables the
+    limit; the MCP specification requires servers to rate limit tool calls, so
+    only disable it if something else enforces a limit.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.mcp.session.tool-call.window.ms</name>
+  <value>60000</value>
+  <description>
+    Length, in milliseconds, of the window over which
+    hadoop.mcp.session.tool-call.limit is counted. A window starts with the
+    first tool call after the previous window ended. Time unit suffixes such
+    as 1m are also accepted.
+  </description>
+</property>
+
 <!--- security properties -->
 
 <property>
