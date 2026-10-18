@@ -58,10 +58,8 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
@@ -365,14 +363,8 @@ public final class RouterWebServiceUtil {
     client.property(ClientProperties.READ_TIMEOUT, readTimeout);
 
     // Read and write JSON as the RM web services do, see RMWebApp#resourceConfig.
-    try {
-      client.register(new IncludeRootJSONProvider(conf), 2001)
-          .register(new ExcludeRootJSONProvider(conf), 2002)
-          .register(new JAXBContextResolver(conf));
-    } catch (Exception e) {
-      client.close();
-      throw new YarnRuntimeException("Cannot create the JAXB context resolver", e);
-    }
+    client.register(new IncludeRootJSONProvider(conf), 2001);
+    client.register(new ExcludeRootJSONProvider(conf), 2002);
 
     return client;
   }
