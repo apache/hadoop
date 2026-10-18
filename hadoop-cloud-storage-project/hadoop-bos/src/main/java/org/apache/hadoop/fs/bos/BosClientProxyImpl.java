@@ -515,9 +515,9 @@ public class BosClientProxyImpl implements BosClientProxy {
               + " need to update client");
       throw new SessionTokenExpireException(e);
     } else if (400 == e.getStatusCode()) {
-      LOG.error("request unknown error : {}",
+      LOG.error("request invalid argument error : {}",
           e.getCause());
-      throw new SessionTokenExpireException(e);
+      throw new BosException(e);
     } else if (BOS_REQUEST_LIMIT_CODE
         == e.getStatusCode()
         && (e.getErrorCode() == null
