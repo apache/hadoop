@@ -22,14 +22,19 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServlet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.mcp.McpSchema.CallToolResult;
 import org.apache.hadoop.mcp.McpSchema.ServerCapabilities;
 import org.apache.hadoop.mcp.McpSchema.Tool;
+import org.apache.hadoop.util.Timer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -39,6 +44,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * <p>Host {@link #getServlet()} with {@link McpHttpServer} on a dedicated port:
  * <pre>{@code
  * McpServer mcpServer = McpServer.sync(jsonMapper)
+ *     .withConf(conf)
  *     .serverInfo("yarn-resourcemanager", version)
  *     .capabilities(ServerCapabilities.withTools())
  *     .toolCall(tool, handler)
@@ -48,6 +54,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *   // ...
  * }
  * }</pre>
+ *
+ * <p>Clients must follow the MCP session lifecycle: {@code initialize}, which returns an
+ * {@code Mcp-Session-Id} header; then {@code notifications/initialized}; then other requests,
+ * each carrying that header and {@code MCP-Protocol-Version}. {@code DELETE} ends the
+ * session. The only supported protocol version is {@link McpJsonRpc#PROTOCOL_VERSION}.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -87,6 +98,10 @@ public final class McpServer implements Closeable {
     private String serverVersion = "1.0.0";
     private ServerCapabilities capabilities = ServerCapabilities.withoutTools();
     private final Map<String, RegisteredTool> tools = new LinkedHashMap<>();
+    private long sessionTimeoutMs =
+        CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_TIMEOUT_MS_DEFAULT;
+    private int maxSessions = CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_MAX_DEFAULT;
+    private Timer timer = new Timer();
 
     private Builder(McpJsonMapper jsonMapper) {
       if (!(jsonMapper instanceof JacksonMcpJsonMapper)) {
@@ -111,9 +126,42 @@ public final class McpServer implements Closeable {
       return this;
     }
 
+    /** Sets how long an idle session lives before it is evicted. */
+    public Builder sessionTimeout(long timeoutMs) {
+      this.sessionTimeoutMs = timeoutMs;
+      return this;
+    }
+
+    /** Sets the maximum number of concurrent sessions. */
+    public Builder maxSessions(int max) {
+      this.maxSessions = max;
+      return this;
+    }
+
+    /**
+     * Reads the {@code hadoop.mcp.*} session settings from the configuration. Builder
+     * methods called afterwards override them.
+     */
+    public Builder withConf(Configuration conf) {
+      this.sessionTimeoutMs = conf.getTimeDuration(
+          CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_TIMEOUT_MS_KEY,
+          CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_TIMEOUT_MS_DEFAULT,
+          TimeUnit.MILLISECONDS);
+      this.maxSessions = conf.getInt(CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_MAX_KEY,
+          CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_MAX_DEFAULT);
+      return this;
+    }
+
+    @VisibleForTesting
+    Builder timer(Timer newTimer) {
+      this.timer = newTimer;
+      return this;
+    }
+
     public McpServer build() {
+      McpSessionStore sessionStore = new McpSessionStore(sessionTimeoutMs, maxSessions, timer);
       McpRequestHandler handler = new McpRequestHandler(objectMapper, serverName,
-          serverVersion, capabilities, tools);
+          serverVersion, capabilities, tools, sessionStore);
       McpHttpServlet httpServlet = new McpHttpServlet(objectMapper, handler);
       return new McpServer(handler, httpServlet);
     }

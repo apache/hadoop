@@ -31,12 +31,31 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class McpCallContext {
 
   private final HttpServletRequest request;
+  private final String sessionIdHeader;
+  private final String protocolVersionHeader;
 
-  public McpCallContext(HttpServletRequest request) {
+  /**
+   * @param request the HTTP request, or {@code null} outside a servlet
+   * @param sessionIdHeader value of the {@code Mcp-Session-Id} header, or {@code null}
+   * @param protocolVersionHeader value of the {@code MCP-Protocol-Version} header, or
+   *     {@code null}
+   */
+  public McpCallContext(HttpServletRequest request, String sessionIdHeader,
+      String protocolVersionHeader) {
     this.request = request;
+    this.sessionIdHeader = sessionIdHeader;
+    this.protocolVersionHeader = protocolVersionHeader;
   }
 
   public HttpServletRequest getRequest() {
     return request;
+  }
+
+  String getSessionIdHeader() {
+    return sessionIdHeader;
+  }
+
+  String getProtocolVersionHeader() {
+    return protocolVersionHeader;
   }
 }

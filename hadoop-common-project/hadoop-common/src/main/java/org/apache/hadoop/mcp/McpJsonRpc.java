@@ -33,6 +33,9 @@ public final class McpJsonRpc {
   /** MCP protocol version implemented by this server. */
   public static final String PROTOCOL_VERSION = "2025-06-18";
 
+  public static final String PROTOCOL_VERSION_HEADER = "MCP-Protocol-Version";
+  public static final String ORIGIN_HEADER = "Origin";
+
   /** JSON-RPC 2.0 parse error. */
   public static final int PARSE_ERROR = -32700;
   /** JSON-RPC 2.0 invalid request. */
@@ -41,10 +44,26 @@ public final class McpJsonRpc {
   public static final int METHOD_NOT_FOUND = -32601;
   /** JSON-RPC 2.0 invalid params. */
   public static final int INVALID_PARAMS = -32602;
+  /** Implementation-defined server error: the session limit has been reached. */
+  public static final int SERVER_ERROR_CAPACITY_LIMIT = -32000;
+  /** Implementation-defined server error: the session has not completed initialization. */
+  public static final int SERVER_ERROR_SESSION_NOT_READY = -32001;
 
   public static final String PARSE_ERROR_MESSAGE = "Parse error";
   public static final String INVALID_REQUEST_MESSAGE = "Invalid Request";
   public static final String REQUEST_BODY_TOO_LARGE_MESSAGE = "Request body too large";
+  public static final String SESSION_REQUIRED_MESSAGE =
+      McpRequestHandler.SESSION_HEADER + " header is required";
+  public static final String SESSION_NOT_FOUND_MESSAGE = "Unknown or expired MCP session";
+  public static final String PROTOCOL_VERSION_REQUIRED_MESSAGE =
+      PROTOCOL_VERSION_HEADER + " header is required";
+  public static final String UNSUPPORTED_PROTOCOL_VERSION_MESSAGE =
+      "Unsupported " + PROTOCOL_VERSION_HEADER;
+  public static final String ORIGIN_NOT_ALLOWED_MESSAGE = "Origin not allowed";
+  public static final String SESSION_NOT_READY_MESSAGE =
+      "Session has not completed initialization";
+  public static final String CAPACITY_LIMIT_MESSAGE =
+      "Server has reached the maximum number of concurrent MCP sessions";
 
   /** Maximum MCP JSON-RPC request body size accepted by {@link McpHttpServlet}. */
   public static final int MAX_REQUEST_BODY_BYTES = 1024 * 1024;

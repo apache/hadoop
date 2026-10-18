@@ -60,15 +60,15 @@ public class TestMcpSessionStore {
     Map<String, Object> capabilities = new HashMap<>();
     capabilities.put("roots", Collections.emptyMap());
 
-    McpSession session = store.create("2025-03-26", clientInfo, capabilities);
+    McpSession session = store.create(McpJsonRpc.PROTOCOL_VERSION, clientInfo, capabilities);
 
     assertNotNull(session);
-    assertEquals(McpSessionState.INITIALIZING, session.state());
-    assertEquals("2025-03-26", session.negotiatedProtocolVersion());
-    assertEquals("test-client", session.clientInfo().get("name"));
-    assertTrue(session.clientCapabilities().containsKey("roots"));
-    assertEquals(timer.now(), session.creationTimeMs());
-    assertSame(session, store.get(session.id()));
+    assertEquals(McpSessionState.INITIALIZING, session.getState());
+    assertEquals(McpJsonRpc.PROTOCOL_VERSION, session.getNegotiatedProtocolVersion());
+    assertEquals("test-client", session.getClientInfo().get("name"));
+    assertTrue(session.getClientCapabilities().containsKey("roots"));
+    assertEquals(timer.now(), session.getCreationTimeMs());
+    assertSame(session, store.get(session.getId()));
   }
 
   @Test
@@ -76,25 +76,11 @@ public class TestMcpSessionStore {
     McpSession first = create();
     McpSession second = create();
 
-    assertNotEquals(first.id(), second.id());
+    assertNotEquals(first.getId(), second.getId());
     // The spec requires visible ASCII (0x21-0x7E) in session ids.
-    for (char c : first.id().toCharArray()) {
+    for (char c : first.getId().toCharArray()) {
       assertTrue(c >= 0x21 && c <= 0x7E, "invalid session id character: " + (int) c);
     }
-  }
-
-  @Test
-  public void testSessionCopiesClientMaps() {
-    Map<String, Object> clientInfo = new HashMap<>();
-    clientInfo.put("name", "before");
-
-    McpSession session = store.create(McpJsonRpc.PROTOCOL_VERSION, clientInfo, null);
-    clientInfo.put("name", "after");
-
-    assertEquals("before", session.clientInfo().get("name"));
-    assertTrue(session.clientCapabilities().isEmpty());
-    assertThrows(UnsupportedOperationException.class,
-        () -> session.clientInfo().put("name", "changed"));
   }
 
   @Test
@@ -102,9 +88,9 @@ public class TestMcpSessionStore {
     McpSession session = create();
 
     assertTrue(session.markReady());
-    assertEquals(McpSessionState.READY, session.state());
+    assertEquals(McpSessionState.READY, session.getState());
     assertFalse(session.markReady());
-    assertEquals(McpSessionState.READY, session.state());
+    assertEquals(McpSessionState.READY, session.getState());
   }
 
   @Test
@@ -114,18 +100,18 @@ public class TestMcpSessionStore {
   }
 
   @Test
-  public void testTerminateRemovesSession() {
+  public void testRemoveReturnsRemovedSession() {
     McpSession session = create();
 
-    assertTrue(store.terminate(session.id()));
-    assertNull(store.get(session.id()));
+    assertSame(session, store.remove(session.getId()));
+    assertNull(store.get(session.getId()));
     assertEquals(0, store.size());
   }
 
   @Test
-  public void testTerminateUnknownOrNullIdReturnsFalse() {
-    assertFalse(store.terminate("no-such-session"));
-    assertFalse(store.terminate(null));
+  public void testRemoveUnknownOrNullIdReturnsNull() {
+    assertNull(store.remove("no-such-session"));
+    assertNull(store.remove(null));
   }
 
   @Test
@@ -138,16 +124,16 @@ public class TestMcpSessionStore {
     assertNull(smallStore.create(McpJsonRpc.PROTOCOL_VERSION,
         Collections.emptyMap(), Collections.emptyMap()));
     // The existing session must survive the rejected attempt.
-    assertSame(first, smallStore.get(first.id()));
+    assertSame(first, smallStore.get(first.getId()));
   }
 
   @Test
-  public void testTerminateFreesCapacity() {
+  public void testRemoveFreesCapacity() {
     McpSessionStore smallStore = new McpSessionStore(TIMEOUT_MS, 1, timer);
     McpSession first = smallStore.create(McpJsonRpc.PROTOCOL_VERSION,
         Collections.emptyMap(), Collections.emptyMap());
 
-    assertTrue(smallStore.terminate(first.id()));
+    assertSame(first, smallStore.remove(first.getId()));
     assertNotNull(smallStore.create(McpJsonRpc.PROTOCOL_VERSION,
         Collections.emptyMap(), Collections.emptyMap()));
   }
@@ -161,7 +147,7 @@ public class TestMcpSessionStore {
     assertEquals(1, store.size());
 
     timer.advance(2);
-    assertNull(store.get(session.id()));
+    assertNull(store.get(session.getId()));
     store.cleanUp();
     assertEquals(0, store.size());
   }
@@ -171,14 +157,14 @@ public class TestMcpSessionStore {
     McpSession session = create();
 
     timer.advance(TIMEOUT_MS / 2);
-    assertSame(session, store.get(session.id()));
+    assertSame(session, store.get(session.getId()));
 
     // More than TIMEOUT_MS since creation, but less since the last access.
     timer.advance(TIMEOUT_MS - 1);
-    assertSame(session, store.get(session.id()));
+    assertSame(session, store.get(session.getId()));
 
     timer.advance(TIMEOUT_MS + 1);
-    assertNull(store.get(session.id()));
+    assertNull(store.get(session.getId()));
   }
 
   @Test
@@ -193,11 +179,11 @@ public class TestMcpSessionStore {
   }
 
   @Test
-  public void testTerminateExpiredSessionReturnsFalse() {
+  public void testRemoveExpiredSessionReturnsNull() {
     McpSession session = create();
 
     timer.advance(TIMEOUT_MS + 1);
-    assertFalse(store.terminate(session.id()));
+    assertNull(store.remove(session.getId()));
   }
 
   @Test
@@ -205,7 +191,7 @@ public class TestMcpSessionStore {
     McpSession session = create();
 
     store.close();
-    assertNull(store.get(session.id()));
+    assertNull(store.get(session.getId()));
     assertEquals(0, store.size());
   }
 

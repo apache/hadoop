@@ -1103,5 +1103,24 @@ public class CommonConfigurationKeysPublic {
    */
   public static final String JMX_NAN_FILTER = "hadoop.http.jmx.nan-filter.enabled";
   public static final boolean JMX_NAN_FILTER_DEFAULT = false;
+
+  /**
+   * Idle timeout after which an MCP session is evicted.
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_MCP_SESSION_TIMEOUT_MS_KEY =
+      "hadoop.mcp.session.timeout.ms";
+  public static final long HADOOP_MCP_SESSION_TIMEOUT_MS_DEFAULT = 30 * 60 * 1000L;
+
+  /**
+   * Maximum number of concurrent MCP sessions.
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_MCP_SESSION_MAX_KEY = "hadoop.mcp.session.max";
+  public static final int HADOOP_MCP_SESSION_MAX_DEFAULT = 1000;
 }
 

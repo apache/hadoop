@@ -49,35 +49,35 @@ public final class McpSession {
       Map<String, Object> clientCapabilities, long creationTimeMs) {
     this.id = id;
     this.negotiatedProtocolVersion = negotiatedProtocolVersion;
-    this.clientInfo = immutableCopy(clientInfo);
-    this.clientCapabilities = immutableCopy(clientCapabilities);
+    this.clientInfo = clientInfo;
+    this.clientCapabilities = clientCapabilities;
     this.creationTimeMs = creationTimeMs;
   }
 
-  public String id() {
+  public String getId() {
     return id;
   }
 
-  public String negotiatedProtocolVersion() {
+  public String getNegotiatedProtocolVersion() {
     return negotiatedProtocolVersion;
   }
 
   /** @return the {@code clientInfo} sent with {@code initialize}; never null */
-  public Map<String, Object> clientInfo() {
+  public Map<String, Object> getClientInfo() {
     return clientInfo;
   }
 
   /** @return the client {@code capabilities} sent with {@code initialize}; never null */
-  public Map<String, Object> clientCapabilities() {
+  public Map<String, Object> getClientCapabilities() {
     return clientCapabilities;
   }
 
   /** @return wall-clock creation time, in milliseconds since the epoch */
-  public long creationTimeMs() {
+  public long getCreationTimeMs() {
     return creationTimeMs;
   }
 
-  public McpSessionState state() {
+  public McpSessionState getState() {
     return state.get();
   }
 
@@ -89,11 +89,5 @@ public final class McpSession {
    */
   boolean markReady() {
     return state.compareAndSet(McpSessionState.INITIALIZING, McpSessionState.READY);
-  }
-
-  private static Map<String, Object> immutableCopy(Map<String, Object> map) {
-    return map == null || map.isEmpty()
-        ? Collections.emptyMap()
-        : Collections.unmodifiableMap(new LinkedHashMap<>(map));
   }
 }

@@ -85,7 +85,7 @@ final class McpSessionStore implements Closeable {
       if (sessions.size() >= maxSessions) {
         return null;
       }
-      sessions.put(session.id(), session);
+      sessions.put(session.getId(), session);
     }
     return session;
   }
@@ -105,13 +105,13 @@ final class McpSessionStore implements Closeable {
   /**
    * Removes a session.
    *
-   * @return true if an unexpired session with this id existed and was removed
+   * @return the removed session, or null if no unexpired session had this id
    */
-  boolean terminate(String sessionId) {
+  McpSession remove(String sessionId) {
     if (sessionId == null) {
-      return false;
+      return null;
     }
-    return sessions.asMap().remove(sessionId) != null;
+    return sessions.asMap().remove(sessionId);
   }
 
   /** @return the number of sessions, which may include expired ones not yet cleaned up */

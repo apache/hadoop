@@ -77,6 +77,27 @@
   </description>
 </property>
 
+<!-- MCP (Model Context Protocol) session management -->
+<property>
+  <name>hadoop.mcp.session.timeout.ms</name>
+  <value>1800000</value>
+  <description>
+    Idle timeout, in milliseconds, after which an MCP session with no
+    activity is evicted. Requests carrying an expired session id receive
+    HTTP 404. Time unit suffixes such as 30m are also accepted.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.mcp.session.max</name>
+  <value>1000</value>
+  <description>
+    Maximum number of concurrent MCP sessions tracked by the server. An
+    initialize request received at this limit is rejected with a JSON-RPC
+    server error (-32000).
+  </description>
+</property>
+
 <!--- security properties -->
 
 <property>
