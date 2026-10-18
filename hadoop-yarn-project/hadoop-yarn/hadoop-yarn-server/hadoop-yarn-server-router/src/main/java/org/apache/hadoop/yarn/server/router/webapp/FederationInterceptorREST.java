@@ -3328,6 +3328,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (threadpool != null) {
       threadpool.shutdown();
     }
+    if (interceptors != null) {
+      interceptors.values().forEach(DefaultRequestInterceptorREST::shutdown);
+    }
   }
 
   private <R> Map<SubClusterInfo, R> invokeConcurrent(Collection<SubClusterInfo> clusterIds,

@@ -73,12 +73,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -154,6 +158,7 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 
 /**
@@ -702,6 +707,40 @@ public class TestRouterWebServicesREST {
     assertEquals(SC_OK, response.getStatus());
     NewApplication ci = response.readEntity(NewApplication.class);
     assertNotNull(ci);
+  }
+
+  /**
+   * Router forwards {@link RMWebServiceProtocol#createNewApplication} with
+   * the caller's Accept header, which defaults to JSON, and then reads the
+   * RM's answer, as FederationInterceptorREST does. Its client must read that
+   * JSON and stay open for the next call.
+   */
+  @Test
+  @Timeout(value = 5)
+  public void testNewApplicationJSONThroughRouterClient() throws Exception {
+    Client client = RouterWebServiceUtil.createJerseyClient(conf);
+    try {
+      for (String accept : new String[] {null, APPLICATION_JSON}) {
+        HttpServletRequest hsr = mock(HttpServletRequest.class);
+        when(hsr.getUserPrincipal()).thenReturn((Principal) () -> userName);
+        when(hsr.getHeader(HttpHeaders.ACCEPT)).thenReturn(accept);
+        when(hsr.getParameterMap()).thenReturn(
+            Collections.singletonMap("user.name", new String[] {userName}));
+
+        Response response = RouterWebServiceUtil.genericForward(rmAddress, hsr,
+            Response.class, POST, RM_WEB_SERVICE_PATH + APPS_NEW_APPLICATION,
+            null, null, conf, client);
+        try {
+          assertEquals(SC_OK, response.getStatus(), "Accept " + accept);
+          NewApplication newApp = response.readEntity(NewApplication.class);
+          assertNotNull(newApp.getApplicationId(), "Accept " + accept);
+        } finally {
+          response.close();
+        }
+      }
+    } finally {
+      client.close();
+    }
   }
 
   /**
