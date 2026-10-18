@@ -38,7 +38,9 @@ import java.util.List;
 import java.util.Vector;
 
 import javax.annotation.Nullable;
+import javax.naming.NameNotFoundException;
 import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
@@ -89,7 +91,12 @@ public class DNS {
       ictx.close();
     }
 
-    String hostname = attribute.get("PTR").get().toString();
+    Attribute ptr = attribute.get("PTR");
+    if (ptr == null || ptr.size() == 0) {
+      // The server answered, but without a PTR record.
+      throw new NameNotFoundException("No PTR record for " + reverseIP);
+    }
+    String hostname = ptr.get().toString();
     int hostnameLength = hostname.length();
     if (hostname.charAt(hostnameLength - 1) == '.') {
       hostname = hostname.substring(0, hostnameLength - 1);

@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteMethod;
@@ -283,6 +284,32 @@ public class TestRouterAsyncRpcClient {
         "Cannot get a connection",
         () -> syncReturn(FileStatus.class));
     assertEquals(1, rpcMetrics.getProxyOpFailureCommunicate());
+  }
+
+  /**
+   * Verify StandbyException is returned when only Observer namenodes are
+   * available but Observer reads are disabled.
+   */
+  @Test
+  public void testInvokeMethodWithOnlyObserverNamenodes() throws Exception {
+    RemoteMethod method = new RemoteMethod("getFileInfo",
+        new Class<?>[] {String.class}, new RemoteParam());
+    UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
+    List<? extends FederationNamenodeContext> namenodes =
+        asyncRpcClient.getOrderedNamenodes(ns0, false);
+    List<FederationNamenodeContext> observerNamenodes = new ArrayList<>();
+    for (FederationNamenodeContext namenode : namenodes) {
+      if (namenode.getState() == FederationNamenodeServiceState.OBSERVER) {
+        observerNamenodes.add(namenode);
+      }
+    }
+    assertEquals(1, observerNamenodes.size());
+
+    asyncRpcClient.invokeMethod(ugi, observerNamenodes, false,
+        method.getProtocol(), method.getMethod(), new String[]{testFile});
+    LambdaTestUtils.intercept(StandbyException.class,
+        "No namenode available to invoke getFileInfo",
+        () -> syncReturn(FileStatus.class));
   }
 
   /**
