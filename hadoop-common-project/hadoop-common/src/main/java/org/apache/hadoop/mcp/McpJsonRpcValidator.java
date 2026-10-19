@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mcp;
 
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -44,6 +46,21 @@ final class McpJsonRpcValidator {
       return responses.error(null, McpJsonRpc.INVALID_REQUEST, McpJsonRpc.INVALID_REQUEST_MESSAGE);
     }
 
+    // A JSON-RPC response from the client
+    if (!requestNode.has("method")
+        && (requestNode.has("result") || requestNode.has("error"))) {
+      return responses.errorWithStatus(HttpServletResponse.SC_BAD_REQUEST,
+          McpJsonRpc.INVALID_REQUEST, McpJsonRpc.UNEXPECTED_RESPONSE_MESSAGE);
+    }
+
+    // The transport specification requires an HTTP error for a notification the server
+    // cannot accept.
+    if (isJsonRpcNotification(requestNode)) {
+      return isValidEnvelope(requestNode) ? null
+          : responses.errorWithStatus(HttpServletResponse.SC_BAD_REQUEST,
+              McpJsonRpc.INVALID_REQUEST, McpJsonRpc.INVALID_REQUEST_MESSAGE);
+    }
+
     JsonNode jsonrpcNode = requestNode.get("jsonrpc");
     if (jsonrpcNode == null || jsonrpcNode.isNull()
         || !jsonrpcNode.isTextual()
@@ -65,10 +82,6 @@ final class McpJsonRpcValidator {
           McpJsonRpc.INVALID_REQUEST_MESSAGE);
     }
 
-    if (isJsonRpcNotification(requestNode)) {
-      return null;
-    }
-
     if (!isValidRequestId(requestNode.get("id"))) {
       return responses.error(null, McpJsonRpc.INVALID_REQUEST, McpJsonRpc.INVALID_REQUEST_MESSAGE);
     }
@@ -77,6 +90,16 @@ final class McpJsonRpcValidator {
 
   static boolean isJsonRpcNotification(JsonNode requestNode) {
     return !requestNode.has("id");
+  }
+
+  private static boolean isValidEnvelope(JsonNode requestNode) {
+    JsonNode jsonrpcNode = requestNode.get("jsonrpc");
+    JsonNode methodNode = requestNode.get("method");
+    JsonNode paramsNode = requestNode.get("params");
+    return jsonrpcNode != null && jsonrpcNode.isTextual()
+        && McpJsonRpc.VERSION.equals(jsonrpcNode.asText())
+        && methodNode != null && methodNode.isTextual() && !methodNode.asText().isEmpty()
+        && (paramsNode == null || !paramsNode.isNull());
   }
 
   private static boolean isValidRequestId(JsonNode idNode) {

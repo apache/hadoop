@@ -53,6 +53,7 @@ public final class McpJsonRpc {
 
   public static final String PARSE_ERROR_MESSAGE = "Parse error";
   public static final String INVALID_REQUEST_MESSAGE = "Invalid Request";
+  public static final String UNEXPECTED_RESPONSE_MESSAGE = "Received unexpected JSON-RPC response";
   public static final String REQUEST_BODY_TOO_LARGE_MESSAGE = "Request body too large";
   public static final String SESSION_REQUIRED_MESSAGE =
       McpRequestHandler.SESSION_HEADER + " header is required";
