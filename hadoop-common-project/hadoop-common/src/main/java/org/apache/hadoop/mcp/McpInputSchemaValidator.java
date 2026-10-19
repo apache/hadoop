@@ -26,13 +26,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Enforces tool input schemas, in two steps:
- * {@link #validateArguments}, on every tool call, checks the arguments against the
- *       schema.
+ * Enforces tool input schemas: {@link #validateArguments}, on every tool call, checks the
+ * arguments against the schema.
  *
  * <p>Supports a subset of JSON Schema: {@code type}, {@code properties}, {@code items} and
- * {@code required}. {@code title} and {@code description} are ignored. Arguments that
- * {@code properties} doesn't describe are allowed.
+ * {@code required}. Other keywords, unknown types, and parts of the schema this validator
+ * cannot interpret (for example {@code "type": ["string", "null"]} or a boolean schema) are
+ * not enforced. Arguments that {@code properties} doesn't describe are allowed.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -50,38 +50,58 @@ final class McpInputSchemaValidator {
     validateValue(schema, arguments, "arguments");
   }
 
-  private static void validateValue(Map<?, ?> schema, Object value, String path)
+  private static void validateValue(Object schemaObject, Object inputValue, String path)
       throws InvalidToolArgumentsException {
-    Object type = schema.get("type");
-    if (type != null && !hasType(value, (String) type)) {
+    if (!(schemaObject instanceof Map)) {
+      return;
+    }
+    Map<?, ?> schema = (Map<?, ?>) schemaObject;
+    validateType(schema.get("type"), inputValue, path);
+    if (inputValue instanceof Map) {
+      validateRequiredFields(schema.get("required"), (Map<?, ?>) inputValue, path);
+      validateProperties(schema.get("properties"), (Map<?, ?>) inputValue, path);
+    } else if (inputValue instanceof List) {
+      validateItems(schema.get("items"), (List<?>) inputValue, path);
+    }
+  }
+
+  private static void validateType(Object type, Object inputValue, String path)
+      throws InvalidToolArgumentsException {
+    if (type instanceof String && !hasType(inputValue, (String) type)) {
       throw new InvalidToolArgumentsException(path + " must be of type " + type);
     }
-    if (value instanceof Map) {
-      Map<?, ?> object = (Map<?, ?>) value;
-      Object required = schema.get("required");
-      if (required != null) {
-        for (Object name : (List<?>) required) {
-          if (!object.containsKey(name)) {
-            throw new InvalidToolArgumentsException(path + "." + name + " is required");
-          }
-        }
-      }
-      Object properties = schema.get("properties");
-      if (properties != null) {
-        for (Map.Entry<?, ?> property : ((Map<?, ?>) properties).entrySet()) {
-          if (object.containsKey(property.getKey())) {
-            validateValue((Map<?, ?>) property.getValue(), object.get(property.getKey()),
-                path + "." + property.getKey());
-          }
-        }
+  }
+
+  private static void validateRequiredFields(Object required, Map<?, ?> inputObject, String path)
+      throws InvalidToolArgumentsException {
+    if (!(required instanceof List)) {
+      return;
+    }
+    for (Object name : (List<?>) required) {
+      if (name instanceof String && !inputObject.containsKey(name)) {
+        throw new InvalidToolArgumentsException(path + "." + name + " is required");
       }
     }
-    Object items = schema.get("items");
-    if (value instanceof List && items != null) {
-      List<?> list = (List<?>) value;
-      for (int i = 0; i < list.size(); i++) {
-        validateValue((Map<?, ?>) items, list.get(i), path + "[" + i + "]");
+  }
+
+  private static void validateProperties(Object properties, Map<?, ?> inputObject,
+      String path) throws InvalidToolArgumentsException {
+    if (!(properties instanceof Map)) {
+      return;
+    }
+    for (Map.Entry<?, ?> property : ((Map<?, ?>) properties).entrySet()) {
+      if (inputObject.containsKey(property.getKey())) {
+        validateValue(property.getValue(), inputObject.get(property.getKey()),
+            path + "." + property.getKey());
       }
+    }
+  }
+
+  /** Validates each element; validateValue skips {@code items} that aren't a schema map. */
+  private static void validateItems(Object items, List<?> list, String path)
+      throws InvalidToolArgumentsException {
+    for (int i = 0; i < list.size(); i++) {
+      validateValue(items, list.get(i), path + "[" + i + "]");
     }
   }
 
@@ -100,7 +120,7 @@ final class McpInputSchemaValidator {
     case "integer":
       return value instanceof Integer || value instanceof Long || value instanceof BigInteger;
     default:
-      return false;
+      return true;  // a type this validator doesn't know is not enforced
     }
   }
 }

@@ -30,6 +30,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 @InterfaceStability.Evolving
 final class McpJsonRpcValidator {
 
+  /** Longest request id accepted, so that storing ids in a session stays cheap. */
+  static final int MAX_REQUEST_ID_LENGTH = 256;
+
   private McpJsonRpcValidator() {
   }
 
@@ -78,7 +81,8 @@ final class McpJsonRpcValidator {
 
   private static boolean isValidRequestId(JsonNode idNode) {
     return idNode != null && !idNode.isNull()
-        && (idNode.isIntegralNumber() || idNode.isTextual());
+        && (idNode.isIntegralNumber() || idNode.isTextual())
+        && idNode.asText().length() <= MAX_REQUEST_ID_LENGTH;
   }
 
   /** Returns {@code id} when it is a valid request id, otherwise {@code null}. */

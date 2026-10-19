@@ -1153,5 +1153,15 @@ public class CommonConfigurationKeysPublic {
   public static final String HADOOP_MCP_TOOL_CALL_MAX_OUTPUT_CHARS_KEY =
       "hadoop.mcp.tool-call.max-output-chars";
   public static final int HADOOP_MCP_TOOL_CALL_MAX_OUTPUT_CHARS_DEFAULT = 1024 * 1024;
+
+  /**
+   * Maximum number of request ids an MCP session may use.
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_MCP_SESSION_MAX_REQUEST_IDS_KEY =
+      "hadoop.mcp.session.max-request-ids";
+  public static final int HADOOP_MCP_SESSION_MAX_REQUEST_IDS_DEFAULT = 10000;
 }
 

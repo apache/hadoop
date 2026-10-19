@@ -131,6 +131,19 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.mcp.session.max-request-ids</name>
+  <value>10000</value>
+  <description>
+    Maximum number of requests an MCP session may make. The MCP specification
+    forbids reusing a request id within a session, so the server remembers
+    every id a session has used. Once a session reaches this limit it is over:
+    further requests get HTTP 404 and the client must start a new session. 0 or
+    less removes the limit, so memory grows with the number of requests per
+    session.
+  </description>
+</property>
+
 <!--- security properties -->
 
 <property>

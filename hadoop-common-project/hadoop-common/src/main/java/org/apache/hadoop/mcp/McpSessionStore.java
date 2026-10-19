@@ -48,21 +48,17 @@ final class McpSessionStore implements Closeable {
   private final Timer timer;
   private final int toolCallLimit;
   private final long toolCallWindowMs;
+  private final int maxRequestIds;
   private final Cache<String, McpSession> sessions;
-
-  /** Creates a store whose sessions have no tool-call rate limit. */
-  @VisibleForTesting
-  McpSessionStore(long sessionTimeoutMs, int maxSessions, Timer timer) {
-    this(sessionTimeoutMs, maxSessions, timer, 0, 0);
-  }
 
   /**
    * @param toolCallLimit tool calls allowed per session within one window; 0 or less
    *     disables the limit
    * @param toolCallWindowMs length of the tool-call rate-limit window
+   * @param maxRequestIds request ids each session may use; 0 or less is unlimited
    */
   McpSessionStore(long sessionTimeoutMs, int maxSessions, Timer timer, int toolCallLimit,
-      long toolCallWindowMs) {
+      long toolCallWindowMs, int maxRequestIds) {
     if (sessionTimeoutMs <= 0) {
       throw new IllegalArgumentException("sessionTimeoutMs must be positive: " + sessionTimeoutMs);
     }
@@ -77,6 +73,7 @@ final class McpSessionStore implements Closeable {
     this.timer = timer;
     this.toolCallLimit = toolCallLimit;
     this.toolCallWindowMs = toolCallWindowMs;
+    this.maxRequestIds = maxRequestIds;
     this.sessions = CacheBuilder.newBuilder()
         .expireAfterAccess(sessionTimeoutMs, TimeUnit.MILLISECONDS)
         .ticker(new Ticker() {
@@ -97,7 +94,7 @@ final class McpSessionStore implements Closeable {
       Map<String, Object> clientCapabilities) {
     McpSession session = new McpSession(UUID.randomUUID().toString(),
         negotiatedProtocolVersion, clientInfo, clientCapabilities, timer.now(),
-        new McpRateLimiter(toolCallLimit, toolCallWindowMs));
+        new McpRateLimiter(toolCallLimit, toolCallWindowMs), maxRequestIds);
     synchronized (this) {
       // Drop expired sessions first so they don't count against capacity.
       sessions.cleanUp();

@@ -18,13 +18,17 @@
 
 package org.apache.hadoop.mcp;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * An MCP session, created by {@code initialize} and identified by the
@@ -45,16 +49,22 @@ public final class McpSession {
   private final AtomicReference<McpSessionState> state =
       new AtomicReference<>(McpSessionState.INITIALIZING);
   private final McpRateLimiter mcpRateLimiter;
+  private final int maxRequestIds;
+  private final Set<String> usedRequestIds = new HashSet<>();
 
+  /**
+   * @param maxRequestIds number of request ids the session may use; 0 or less is unlimited
+   */
   McpSession(String id, String negotiatedProtocolVersion, Map<String, Object> clientInfo,
       Map<String, Object> clientCapabilities, long creationTimeMs,
-      McpRateLimiter mcpRateLimiter) {
+      McpRateLimiter mcpRateLimiter, int maxRequestIds) {
     this.id = id;
     this.negotiatedProtocolVersion = negotiatedProtocolVersion;
     this.clientInfo = clientInfo;
     this.clientCapabilities = clientCapabilities;
     this.creationTimeMs = creationTimeMs;
     this.mcpRateLimiter = mcpRateLimiter;
+    this.maxRequestIds = maxRequestIds;
   }
 
   public String getId() {
@@ -96,5 +106,27 @@ public final class McpSession {
 
   McpRateLimiter getMcpRateLimiter() {
     return mcpRateLimiter;
+  }
+
+  /**
+   * Records a request id, which the specification forbids reusing within a session.
+   * {@code 1} and {@code "1"} are different ids.
+   *
+   * @throws RequestRejectedException with 404 if the session has used its maximum number of
+   *     ids, which ends the session; with 400 if the id was already used in this session
+   */
+  synchronized void recordRequestId(JsonNode idNode) throws RequestRejectedException {
+    if (maxRequestIds > 0 && usedRequestIds.size() >= maxRequestIds) {
+      throw new RequestRejectedException(HttpServletResponse.SC_NOT_FOUND,
+          McpJsonRpc.REQUEST_ID_LIMIT_MESSAGE);
+    }
+    // Differentiating integers and numbers in string format.
+    String key = idNode.isTextual()
+        ? "s:" + idNode.textValue()
+        : "n:" + idNode.bigIntegerValue();
+    if (!usedRequestIds.add(key)) {
+      throw new RequestRejectedException(HttpServletResponse.SC_BAD_REQUEST,
+          McpJsonRpc.DUPLICATE_REQUEST_ID_MESSAGE);
+    }
   }
 }

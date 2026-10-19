@@ -114,6 +114,15 @@ public class TestMcpJsonRpcValidator {
   }
 
   @Test
+  public void testTooLongRequestIdIsInvalid() throws Exception {
+    String id = new String(new char[McpJsonRpcValidator.MAX_REQUEST_ID_LENGTH + 1])
+        .replace('\0', 'a');
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"id\":\"" + id + "\",\"method\":\"tools/list\"}");
+    assertInvalid(request, null);
+  }
+
+  @Test
   public void testObjectRequestIdIsInvalid() throws Exception {
     JsonNode request = OBJECT_MAPPER.readTree(
         "{\"jsonrpc\":\"2.0\",\"id\":{\"bad\":true},\"method\":\"tools/list\"}");

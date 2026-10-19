@@ -112,24 +112,28 @@ public final class McpRequestHandler {
     JsonNode paramsNode = requestNode.get("params");
     boolean isNotification = McpJsonRpcValidator.isJsonRpcNotification(requestNode);
 
-    // initialize is the first contact, so it carries no session or protocol-version header.
-    // Any session id the client sends with it is ignored and a new session is created.
-    if (!isNotification && METHOD_INITIALIZE.equals(method)) {
-      Map<String, Object> params = toParams(paramsNode);
-      if (params == null) {
-        return invalidParamsResponse(idNode);
-      }
-      McpSession session = createSession(params);
-      if (session == null) {
-        return jsonRpcResponses.error(idNode, McpJsonRpc.SERVER_ERROR_CAPACITY_LIMIT,
-            McpJsonRpc.CAPACITY_LIMIT_MESSAGE);
-      }
-      return initializeResponse(idNode, session);
-    }
-
     try {
+      // initialize is the first contact, so it carries no session or protocol-version header.
+      if (!isNotification && METHOD_INITIALIZE.equals(method)) {
+        Map<String, Object> params = toParams(paramsNode);
+        if (params == null) {
+          return invalidParamsResponse(idNode);
+        }
+        McpSession session = createSession(params);
+        if (session == null) {
+          return jsonRpcResponses.error(idNode, McpJsonRpc.SERVER_ERROR_CAPACITY_LIMIT,
+              McpJsonRpc.CAPACITY_LIMIT_MESSAGE);
+        }
+        // The initialize id is the first id used in the new session.
+        session.recordRequestId(idNode);
+        return initializeResponse(idNode, session);
+      }
+
       checkProtocolVersion(context);
       McpSession session = resolveSession(context);
+      if (!isNotification) {
+        session.recordRequestId(idNode);
+      }
       return dispatch(method, isNotification, idNode, paramsNode, context, session);
     } catch (RequestRejectedException e) {
       return jsonRpcResponses.transportError(e.getHttpStatus(), e.getErrorMessage());

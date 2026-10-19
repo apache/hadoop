@@ -59,10 +59,11 @@ public class TestMcpInputSchemaValidator {
   }
 
   @Test
-  public void testMissingRequiredRejected() throws Exception {
-    Map<String, Object> schema = new JacksonMcpJsonMapper().readMap(
-        "{\"type\":\"object\",\"properties\":{\"user\":{\"type\":\"string\"}},"
-            + "\"required\":[\"user\"]}");
+  public void testMissingRequiredRejected() {
+    Map<String, Object> schema = McpToolSchema.object()
+        .string("user", "User filter")
+        .required("user")
+        .build();
 
     InvalidToolArgumentsException e = assertThrows(InvalidToolArgumentsException.class,
         () -> McpInputSchemaValidator.validateArguments(schema, Collections.emptyMap()));

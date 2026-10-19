@@ -49,7 +49,7 @@ public class TestMcpHttpServlet {
       new JacksonMcpJsonMapper(OBJECT_MAPPER);
 
   private static final String INITIALIZE_REQUEST =
-      "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\","
+      "{\"jsonrpc\":\"2.0\",\"id\":0,\"method\":\"initialize\","
           + "\"params\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{},"
           + "\"clientInfo\":{\"name\":\"test\",\"version\":\"1.0\"}}}";
   private static final String INITIALIZED_NOTIFICATION =
@@ -195,7 +195,7 @@ public class TestMcpHttpServlet {
     String sessionId = handshake(server);
 
     JsonNode body = sendRequest(server,
-        "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"leak\"}}",
+        "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"test\"}}",
         sessionId).body();
 
     assertTrue(body.get("result").get("isError").asBoolean());
@@ -219,7 +219,7 @@ public class TestMcpHttpServlet {
 
     JsonNode body = sendRequest(server,
         "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\","
-            + "\"params\":{\"name\":\"find\",\"arguments\":{\"user\":42}}}", sessionId).body();
+            + "\"params\":{\"name\":\"test\",\"arguments\":{\"user\":42}}}", sessionId).body();
 
     assertEquals(McpJsonRpc.INVALID_PARAMS, body.get("error").get("code").asInt());
     assertEquals("Invalid arguments: arguments.user must be of type string",
@@ -292,8 +292,10 @@ public class TestMcpHttpServlet {
     return buildEchoServer(new Configuration());
   }
 
-  private static final String ECHO_TOOLS_REQUEST =
-      "{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"tools/call\",\"params\":{\"name\":\"echo\"}}";
+  private static String echoToolsRequest(int id) {
+    return "{\"jsonrpc\":\"2.0\",\"id\":" + id
+        + ",\"method\":\"tools/call\",\"params\":{\"name\":\"echo\"}}";
+  }
 
   /** A configuration allowing {@code limit} tool calls per session per minute. */
   private static Configuration createRateLimitConfiguration(int limit) {
@@ -307,13 +309,13 @@ public class TestMcpHttpServlet {
     McpServer server = buildEchoServer(createRateLimitConfiguration(2));
     String sessionId = handshake(server);
 
-    assertTrue(sendRequest(server, ECHO_TOOLS_REQUEST, sessionId).body().has("result"));
-    assertTrue(sendRequest(server, ECHO_TOOLS_REQUEST, sessionId).body().has("result"));
-    McpHttpResponse response = sendRequest(server, ECHO_TOOLS_REQUEST, sessionId);
+    assertTrue(sendRequest(server, echoToolsRequest(1), sessionId).body().has("result"));
+    assertTrue(sendRequest(server, echoToolsRequest(2), sessionId).body().has("result"));
+    McpHttpResponse response = sendRequest(server, echoToolsRequest(3), sessionId);
 
     // The session is still healthy, so this is a JSON-RPC error, not an HTTP one.
     assertEquals(200, response.status());
-    assertEquals(9, response.body().get("id").asInt());
+    assertEquals(3, response.body().get("id").asInt());
     assertEquals(McpJsonRpc.SERVER_ERROR_RATE_LIMITED,
         response.body().get("error").get("code").asInt());
   }
@@ -324,21 +326,94 @@ public class TestMcpHttpServlet {
     String first = handshake(server);
     String second = handshake(server);
 
-    sendRequest(server, ECHO_TOOLS_REQUEST, first);
-    assertTrue(sendRequest(server, ECHO_TOOLS_REQUEST, first).body().has("error"));
+    sendRequest(server, echoToolsRequest(1), first);
+    assertTrue(sendRequest(server, echoToolsRequest(2), first).body().has("error"));
 
-    assertTrue(sendRequest(server, ECHO_TOOLS_REQUEST, second).body().has("result"));
+    assertTrue(sendRequest(server, echoToolsRequest(1), second).body().has("result"));
   }
 
   @Test
   public void testRateLimitDoesNotApplyToOtherMethods() throws Exception {
     McpServer server = buildEchoServer(createRateLimitConfiguration(1));
     String sessionId = handshake(server);
-    sendRequest(server, ECHO_TOOLS_REQUEST, sessionId);
+    sendRequest(server, echoToolsRequest(2), sessionId);
 
     assertTrue(sendRequest(server, TOOLS_LIST_REQUEST, sessionId).body().has("result"));
     assertTrue(sendRequest(server,
         "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"ping\"}", sessionId).body().has("result"));
+  }
+
+  @Test
+  public void testDuplicateRequestIdReturns400() throws Exception {
+    boolean[] calls = {false};
+    McpServer server = McpServer.sync(JSON_MAPPER, new Configuration())
+        .capabilities(McpSchema.ServerCapabilities.withTools())
+        .toolCall(McpSchema.Tool.of("echo", "Echo", McpToolSchema.emptyObject()),
+            (context, args) -> {
+              calls[0] = true;
+              return McpSchema.CallToolResult.text("ok");
+            })
+        .build();
+    String sessionId = handshake(server);
+    sendRequest(server, TOOLS_LIST_REQUEST, sessionId);
+
+    // Same id as the tools/list above, so the tool must not run.
+    McpHttpResponse response = sendRequest(server,
+        "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"echo\"}}",
+        sessionId);
+
+    assertEquals(400, response.status());
+    assertEquals(McpJsonRpc.DUPLICATE_REQUEST_ID_MESSAGE,
+        response.body().get("message").asText());
+    assertFalse(calls[0]);
+  }
+
+  @Test
+  public void testRequestIdsAreTrackedPerSession() throws Exception {
+    McpServer server = buildEchoServer();
+    String firstSessionId = handshake(server);
+    String secondSessionId = handshake(server);
+
+    assertEquals(200, sendRequest(server, TOOLS_LIST_REQUEST, firstSessionId).status());
+    assertEquals(200, sendRequest(server, TOOLS_LIST_REQUEST, secondSessionId).status());
+  }
+
+  @Test
+  public void testNumberAndStringRequestIdsAreDifferent() throws Exception {
+    McpServer server = buildEchoServer();
+    String sessionId = handshake(server);
+
+    assertEquals(200, sendRequest(server, TOOLS_LIST_REQUEST, sessionId).status());
+    assertEquals(200, sendRequest(server,
+        "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"tools/list\"}", sessionId).status());
+  }
+
+  @Test
+  public void testInitializeRequestIdCannotBeReused() throws Exception {
+    McpServer server = buildEchoServer();
+    String sessionId = handshake(server);
+
+    // INITIALIZE_REQUEST uses id 0.
+    McpHttpResponse response = sendRequest(server,
+        "{\"jsonrpc\":\"2.0\",\"id\":0,\"method\":\"tools/list\"}", sessionId);
+
+    assertEquals(400, response.status());
+  }
+
+  @Test
+  public void testSessionReachesRequestIdLimit() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_MAX_REQUEST_IDS_KEY, 2);
+    McpServer server = buildEchoServer(conf);
+    // initialize uses the first id.
+    String sessionId = handshake(server);
+    assertEquals(200, sendRequest(server, TOOLS_LIST_REQUEST, sessionId).status());
+
+    McpHttpResponse response = sendRequest(server,
+        "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}", sessionId);
+
+    assertEquals(404, response.status());
+    assertEquals(McpJsonRpc.REQUEST_ID_LIMIT_MESSAGE, response.body().get("message").asText());
   }
 
   private static McpServer buildServer() {

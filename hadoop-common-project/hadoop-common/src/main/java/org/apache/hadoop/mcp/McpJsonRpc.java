@@ -63,6 +63,10 @@ public final class McpJsonRpc {
       "Unsupported " + PROTOCOL_VERSION_HEADER;
   public static final String ORIGIN_NOT_ALLOWED_MESSAGE = "Origin not allowed";
   public static final String RATE_LIMITED_MESSAGE = "Tool call rate limit exceeded";
+  public static final String DUPLICATE_REQUEST_ID_MESSAGE =
+      "Request id has already been used in this session";
+  public static final String REQUEST_ID_LIMIT_MESSAGE =
+      "MCP session has used its maximum number of requests";
   public static final String SESSION_NOT_READY_MESSAGE =
       "Session has not completed initialization";
   public static final String CAPACITY_LIMIT_MESSAGE =

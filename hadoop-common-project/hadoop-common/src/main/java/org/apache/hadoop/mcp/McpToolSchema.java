@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.mcp;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -32,6 +34,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class McpToolSchema {
 
   private final Map<String, Object> schema;
+  private final List<String> required = new ArrayList<>();
 
   private McpToolSchema() {
     Map<String, Object> properties = new LinkedHashMap<>();
@@ -66,7 +69,28 @@ public final class McpToolSchema {
     return this;
   }
 
+  /**
+   * Marks properties as required, so a call that omits any of them is rejected before the
+   * tool runs.
+   *
+   * @throws IllegalArgumentException if a name is not a property added to this schema
+   */
+  public McpToolSchema required(String... names) {
+    for (String name : names) {
+      if (!properties().containsKey(name)) {
+        throw new IllegalArgumentException("Unknown property: " + name);
+      }
+      if (!required.contains(name)) {
+        required.add(name);
+      }
+    }
+    return this;
+  }
+
   public Map<String, Object> build() {
+    if (!required.isEmpty()) {
+      schema.put("required", new ArrayList<>(required));
+    }
     return schema;
   }
 

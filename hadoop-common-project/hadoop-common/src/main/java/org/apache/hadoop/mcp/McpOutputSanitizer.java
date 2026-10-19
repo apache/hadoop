@@ -79,6 +79,6 @@ final class McpOutputSanitizer {
           toolName, length, maxOutputChars);
       return CallToolResult.error(OUTPUT_TOO_LARGE_MESSAGE);
     }
-    return CallToolResult.ofContent(content, result.isError());
+    return CallToolResult.of(content, result.isError());
   }
 }

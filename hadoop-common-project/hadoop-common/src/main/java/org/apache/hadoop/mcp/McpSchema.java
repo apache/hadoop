@@ -116,7 +116,7 @@ public final class McpSchema {
       return new CallToolResult(Collections.singletonList(new TextContent(message)), true);
     }
 
-    static CallToolResult ofContent(List<TextContent> content, boolean isError) {
+    static CallToolResult of(List<TextContent> content, boolean isError) {
       return new CallToolResult(Collections.unmodifiableList(content), isError);
     }
   }

@@ -45,7 +45,12 @@ public class TestMcpSessionStore {
   @BeforeEach
   public void setUp() {
     timer = new FakeTimer();
-    store = new McpSessionStore(TIMEOUT_MS, 10, timer);
+    store = createStore(10);
+  }
+
+  /** A store without tool-call or request id limits, which these tests don't cover. */
+  private McpSessionStore createStore(int maxSessions) {
+    return new McpSessionStore(TIMEOUT_MS, maxSessions, timer, 0, 0, 0);
   }
 
   private McpSession create() {
@@ -116,7 +121,7 @@ public class TestMcpSessionStore {
 
   @Test
   public void testCreateRejectedAtMaxCapacity() {
-    McpSessionStore smallStore = new McpSessionStore(TIMEOUT_MS, 1, timer);
+    McpSessionStore smallStore = createStore(1);
     McpSession first = smallStore.create(McpJsonRpc.PROTOCOL_VERSION,
         Collections.emptyMap(), Collections.emptyMap());
 
@@ -129,7 +134,7 @@ public class TestMcpSessionStore {
 
   @Test
   public void testRemoveFreesCapacity() {
-    McpSessionStore smallStore = new McpSessionStore(TIMEOUT_MS, 1, timer);
+    McpSessionStore smallStore = createStore(1);
     McpSession first = smallStore.create(McpJsonRpc.PROTOCOL_VERSION,
         Collections.emptyMap(), Collections.emptyMap());
 
@@ -169,7 +174,7 @@ public class TestMcpSessionStore {
 
   @Test
   public void testExpiredSessionsDoNotCountAgainstCapacity() {
-    McpSessionStore smallStore = new McpSessionStore(TIMEOUT_MS, 1, timer);
+    McpSessionStore smallStore = createStore(1);
     smallStore.create(McpJsonRpc.PROTOCOL_VERSION, Collections.emptyMap(),
         Collections.emptyMap());
 
@@ -197,8 +202,12 @@ public class TestMcpSessionStore {
 
   @Test
   public void testInvalidArgumentsRejected() {
-    assertThrows(IllegalArgumentException.class, () -> new McpSessionStore(0, 10, timer));
     assertThrows(IllegalArgumentException.class,
-        () -> new McpSessionStore(TIMEOUT_MS, 0, timer));
+        () -> new McpSessionStore(0, 10, timer, 0, 0, 0));
+    assertThrows(IllegalArgumentException.class,
+        () -> new McpSessionStore(TIMEOUT_MS, 0, timer, 0, 0, 0));
+    // A tool-call limit needs a positive window.
+    assertThrows(IllegalArgumentException.class,
+        () -> new McpSessionStore(TIMEOUT_MS, 10, timer, 1, 0, 0));
   }
 }
