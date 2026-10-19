@@ -68,7 +68,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -76,7 +75,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.WEIGHT;
 
 /**
  * Provides implementation of {@code CSQueue} methods common for every queue class in Capacity
@@ -397,17 +395,10 @@ public abstract class AbstractCSQueue implements CSQueue {
         overrideCapacityVectorsForSpecialQueues(label);
 
         // Re-adjust weight when mixed capacity type is used. 5w == [memory=5w, vcores=5w]
-        final QueueCapacityVector capacityVector = configuredCapacityVectors.get(label);
-        final Set<QueueCapacityVector.ResourceUnitCapacityType> definedCapacityTypes =
-            capacityVector.getDefinedCapacityTypes();
-        if (definedCapacityTypes.size() == 1 && definedCapacityTypes.iterator().next() == WEIGHT) {
-          Set<Double> weights = new HashSet<>();
-          for (String resourceName : capacityVector.getResourceNames()) {
-            weights.add(capacityVector.getResource(resourceName).getResourceValue());
-          }
-          if (weights.size() == 1) {
-            queueCapacities.setWeight(label, weights.iterator().next().floatValue());
-          }
+        final Float uniformWeight =
+            QueueCapacityChecks.uniformWeightOf(configuredCapacityVectors.get(label));
+        if (uniformWeight != null) {
+          queueCapacities.setWeight(label, uniformWeight);
         }
       }
 
@@ -514,29 +505,16 @@ public abstract class AbstractCSQueue implements CSQueue {
       LOG.debug("capacityConfigType is '{}' for queue {}",
           capacityConfigType, getQueuePath());
 
-      CapacityConfigType localType = CapacityConfigType.NONE;
+      CapacityConfigType localType;
 
       if (queueContext.getConfiguration().isLegacyQueueMode()) {
-        localType = checkConfigTypeIsAbsoluteResource(
-                getQueuePathObject(), label) ? CapacityConfigType.ABSOLUTE_RESOURCE
-                : CapacityConfigType.PERCENTAGE;
+        localType = QueueCapacityChecks.capacityConfigTypeOf(
+            checkConfigTypeIsAbsoluteResource(getQueuePathObject(), label));
       } else {
         // TODO: revisit this later
         //  AbstractCSQueue.CapacityConfigType has only None, Percentage and Absolute mode
-        final Set<QueueCapacityVector.ResourceUnitCapacityType> definedCapacityTypes =
-                getConfiguredCapacityVector(label).getDefinedCapacityTypes();
-        if (definedCapacityTypes.size() == 1) {
-          QueueCapacityVector.ResourceUnitCapacityType next = definedCapacityTypes.iterator().next();
-          if (Objects.requireNonNull(next) == PERCENTAGE) {
-            localType = CapacityConfigType.PERCENTAGE;
-          } else if (next == QueueCapacityVector.ResourceUnitCapacityType.ABSOLUTE) {
-            localType = CapacityConfigType.ABSOLUTE_RESOURCE;
-          } else if (next == WEIGHT) {
-            localType = CapacityConfigType.PERCENTAGE;
-          }
-        } else { // Mixed type
-          localType = CapacityConfigType.PERCENTAGE;
-        }
+        localType = QueueCapacityChecks.capacityConfigTypeOf(
+            getConfiguredCapacityVector(label));
       }
 
       if (this.capacityConfigType.equals(CapacityConfigType.NONE)) {
@@ -562,24 +540,17 @@ public abstract class AbstractCSQueue implements CSQueue {
       if (parent != null) {
         final Resource parentMax = parent.getQueueResourceQuotas()
             .getConfiguredMaxResource(label);
-        validateMinResourceIsNotGreaterThanMaxResource(maxResource, parentMax, clusterResource,
-            "Max resource configuration "
-                + maxResource + " is greater than parents max value:"
-                + parentMax + " in queue:" + getQueuePath());
+        throwIfInvalidResourceLimit(QueueCapacityChecks.checkMaxResourceWithinParent(
+            getQueuePath(), maxResource, parentMax, clusterResource, resourceCalculator));
 
         // If child's max resource is not set, but its parent max resource is
         // set, we must set child max resource to its parent's.
-        if (maxResource.equals(Resources.none()) &&
-            !minResource.equals(Resources.none()) &&
-            !parentMax.equals(Resources.none())) {
-          maxResource = Resources.clone(parentMax);
-        }
+        maxResource = QueueCapacityChecks.inheritMaxResourceFromParent(minResource,
+            maxResource, parentMax);
       }
 
-      validateMinResourceIsNotGreaterThanMaxResource(minResource, maxResource, clusterResource,
-          "Min resource configuration "
-              + minResource + " is greater than its max value:" + maxResource
-              + " in queue:" + getQueuePath());
+      throwIfInvalidResourceLimit(QueueCapacityChecks.checkMinResourceWithinMax(
+          getQueuePath(), minResource, maxResource, clusterResource, resourceCalculator));
 
       LOG.debug("Updating absolute resource configuration for queue:{} as"
               + " minResource={} and maxResource={}", getQueuePath(), minResource,
@@ -590,24 +561,20 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
   }
 
-  private void validateMinResourceIsNotGreaterThanMaxResource(Resource minResource,
-                                                              Resource maxResource,
-                                                              Resource clusterResource,
-                                                              String validationError) {
-    if (!maxResource.equals(Resources.none()) && Resources.greaterThan(
-        resourceCalculator, clusterResource, minResource, maxResource)) {
+  private static void throwIfInvalidResourceLimit(String validationError) {
+    if (validationError != null) {
       throw new IllegalArgumentException(validationError);
     }
   }
 
   private void validateAbsoluteVsPercentageCapacityConfig(
       CapacityConfigType localType) {
-    if (!queuePath.isRoot()
-        && !this.capacityConfigType.equals(localType) &&
-        queueContext.getConfiguration().isLegacyQueueMode()) {
-      throw new IllegalArgumentException("Queue '" + getQueuePath()
-          + "' should use either percentage based capacity"
-          + " configuration or absolute resource.");
+    String error = QueueCapacityChecks.checkCapacityConfigTypeConsistent(
+        getQueuePath(), queuePath.isRoot(),
+        queueContext.getConfiguration().isLegacyQueueMode(),
+        this.capacityConfigType, localType);
+    if (error != null) {
+      throw new IllegalArgumentException(error);
     }
   }
 
@@ -1140,11 +1107,13 @@ public abstract class AbstractCSQueue implements CSQueue {
             + " is already in the RUNNING state.");
       } else {
         CSQueue parentQueue = parent;
-        if (parentQueue == null || parentQueue.getState() == QueueState.RUNNING) {
+        String parentError = parentQueue == null ? null
+            : QueueStateHelper.checkParentRunning(parentQueue.getQueuePath(),
+                parentQueue.getState());
+        if (parentError == null) {
           updateQueueState(QueueState.RUNNING);
         } else {
-          throw new YarnException("The parent Queue:" + parentQueue.getQueuePath()
-              + " is not running. Please activate the parent queue first");
+          throw new YarnException(parentError);
         }
       }
     } finally {
