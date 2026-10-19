@@ -22,12 +22,14 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.UserPrincipal;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
@@ -263,9 +265,7 @@ public class DirectoryCollection {
     subAccessibilityValidationEnabled = conf.getBoolean(
         YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_ENABLED,
         YarnConfiguration.DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_ENABLED);
-    subAccessibilityValidationMaxDepth = conf.getInt(
-        YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH,
-        YarnConfiguration.DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH);
+    subAccessibilityValidationMaxDepth = getSubAccessibilityValidationMaxDepth(conf);
 
     localDirs = new ArrayList<>(Arrays.asList(dirs));
     errorDirs = new ArrayList<>();
@@ -602,19 +602,50 @@ public class DirectoryCollection {
     }
     LOG.debug("Start checking accessibility for: {}", dir);
 
+    UserPrincipal nmUser;
+    try {
+      nmUser = lookupNmUser();
+    } catch (IOException e) {
+      LOG.warn("Skipping accessibility check of {}: can not resolve the NM user", dir, e);
+      return null;
+    }
     try {
       Files.walkFileTree(dir.toPath(), Collections.emptySet(),
-          subAccessibilityValidationMaxDepth, new SubAccessibilityVisitor());
+          subAccessibilityValidationMaxDepth, new SubAccessibilityVisitor(dir.toPath(), nmUser));
     } catch (IOException | UncheckedIOException | SecurityException e) {
       return new DiskErrorInformation(DiskErrorCause.OTHER, e.getMessage());
     }
     return null;
   }
 
+  @VisibleForTesting
+  static UserPrincipal lookupNmUser() throws IOException {
+    return FileSystems.getDefault().getUserPrincipalLookupService()
+        .lookupPrincipalByName(System.getProperty("user.name"));
+  }
+
+  @VisibleForTesting
+  static int getSubAccessibilityValidationMaxDepth(Configuration conf) {
+    int maxDepth = conf.getInt(
+        YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH,
+        YarnConfiguration.DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH);
+    if (maxDepth < 0) {
+      throw new IllegalArgumentException(
+          YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH
+              + " must not be negative, but was " + maxDepth);
+    }
+    return maxDepth;
+  }
+
   /**
-   * Walks the content of an NM directories.
-   * It fails with an {@link IOException} if the NM user cannot access the entry.
-   * Entries must be readable, writable and executable.
+   * Walks the content of an NM directory and fails with an {@link IOException}
+   * on the first entry the NM user cannot access.
+   * <p>
+   * The NM directory itself and every directory owned by the NM user must be
+   * readable, writable and executable.
+   * Files owned by the NM user must be readable.
+   * Entries owned by other users (e.g. application directories) are not checked:
+   * directories owned by other users are descended into and enter them, and skipped otherwise.
    * Symbolic links are neither followed nor checked.
    * <p>
    * Entries deleted during the walk are ignored, because
@@ -623,25 +654,24 @@ public class DirectoryCollection {
   @VisibleForTesting
   static class SubAccessibilityVisitor
       extends SimpleFileVisitor<java.nio.file.Path> {
-    private final String nmUser;
+    private final java.nio.file.Path root;
+    private final UserPrincipal nmUser;
 
-    SubAccessibilityVisitor() {
-      this(System.getProperty("user.name"));
-    }
-
-    @VisibleForTesting
-    SubAccessibilityVisitor(String nmUser) {
+    SubAccessibilityVisitor(java.nio.file.Path root, UserPrincipal nmUser) {
+      this.root = root;
       this.nmUser = nmUser;
     }
 
     @Override
     public FileVisitResult preVisitDirectory(java.nio.file.Path p,
         BasicFileAttributes attrs) throws IOException {
-      if (!isOwnedByNmUser(p)) {
-        return FileVisitResult.SKIP_SUBTREE;
+      if (isCheckedForNmUser(p)) {
+        checkAccessible(p, true);
+        return FileVisitResult.CONTINUE;
       }
-      checkAccessible(p, true);
-      return FileVisitResult.CONTINUE;
+      return Files.isReadable(p) && Files.isExecutable(p)
+          ? FileVisitResult.CONTINUE
+          : FileVisitResult.SKIP_SUBTREE;
     }
 
     @Override
@@ -656,7 +686,7 @@ public class DirectoryCollection {
     @Override
     public FileVisitResult visitFile(java.nio.file.Path path, BasicFileAttributes attrs)
         throws IOException {
-      if (!attrs.isSymbolicLink() && isOwnedByNmUser(path)) {
+      if (!attrs.isSymbolicLink() && isCheckedForNmUser(path)) {
         checkAccessible(path, attrs.isDirectory());
       }
       return FileVisitResult.CONTINUE;
@@ -671,10 +701,13 @@ public class DirectoryCollection {
       throw e;
     }
 
+    private boolean isCheckedForNmUser(java.nio.file.Path path) throws IOException {
+      return path.equals(root) || isOwnedByNmUser(path);
+    }
+
     private boolean isOwnedByNmUser(java.nio.file.Path path) throws IOException {
       try {
-        return nmUser.equals(
-            Files.getOwner(path, LinkOption.NOFOLLOW_LINKS).getName());
+        return nmUser.equals(Files.getOwner(path, LinkOption.NOFOLLOW_LINKS));
       } catch (NoSuchFileException e) {
         return false;
       }

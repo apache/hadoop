@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.nio.file.attribute.UserPrincipal;
 import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
@@ -54,14 +55,18 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestDirectoryCollection {
 
+  private static final UserPrincipal OTHER_USER = () -> "not-the-owner";
+
   private File testDir;
   private File testFile;
+  private UserPrincipal nmUser;
 
   private Configuration conf;
   private FileContext localFs;
 
   @BeforeEach
   public void setupForTests() throws IOException {
+    nmUser = DirectoryCollection.lookupNmUser();
     conf = new Configuration();
     localFs = FileContext.getLocalFSFileContext(conf);
     testDir = Files.createTempDirectory(TestDirectoryCollection.class.getName()).toFile();
@@ -554,7 +559,7 @@ public class TestDirectoryCollection {
     BasicFileAttributes attrs = Files.readAttributes(gone, BasicFileAttributes.class);
     Files.delete(gone);
     DirectoryCollection.SubAccessibilityVisitor visitor =
-        new DirectoryCollection.SubAccessibilityVisitor();
+        new DirectoryCollection.SubAccessibilityVisitor(testDir.toPath(), nmUser);
     assertEquals(FileVisitResult.CONTINUE, visitor.visitFile(gone, attrs));
     assertEquals(FileVisitResult.SKIP_SUBTREE,
         visitor.preVisitDirectory(new File(testDir, "missingDir").toPath(), attrs));
@@ -563,23 +568,63 @@ public class TestDirectoryCollection {
   }
 
   @Test
-  public void testSubAccessibilitySkipsEntriesOwnedByOtherUsers() throws IOException {
+  public void testSubAccessibilitySkipsFilesOwnedByOtherUsers() throws IOException {
     Files.setPosixFilePermissions(testFile.toPath(),
         PosixFilePermissions.fromString("-w--w--w-"));
     java.nio.file.Path file = testFile.toPath();
     BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
 
     DirectoryCollection.SubAccessibilityVisitor otherUser =
-        new DirectoryCollection.SubAccessibilityVisitor("not-the-owner");
+        new DirectoryCollection.SubAccessibilityVisitor(testDir.toPath(), OTHER_USER);
     assertEquals(FileVisitResult.CONTINUE, otherUser.visitFile(file, attrs));
-    assertEquals(FileVisitResult.SKIP_SUBTREE,
-        otherUser.preVisitDirectory(testDir.toPath(), attrs));
 
     DirectoryCollection.SubAccessibilityVisitor owner =
-        new DirectoryCollection.SubAccessibilityVisitor();
+        new DirectoryCollection.SubAccessibilityVisitor(testDir.toPath(), nmUser);
     IOException e = assertThrows(IOException.class,
         () -> owner.visitFile(file, attrs));
     assertTrue(e.getMessage().contains("Can not read"));
+  }
+
+  @Test
+  public void testSubAccessibilityDescendsIntoReadableDirsOwnedByOtherUsers()
+      throws IOException {
+    File readOnly = new File(testDir, "readOnly");
+    File noAccess = new File(testDir, "noAccess");
+    assertTrue(readOnly.mkdir());
+    assertTrue(noAccess.mkdir());
+    Files.setPosixFilePermissions(readOnly.toPath(),
+        PosixFilePermissions.fromString("r-x------"));
+    Files.setPosixFilePermissions(noAccess.toPath(),
+        PosixFilePermissions.fromString("-w-------"));
+    BasicFileAttributes attrs =
+        Files.readAttributes(readOnly.toPath(), BasicFileAttributes.class);
+
+    DirectoryCollection.SubAccessibilityVisitor otherUser =
+        new DirectoryCollection.SubAccessibilityVisitor(testDir.toPath(), OTHER_USER);
+    assertEquals(FileVisitResult.CONTINUE,
+        otherUser.preVisitDirectory(readOnly.toPath(), attrs));
+    assertEquals(FileVisitResult.SKIP_SUBTREE,
+        otherUser.preVisitDirectory(noAccess.toPath(), attrs));
+
+    DirectoryCollection.SubAccessibilityVisitor owner =
+        new DirectoryCollection.SubAccessibilityVisitor(testDir.toPath(), nmUser);
+    IOException e = assertThrows(IOException.class,
+        () -> owner.preVisitDirectory(readOnly.toPath(), attrs));
+    assertTrue(e.getMessage().contains("Can not access"));
+  }
+
+  @Test
+  public void testSubAccessibilityAlwaysChecksRootDir() throws IOException {
+    java.nio.file.Path root = new File(testDir, "root").toPath();
+    Files.createDirectory(root);
+    Files.setPosixFilePermissions(root, PosixFilePermissions.fromString("r-x------"));
+
+    for (int maxDepth : new int[]{0, 1}) {
+      IOException e = assertThrows(IOException.class,
+          () -> Files.walkFileTree(root, Collections.emptySet(), maxDepth,
+              new DirectoryCollection.SubAccessibilityVisitor(root, OTHER_USER)));
+      assertTrue(e.getMessage().contains(root.toString()));
+    }
   }
 
   @Test
@@ -610,6 +655,18 @@ public class TestDirectoryCollection {
     dc.setSubAccessibilityValidationMaxDepth(5);
     assertEquals(1, dc.testDirs(Collections.singletonList(testDir.toString()),
         Collections.emptySet()).size());
+  }
+
+  @Test
+  public void testSubAccessibilityRejectsNegativeMaxDepth() {
+    conf.setInt(YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH, -1);
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        () -> DirectoryCollection.getSubAccessibilityValidationMaxDepth(conf));
+    assertTrue(e.getMessage().contains(
+        YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH));
+
+    conf.setInt(YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH, 0);
+    assertEquals(0, DirectoryCollection.getSubAccessibilityValidationMaxDepth(conf));
   }
 
   @Test
