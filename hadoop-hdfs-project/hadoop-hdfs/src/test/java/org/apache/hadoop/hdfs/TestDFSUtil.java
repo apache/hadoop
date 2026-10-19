@@ -659,6 +659,12 @@ public class TestDFSUtil {
         DFSUtil.substituteForWildcardAddress("0.0.0.0:12345", "foo"));
     assertEquals("127.0.0.1:12345",
         DFSUtil.substituteForWildcardAddress("127.0.0.1:12345", "foo"));
+    assertEquals("[2001:db8:0:0:0:0:0:10]:12345",
+        DFSUtil.substituteForWildcardAddress("[::]:12345", "2001:db8:0:0:0:0:0:10"));
+    assertEquals("[2001:db8:0:0:0:0:0:10]:12345",
+        DFSUtil.substituteForWildcardAddress("0.0.0.0:12345", "2001:db8:0:0:0:0:0:10"));
+    assertEquals("[2001:db8::11]:12345",
+        DFSUtil.substituteForWildcardAddress("[2001:db8::11]:12345", "foo"));
   }
 
   private static Collection<URI> getInternalNameServiceUris(Configuration conf,
