@@ -115,6 +115,10 @@ public final class McpSchema {
     public static CallToolResult error(String message) {
       return new CallToolResult(Collections.singletonList(new TextContent(message)), true);
     }
+
+    static CallToolResult ofContent(List<TextContent> content, boolean isError) {
+      return new CallToolResult(Collections.unmodifiableList(content), isError);
+    }
   }
 
   public static final class ServerCapabilities {

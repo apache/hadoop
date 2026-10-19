@@ -103,6 +103,7 @@ public final class McpServer implements Closeable {
     private final int maxSessions;
     private final int toolCallLimit;
     private final long toolCallWindowMs;
+    private final int maxToolOutputChars;
     private Timer timer = new Timer();
 
     private Builder(McpJsonMapper jsonMapper, Configuration conf) {
@@ -123,6 +124,9 @@ public final class McpServer implements Closeable {
           CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_TOOL_CALL_WINDOW_MS_KEY,
           CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_TOOL_CALL_WINDOW_MS_DEFAULT,
           TimeUnit.MILLISECONDS);
+      this.maxToolOutputChars = conf.getInt(
+          CommonConfigurationKeysPublic.HADOOP_MCP_TOOL_CALL_MAX_OUTPUT_CHARS_KEY,
+          CommonConfigurationKeysPublic.HADOOP_MCP_TOOL_CALL_MAX_OUTPUT_CHARS_DEFAULT);
     }
 
     public Builder serverInfo(String name, String version) {
@@ -151,7 +155,8 @@ public final class McpServer implements Closeable {
       McpSessionStore sessionStore = new McpSessionStore(sessionTimeoutMs, maxSessions, timer,
           toolCallLimit, toolCallWindowMs);
       McpRequestHandler handler = new McpRequestHandler(objectMapper, serverName,
-          serverVersion, capabilities, tools, sessionStore);
+          serverVersion, capabilities, tools, sessionStore,
+          new McpOutputSanitizer(maxToolOutputChars));
       McpHttpServlet httpServlet = new McpHttpServlet(objectMapper, handler);
       return new McpServer(handler, httpServlet);
     }

@@ -37,7 +37,7 @@ public class RequestRejectedException extends Exception {
   }
 
   RequestRejectedException(int httpStatus, String errorMessage) {
-    super(errorMessage);
+    super(errorMessage, null, false, false);
     this.httpStatus = httpStatus;
     this.errorMessage = errorMessage;
   }

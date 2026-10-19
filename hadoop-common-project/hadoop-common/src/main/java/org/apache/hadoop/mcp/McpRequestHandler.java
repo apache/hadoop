@@ -33,6 +33,8 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.mcp.McpSchema.ServerCapabilities;
 import org.apache.hadoop.mcp.McpSchema.Tool;
 import org.apache.hadoop.mcp.McpServer.RegisteredTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -49,6 +51,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class McpRequestHandler {
+
+  private static final Logger LOG = LoggerFactory.getLogger(McpRequestHandler.class);
 
   public static final String SESSION_HEADER = "Mcp-Session-Id";
 
@@ -69,10 +73,11 @@ public final class McpRequestHandler {
   private final Map<String, RegisteredTool> tools;
   private final McpJsonRpcResponses jsonRpcResponses;
   private final McpSessionStore sessionStore;
+  private final McpOutputSanitizer outputSanitizer;
 
   McpRequestHandler(ObjectMapper objectMapper, String serverName, String serverVersion,
       ServerCapabilities capabilities, Map<String, RegisteredTool> tools,
-      McpSessionStore sessionStore) {
+      McpSessionStore sessionStore, McpOutputSanitizer outputSanitizer) {
     this.objectMapper = objectMapper;
     this.serverName = serverName;
     this.serverVersion = serverVersion;
@@ -80,6 +85,7 @@ public final class McpRequestHandler {
     this.tools = Collections.unmodifiableMap(new LinkedHashMap<>(tools));
     this.jsonRpcResponses = new McpJsonRpcResponses(objectMapper);
     this.sessionStore = sessionStore;
+    this.outputSanitizer = outputSanitizer;
   }
 
   public McpHttpResponse originNotAllowedResponse() {
@@ -340,17 +346,22 @@ public final class McpRequestHandler {
           objectMapper.valueToTree(argumentsObject), PARAMS_TYPE);
     }
 
-    final McpSchema.CallToolResult callResult;
+    try {
+      McpInputSchemaValidator.validateArguments(registeredTool.tool().inputSchema(), arguments);
+    } catch (InvalidToolArgumentsException e) {
+      return jsonRpcResponses.error(idNode, McpJsonRpc.INVALID_PARAMS,
+          "Invalid arguments: " + e.getMessage());
+    }
+
+    String toolName = registeredTool.tool().name();
+    McpSchema.CallToolResult callResult;
     try {
       callResult = registeredTool.call(context, arguments);
     } catch (Exception e) {
-      String message = e.getMessage();
-      if (message == null || message.isEmpty()) {
-        message = TOOL_EXECUTION_FAILED_MESSAGE;
-      }
-      return jsonRpcResponses.success(idNode, McpJsonRpcResponses.toResultMap(
-          McpSchema.CallToolResult.error(message)));
+      LOG.warn("Execution of {} MCP tool failed", toolName, e);
+      callResult = McpSchema.CallToolResult.error(TOOL_EXECUTION_FAILED_MESSAGE);
     }
+    callResult = outputSanitizer.sanitize(toolName, callResult);
     return jsonRpcResponses.success(idNode, McpJsonRpcResponses.toResultMap(callResult));
   }
 }

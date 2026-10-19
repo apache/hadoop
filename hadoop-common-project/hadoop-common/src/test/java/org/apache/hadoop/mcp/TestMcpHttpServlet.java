@@ -137,15 +137,13 @@ public class TestMcpHttpServlet {
   }
 
   @Test
-  public void testToolHandlerExceptionReturnsErrorResult() throws Exception {
+  public void testToolErrorResultReturnsMessage() throws Exception {
     McpServer server = McpServer.sync(JSON_MAPPER, new Configuration())
         .serverInfo("test-server", "1.0")
         .capabilities(McpSchema.ServerCapabilities.withTools())
         .toolCall(McpSchema.Tool.of("boom", "Throws", JSON_MAPPER,
                 "{\"type\":\"object\",\"properties\":{}}"),
-            (context, args) -> {
-              throw new RuntimeException("boom");
-            })
+            (context, args) -> McpSchema.CallToolResult.error("boom"))
         .build();
     String sessionId = handshake(server);
 
@@ -183,6 +181,50 @@ public class TestMcpHttpServlet {
     assertTrue(body.get("result").get("isError").asBoolean());
     assertEquals("Tool execution failed",
         body.get("result").get("content").get(0).get("text").asText());
+  }
+
+  @Test
+  public void testToolExceptionMessageIsNotReturned() throws Exception {
+    McpServer server = McpServer.sync(JSON_MAPPER, new Configuration())
+        .capabilities(McpSchema.ServerCapabilities.withTools())
+        .toolCall(McpSchema.Tool.of("test", "Throws", McpToolSchema.emptyObject()),
+            (context, args) -> {
+              throw new IllegalStateException("cannot read /etc/hadoop/secret.xml");
+            })
+        .build();
+    String sessionId = handshake(server);
+
+    JsonNode body = sendRequest(server,
+        "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"leak\"}}",
+        sessionId).body();
+
+    assertTrue(body.get("result").get("isError").asBoolean());
+    assertEquals("Tool execution failed",
+        body.get("result").get("content").get(0).get("text").asText());
+  }
+
+  @Test
+  public void testInvalidArgumentsRejectedBeforeHandler() throws Exception {
+    boolean[] called = {false};
+    McpServer server = McpServer.sync(JSON_MAPPER, new Configuration())
+        .capabilities(McpSchema.ServerCapabilities.withTools())
+        .toolCall(McpSchema.Tool.of("test", "Finds",
+                McpToolSchema.object().string("user", "User").build()),
+            (context, args) -> {
+              called[0] = true;
+              return McpSchema.CallToolResult.text("ok");
+            })
+        .build();
+    String sessionId = handshake(server);
+
+    JsonNode body = sendRequest(server,
+        "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\","
+            + "\"params\":{\"name\":\"find\",\"arguments\":{\"user\":42}}}", sessionId).body();
+
+    assertEquals(McpJsonRpc.INVALID_PARAMS, body.get("error").get("code").asInt());
+    assertEquals("Invalid arguments: arguments.user must be of type string",
+        body.get("error").get("message").asText());
+    assertFalse(called[0]);
   }
 
   @Test

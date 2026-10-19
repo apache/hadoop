@@ -1143,5 +1143,15 @@ public class CommonConfigurationKeysPublic {
   public static final String HADOOP_MCP_SESSION_TOOL_CALL_WINDOW_MS_KEY =
       "hadoop.mcp.session.tool-call.window.ms";
   public static final long HADOOP_MCP_SESSION_TOOL_CALL_WINDOW_MS_DEFAULT = 60 * 1000L;
+
+  /**
+   * Maximum total length of the text one MCP tool call may return in characters.
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_MCP_TOOL_CALL_MAX_OUTPUT_CHARS_KEY =
+      "hadoop.mcp.tool-call.max-output-chars";
+  public static final int HADOOP_MCP_TOOL_CALL_MAX_OUTPUT_CHARS_DEFAULT = 1024 * 1024;
 }
 

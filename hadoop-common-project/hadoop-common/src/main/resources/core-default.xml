@@ -121,6 +121,16 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.mcp.tool-call.max-output-chars</name>
+  <value>1048576</value>
+  <description>
+    Maximum total length of the text returned by one MCP tool
+    call in characters. A larger result is replaced with an error result saying the output
+    was too large. 0 or less disables the limit.
+  </description>
+</property>
+
 <!--- security properties -->
 
 <property>
