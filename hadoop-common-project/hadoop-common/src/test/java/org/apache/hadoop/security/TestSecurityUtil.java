@@ -129,6 +129,17 @@ public class TestSecurityUtil {
                  SecurityUtil.getServerPrincipal("hdfs/_HOST@REALM", (String)null));
     assertEquals("hdfs/" + local + "@REALM",
                  SecurityUtil.getServerPrincipal("hdfs/_HOST@REALM", "0.0.0.0"));
+    // The IPv6 wildcard as configured, as InetSocketAddress#getHostName
+    // returns it, and as the host of a URI
+    for (String wildcard : new String[] {"::", "[::]", "0:0:0:0:0:0:0:0", "[0:0:0:0:0:0:0:0]"}) {
+      assertEquals("hdfs/" + local + "@REALM",
+          SecurityUtil.getServerPrincipal("hdfs/_HOST@REALM", wildcard));
+    }
+    // Other IP addresses are not replaced
+    assertEquals("hdfs/2001:db8::1@REALM",
+        SecurityUtil.getServerPrincipal("hdfs/_HOST@REALM", "2001:db8::1"));
+    assertEquals("hdfs/fe80::1%nosuchif@REALM",
+        SecurityUtil.getServerPrincipal("hdfs/_HOST@REALM", "fe80::1%nosuchif"));
   }
   
   @Test

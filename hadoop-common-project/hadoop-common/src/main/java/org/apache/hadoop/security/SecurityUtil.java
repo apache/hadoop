@@ -172,8 +172,9 @@ public final class SecurityUtil {
   /**
    * Convert Kerberos principal name pattern to valid Kerberos principal
    * names. It replaces hostname pattern with hostname, which should be
-   * fully-qualified domain name. If hostname is null or "0.0.0.0", it uses
-   * dynamically looked-up fqdn of the current host instead.
+   * fully-qualified domain name. If hostname is null or a wildcard address
+   * such as "0.0.0.0", "::" or "[::]", it uses dynamically looked-up fqdn of the
+   * current host instead.
    * 
    * @param principalConfig
    *          the Kerberos principal name conf value to convert
@@ -235,11 +236,23 @@ public final class SecurityUtil {
   private static String replacePattern(String[] components, String hostname)
       throws IOException {
     String fqdn = hostname;
-    if (fqdn == null || fqdn.isEmpty() || fqdn.equals("0.0.0.0")) {
+    if (fqdn == null || fqdn.isEmpty() || isWildcardAddress(fqdn)) {
       fqdn = getLocalHostName(null);
     }
     return components[0] + "/" +
         StringUtils.toLowerCase(fqdn) + "@" + components[2];
+  }
+
+  /**
+   * Checks whether a host is the IPv4 or IPv6 wildcard address, in any
+   * spelling and with or without the brackets used around IPv6 literals.
+   */
+  private static boolean isWildcardAddress(String host) {
+    String address = host.startsWith("[") && host.endsWith("]")
+        ? host.substring(1, host.length() - 1) : host;
+    // A scoped address is never the wildcard, and parsing it can fail.
+    return address.indexOf('%') < 0 && InetAddresses.isInetAddress(address)
+        && InetAddresses.forString(address).isAnyLocalAddress();
   }
 
   /**
