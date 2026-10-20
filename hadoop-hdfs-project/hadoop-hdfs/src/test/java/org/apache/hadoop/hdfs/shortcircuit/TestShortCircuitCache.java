@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -61,8 +62,10 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.net.DomainPeer;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -1006,6 +1009,42 @@ public class TestShortCircuitCache {
       assertEquals(0, cache.getDfsClientShmManager().getShmNum());
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  @Test
+  @Timeout(value = 60)
+  public void testSlotFreedWhenRequestFileDescriptorsFails() throws Exception {
+    TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
+    Configuration conf = createShortCircuitConf(
+        "testSlotFreedWhenRequestFileDescriptorsFails", sockDir);
+
+    try (MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build()) {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      Path path = new Path("/testfile");
+      DFSTestUtil.createFile(fs, path, 4096, (short) 1, 0xFADE);
+
+      // Open a stream and cache the block locations
+      try (HdfsDataInputStream in = (HdfsDataInputStream) fs.open(path)) {
+        ExtendedBlock blk = in.getAllBlocks().get(0).getBlock();
+        DataNode dn = cluster.getDataNodes().get(0);
+
+        // Simulate a block move / ReplicaNotFoundException
+        // Delete replica the stream just cached, then read the block
+        dn.getFSDataset().invalidate(blk.getBlockPoolId(),
+            new Block[] {blk.getLocalBlock()});
+        assertThrows(IllegalStateException.class,
+            () -> in.read(0, new byte[4096], 0, 4096));
+
+        // Check shared memory doesn't leak! (slots balance to 0)
+        DfsClientShmManager shmManager = fs.getClient().getClientContext()
+            .getShortCircuitCache().getDfsClientShmManager();
+        assertEquals(0, shmManager.getShmNum());
+        checkNumberOfSegmentsAndSlots(0, 0, dn.getShortCircuitRegistry());
+      }
     }
   }
 
