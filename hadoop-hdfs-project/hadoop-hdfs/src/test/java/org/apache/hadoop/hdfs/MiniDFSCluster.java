@@ -1877,7 +1877,11 @@ public class MiniDFSCluster implements AutoCloseable {
       final DataNode curDn,
       long[][] storageCapacities) throws IOException {
 
-    if (storageCapacities == null || storageCapacities.length == 0) {
+    // Check for null/empty array AND ensure index is within bounds.
+    // DataNodes added without explicit storageCapacities won't have
+    // an entry in the storageCap list.
+    if (storageCapacities == null || storageCapacities.length == 0
+        || curDnIdx >= storageCapacities.length) {
       return;
     }
 
