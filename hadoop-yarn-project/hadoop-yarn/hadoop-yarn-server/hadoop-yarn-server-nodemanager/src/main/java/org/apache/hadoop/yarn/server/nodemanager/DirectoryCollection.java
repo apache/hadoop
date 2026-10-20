@@ -709,7 +709,8 @@ public class DirectoryCollection {
       return path.equals(root) || isOwnedByNmUser(path);
     }
 
-    private boolean isOwnedByNmUser(java.nio.file.Path path) throws IOException {
+    @VisibleForTesting
+    boolean isOwnedByNmUser(java.nio.file.Path path) throws IOException {
       try {
         return nmUser.equals(Files.getOwner(path, LinkOption.NOFOLLOW_LINKS));
       } catch (NoSuchFileException e) {

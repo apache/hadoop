@@ -586,6 +586,30 @@ public class TestDirectoryCollection {
   }
 
   @Test
+  public void testSubAccessibilityDetectsNmOwnedEntryBelowRootOwnedByOtherUser()
+      throws IOException {
+    // root/                  owned by another user, but accessible (rwx)   ← used to cause SKIP_SUBTREE
+    //└── filecache/10/job.jar   owned by the NM user, NOT readable        ← must still be reported
+    java.nio.file.Path root = testDir.toPath();
+    File unreadable = new File(testDir, "filecache/10/job.jar");
+    assertTrue(unreadable.getParentFile().mkdirs());
+    assertTrue(unreadable.createNewFile());
+    Files.setPosixFilePermissions(unreadable.toPath(),
+        PosixFilePermissions.fromString("-w--w--w-"));
+
+    DirectoryCollection.SubAccessibilityVisitor rootOwnedByOtherUser =
+        new DirectoryCollection.SubAccessibilityVisitor(root, nmUser) {
+          @Override
+          boolean isOwnedByNmUser(java.nio.file.Path path) throws IOException {
+            return !path.equals(root) && super.isOwnedByNmUser(path);
+          }
+        };
+    IOException e = assertThrows(IOException.class,
+        () -> Files.walkFileTree(root, Collections.emptySet(), 3, rootOwnedByOtherUser));
+    assertEquals("Cannot read " + unreadable.toPath(), e.getMessage());
+  }
+
+  @Test
   public void testSubAccessibilityDescendsIntoReadableDirsOwnedByOtherUsers()
       throws IOException {
     File readOnly = new File(testDir, "readOnly");
