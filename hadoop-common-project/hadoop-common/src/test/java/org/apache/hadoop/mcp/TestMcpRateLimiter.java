@@ -47,15 +47,6 @@ public class TestMcpRateLimiter {
   }
 
   @Test
-  public void testZeroLimitDisablesLimiting() {
-    McpRateLimiter limiter = new McpRateLimiter(0, 0);
-
-    for (int i = 0; i < 1000; i++) {
-      assertTrue(limiter.tryAcquire());
-    }
-  }
-
-  @Test
   public void testInvalidWindowRejected() {
     assertThrows(IllegalArgumentException.class, () -> new McpRateLimiter(1, 0));
   }

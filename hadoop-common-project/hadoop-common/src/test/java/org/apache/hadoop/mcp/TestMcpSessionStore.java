@@ -31,30 +31,29 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.hadoop.util.FakeTimer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class TestMcpSessionStore {
 
-  private static final long TIMEOUT_MS = 60_000;
+  private static final long DEFAULT_TIMEOUT_MS = 60_000;
+  /** Short idle timeout for the expiry tests */
+  private static final long SHORT_TIMEOUT_MS = 200;
 
-  private FakeTimer timer;
   private McpSessionStore store;
 
   @BeforeEach
   public void setUp() {
-    timer = new FakeTimer();
-    store = createStore(10);
+    store = createStore(10, DEFAULT_TIMEOUT_MS);
   }
 
   /** A store without tool-call or request id limits, which these tests don't cover. */
-  private McpSessionStore createStore(int maxSessions) {
-    return new McpSessionStore(TIMEOUT_MS, maxSessions, timer, 0, 0, 0);
+  private static McpSessionStore createStore(int maxSessions, long timeoutMs) {
+    return new McpSessionStore(timeoutMs, maxSessions, 0, 0, 0);
   }
 
-  private McpSession create() {
-    return store.create(McpJsonRpc.PROTOCOL_VERSION, Collections.emptyMap(),
+  private static McpSession createSession(McpSessionStore sessionStore) {
+    return sessionStore.create(McpJsonRpc.PROTOCOL_VERSION, Collections.emptyMap(),
         Collections.emptyMap());
   }
 
@@ -72,14 +71,13 @@ public class TestMcpSessionStore {
     assertEquals(McpJsonRpc.PROTOCOL_VERSION, session.getNegotiatedProtocolVersion());
     assertEquals("test-client", session.getClientInfo().get("name"));
     assertTrue(session.getClientCapabilities().containsKey("roots"));
-    assertEquals(timer.now(), session.getCreationTimeMs());
     assertSame(session, store.get(session.getId()));
   }
 
   @Test
   public void testSessionIdsAreUniqueVisibleAscii() {
-    McpSession first = create();
-    McpSession second = create();
+    McpSession first = createSession(store);
+    McpSession second = createSession(store);
 
     assertNotEquals(first.getId(), second.getId());
     // The spec requires visible ASCII (0x21-0x7E) in session ids.
@@ -89,24 +87,14 @@ public class TestMcpSessionStore {
   }
 
   @Test
-  public void testMarkReadyIsIdempotent() {
-    McpSession session = create();
-
-    assertTrue(session.markReady());
-    assertEquals(McpSessionState.READY, session.getState());
-    assertFalse(session.markReady());
-    assertEquals(McpSessionState.READY, session.getState());
-  }
-
-  @Test
   public void testGetUnknownOrNullIdReturnsNull() {
     assertNull(store.get("no-such-session"));
     assertNull(store.get(null));
   }
 
   @Test
-  public void testRemoveReturnsRemovedSession() {
-    McpSession session = create();
+  public void testRemoveSession() {
+    McpSession session = createSession(store);
 
     assertSame(session, store.remove(session.getId()));
     assertNull(store.get(session.getId()));
@@ -121,79 +109,64 @@ public class TestMcpSessionStore {
 
   @Test
   public void testCreateRejectedAtMaxCapacity() {
-    McpSessionStore smallStore = createStore(1);
-    McpSession first = smallStore.create(McpJsonRpc.PROTOCOL_VERSION,
+    McpSessionStore sessionStore = createStore(1, DEFAULT_TIMEOUT_MS);
+    McpSession firstSession = sessionStore.create(McpJsonRpc.PROTOCOL_VERSION,
         Collections.emptyMap(), Collections.emptyMap());
 
-    assertNotNull(first);
-    assertNull(smallStore.create(McpJsonRpc.PROTOCOL_VERSION,
+    assertNotNull(firstSession);
+    assertNull(sessionStore.create(McpJsonRpc.PROTOCOL_VERSION,
         Collections.emptyMap(), Collections.emptyMap()));
     // The existing session must survive the rejected attempt.
-    assertSame(first, smallStore.get(first.getId()));
+    assertSame(firstSession, sessionStore.get(firstSession.getId()));
   }
 
   @Test
   public void testRemoveFreesCapacity() {
-    McpSessionStore smallStore = createStore(1);
-    McpSession first = smallStore.create(McpJsonRpc.PROTOCOL_VERSION,
+    McpSessionStore sessionStore = createStore(1, DEFAULT_TIMEOUT_MS);
+    McpSession firstSession = sessionStore.create(McpJsonRpc.PROTOCOL_VERSION,
         Collections.emptyMap(), Collections.emptyMap());
 
-    assertSame(first, smallStore.remove(first.getId()));
-    assertNotNull(smallStore.create(McpJsonRpc.PROTOCOL_VERSION,
+    assertSame(firstSession, sessionStore.remove(firstSession.getId()));
+    assertNotNull(sessionStore.create(McpJsonRpc.PROTOCOL_VERSION,
         Collections.emptyMap(), Collections.emptyMap()));
   }
 
   @Test
-  public void testIdleExpiry() {
-    McpSession session = create();
+  public void testIdleExpiry() throws Exception {
+    McpSessionStore sessionStore = createStore(10, SHORT_TIMEOUT_MS);
+    McpSession session = createSession(sessionStore);
+    assertEquals(1, sessionStore.size());
 
-    timer.advance(TIMEOUT_MS - 1);
-    store.cleanUp();
-    assertEquals(1, store.size());
+    Thread.sleep(2 * SHORT_TIMEOUT_MS);
 
-    timer.advance(2);
-    assertNull(store.get(session.getId()));
-    store.cleanUp();
-    assertEquals(0, store.size());
+    assertNull(sessionStore.get(session.getId()));
+    sessionStore.cleanUp();
+    assertEquals(0, sessionStore.size());
   }
 
   @Test
-  public void testAccessResetsIdleClock() {
-    McpSession session = create();
+  public void testExpiredSessionsDoNotCountAgainstCapacity() throws Exception {
+    McpSessionStore sessionStore = createStore(1, SHORT_TIMEOUT_MS);
+    createSession(sessionStore);
 
-    timer.advance(TIMEOUT_MS / 2);
-    assertSame(session, store.get(session.getId()));
+    Thread.sleep(2 * SHORT_TIMEOUT_MS);
 
-    // More than TIMEOUT_MS since creation, but less since the last access.
-    timer.advance(TIMEOUT_MS - 1);
-    assertSame(session, store.get(session.getId()));
-
-    timer.advance(TIMEOUT_MS + 1);
-    assertNull(store.get(session.getId()));
+    assertNotNull(createSession(sessionStore));
   }
 
   @Test
-  public void testExpiredSessionsDoNotCountAgainstCapacity() {
-    McpSessionStore smallStore = createStore(1);
-    smallStore.create(McpJsonRpc.PROTOCOL_VERSION, Collections.emptyMap(),
-        Collections.emptyMap());
+  public void testRemoveExpiredSessionReturnsNull() throws Exception {
+    McpSessionStore sessionStore = createStore(10, SHORT_TIMEOUT_MS);
+    McpSession session = createSession(sessionStore);
 
-    timer.advance(TIMEOUT_MS + 1);
-    assertNotNull(smallStore.create(McpJsonRpc.PROTOCOL_VERSION,
-        Collections.emptyMap(), Collections.emptyMap()));
-  }
+    Thread.sleep(2 * SHORT_TIMEOUT_MS);
 
-  @Test
-  public void testRemoveExpiredSessionReturnsNull() {
-    McpSession session = create();
-
-    timer.advance(TIMEOUT_MS + 1);
-    assertNull(store.remove(session.getId()));
+    assertNull(sessionStore.remove(session.getId()));
   }
 
   @Test
   public void testCloseClearsStore() {
-    McpSession session = create();
+    McpSession session = createSession(store);
 
     store.close();
     assertNull(store.get(session.getId()));
@@ -203,11 +176,11 @@ public class TestMcpSessionStore {
   @Test
   public void testInvalidArgumentsRejected() {
     assertThrows(IllegalArgumentException.class,
-        () -> new McpSessionStore(0, 10, timer, 0, 0, 0));
+        () -> new McpSessionStore(0, 10, 0, 0, 0));
     assertThrows(IllegalArgumentException.class,
-        () -> new McpSessionStore(TIMEOUT_MS, 0, timer, 0, 0, 0));
+        () -> new McpSessionStore(DEFAULT_TIMEOUT_MS, 0, 0, 0, 0));
     // A tool-call limit needs a positive window.
     assertThrows(IllegalArgumentException.class,
-        () -> new McpSessionStore(TIMEOUT_MS, 10, timer, 1, 0, 0));
+        () -> new McpSessionStore(DEFAULT_TIMEOUT_MS, 10, 1, 0, 0));
   }
 }

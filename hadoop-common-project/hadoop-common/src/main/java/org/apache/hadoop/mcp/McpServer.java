@@ -28,13 +28,11 @@ import javax.servlet.http.HttpServlet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.mcp.McpSchema.CallToolResult;
 import org.apache.hadoop.mcp.McpSchema.ServerCapabilities;
 import org.apache.hadoop.mcp.McpSchema.Tool;
-import org.apache.hadoop.util.Timer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -105,7 +103,6 @@ public final class McpServer implements Closeable {
     private final long toolCallWindowMs;
     private final int maxToolOutputChars;
     private final int maxRequestIds;
-    private Timer timer = new Timer();
 
     private Builder(McpJsonMapper jsonMapper, Configuration conf) {
       if (!(jsonMapper instanceof JacksonMcpJsonMapper)) {
@@ -149,14 +146,8 @@ public final class McpServer implements Closeable {
       return this;
     }
 
-    @VisibleForTesting
-    Builder timer(Timer newTimer) {
-      this.timer = newTimer;
-      return this;
-    }
-
     public McpServer build() {
-      McpSessionStore sessionStore = new McpSessionStore(sessionTimeoutMs, maxSessions, timer,
+      McpSessionStore sessionStore = new McpSessionStore(sessionTimeoutMs, maxSessions,
           toolCallLimit, toolCallWindowMs, maxRequestIds);
       McpRequestHandler handler = new McpRequestHandler(objectMapper, serverName,
           serverVersion, capabilities, tools, sessionStore,

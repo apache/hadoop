@@ -26,10 +26,9 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Ticker;
 import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
-import org.apache.hadoop.util.Timer;
+import org.apache.hadoop.util.Time;
 
 /**
  * Bounded, idle-expiring store of {@link McpSession}s keyed by session id.
@@ -45,7 +44,6 @@ import org.apache.hadoop.util.Timer;
 final class McpSessionStore implements Closeable {
 
   private final int maxSessions;
-  private final Timer timer;
   private final int toolCallLimit;
   private final long toolCallWindowMs;
   private final int maxRequestIds;
@@ -55,10 +53,24 @@ final class McpSessionStore implements Closeable {
    * @param toolCallLimit tool calls allowed per session within one window; 0 or less
    *     disables the limit
    * @param toolCallWindowMs length of the tool-call rate-limit window
+   * @param toolCallLimit maximum number of MCP tool calls per session within a rate-limit window
+   * @param toolCallWindowMs length of the MCP tool-call rate-limit window
    * @param maxRequestIds request ids each session may use; 0 or less is unlimited
    */
-  McpSessionStore(long sessionTimeoutMs, int maxSessions, Timer timer, int toolCallLimit,
+  McpSessionStore(long sessionTimeoutMs, int maxSessions, int toolCallLimit,
       long toolCallWindowMs, int maxRequestIds) {
+    validateArguments(sessionTimeoutMs, maxSessions, toolCallLimit, toolCallWindowMs);
+    this.maxSessions = maxSessions;
+    this.toolCallLimit = toolCallLimit;
+    this.toolCallWindowMs = toolCallWindowMs;
+    this.maxRequestIds = maxRequestIds;
+    this.sessions = CacheBuilder.newBuilder()
+        .expireAfterAccess(sessionTimeoutMs, TimeUnit.MILLISECONDS)
+        .build();
+  }
+
+  private void validateArguments(long sessionTimeoutMs, int maxSessions, int toolCallLimit,
+      long toolCallWindowMs) {
     if (sessionTimeoutMs <= 0) {
       throw new IllegalArgumentException("sessionTimeoutMs must be positive: " + sessionTimeoutMs);
     }
@@ -69,20 +81,6 @@ final class McpSessionStore implements Closeable {
       throw new IllegalArgumentException("toolCallWindowMs must be positive: "
           + toolCallWindowMs);
     }
-    this.maxSessions = maxSessions;
-    this.timer = timer;
-    this.toolCallLimit = toolCallLimit;
-    this.toolCallWindowMs = toolCallWindowMs;
-    this.maxRequestIds = maxRequestIds;
-    this.sessions = CacheBuilder.newBuilder()
-        .expireAfterAccess(sessionTimeoutMs, TimeUnit.MILLISECONDS)
-        .ticker(new Ticker() {
-          @Override
-          public long read() {
-            return timer.monotonicNowNanos();
-          }
-        })
-        .build();
   }
 
   /**
@@ -93,7 +91,7 @@ final class McpSessionStore implements Closeable {
   McpSession create(String negotiatedProtocolVersion, Map<String, Object> clientInfo,
       Map<String, Object> clientCapabilities) {
     McpSession session = new McpSession(UUID.randomUUID().toString(),
-        negotiatedProtocolVersion, clientInfo, clientCapabilities, timer.now(),
+        negotiatedProtocolVersion, clientInfo, clientCapabilities, Time.now(),
         new McpRateLimiter(toolCallLimit, toolCallWindowMs), maxRequestIds);
     synchronized (this) {
       // Drop expired sessions first so they don't count against capacity.

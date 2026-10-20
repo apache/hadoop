@@ -36,7 +36,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.util.FakeTimer;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -614,15 +613,12 @@ public class TestMcpHttpServlet {
 
   @Test
   public void testSessionExpiresAfterIdleTimeout() throws Exception {
-    FakeTimer timer = new FakeTimer();
     Configuration conf = new Configuration();
-    conf.setLong(CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_TIMEOUT_MS_KEY, 1000);
-    McpServer server = McpServer.sync(JSON_MAPPER, conf)
-        .timer(timer)
-        .build();
+    conf.setLong(CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_TIMEOUT_MS_KEY, 200);
+    McpServer server = McpServer.sync(JSON_MAPPER, conf).build();
     String sessionId = handshake(server);
 
-    timer.advance(1001);
+    Thread.sleep(400);
 
     assertEquals(404, sendRequest(server, TOOLS_LIST_REQUEST, sessionId).status());
   }
