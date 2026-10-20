@@ -582,7 +582,7 @@ public class TestDirectoryCollection {
         new DirectoryCollection.SubAccessibilityVisitor(testDir.toPath(), nmUser);
     IOException e = assertThrows(IOException.class,
         () -> owner.visitFile(file, attrs));
-    assertTrue(e.getMessage().contains("Can not read"));
+    assertEquals("Cannot read " + file, e.getMessage());
   }
 
   @Test
@@ -610,11 +610,12 @@ public class TestDirectoryCollection {
         new DirectoryCollection.SubAccessibilityVisitor(testDir.toPath(), nmUser);
     IOException e = assertThrows(IOException.class,
         () -> owner.preVisitDirectory(readOnly.toPath(), attrs));
-    assertTrue(e.getMessage().contains("Can not access"));
+    assertEquals("Cannot access " + readOnly.toPath(), e.getMessage());
   }
 
   @Test
-  public void testSubAccessibilityAlwaysChecksRootDir() throws IOException {
+  public void testSubAccessibilityAlwaysChecksRootDirPermissionRegardlessOfOwner()
+      throws IOException {
     java.nio.file.Path root = new File(testDir, "root").toPath();
     Files.createDirectory(root);
     Files.setPosixFilePermissions(root, PosixFilePermissions.fromString("r-x------"));
@@ -623,7 +624,7 @@ public class TestDirectoryCollection {
       IOException e = assertThrows(IOException.class,
           () -> Files.walkFileTree(root, Collections.emptySet(), maxDepth,
               new DirectoryCollection.SubAccessibilityVisitor(root, OTHER_USER)));
-      assertTrue(e.getMessage().contains(root.toString()));
+      assertEquals("Cannot access " + root, e.getMessage());
     }
   }
 
@@ -633,8 +634,9 @@ public class TestDirectoryCollection {
         new File(testDir, "missing").toPath());
     DirectoryCollection dc = new DirectoryCollection(new String[]{testDir.toString()});
     dc.setSubAccessibilityValidationEnabled(true);
-    assertTrue(dc.testDirs(Collections.singletonList(testDir.toString()),
-        Collections.emptySet()).isEmpty());
+    Map<String, DirectoryCollection.DiskErrorInformation> dcErrors =
+            dc.testDirs(Collections.singletonList(testDir.toString()), Collections.emptySet());
+    assertTrue(dcErrors.isEmpty(), "No errors found when broken symlink is checked");
   }
 
   @Test
@@ -649,12 +651,17 @@ public class TestDirectoryCollection {
     dc.setSubAccessibilityValidationEnabled(true);
 
     dc.setSubAccessibilityValidationMaxDepth(3);
-    assertTrue(dc.testDirs(Collections.singletonList(testDir.toString()),
-        Collections.emptySet()).isEmpty());
+    Map<String, DirectoryCollection.DiskErrorInformation> errorWithMax3 =
+            dc.testDirs(Collections.singletonList(testDir.toString()), Collections.emptySet());
+    assertTrue(errorWithMax3.isEmpty());
+
 
     dc.setSubAccessibilityValidationMaxDepth(5);
-    assertEquals(1, dc.testDirs(Collections.singletonList(testDir.toString()),
-        Collections.emptySet()).size());
+    Map<String, DirectoryCollection.DiskErrorInformation> errorWithMax5 =
+            dc.testDirs(Collections.singletonList(testDir.toString()), Collections.emptySet());
+    assertEquals(1, errorWithMax5.size());
+    assertEquals("Cannot read " + unreadable.toPath(),
+        errorWithMax5.get(testDir.toString()).message);
   }
 
   @Test
@@ -664,9 +671,7 @@ public class TestDirectoryCollection {
         () -> DirectoryCollection.getSubAccessibilityValidationMaxDepth(conf));
     assertTrue(e.getMessage().contains(
         YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH));
-
-    conf.setInt(YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH, 0);
-    assertEquals(0, DirectoryCollection.getSubAccessibilityValidationMaxDepth(conf));
+    assertTrue(e.getMessage().contains("must not be negative"));
   }
 
   @Test

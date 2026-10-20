@@ -639,17 +639,21 @@ public class DirectoryCollection {
 
   /**
    * Walks the content of an NM directory and fails with an {@link IOException}
-   * on the first entry the NM user cannot access.
-   * <p>
-   * The NM directory itself and every directory owned by the NM user must be
-   * readable, writable and executable.
-   * Files owned by the NM user must be readable.
-   * Entries owned by other users (e.g. application directories) are not checked:
-   * directories owned by other users are descended into and enter them, and skipped otherwise.
-   * Symbolic links are neither followed nor checked.
-   * <p>
-   * Entries deleted during the walk are ignored, because
-   * localization and cleanup modify these directories concurrently.
+   * on the first entry the NM user cannot access. This includes the following:
+   * <ul>
+   *     <li>Configured directory (e.g. 'root' dir) only accessibility:
+   *        readable, writable and executable are checked regardless of who owns it
+   *     </li>
+   *     <li>
+   *         For entries below root dir:
+   *         If it is owned by NM user then checks readable, writable and executable.
+   *         If it is not owned by NM user then only check readable and if NM user could enter.
+   *     </li>
+   *     <li>Symbolic links are neither followed nor checked.</li>
+   *     <li>Entries deleted during the walk are ignored,
+   *         because localization and clean up modify these directories concurrently.
+   *     </li>
+   * </ul>
    */
   @VisibleForTesting
   static class SubAccessibilityVisitor
@@ -719,7 +723,7 @@ public class DirectoryCollection {
           ? Files.isReadable(path) && Files.isWritable(path) && Files.isExecutable(path)
           : Files.isReadable(path);
       if (!accessible && !Files.notExists(path, LinkOption.NOFOLLOW_LINKS)) {
-        throw new IOException((isDir ? "Can not access " : "Can not read ") + path);
+        throw new IOException((isDir ? "Cannot access " : "Cannot read ") + path);
       }
     }
   }
