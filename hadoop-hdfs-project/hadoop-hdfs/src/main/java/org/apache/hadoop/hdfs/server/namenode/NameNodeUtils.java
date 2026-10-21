@@ -107,8 +107,10 @@ public final class NameNodeUtils {
     }
 
     int port = 0;
-    if (currentNnAddress.contains(":")) {
-      port = Integer.parseInt(currentNnAddress.split(":")[1]);
+    // The port follows the last colon, unless that colon is inside an IPv6 literal like [::1].
+    int colon = currentNnAddress.lastIndexOf(':');
+    if (colon > currentNnAddress.lastIndexOf(']')) {
+      port = Integer.parseInt(currentNnAddress.substring(colon + 1));
     }
 
     if (port > 0) {
