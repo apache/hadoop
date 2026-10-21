@@ -209,24 +209,28 @@ public class TestDatanodeManager {
     Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY, true);
     DatanodeManager dm = mockDatanodeManager(fsn, conf);
+    try {
+      String[] ips = {"1.2.3.4", "2001:db8::1", "2001:db8::2", "5.6.7.8"};
+      for (int i = 0; i < ips.length; i++) {
+        dm.registerDatanode(new DatanodeRegistration(
+            new DatanodeID(ips[i], "", "uuid" + i, 9866, 9864, 0, 9867), null, null, "version"));
+      }
+      DatanodeDescriptor ipv4 = dm.getDatanodeByHost(ips[0]);
+      DatanodeDescriptor ipv6 = dm.getDatanodeByHost(ips[1]);
+      DatanodeDescriptor ipv6Bracketed = dm.getDatanodeByHost(ips[2]);
 
-    String[] ips = {"1.2.3.4", "2001:db8::1", "2001:db8::2", "5.6.7.8"};
-    for (int i = 0; i < ips.length; i++) {
-      dm.registerDatanode(new DatanodeRegistration(
-          new DatanodeID(ips[i], "", "uuid" + i, 9866, 9864, 0, 9867), null, null, "version"));
+      SlowPeerTracker tracker = dm.getSlowPeerTracker();
+      OutlierMetrics metrics = new OutlierMetrics(0.0, 0.0, 0.0, 5.0);
+      tracker.addReport(ipv4.getInfoAddr(), ips[3], metrics);
+      tracker.addReport(ipv6.getInfoAddr(), ips[3], metrics);
+      tracker.addReport(NetUtils.getHostPortString(ips[2], ipv6Bracketed.getInfoPort()), ips[3],
+          metrics);
+
+      assertThat(dm.getAllSlowDataNodes()).containsExactlyInAnyOrder(ipv4, ipv6, ipv6Bracketed);
+    } finally {
+      // Stops the slow peer collector thread started by enabling peer stats.
+      dm.close();
     }
-    DatanodeDescriptor ipv4 = dm.getDatanodeByHost(ips[0]);
-    DatanodeDescriptor ipv6 = dm.getDatanodeByHost(ips[1]);
-    DatanodeDescriptor ipv6Bracketed = dm.getDatanodeByHost(ips[2]);
-
-    SlowPeerTracker tracker = dm.getSlowPeerTracker();
-    OutlierMetrics metrics = new OutlierMetrics(0.0, 0.0, 0.0, 5.0);
-    tracker.addReport(ipv4.getInfoAddr(), ips[3], metrics);
-    tracker.addReport(ipv6.getInfoAddr(), ips[3], metrics);
-    tracker.addReport(NetUtils.getHostPortString(ips[2], ipv6Bracketed.getInfoPort()), ips[3],
-        metrics);
-
-    assertThat(dm.getAllSlowDataNodes()).containsExactlyInAnyOrder(ipv4, ipv6, ipv6Bracketed);
   }
 
   /**
