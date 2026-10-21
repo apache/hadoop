@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -702,7 +703,12 @@ public class DirectoryCollection {
       if (e instanceof NoSuchFileException) {
         return FileVisitResult.CONTINUE;
       }
-      throw e;
+      // walkFileTree opens a directory before preVisitDirectory is called, so a
+      // directory the NM user cannot list ends up here instead.
+      if (e instanceof AccessDeniedException && !isCheckedForNmUser(path)) {
+        return FileVisitResult.CONTINUE;
+      }
+      throw new IOException("Cannot access " + path, e);
     }
 
     private boolean isCheckedForNmUser(java.nio.file.Path path) throws IOException {

@@ -638,6 +638,50 @@ public class TestDirectoryCollection {
   }
 
   @Test
+  public void testSubAccessibilitySkipsUnlistableDirsOwnedByOtherUsersDuringWalk()
+      throws IOException {
+    // root/usercache/user/filecache   traverse-only (--x), like the LCE private cache dir
+    java.nio.file.Path root = testDir.toPath();
+    File unlistable = new File(testDir, "usercache/user/filecache");
+    assertTrue(unlistable.mkdirs());
+    Files.setPosixFilePermissions(unlistable.toPath(),
+        PosixFilePermissions.fromString("--x------"));
+
+    Files.walkFileTree(root, Collections.emptySet(), Integer.MAX_VALUE,
+        new DirectoryCollection.SubAccessibilityVisitor(root, OTHER_USER));
+  }
+
+  @Test
+  public void testSubAccessibilityReportsUnlistableDirsOwnedByNmUserDuringWalk()
+      throws IOException {
+    java.nio.file.Path root = testDir.toPath();
+    File unlistable = new File(testDir, "filecache/probe");
+    assertTrue(unlistable.mkdirs());
+    Files.setPosixFilePermissions(unlistable.toPath(),
+        PosixFilePermissions.fromString("---------"));
+
+    IOException e = assertThrows(IOException.class,
+        () -> Files.walkFileTree(root, Collections.emptySet(), Integer.MAX_VALUE,
+            new DirectoryCollection.SubAccessibilityVisitor(root, nmUser)));
+    assertEquals("Cannot access " + unlistable.toPath(), e.getMessage());
+  }
+
+  @Test
+  public void testSubAccessibilityReportsUnlistableRootDirRegardlessOfOwner()
+      throws IOException {
+    java.nio.file.Path root = new File(testDir, "root").toPath();
+    Files.createDirectory(root);
+    Files.setPosixFilePermissions(root, PosixFilePermissions.fromString("-wx------"));
+
+    for (int maxDepth : new int[]{0, 1}) {
+      IOException e = assertThrows(IOException.class,
+          () -> Files.walkFileTree(root, Collections.emptySet(), maxDepth,
+              new DirectoryCollection.SubAccessibilityVisitor(root, OTHER_USER)));
+      assertEquals("Cannot access " + root, e.getMessage());
+    }
+  }
+
+  @Test
   public void testSubAccessibilityAlwaysChecksRootDirPermissionRegardlessOfOwner()
       throws IOException {
     java.nio.file.Path root = new File(testDir, "root").toPath();
