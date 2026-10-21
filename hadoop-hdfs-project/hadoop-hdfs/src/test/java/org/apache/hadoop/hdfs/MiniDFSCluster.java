@@ -2628,10 +2628,9 @@ public class MiniDFSCluster implements AutoCloseable {
     Configuration newconf = new HdfsConfiguration(conf); // save cloned config
     if (keepPort) {
       InetSocketAddress addr = dnprop.datanode.getXferAddress();
-      conf.set(DFS_DATANODE_ADDRESS_KEY, 
-          addr.getAddress().getHostAddress() + ":" + addr.getPort());
-      conf.set(DFS_DATANODE_IPC_ADDRESS_KEY,
-          addr.getAddress().getHostAddress() + ":" + dnprop.ipcPort); 
+      String host = addr.getAddress().getHostAddress();
+      conf.set(DFS_DATANODE_ADDRESS_KEY, NetUtils.getHostPortString(host, addr.getPort()));
+      conf.set(DFS_DATANODE_IPC_ADDRESS_KEY, NetUtils.getHostPortString(host, dnprop.ipcPort));
     }
     final DataNode newDn = DataNode.createDataNode(args, conf, secureResources);
 

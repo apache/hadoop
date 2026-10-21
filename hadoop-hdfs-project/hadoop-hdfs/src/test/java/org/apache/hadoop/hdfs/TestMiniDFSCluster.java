@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Set;
@@ -433,12 +434,21 @@ public class TestMiniDFSCluster {
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).bindHost("::1").build()) {
       cluster.waitActive();
       assertEquals(loopback, cluster.getNameNode().getNameNodeAddress().getAddress());
-      assertEquals(loopback, cluster.getDataNodes().get(0).getXferAddress().getAddress());
+      DataNode dn = cluster.getDataNodes().get(0);
+      InetSocketAddress xferAddress = dn.getXferAddress();
+      int ipcPort = dn.getIpcPort();
+      assertEquals(loopback, xferAddress.getAddress());
 
       DistributedFileSystem fs = cluster.getFileSystem();
       Path dir = new Path("/testBindHostIPv6Loopback");
       assertThat(fs.mkdirs(dir)).isTrue();
       assertThat(fs.exists(dir)).isTrue();
+
+      assertThat(cluster.restartDataNode(0, true)).isTrue();
+      cluster.waitActive();
+      dn = cluster.getDataNodes().get(0);
+      assertEquals(xferAddress, dn.getXferAddress());
+      assertEquals(ipcPort, dn.getIpcPort());
     }
   }
 
