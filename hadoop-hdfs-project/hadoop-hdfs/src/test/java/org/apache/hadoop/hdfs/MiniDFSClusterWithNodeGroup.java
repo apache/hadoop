@@ -67,11 +67,11 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
       return;
     }
     if (checkDataNodeHostConfig) {
-      conf.setIfUnset(DFS_DATANODE_HOST_NAME_KEY, "127.0.0.1");
+      conf.setIfUnset(DFS_DATANODE_HOST_NAME_KEY, getBindHost());
     } else {
-      conf.set(DFS_DATANODE_HOST_NAME_KEY, "127.0.0.1");
+      conf.set(DFS_DATANODE_HOST_NAME_KEY, getBindHost());
     }
-    conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "127.0.0.1");
+    conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, getBindHost());
 
     int curDatanodesNum = dataNodes.size();
     // for mincluster's the default initialDelay for BRs is 0
