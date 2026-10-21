@@ -69,6 +69,7 @@ import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.test.Whitebox;
+import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
@@ -76,6 +77,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -224,7 +226,14 @@ public class TestDatanodeManager {
     assertThat(dm.getDatanodeDescriptor("[" + ipv6 + "]:" + port)).isSameAs(ipv6Node);
     assertThat(dm.getDatanodeDescriptor("[" + ipv6 + "]")).isSameAs(ipv6Node);
     assertThat(dm.getDatanodeDescriptor(ipv6)).isSameAs(ipv6Node);
-    assertThat(dm.getDatanodeDescriptor("[2001:db8::1]:" + port)).isSameAs(ipv6Node);
+    // Asserted on the parser, since a lookup miss falls back to a random node
+    assertThat(DatanodeManager.parseIpv6Address("[2001:db8::1]:" + port))
+        .isEqualTo(HostAndPort.fromParts(ipv6, port));
+    assertThat(DatanodeManager.parseIpv6Address("::ffff:" + ipv4))
+        .isEqualTo(HostAndPort.fromHost(ipv4));
+    // A malformed IPv6 address is rejected, as a malformed IPv4 one is
+    assertThatThrownBy(() -> dm.getDatanodeDescriptor("[2001:db8::zz]:" + port))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   /**
