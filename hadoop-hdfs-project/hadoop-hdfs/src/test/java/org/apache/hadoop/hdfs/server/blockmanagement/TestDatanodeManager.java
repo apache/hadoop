@@ -61,11 +61,13 @@ import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.test.Whitebox;
@@ -193,6 +195,38 @@ public class TestDatanodeManager {
 
     assertNull(dm.getDatanodeByHostName(hostnameOld), "should be no node with old hostname");
     assertNotNull(dm.getDatanodeByHostName(hostnameNew), "should be a node with new hostname");
+  }
+
+  /**
+   * Slow peer reports keyed by IPv4, IPv6 and bracketed IPv6 info addresses
+   * must all resolve to their registered datanodes.
+   */
+  @Test
+  public void testSlowPeersResolvedForIpv4AndIpv6() throws IOException {
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    Mockito.when(fsn.hasWriteLock(RwLockMode.BM)).thenReturn(true);
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY, true);
+    DatanodeManager dm = mockDatanodeManager(fsn, conf);
+
+    String[] ips = {"1.2.3.4", "2001:db8::1", "2001:db8::2", "5.6.7.8"};
+    for (int i = 0; i < ips.length; i++) {
+      dm.registerDatanode(new DatanodeRegistration(
+          new DatanodeID(ips[i], "", "uuid" + i, 9866, 9864, 0, 9867), null, null, "version"));
+    }
+    DatanodeDescriptor ipv4 = dm.getDatanodeByHost(ips[0]);
+    DatanodeDescriptor ipv6 = dm.getDatanodeByHost(ips[1]);
+    DatanodeDescriptor ipv6Bracketed = dm.getDatanodeByHost(ips[2]);
+
+    SlowPeerTracker tracker = dm.getSlowPeerTracker();
+    OutlierMetrics metrics = new OutlierMetrics(0.0, 0.0, 0.0, 5.0);
+    tracker.addReport(ipv4.getInfoAddr(), ips[3], metrics);
+    tracker.addReport(ipv6.getInfoAddr(), ips[3], metrics);
+    tracker.addReport(NetUtils.getHostPortString(ips[2], ipv6Bracketed.getInfoPort()), ips[3],
+        metrics);
+
+    assertThat(dm.getAllSlowDataNodes()).containsExactlyInAnyOrder(ipv4, ipv6, ipv6Bracketed);
   }
 
   /**
