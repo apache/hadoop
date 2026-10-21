@@ -196,6 +196,38 @@ public class TestDatanodeManager {
   }
 
   /**
+   * Check that getDatanodeDescriptor, which resolves favored nodes, finds
+   * IPv4 and IPv6 DataNodes from their address with and without a port.
+   */
+  @Test
+  public void testGetDatanodeDescriptorForIpv4AndIpv6() throws IOException {
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    Mockito.when(fsn.hasWriteLock(RwLockMode.BM)).thenReturn(true);
+    DatanodeManager dm = mockDatanodeManager(fsn, new Configuration());
+
+    int port = DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT;
+    String ipv4 = "10.0.0.1";
+    // The form InetAddress#getHostAddress returns, as DataNodes register with
+    String ipv6 = "2001:db8:0:0:0:0:0:1";
+    String otherIpv6 = "2001:db8:0:0:0:0:0:2";
+    for (String ip : new String[] {ipv4, ipv6, otherIpv6}) {
+      dm.registerDatanode(new DatanodeRegistration(
+          new DatanodeID(ip, "", "uuid-" + ip, port, 0, 0, 0), null, null, "version"));
+    }
+    DatanodeDescriptor ipv4Node = dm.getDatanodeByXferAddr(ipv4, port);
+    DatanodeDescriptor ipv6Node = dm.getDatanodeByXferAddr(ipv6, port);
+
+    assertThat(dm.getDatanodeDescriptor(ipv4 + ":" + port)).isSameAs(ipv4Node);
+    assertThat(dm.getDatanodeDescriptor(ipv4)).isSameAs(ipv4Node);
+    assertThat(dm.getDatanodeDescriptor(ipv6 + ":" + port)).isSameAs(ipv6Node);
+    assertThat(dm.getDatanodeDescriptor("[" + ipv6 + "]:" + port)).isSameAs(ipv6Node);
+    assertThat(dm.getDatanodeDescriptor("[" + ipv6 + "]")).isSameAs(ipv6Node);
+    assertThat(dm.getDatanodeDescriptor(ipv6)).isSameAs(ipv6Node);
+    assertThat(dm.getDatanodeDescriptor("[2001:db8::1]:" + port)).isSameAs(ipv6Node);
+  }
+
+  /**
    * This test sends a random sequence of node registrations and node removals
    * to the DatanodeManager (of nodes with different IDs and versions), and
    * checks that the DatanodeManager keeps a correct count of different software
