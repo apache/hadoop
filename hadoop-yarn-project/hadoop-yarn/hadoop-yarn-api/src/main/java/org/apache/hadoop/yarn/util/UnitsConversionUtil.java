@@ -137,29 +137,27 @@ public class UnitsConversionUtil {
     }
     Converter fc = getConverter(fromUnit);
     Converter tc = getConverter(toUnit);
-    long numerator = fc.numerator * tc.denominator;
-    long denominator = fc.denominator * tc.numerator;
-    long numeratorMultiplierLimit = Long.MAX_VALUE / numerator;
-    if (numerator < denominator) {
-      if (numeratorMultiplierLimit < fromValue) {
-        String overflowMsg =
+    if (fromValue == 0) {
+      return 0;
+    }
+    try {
+      long numerator = Math.multiplyExact(fc.numerator, tc.denominator);
+      long denominator = Math.multiplyExact(fc.denominator, tc.numerator);
+      return Math.multiplyExact(fromValue, numerator) / denominator;
+    } catch (ArithmeticException e) {
+      BigInteger numerator = BigInteger.valueOf(fromValue)
+          .multiply(BigInteger.valueOf(fc.numerator))
+          .multiply(BigInteger.valueOf(tc.denominator));
+      BigInteger denominator = BigInteger.valueOf(fc.denominator)
+          .multiply(BigInteger.valueOf(tc.numerator));
+      try {
+        return numerator.divide(denominator).longValueExact();
+      } catch (ArithmeticException overflow) {
+        throw new IllegalArgumentException(
             "Converting " + fromValue + " from '" + fromUnit + "' to '" + toUnit
-                + "' will result in an overflow of Long";
-        throw new IllegalArgumentException(overflowMsg);
+                + "' will result in an overflow of Long", overflow);
       }
-      return (fromValue * numerator) / denominator;
     }
-    if (numeratorMultiplierLimit > fromValue) {
-      return (numerator * fromValue) / denominator;
-    }
-    long tmp = numerator / denominator;
-    if ((Long.MAX_VALUE / tmp) < fromValue) {
-      String overflowMsg =
-          "Converting " + fromValue + " from '" + fromUnit + "' to '" + toUnit
-              + "' will result in an overflow of Long";
-      throw new IllegalArgumentException(overflowMsg);
-    }
-    return fromValue * tmp;
   }
 
   /**
