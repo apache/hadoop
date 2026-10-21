@@ -32,6 +32,7 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -403,6 +404,32 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
     } finally {
       IOUtils.cleanupWithLogger(null, socket, serverSocket);
     }
+  }
+
+  @Test
+  public void testGetPeerAddress() throws Exception {
+    for (String ip : new String[] {"192.168.1.10", "fd00:dead:beef::21", "::1"}) {
+      InetAddress addr = InetAddress.getByName(ip);
+      assertPeerAddress(addr, new InetSocketAddress(addr, 9866).toString());
+      assertPeerAddress(addr, new InetSocketAddress(
+          InetAddress.getByAddress("dn1.example.com", addr.getAddress()), 9866).toString());
+    }
+    InetAddress loopback6 = InetAddress.getByName("::1");
+    // Unbracketed IPv6 form, as printed by InetSocketAddress before JDK 14
+    assertPeerAddress(loopback6, "/0:0:0:0:0:0:0:1:9866");
+    assertPeerAddress(loopback6, "[::1]:9866");
+    assertPeerAddress(InetAddress.getByName("192.168.1.10"), "192.168.1.10:9866");
+    assertThrows(IllegalArgumentException.class, () -> getPeerAddress("dn1.example.com:9866"));
+  }
+
+  private static void assertPeerAddress(InetAddress expected, String remoteAddress) {
+    assertEquals(expected, getPeerAddress(remoteAddress), remoteAddress);
+  }
+
+  private static InetAddress getPeerAddress(String remoteAddress) {
+    Peer peer = mock(Peer.class);
+    Mockito.when(peer.getRemoteAddressString()).thenReturn(remoteAddress);
+    return DataTransferSaslUtil.getPeerAddress(peer);
   }
 
 }
