@@ -58,10 +58,6 @@ public class TestDatanodeID {
     assertEquals("[0:0:0:0:0:0:0:1]:9866", v6.getXferAddr(true));
     assertEquals("[0:0:0:0:0:0:0:1]:9867", v6.getIpcAddr(true));
 
-    // setIpAddr rebuilds the cached xfer address
-    v4.setIpAddr("2001:db8:0:0:0:0:0:2");
-    assertEquals("[2001:db8:0:0:0:0:0:2]:9866", v4.getXferAddr());
-
     for (DatanodeID dn : new DatanodeID[] {v4, v6}) {
       for (String addr : new String[] {dn.getXferAddr(), dn.getIpcAddr(false),
           dn.getInfoAddr(), dn.getInfoSecureAddr(), dn.getXferAddr(true), dn.getIpcAddr(true)}) {
@@ -70,5 +66,9 @@ public class TestDatanodeID {
             .isEqualTo(addr);
       }
     }
+
+    // setIpAddr rebuilds the cached xfer address
+    v4.setIpAddr("2001:db8:0:0:0:0:0:2");
+    assertEquals("[2001:db8:0:0:0:0:0:2]:9866", v4.getXferAddr());
   }
 }
