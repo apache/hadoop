@@ -661,7 +661,7 @@ public class MiniDFSCluster implements AutoCloseable {
   private Configuration conf;
   private Multimap<String, NameNodeInfo> namenodes = ArrayListMultimap.create();
   protected int numDataNodes;
-  protected String bindHost = DEFAULT_BIND_HOST;
+  private String bindHost = DEFAULT_BIND_HOST;
   protected final List<DataNodeProperties> dataNodes =
                          new ArrayList<DataNodeProperties>();
   private File base_dir;
@@ -1215,7 +1215,8 @@ public class MiniDFSCluster implements AutoCloseable {
       // specified initially, the port will be 0 to make NN bind to any
       // available port. It will be set to the right address after
       // NN is started.
-      conf.set(FS_DEFAULT_NAME_KEY, "hdfs://" + NetUtils.getHostPortString(host, onlyNN.getIpcPort()));
+      conf.set(FS_DEFAULT_NAME_KEY,
+          "hdfs://" + NetUtils.getHostPortString(host, onlyNN.getIpcPort()));
     }
 
     List<String> allNsIds = Lists.newArrayList();
@@ -2018,6 +2019,11 @@ public class MiniDFSCluster implements AutoCloseable {
       }
       finalizeNamenode(nnInfo.nameNode, nnInfo.conf);
     }
+  }
+
+  /** @return the host that the NameNode and DataNode addresses bind to. */
+  protected String getBindHost() {
+    return bindHost;
   }
 
   public int getNumNameNodes() {
@@ -3506,7 +3512,8 @@ public class MiniDFSCluster implements AutoCloseable {
       }
     }
     if (checkDataNodeAddrConfig) {
-      conf.setIfUnset(DFS_DATANODE_HTTP_ADDRESS_KEY, NetUtils.getHostPortString(bindHost, httpPort));
+      conf.setIfUnset(DFS_DATANODE_HTTP_ADDRESS_KEY,
+          NetUtils.getHostPortString(bindHost, httpPort));
       conf.setIfUnset(DFS_DATANODE_IPC_ADDRESS_KEY, NetUtils.getHostPortString(bindHost, ipcPort));
     } else {
       conf.set(DFS_DATANODE_HTTP_ADDRESS_KEY, NetUtils.getHostPortString(bindHost, httpPort));
