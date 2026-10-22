@@ -67,7 +67,6 @@ import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.test.Whitebox;
@@ -215,18 +214,20 @@ public class TestDatanodeManager {
         dm.registerDatanode(new DatanodeRegistration(
             new DatanodeID(ips[i], "", "uuid" + i, 9866, 9864, 0, 9867), null, null, "version"));
       }
-      DatanodeDescriptor ipv4 = dm.getDatanodeByHost(ips[0]);
-      DatanodeDescriptor ipv6 = dm.getDatanodeByHost(ips[1]);
-      DatanodeDescriptor ipv6Bracketed = dm.getDatanodeByHost(ips[2]);
+      DatanodeDescriptor dnIpv4 = dm.getDatanodeByHost(ips[0]);
+      DatanodeDescriptor dnIpv6PlainKey = dm.getDatanodeByHost(ips[1]);
+      DatanodeDescriptor dnIpv6BracketedKey = dm.getDatanodeByHost(ips[2]);
 
+      // Keys are spelled out so the plain and bracketed IPv6 forms stay covered
+      // regardless of how DatanodeID formats its info address.
       SlowPeerTracker tracker = dm.getSlowPeerTracker();
       OutlierMetrics metrics = new OutlierMetrics(0.0, 0.0, 0.0, 5.0);
-      tracker.addReport(ipv4.getInfoAddr(), ips[3], metrics);
-      tracker.addReport(ipv6.getInfoAddr(), ips[3], metrics);
-      tracker.addReport(NetUtils.getHostPortString(ips[2], ipv6Bracketed.getInfoPort()), ips[3],
-          metrics);
+      tracker.addReport("1.2.3.4:9864", ips[3], metrics);
+      tracker.addReport("2001:db8::1:9864", ips[3], metrics);
+      tracker.addReport("[2001:db8::2]:9864", ips[3], metrics);
 
-      assertThat(dm.getAllSlowDataNodes()).containsExactlyInAnyOrder(ipv4, ipv6, ipv6Bracketed);
+      assertThat(dm.getAllSlowDataNodes())
+          .containsExactlyInAnyOrder(dnIpv4, dnIpv6PlainKey, dnIpv6BracketedKey);
     } finally {
       // Stops the slow peer collector thread started by enabling peer stats.
       dm.close();
