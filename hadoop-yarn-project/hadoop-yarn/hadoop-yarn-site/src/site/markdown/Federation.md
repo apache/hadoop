@@ -624,6 +624,16 @@ This ensures that we can obtain at least some correct results.
 
 **Note** It is important to note that even if we configure the parameters, if all sub-clusters return failures, the Router will still throw an exception. This is because there are no available results to return, making it impossible to provide a valid response.
 
+#### How to configure finding applications without a home SubCluster
+
+The RM removes a completed application once it keeps more than `yarn.resourcemanager.max-completed-applications`, and the home SubCluster of the application is deleted from the StateStore with it. When the StateStore has no home SubCluster for an application, the Router asks the RMs of all the active SubClusters for it at once, and records the SubCluster whose RM knows it again. This applies to the client RPC interface, to the REST interface and to the web proxy of the Router.
+
+| Property                                 | Example | Description                                                                                       |
+|:-----------------------------------------|:--------|:--------------------------------------------------------------------------------------------------|
+| `yarn.router.application-probe.timeout` | `10s`   | How long the Router waits for the RMs to answer, which is also the RPC timeout towards each RM. |
+
+**Note** The Router reports an application missing with `ApplicationNotFoundException`, so that clients fall back to their history server, only when every RM answered that it does not know the application. If some RM could not be asked or did not answer in time, the Router fails the request so that the client retries, as the application may be running there.
+
 #### How to use Router Command Line
 
 ##### Cmd1: deregisterSubCluster
