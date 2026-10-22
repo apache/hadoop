@@ -46,9 +46,9 @@ public final class QueueStateHelper {
     QueueState parentState = (queue.getParent() == null) ? null : queue.getParent().getState();
 
     // verify that we can not any value for State other than RUNNING/STOPPED
-    if (configuredState != null && !VALID_STATE_CONFIGURATIONS.contains(configuredState)) {
-      throw new IllegalArgumentException("Invalid queue state configuration."
-          + " We can only use RUNNING or STOPPED.");
+    String configuredStateError = checkConfiguredState(configuredState);
+    if (configuredStateError != null) {
+      throw new IllegalArgumentException(configuredStateError);
     }
 
     if (previousState == null) {
@@ -78,21 +78,81 @@ public final class QueueStateHelper {
 
   private static void initializeState(
       AbstractCSQueue queue, QueueState configuredState, QueueState parentState) {
-    QueueState currentState = configuredState == null ? DEFAULT_STATE : configuredState;
-
     if (parentState != null) {
-      if (configuredState == QueueState.RUNNING && parentState != QueueState.RUNNING) {
-        throw new IllegalArgumentException(
-            "The parent queue:" + queue.getParent().getQueuePath()
-                + " cannot be STOPPED as the child queue:" + queue.getQueuePath()
-                + " is in RUNNING state.");
-      }
-
-      if (configuredState == null) {
-        currentState = parentState == QueueState.DRAINING ? QueueState.STOPPED : parentState;
+      String initialStateError = checkInitialState(queue.getQueuePath(), configuredState,
+          queue.getParent().getQueuePath(), parentState);
+      if (initialStateError != null) {
+        throw new IllegalArgumentException(initialStateError);
       }
     }
 
-    queue.updateQueueState(currentState);
+    queue.updateQueueState(getInitialState(configuredState, parentState));
+  }
+
+  /**
+   * Checks that the configured state is one that can be set in the configuration.
+   * The parsing of the value itself happens in
+   * {@link CapacitySchedulerConfiguration#getConfiguredState(QueuePath)}.
+   * @param configuredState the configured state of the queue, null if not configured
+   * @return null if the state is valid, otherwise the error message
+   */
+  public static String checkConfiguredState(QueueState configuredState) {
+    if (configuredState != null && !VALID_STATE_CONFIGURATIONS.contains(configuredState)) {
+      return "Invalid queue state configuration. We can only use RUNNING or STOPPED.";
+    }
+    return null;
+  }
+
+  /**
+   * Checks that a newly created queue configured as RUNNING is not placed under a parent that
+   * is not RUNNING.
+   * @param queuePath the full path of the queue
+   * @param configuredState the configured state of the queue, null if not configured
+   * @param parentQueuePath the full path of the parent
+   * @param parentState the state of the parent queue, null for root
+   * @return null if the check passes, otherwise the error message
+   */
+  public static String checkInitialState(String queuePath, QueueState configuredState,
+      String parentQueuePath, QueueState parentState) {
+    if (parentState != null && configuredState == QueueState.RUNNING
+        && parentState != QueueState.RUNNING) {
+      return "The parent queue:" + parentQueuePath
+          + " cannot be STOPPED as the child queue:" + queuePath
+          + " is in RUNNING state.";
+    }
+    return null;
+  }
+
+  /**
+   * Checks that a queue is activated only under a RUNNING parent. The
+   * exception type of a failure is {@link YarnException}.
+   * @param parentQueuePath the full path of the parent
+   * @param parentState the state of the parent
+   * @return null if the queue can be activated, otherwise the error message
+   */
+  public static String checkParentRunning(String parentQueuePath,
+      QueueState parentState) {
+    if (parentState == QueueState.RUNNING) {
+      return null;
+    }
+    return "The parent Queue:" + parentQueuePath
+        + " is not running. Please activate the parent queue first";
+  }
+
+  /**
+   * Computes the state of a newly created queue: the configured state, otherwise the state of
+   * the parent (DRAINING is inherited as STOPPED), otherwise RUNNING.
+   * @param configuredState the configured state of the queue, null if not configured
+   * @param parentState the state of the parent queue, null for root
+   * @return the initial state of the queue
+   */
+  public static QueueState getInitialState(QueueState configuredState, QueueState parentState) {
+    if (configuredState != null) {
+      return configuredState;
+    }
+    if (parentState != null) {
+      return parentState == QueueState.DRAINING ? QueueState.STOPPED : parentState;
+    }
+    return DEFAULT_STATE;
   }
 }
