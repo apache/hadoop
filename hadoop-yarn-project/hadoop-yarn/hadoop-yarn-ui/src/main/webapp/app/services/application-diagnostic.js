@@ -18,12 +18,12 @@
 
 import Ember from 'ember';
 import {
+  ISSUE_ID,
   buildBundleFolderName,
   buildDiagnosticArchiveEntries,
   buildDiagnosticZipBlob,
 } from '../utils/diagnostic-archive';
 
-const ISSUE_ID = 'application_diagnostic';
 const COLLECT_TIMEOUT_MS = 300000;
 
 export default Ember.Service.extend({
@@ -55,12 +55,23 @@ export default Ember.Service.extend({
           Accept: 'application/json'
         },
         success: (payload) => resolve(payload),
-        error: (jqXHR) => reject(this.parseAjaxError(jqXHR))
+        error: (jqXHR, textStatus) => reject(this.parseAjaxError(jqXHR, textStatus))
       });
     });
   },
 
-  parseAjaxError(jqXHR) {
+  parseAjaxError(jqXHR, textStatus) {
+    if (textStatus === 'timeout') {
+      return new Error('Diagnostic collection did not finish within ' +
+        `${COLLECT_TIMEOUT_MS / 60000} minutes. ` +
+        'It may still be running on the Resource Manager; check the RM logs.');
+    }
+
+    if (jqXHR.status === 403) {
+      return new Error('Not authorized to collect application diagnostics. ' +
+        'Requires YARN admin privileges when ACLs are enabled.');
+    }
+
     let message = 'Failed to collect application diagnostics.';
 
     if (jqXHR.responseJSON && jqXHR.responseJSON.RemoteException) {
@@ -91,10 +102,10 @@ export default Ember.Service.extend({
   },
 
   downloadDiagnosticArchive(appId, issueData) {
-    const generatedAt = new Date().toISOString();
-    const folderName = buildBundleFolderName(generatedAt, appId, ISSUE_ID);
+    const generatedAt = new Date();
+    const folderName = buildBundleFolderName(generatedAt.toISOString(), appId, ISSUE_ID);
     const entries = buildDiagnosticArchiveEntries(folderName, issueData);
-    const blob = buildDiagnosticZipBlob(folderName, entries);
+    const blob = buildDiagnosticZipBlob(entries, generatedAt);
     const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = objectUrl;

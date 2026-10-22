@@ -66,3 +66,34 @@ test('parseAjaxError handles connection failure', function(assert) {
 
   assert.equal(error.message, 'Not able to connect to the Resource Manager.');
 });
+
+test('parseAjaxError explains admin requirement on 403', function(assert) {
+  const service = this.subject();
+  const error = service.parseAjaxError({
+    status: 403,
+    statusText: 'Forbidden',
+    responseJSON: {
+      RemoteException: {
+        exception: 'ForbiddenException',
+        message: 'User dr.who is not authorized'
+      }
+    }
+  }, 'error');
+
+  assert.equal(
+    error.message,
+    'Not authorized to collect application diagnostics. ' +
+      'Requires YARN admin privileges when ACLs are enabled.'
+  );
+});
+
+test('parseAjaxError reports timeout separately from connection failure', function(assert) {
+  const service = this.subject();
+  const error = service.parseAjaxError({ status: 0, responseText: '' }, 'timeout');
+
+  assert.equal(
+    error.message,
+    'Diagnostic collection did not finish within 5 minutes. ' +
+      'It may still be running on the Resource Manager; check the RM logs.'
+  );
+});

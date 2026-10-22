@@ -27,6 +27,16 @@ export default Ember.Controller.extend({
   actionResponse: null,
   isCollectingApplicationDiagnostic: false,
   diagnosticCollectError: null,
+  diagnosticRequestId: 0,
+
+  resetApplicationDiagnosticState() {
+    // Bumping the id makes callbacks of a request started on another app ignore this page.
+    this.incrementProperty('diagnosticRequestId');
+    this.setProperties({
+      isCollectingApplicationDiagnostic: false,
+      diagnosticCollectError: null
+    });
+  },
 
   actions: {
     collectApplicationDiagnostic() {
@@ -37,16 +47,23 @@ export default Ember.Controller.extend({
       }
 
       const self = this;
+      const requestId = this.incrementProperty('diagnosticRequestId');
+      const isCurrentRequest = () => self.get('diagnosticRequestId') === requestId;
       this.set('diagnosticCollectError', null);
       this.set('isCollectingApplicationDiagnostic', true);
 
       this.get('applicationDiagnostic').collectApplicationDiagnostic(appId).then(function(issueData) {
         self.get('applicationDiagnostic').downloadDiagnosticArchive(appId, issueData);
       }, function(error) {
+        if (!isCurrentRequest()) {
+          return;
+        }
         const message = error && error.message ? error.message : String(error);
         self.set('diagnosticCollectError', message);
       }).finally(function() {
-        self.set('isCollectingApplicationDiagnostic', false);
+        if (isCurrentRequest()) {
+          self.set('isCollectingApplicationDiagnostic', false);
+        }
       });
     },
 

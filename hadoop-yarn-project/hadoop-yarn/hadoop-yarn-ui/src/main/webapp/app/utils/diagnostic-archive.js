@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-const ISSUE_ID = 'application_diagnostic';
+export const ISSUE_ID = 'application_diagnostic';
 
 export function buildBundleFolderName(generatedAt, appId, issueId) {
   const safeTs = generatedAt.replace(/[:.]/g, '-');
@@ -42,11 +42,19 @@ export function resolveEntryFileName(filename, contentType, content) {
   if (contentType.indexOf('json') >= 0 || content.startsWith('{') || content.startsWith('[')) {
     return `${filename}.json`;
   }
-  if (filename.indexOf('log') >= 0) {
+  if (/(^|_)log$/.test(filename)) {
     return `${filename}.log`;
   }
 
   return `${filename}.txt`;
+}
+
+export function sanitizeEntryPath(relativeName) {
+  return relativeName
+    .split('/')
+    .filter((segment) => segment && segment !== '.' && segment !== '..')
+    .map((segment) => segment.replace(/[^\w.-]+/g, '_'))
+    .join('/');
 }
 
 function stringToUtf8Bytes(str) {
@@ -57,7 +65,7 @@ function stringToUtf8Bytes(str) {
   return utf8EncodeFallback(str);
 }
 
-function utf8EncodeFallback(str) {
+export function utf8EncodeFallback(str) {
   const bytes = [];
   for (let i = 0; i < str.length; i++) {
     let codePoint = str.charCodeAt(i);
@@ -119,12 +127,28 @@ function writeUint16LE(view, offset, value) {
   view.setUint16(offset, value, true);
 }
 
+const ZIP_FLAG_UTF8_NAME = 0x0800;
+
 /**
- * Build a ZIP archive (stored, no compression) containing one top-level folder.
+ * Encode a date as MS-DOS time and date fields, which ZIP stores in local time
+ * with 2-second resolution and a minimum year of 1980.
  */
-export function buildDiagnosticZipBlob(folderName, entries) {
+export function toDosDateTime(date) {
+  const year = Math.max(date.getFullYear(), 1980);
+  return {
+    time: (date.getHours() << 11) | (date.getMinutes() << 5) | (date.getSeconds() >> 1),
+    date: ((year - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate(),
+  };
+}
+
+/**
+ * Build a ZIP archive (stored, no compression). Entry paths are written as given,
+ * so a top-level folder comes from the path prefix rather than a directory entry.
+ */
+export function buildDiagnosticZipBytes(entries, modifiedAt) {
   const localParts = [];
   const centralParts = [];
+  const dos = toDosDateTime(modifiedAt || new Date());
   let offset = 0;
 
   entries.forEach((entry) => {
@@ -136,10 +160,10 @@ export function buildDiagnosticZipBlob(folderName, entries) {
     const localView = new DataView(localHeader);
     writeUint32LE(localView, 0, 0x04034b50);
     writeUint16LE(localView, 4, 20);
-    writeUint16LE(localView, 6, 0);
+    writeUint16LE(localView, 6, ZIP_FLAG_UTF8_NAME);
     writeUint16LE(localView, 8, 0);
-    writeUint16LE(localView, 10, 0);
-    writeUint16LE(localView, 12, 0);
+    writeUint16LE(localView, 10, dos.time);
+    writeUint16LE(localView, 12, dos.date);
     writeUint32LE(localView, 14, crc);
     writeUint32LE(localView, 18, dataBytes.length);
     writeUint32LE(localView, 22, dataBytes.length);
@@ -154,10 +178,10 @@ export function buildDiagnosticZipBlob(folderName, entries) {
     writeUint32LE(centralView, 0, 0x02014b50);
     writeUint16LE(centralView, 4, 20);
     writeUint16LE(centralView, 6, 20);
-    writeUint16LE(centralView, 8, 0);
+    writeUint16LE(centralView, 8, ZIP_FLAG_UTF8_NAME);
     writeUint16LE(centralView, 10, 0);
-    writeUint16LE(centralView, 12, 0);
-    writeUint16LE(centralView, 14, 0);
+    writeUint16LE(centralView, 12, dos.time);
+    writeUint16LE(centralView, 14, dos.date);
     writeUint32LE(centralView, 16, crc);
     writeUint32LE(centralView, 20, dataBytes.length);
     writeUint32LE(centralView, 24, dataBytes.length);
@@ -202,7 +226,11 @@ export function buildDiagnosticZipBlob(folderName, entries) {
   });
   output.set(new Uint8Array(endRecord), writeOffset);
 
-  return new Blob([output], { type: 'application/zip' });
+  return output;
+}
+
+export function buildDiagnosticZipBlob(entries, modifiedAt) {
+  return new Blob([buildDiagnosticZipBytes(entries, modifiedAt)], { type: 'application/zip' });
 }
 
 export function buildDiagnosticArchiveEntries(folderName, issueData) {
@@ -216,7 +244,7 @@ export function buildDiagnosticArchiveEntries(folderName, issueData) {
       fileEntry.contentType,
       content,
     );
-    let zipPath = `${folderName}/${relativeName.replace(/^\/+/, '')}`;
+    let zipPath = `${folderName}/${sanitizeEntryPath(relativeName)}`;
 
     if (usedNames[zipPath]) {
       const dot = zipPath.lastIndexOf('.');
