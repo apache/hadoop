@@ -399,8 +399,8 @@ public class TestZKDelegationTokenSecretManager {
       tm1.init();
 
       Token<DelegationTokenIdentifier> token =
-        (Token<DelegationTokenIdentifier>)
-      tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
+          (Token<DelegationTokenIdentifier>)
+          tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
       assertNotNull(token);
     } finally {
       if (tm1 != null) {
