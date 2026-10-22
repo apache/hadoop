@@ -496,18 +496,19 @@ public class TestDelegationToken {
             throw new RuntimeException("interrupted", e);
           }
         });
-    boolean terminated;
+    ExitUtil.ExitException ee;
     try {
       dtSecretManager.startThreads();
       assertTrue(blocked.await(10, TimeUnit.SECONDS));
     } finally {
       // stopThreads() joins the remover thread, so its outcome is final here.
       dtSecretManager.stopThreads();
-      terminated = ExitUtil.terminateCalled();
+      ee = ExitUtil.getFirstExitException();
       ExitUtil.enableSystemExit();
       ExitUtil.resetFirstExitException();
     }
-    assertFalse(terminated, "terminate should not be called while stopping");
+    assertThat(ee).as("terminate should not be called while stopping")
+        .isNull();
   }
 
   @Test
