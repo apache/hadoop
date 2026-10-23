@@ -176,7 +176,7 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
               Mockito.any(byte[].class),
               Mockito.anyInt(),
               Mockito.anyInt(),
-              Mockito.any());
+              Mockito.any(), Mockito.nullable(String.class));
     }
   }
 
@@ -431,7 +431,7 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
           Mockito.any(byte[].class),
           Mockito.anyInt(),
           Mockito.anyInt(),
-          Mockito.any());
+          Mockito.any(), Mockito.nullable(String.class));
 
       // Replace the wrapped stream inside FSDataInputStream with our spy,
       // so all subsequent calls go through spyIn.
@@ -467,7 +467,7 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
               Mockito.any(byte[].class),
               Mockito.anyInt(),
               Mockito.anyInt(),
-              Mockito.any());
+              Mockito.any(), Mockito.nullable(String.class));
     }
   }
 
@@ -500,7 +500,7 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
           })
           .when(spyIn)
           .readRemote(Mockito.anyLong(), Mockito.any(byte[].class),
-              Mockito.anyInt(), Mockito.anyInt(), Mockito.any());
+              Mockito.anyInt(), Mockito.anyInt(), Mockito.any(), Mockito.nullable(String.class));
 
       ExecutorService exec = Executors.newFixedThreadPool(EXEC_THREADS);
       try {
@@ -620,7 +620,7 @@ public class ITestVectoredRead extends AbstractAbfsIntegrationTest {
                 Mockito.any(byte[].class),
                 Mockito.anyInt(),
                 Mockito.anyInt(),
-                Mockito.any());
+                Mockito.any(), Mockito.nullable(String.class));
       }
     }
   }

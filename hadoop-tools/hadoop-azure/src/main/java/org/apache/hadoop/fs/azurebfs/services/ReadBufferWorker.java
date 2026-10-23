@@ -70,12 +70,12 @@ class ReadBufferWorker implements Runnable {
           int bytesRead = buffer.getStream().readRemote(
               buffer.getOffset(),
               buffer.getBuffer(),
-              0,
+              buffer.getBufferOffset(),
               // If AbfsInputStream was created with bigger buffer size than
               // read-ahead buffer size, make sure a valid length is passed
               // for remote read
               Math.min(buffer.getRequestedLength(), buffer.getBuffer().length),
-              buffer.getTracingContext());
+              buffer.getTracingContext(), buffer.getReadEndpoint());
 
           bufferManager.doneReading(buffer, ReadBufferStatus.AVAILABLE, bytesRead);  // post result back to ReadBufferManager
         } catch (IOException ex) {
