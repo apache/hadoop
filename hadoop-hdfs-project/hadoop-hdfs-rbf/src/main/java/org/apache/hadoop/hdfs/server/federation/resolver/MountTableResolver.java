@@ -529,6 +529,13 @@ public class MountTableResolver
     String path = RouterAdmin.normalizeFileSystemPath(str);
     if (isTrashPath(path)) {
       path = subtractTrashCurrentPath(path);
+      if (path.isEmpty()) {
+        // The path is exactly the trash Current/checkpoint directory itself
+        // (e.g. /user/alice/.Trash/Current). Use "/" so the subMap covers all
+        // mount points, letting the router fan out to every sub-cluster for
+        // operations like listStatus on the trash root.
+        path = "/";
+      }
     }
     readLock.lock();
     try {
