@@ -150,8 +150,7 @@ public class HsWebServices extends WebServices {
   }
 
   private void init() {
-    //clear content type
-    response.setContentType(null);
+    JettyUtils.clearContentType(response);
   }
 
   @VisibleForTesting

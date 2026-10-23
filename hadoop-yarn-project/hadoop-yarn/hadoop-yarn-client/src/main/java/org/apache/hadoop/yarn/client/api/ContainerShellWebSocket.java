@@ -24,11 +24,11 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.eclipse.jetty.websocket.api.Session;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
-import org.eclipse.jetty.websocket.api.annotations.WebSocket;
+import org.eclipse.jetty.ee8.websocket.api.Session;
+import org.eclipse.jetty.ee8.websocket.api.annotations.OnWebSocketClose;
+import org.eclipse.jetty.ee8.websocket.api.annotations.OnWebSocketConnect;
+import org.eclipse.jetty.ee8.websocket.api.annotations.OnWebSocketMessage;
+import org.eclipse.jetty.ee8.websocket.api.annotations.WebSocket;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import org.jline.reader.LineReader;
@@ -69,16 +69,16 @@ public class ContainerShellWebSocket {
   @OnWebSocketConnect
   public void onConnect(Session s) {
     initTerminal(s);
-    LOG.info("{} connected!", s.getRemoteAddress().getHostString());
+    LOG.info("{} connected!", s.getRemoteAddress());
   }
 
   @OnWebSocketClose
   public void onClose(Session session, int status, String reason) {
     if (status==1000) {
-      LOG.info("{} closed, status: {}", session.getRemoteAddress().getHostString(), status);
+      LOG.info("{} closed, status: {}", session.getRemoteAddress(), status);
     } else {
       LOG.warn("{} closed, status:" +
-              " {} Reason: {}.", session.getRemoteAddress().getHostString(), status, reason);
+              " {} Reason: {}.", session.getRemoteAddress(), status, reason);
     }
   }
 
@@ -101,11 +101,8 @@ public class ContainerShellWebSocket {
       }
       inputThread.join();
     } catch (IOException | InterruptedException e) {
-      try {
-        mySession.disconnect();
-      } catch (IOException e1) {
-        LOG.error("Error closing connection: ", e1);
-      }
+      // Session.disconnect() no longer declares IOException as of Jetty 12.
+      mySession.disconnect();
     }
   }
 
