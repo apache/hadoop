@@ -573,7 +573,9 @@ Building on Windows 10
 ----------------------------------------------------------------------------------
 Requirements:
 
-* Windows 10
+* Windows 10 or Windows 11. The Docker route below has been verified on a
+  Windows 11 host; since the build itself runs inside a Windows container, the
+  host version matters only for Docker's own requirements.
 * JDK 17
 * Maven 3.9.15 or later (maven.apache.org, optional, a compatible version is automatically downloaded if using mvnw.cmd)
 * Boost 1.86.0 (boost.org)
@@ -617,7 +619,11 @@ the root of the Hadoop repository.
 The -m 8g is needed because the vcpkg step compiles Boost, Protocol Buffers, OpenSSL and Zlib from
 source and the default container memory is too small. Expect the image build to take a few hours
 and the resulting image to be around 23 GB. Note that -m and --isolation are options of the classic
-builder, so leave DOCKER_BUILDKIT unset; BuildKit does not accept them.
+builder, so DOCKER_BUILDKIT must not be set to 1. If it is set in your
+environment, clear it for the session first -
+> set DOCKER_BUILDKIT=            (cmd.exe)
+> $Env:DOCKER_BUILDKIT = ''       (PowerShell)
+Setting it to 0 works as well; BuildKit itself does not accept these options.
 
 Start the container with the image that we just built.
 > docker run --rm -m 8g --isolation=hyperv -it hadoop-windows-10-builder

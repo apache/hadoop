@@ -149,6 +149,10 @@ endif (NOT THREAD_LOCAL_SUPPORTED)
 # Check if PROTOC library was compiled with the compatible compiler by trying
 # to compile some dummy code
 unset (PROTOC_IS_COMPATIBLE CACHE)
+# Save whatever the checks above left in place; the Protobuf check below needs
+# its own requirements, and they are restored once it is done.
+set (SAVED_CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES})
+set (SAVED_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
 set (CMAKE_REQUIRED_INCLUDES ${PROTOBUF_INCLUDE_DIRS})
 set (CMAKE_REQUIRED_LIBRARIES
   protobuf::libprotobuf
@@ -171,12 +175,15 @@ if (NOT PROTOC_IS_COMPATIBLE)
   compiler are compatible with each other.")
 endif (NOT PROTOC_IS_COMPATIBLE)
 
-# The checks above leave CMAKE_REQUIRED_INCLUDES and CMAKE_REQUIRED_LIBRARIES
+# The check above leaves CMAKE_REQUIRED_INCLUDES and CMAKE_REQUIRED_LIBRARIES
 # pointing at the Protobuf and Abseil targets. Abseil carries C++ feature
 # requirements, which a C-language check_symbol_exists() below cannot satisfy
-# under the Visual Studio generator. Reset them so later checks run clean.
-unset (CMAKE_REQUIRED_INCLUDES)
-unset (CMAKE_REQUIRED_LIBRARIES)
+# under the Visual Studio generator. Restore the previous values so later
+# checks run against the state they expect.
+set (CMAKE_REQUIRED_INCLUDES ${SAVED_CMAKE_REQUIRED_INCLUDES})
+set (CMAKE_REQUIRED_LIBRARIES ${SAVED_CMAKE_REQUIRED_LIBRARIES})
+unset (SAVED_CMAKE_REQUIRED_INCLUDES)
+unset (SAVED_CMAKE_REQUIRED_LIBRARIES)
 
 find_program(MEMORYCHECK_COMMAND valgrind HINTS ${VALGRIND_DIR} )
 set(MEMORYCHECK_COMMAND_OPTIONS "--trace-children=no --leak-check=full --error-exitcode=1 --suppressions=${PROJECT_SOURCE_DIR}/tests/memcheck.supp")

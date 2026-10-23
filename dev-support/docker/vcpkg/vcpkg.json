@@ -72,6 +72,10 @@
       "version": "1.86.0"
     },
     {
+      "name": "boost-coroutine",
+      "version": "1.86.0"
+    },
+    {
       "name": "boost-conversion",
       "version": "1.86.0"
     },
