@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -373,6 +374,21 @@ public class TestSecurityUtil {
     NetUtils.addStaticResolution(host, host);
     InetSocketAddress addr = NetUtils.createSocketAddr("[::1]:123");
     verifyAddress(addr, host, InetAddress.getByName(host).getHostAddress(), 123);
+  }
+
+  @Test
+  public void testGetByNameWithBracketedIPv6() throws Exception {
+    Configuration conf = new Configuration(false);
+    for (boolean useIp : new boolean[] {false, true}) {
+      conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, useIp);
+      SecurityUtil.setConfiguration(conf);
+      String msg = "use_ip=" + useIp;
+      for (String ip : new String[] {"::1", "2001:db8::1"}) {
+        assertEquals(msg, InetAddress.getByName(ip), SecurityUtil.getByName("[" + ip + "]"));
+      }
+      // the JDK does not accept an IPv4 literal in brackets either
+      assertThrows(msg, UnknownHostException.class, () -> SecurityUtil.getByName("[127.0.0.1]"));
+    }
   }
 
   @Test
