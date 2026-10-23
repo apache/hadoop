@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.fs.contract.localfs;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.IntFunction;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -40,6 +43,8 @@ import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.io.ElasticByteBufferPool;
+import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
@@ -194,5 +199,69 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     AtomicLong bytes = new AtomicLong();
     FileSystem.getAllStatistics().forEach(st -> bytes.addAndGet(st.getBytesRead()));
     return bytes.get();
+  }
+
+  /**
+   * HADOOP-19901: Verify that checksum buffers allocated during vectored read
+   * are released back to the caller's pool after verification completes.
+   * <p>
+   * Before the fix, ChecksumFileSystem would allocate buffers for reading
+   * checksum data but never release them, causing a buffer leak when callers
+   * use a tracking/pooled allocator.
+   * <p>
+   * This test counts the number of times the release consumer is called by the
+   * system (not by the caller) during a vectored read through ChecksumFileSystem.
+   * With the fix, the system must release checksum buffers after verification,
+   * so the release count must be greater than zero before the caller releases
+   * its own data buffers.
+   */
+  @Test
+  public void testChecksumBuffersReleasedAfterVectoredRead() throws Exception {
+    Path testPath = path("checksum_buffer_release_test");
+    LocalFileSystem localFs = (LocalFileSystem) getFileSystem();
+    final int length = 8192;
+    final byte[] dataset = ContractTestUtils.dataset(length, 'a', 32);
+    try (FSDataOutputStream out = localFs.create(testPath, true)) {
+      out.write(dataset);
+    }
+
+    // Count allocations and system-initiated releases
+    AtomicLong allocations = new AtomicLong();
+    AtomicLong systemReleases = new AtomicLong();
+    ElasticByteBufferPool innerPool = new WeakReferencedElasticByteBufferPool();
+    IntFunction<ByteBuffer> allocate = size -> {
+      allocations.incrementAndGet();
+      return innerPool.getBuffer(false, size);
+    };
+
+    List<FileRange> ranges = new ArrayList<>();
+    ranges.add(FileRange.createFileRange(0, 1024));
+    ranges.add(FileRange.createFileRange(4096, 1024));
+
+    CompletableFuture<FSDataInputStream> fis = localFs.openFile(testPath).build();
+    try (FSDataInputStream in = fis.get()) {
+      in.readVectored(ranges, allocate, buffer -> {
+        systemReleases.incrementAndGet();
+        innerPool.putBuffer(buffer);
+      });
+      // Wait for all data to arrive
+      for (FileRange range : ranges) {
+        range.getData().get(5, TimeUnit.SECONDS);
+      }
+      // Validate the data is correct
+      validateVectoredReadResult(ranges, dataset, 0);
+    }
+    // Allow async thenRun release to complete
+    Thread.sleep(200);
+
+    // The system must have allocated buffers for both data and checksums.
+    // With our fix, the checksum buffers are released by the system after
+    // verification. Before the fix, systemReleases would be 0.
+    assertThat(allocations.get())
+        .describedAs("Total allocations (data + checksum buffers)")
+        .isGreaterThan(ranges.size());
+    assertThat(systemReleases.get())
+        .describedAs("System-initiated releases (should include checksum buffers)")
+        .isGreaterThan(0);
   }
 }
