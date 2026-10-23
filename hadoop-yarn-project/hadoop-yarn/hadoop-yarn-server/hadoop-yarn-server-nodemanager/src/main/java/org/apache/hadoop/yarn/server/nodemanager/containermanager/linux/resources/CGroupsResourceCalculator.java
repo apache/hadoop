@@ -109,9 +109,13 @@ public class CGroupsResourceCalculator extends AbstractCGroupsResourceCalculator
     super(
         pid,
         Arrays.asList(CPU_STAT + "#user", CPU_STAT + "#system"),
-        MEM_STAT,
-        MEMSW_STAT
+        MEM_STAT
     );
+  }
+  @Override
+  protected long getVirtualMemorySize0() {
+    // cgroup v1 already provides memory + swap in one counter.
+    return getStat(MEMSW_STAT);
   }
 
   @Override
