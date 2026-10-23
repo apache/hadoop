@@ -77,7 +77,7 @@ public abstract class TreeWalk implements Iterable<TreePath> {
 
     protected void onAccept(TreePath p, long id) {
       for (TreePath k : getChildren(p, id, this)) {
-        pending.addFirst(k);
+        pending.addLast(k);
       }
     }
 
