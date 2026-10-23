@@ -721,6 +721,11 @@ public final class SecurityUtil {
     public InetAddress resolve(String host) throws UnknownHostException {
       InetAddress addr = null;
 
+      // URI.getHost() returns IPv6 literals in brackets, ex. "[::1]"
+      if (host.startsWith("[") && InetAddresses.isUriInetAddress(host)) {
+        host = host.substring(1, host.length() - 1);
+      }
+
       if (InetAddresses.isInetAddress(host)) {
         // valid ip address. use it as-is
         addr = InetAddresses.forString(host);
