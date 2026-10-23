@@ -23,11 +23,13 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
+import org.apache.hadoop.fs.ClusterStorageCapacityExceededException;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -37,6 +39,7 @@ import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
+import static io.netty.handler.codec.http.HttpResponseStatus.INSUFFICIENT_STORAGE;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -72,6 +75,9 @@ class ExceptionHandler {
       s = FORBIDDEN;
     } else if (e instanceof FileNotFoundException) {
       s = NOT_FOUND;
+    } else if (e instanceof ClusterStorageCapacityExceededException
+        || e instanceof DiskOutOfSpaceException) {
+      s = INSUFFICIENT_STORAGE;
     } else if (e instanceof IOException) {
       s = FORBIDDEN;
     } else if (e instanceof UnsupportedOperationException) {
