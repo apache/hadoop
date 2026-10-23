@@ -34,6 +34,11 @@ import org.apache.hadoop.service.Service;
 public interface ClientManager extends Service {
 
   /**
+   * Registered service name: {@value}.
+   */
+  String CLIENT_MANAGER = "ClientManager";
+
+  /**
    * Get the transfer manager, creating it and any dependencies if needed.
    * @return a transfer manager
    * @throws IOException on any failure to create the manager
