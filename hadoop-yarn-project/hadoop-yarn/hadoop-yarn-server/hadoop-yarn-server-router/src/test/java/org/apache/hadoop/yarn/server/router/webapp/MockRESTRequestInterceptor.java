@@ -98,6 +98,12 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
   }
 
   @Override
+  public Response getResourceManagerThreadDump(HttpServletRequest req,
+      int numberOfJStack) {
+    return Response.ok().build();
+  }
+
+  @Override
   public SchedulerTypeInfo getSchedulerInfo() {
     return new SchedulerTypeInfo();
   }
