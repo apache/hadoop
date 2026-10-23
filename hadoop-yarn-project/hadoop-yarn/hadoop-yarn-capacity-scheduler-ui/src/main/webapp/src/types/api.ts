@@ -84,6 +84,12 @@ export type YarnConfigResponse = {
   };
 };
 
+export type BulkActivitiesResponse = {
+  bulkActivities?: {
+    activities?: unknown[];
+  };
+};
+
 // API client configuration
 export type ApiClientConfig = {
   timeout?: number;
