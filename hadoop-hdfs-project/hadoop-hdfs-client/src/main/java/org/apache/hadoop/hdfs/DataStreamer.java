@@ -694,6 +694,21 @@ class DataStreamer extends Daemon {
    */
   @Override
   public void run() {
+    try {
+      runLoop();
+    } finally {
+      // Whatever ends this thread -- a normal exit, or a Throwable that
+      // escapes the handler in runLoop(), such as the AssertionError the
+      // NullPointerException assertion raises -- closeInternal() has to run.
+      // It is what sets streamerClosed and wakes waitForAckedSeqno; without
+      // it a writer blocked in close() keeps waiting on a thread that no
+      // longer exists, until the datanode write timeout expires minutes
+      // later.
+      closeInternal();
+    }
+  }
+
+  private void runLoop() {
     TraceScope scope = null;
     while (!streamerClosed && dfsClient.clientRunning) {
       // if the Responder encountered an error, shutdown Responder
@@ -873,7 +888,6 @@ class DataStreamer extends Daemon {
         }
       }
     }
-    closeInternal();
   }
 
   private void waitForAllAcks() throws IOException {
