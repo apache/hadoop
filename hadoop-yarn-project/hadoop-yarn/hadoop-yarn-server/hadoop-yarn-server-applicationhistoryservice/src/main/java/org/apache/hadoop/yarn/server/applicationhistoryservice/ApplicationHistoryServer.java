@@ -69,7 +69,6 @@ import org.eclipse.jetty.webapp.WebAppContext;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -360,7 +359,6 @@ public class ApplicationHistoryServer extends CompositeService {
     ResourceConfig config = new ResourceConfig();
     config.packages("org.apache.hadoop.yarn.server.timeline.webapp");
     config.packages("org.apache.hadoop.yarn.server.applicationhistoryservice.webapp");
-    config.packages("org.apache.hadoop.yarn.api.records.writer");
     config.register(TimelineWebServices.class);
     config.register(AHSWebServices.class);
     config.register(TimelineEntitiesWriter.class);
@@ -371,7 +369,7 @@ public class ApplicationHistoryServer extends CompositeService {
     config.register(TimelinePutResponseReader.class);
     config.register(new JerseyBinder());
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(YarnJacksonJaxbJsonProvider.class);
+    config.register(YarnJacksonJaxbJsonProvider.class);
     return config;
   }
 

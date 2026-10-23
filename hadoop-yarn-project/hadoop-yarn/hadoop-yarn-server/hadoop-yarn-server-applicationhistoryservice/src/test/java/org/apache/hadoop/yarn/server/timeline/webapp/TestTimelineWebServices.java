@@ -39,7 +39,6 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.TestProperties;
 import org.junit.jupiter.api.Test;
@@ -118,7 +117,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
     config.register(TimelineEventsWriter.class);
     config.register(GenericExceptionHandler.class);
     config.register(TimelinePutResponseWriter.class);
-    config.register(new JettisonFeature()).register(YarnJacksonJaxbJsonProvider.class);
+    config.register(YarnJacksonJaxbJsonProvider.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }
