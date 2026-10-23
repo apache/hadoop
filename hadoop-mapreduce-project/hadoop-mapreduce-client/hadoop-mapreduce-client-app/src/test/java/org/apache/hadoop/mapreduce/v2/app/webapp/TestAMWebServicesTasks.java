@@ -266,7 +266,7 @@ public class TestAMWebServicesTasks extends JerseyTestBase {
         String type = exception.getString("exception");
         String classname = exception.getString("javaClassName");
         WebServicesTestUtils.checkStringMatch("exception message",
-            "tasktype must be either m or r", message);
+            "java.lang.Exception: tasktype must be either m or r", message);
         WebServicesTestUtils.checkStringMatch("exception type",
             "BadRequestException", type);
         WebServicesTestUtils.checkStringMatch("exception classname",
@@ -365,7 +365,7 @@ public class TestAMWebServicesTasks extends JerseyTestBase {
         String type = exception.getString("exception");
         String classname = exception.getString("javaClassName");
         WebServicesTestUtils.checkStringEqual("exception message",
-            "TaskId string : " +
+            "java.lang.Exception: TaskId string : " +
             "bogustaskid is not properly formed"
             + "\nReason: java.util.regex.Matcher[pattern=" +
             TaskID.TASK_ID_REGEX + " region=0,11 lastmatch=]", message);
@@ -401,7 +401,7 @@ public class TestAMWebServicesTasks extends JerseyTestBase {
         String type = exception.getString("exception");
         String classname = exception.getString("javaClassName");
         WebServicesTestUtils.checkStringMatch("exception message",
-            "task not found with id task_0_0000_m_000000", message);
+            "java.lang.Exception: task not found with id task_0_0000_m_000000", message);
         WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
         WebServicesTestUtils.checkStringMatch("exception classname",
             "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
@@ -432,7 +432,7 @@ public class TestAMWebServicesTasks extends JerseyTestBase {
         String type = exception.getString("exception");
         String classname = exception.getString("javaClassName");
         WebServicesTestUtils.checkStringEqual("exception message",
-            "TaskId string : "
+            "java.lang.Exception: TaskId string : "
             + "task_0_0000_d_000000 is not properly formed"
             + "\nReason: java.util.regex.Matcher[pattern=" +
             TaskID.TASK_ID_REGEX + " region=0,20 lastmatch=]", message);
@@ -467,7 +467,7 @@ public class TestAMWebServicesTasks extends JerseyTestBase {
         String type = exception.getString("exception");
         String classname = exception.getString("javaClassName");
         WebServicesTestUtils.checkStringEqual("exception message",
-            "TaskId string : "
+            "java.lang.Exception: TaskId string : "
              + "task_0_m_000000 is not properly formed"
              + "\nReason: java.util.regex.Matcher[pattern=" +
              TaskID.TASK_ID_REGEX + " region=0,15 lastmatch=]", message);
@@ -501,7 +501,7 @@ public class TestAMWebServicesTasks extends JerseyTestBase {
         String type = exception.getString("exception");
         String classname = exception.getString("javaClassName");
         WebServicesTestUtils.checkStringEqual("exception message",
-            "TaskId string : "
+            "java.lang.Exception: TaskId string : "
              + "task_0_0000_m is not properly formed"
              + "\nReason: java.util.regex.Matcher[pattern=" +
              TaskID.TASK_ID_REGEX + " region=0,13 lastmatch=]", message);
