@@ -18,9 +18,18 @@
 
 package org.apache.hadoop.hdfs.server.datanode.metrics;
 
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.metrics2.lib.MetricsTestHelper;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -35,8 +44,12 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test that the {@link DataNodePeerMetrics} class is able to detect
@@ -155,5 +168,106 @@ public class TestDataNodeOutlierDetectionViaMetrics {
       peerMetrics.addSendPacketDownstream(
           slowNodeName, SLOW_NODE_LATENCY_MS);
     }
+  }
+
+  /**
+   * Verifies that slow disk detection is performed per StorageType group.
+   * Scenario 1: 1 SSD + 10 HDDs — SSD group skipped (size below minimum),
+   * 2 HDDs detected.
+   * Scenario 2: 6 SSDs + 10 HDDs — 2 SSDs and 2 HDDs
+   * each detected independently within their own group.
+   */
+  @Test
+  public void testStorageTypeAwareSlowDiskDetection() throws Exception {
+    Configuration testConf = new HdfsConfiguration();
+    testConf.setLong(DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY, 5);
+    testConf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY, 1);
+
+    // Scenario 1: 1 SSD + 10 HDDs.
+    {
+      List<FsVolumeSpi> volumes = new ArrayList<>();
+      volumes.add(createMockDiskVolume("/ssd0/", StorageType.SSD, 5000.0));
+      for (int i = 0; i < 8; i++) {
+        volumes.add(createMockDiskVolume("/hdd" + i + "/", StorageType.DISK, 0.5));
+      }
+      volumes.add(createMockDiskVolume("/hdd8/", StorageType.DISK, 5000.0));
+      volumes.add(createMockDiskVolume("/hdd9/", StorageType.DISK, 6000.0));
+
+      DataNodeDiskMetrics diskMetrics = buildMetrics(testConf, volumes);
+      try {
+        GenericTestUtils.waitFor(() -> diskMetrics.getDiskOutliersStats().size() >= 2, 100, 10_000);
+        Map<String, ?> outliers = diskMetrics.getDiskOutliersStats();
+        assertFalse(outliers.containsKey("/ssd0/"), "SSD group too small, must not be flagged");
+        assertTrue(outliers.containsKey("/hdd8/"), "Slow HDD must be detected");
+        assertTrue(outliers.containsKey("/hdd9/"), "Slow HDD must be detected");
+        assertThat(diskMetrics.getSlowDisksToExclude()).hasSize(1);
+      } finally {
+        diskMetrics.shutdownAndWait();
+      }
+    }
+
+    // Scenario 2: 6 SSDs + 10 HDDs.
+    {
+      List<FsVolumeSpi> volumes = new ArrayList<>();
+      for (int i = 0; i < 4; i++) {
+        volumes.add(createMockDiskVolume("/ssd" + i + "/", StorageType.SSD, i + 1.0));
+      }
+      volumes.add(createMockDiskVolume("/ssd4/", StorageType.SSD, 5000.0));
+      volumes.add(createMockDiskVolume("/ssd5/", StorageType.SSD, 6000.0));
+      for (int i = 0; i < 8; i++) {
+        volumes.add(createMockDiskVolume("/hdd" + i + "/", StorageType.DISK, 0.5));
+      }
+      volumes.add(createMockDiskVolume("/hdd8/", StorageType.DISK, 5000.0));
+      volumes.add(createMockDiskVolume("/hdd9/", StorageType.DISK, 6000.0));
+
+      DataNodeDiskMetrics diskMetrics = buildMetrics(testConf, volumes);
+      try {
+        GenericTestUtils.waitFor(() -> diskMetrics.getDiskOutliersStats().size() >= 4, 100, 10_000);
+        Map<String, ?> outliers = diskMetrics.getDiskOutliersStats();
+        assertTrue(outliers.containsKey("/ssd4/"), "Slow SSD must be detected");
+        assertTrue(outliers.containsKey("/ssd5/"), "Slow SSD must be detected");
+        assertTrue(outliers.containsKey("/hdd8/"), "Slow HDD must be detected");
+        assertTrue(outliers.containsKey("/hdd9/"), "Slow HDD must be detected");
+        assertThat(outliers.keySet().stream().filter(k -> k.startsWith("/ssd")).count()).isEqualTo(
+            2);
+        assertThat(outliers.keySet().stream().filter(k -> k.startsWith("/hdd")).count()).isEqualTo(
+            2);
+        assertThat(diskMetrics.getSlowDisksToExclude()).hasSize(2);
+      } finally {
+        diskMetrics.shutdownAndWait();
+      }
+    }
+  }
+
+  private DataNodeDiskMetrics buildMetrics(Configuration conf, List<FsVolumeSpi> volumes) {
+    DataNode mockDn = mock(DataNode.class);
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    FsDatasetSpi mockDataset = mock(FsDatasetSpi.class);
+    FsDatasetSpi.FsVolumeReferences mockRefs = mock(FsDatasetSpi.FsVolumeReferences.class);
+    when(mockDn.getFSDataset()).thenReturn(mockDataset);
+    when(mockDataset.getFsVolumeReferences()).thenReturn(mockRefs);
+    doAnswer(inv -> volumes.iterator()).when(mockRefs).iterator();
+    return new DataNodeDiskMetrics(mockDn, 100, conf);
+  }
+
+  /**
+   * Creates a mock volume; only metadata latency drives outlier detection.
+   */
+  @SuppressWarnings("unchecked")
+  private FsVolumeSpi createMockDiskVolume(String path, StorageType storageType,
+      double metadataMs) {
+    FsVolumeSpi mockVolume = mock(FsVolumeSpi.class);
+    DataNodeVolumeMetrics mockMetrics = mock(DataNodeVolumeMetrics.class);
+    try {
+      when(mockVolume.getBaseURI()).thenReturn(new URI("file://" + path));
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    when(mockVolume.getStorageType()).thenReturn(storageType);
+    when(mockVolume.getMetrics()).thenReturn(mockMetrics);
+    when(mockMetrics.getMetadataOperationMean()).thenReturn(metadataMs);
+    when(mockMetrics.getReadIoMean()).thenReturn(0.0);
+    when(mockMetrics.getWriteIoMean()).thenReturn(0.0);
+    return mockVolume;
   }
 }
