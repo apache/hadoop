@@ -44,7 +44,9 @@ public class TestGetJournalEditServlet {
     // Configure Hadoop
     CONF.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:4321/");
     CONF.set(DFSConfigKeys.HADOOP_SECURITY_AUTH_TO_LOCAL,
-        "RULE:[2:$1/$2@$0]([nsdj]n/.*@REALM\\.TLD)s/.*/hdfs/\nDEFAULT");
+        "RULE:[2:$1/$2@$0]([nsdj]n/.*@REALM\\.TLD)s/.*/hdfs/\n"
+            + "RULE:[2:$1/$2@$0](nn/.*@OTHER\\.REALM)s/.*/other/\n"
+            + "DEFAULT");
     CONF.set(DFSConfigKeys.DFS_NAMESERVICES, "ns");
     CONF.set(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, "nn/_HOST@REALM.TLD");
 
@@ -101,6 +103,34 @@ public class TestGetJournalEditServlet {
     boolean isValid = SERVLET.isValidRequestor(request, CONF);
 
     assertThat(isValid).isTrue();
+  }
+
+  /**
+   * A requestor whose principal matches an explicitly configured NameNode principal pattern
+   * is authorized, and one that does not match is rejected.
+   *
+   * @throws IOException for unexpected validation failures
+   */
+  @Test
+  public void testRequestMatchesConfiguredPattern() throws IOException {
+    Configuration conf = new Configuration(CONF);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY + ".pattern",
+        "nn/host1@OTHER\\.REALM");
+
+    // Test: Make a request from a principal that matches the pattern
+    HttpServletRequest allowed = mock(HttpServletRequest.class);
+    when(allowed.getParameter(UserParam.NAME)).thenReturn("nn/host1@OTHER.REALM");
+    when(allowed.getUserPrincipal()).thenReturn(() -> "nn/host1@OTHER.REALM");
+
+    // Test: Make a request from a principal that does not match the pattern, and is not a
+    // configured NameNode or a journalnode
+    HttpServletRequest denied = mock(HttpServletRequest.class);
+    when(denied.getParameter(UserParam.NAME)).thenReturn("nn/host2@OTHER.REALM");
+    when(denied.getUserPrincipal()).thenReturn(() -> "nn/host2@OTHER.REALM");
+
+    // Verify: Only the matching principal is valid
+    assertThat(SERVLET.isValidRequestor(allowed, conf)).isTrue();
+    assertThat(SERVLET.isValidRequestor(denied, conf)).isFalse();
   }
 
 }
