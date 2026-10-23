@@ -386,6 +386,21 @@ public class TestSecurityUtil {
   }
 
   @Test
+  public void testGetByNameWithBracketedIPv6() throws Exception {
+    Configuration conf = new Configuration(false);
+    for (boolean useIp : new boolean[] {false, true}) {
+      conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, useIp);
+      SecurityUtil.setConfiguration(conf);
+      String msg = "use_ip=" + useIp;
+      for (String ip : new String[] {"::1", "2001:db8::1"}) {
+        assertEquals(InetAddress.getByName(ip), SecurityUtil.getByName("[" + ip + "]"), msg);
+      }
+      // the JDK does not accept an IPv4 literal in brackets either
+      assertThrows(UnknownHostException.class, () -> SecurityUtil.getByName("[127.0.0.1]"), msg);
+    }
+  }
+
+  @Test
   public void testSocketAddrWithNameToStaticName() {
     String staticHost = "host1";
     NetUtils.addStaticResolution(staticHost, "localhost");
