@@ -29,6 +29,7 @@ import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.bind.annotation.XmlRootElement;
 
 import org.eclipse.persistence.jaxb.MarshallerProperties;
 import org.eclipse.persistence.jaxb.rs.MOXyJsonProvider;
@@ -48,6 +49,10 @@ import org.apache.hadoop.conf.Configuration;
  * to determine which classes should be serialized
  * and deserialized without a root element in the resulting JSON.
  * </p>
+ *
+ * <p>Additionally, any {@link XmlRootElement}-annotated type that is listed neither as
+ * wrapped nor unwrapped in {@link ClassSerialisationConfig} is handled here as
+ * <b>unwrapped</b> JSON.</p>
  *
  * During marshalling and unmarshalling, this provider sets the MOXy-specific properties:
  * <ul>
@@ -107,9 +112,26 @@ public class ExcludeRootJSONProvider extends MOXyJsonProvider {
   @Override
   public boolean isReadable(Class<?> type, Type genericType, Annotation[] annotations,
       MediaType mediaType) {
-    boolean match = classSerialisationConfig.getUnWrappedClasses().contains(type);
+    if (classSerialisationConfig.getWrappedClasses().contains(type)) {
+      return false;
+    }
+    boolean match = classSerialisationConfig.getUnWrappedClasses().contains(type)
+        || isUnwrappedFallbackCandidate(type);
     LOG.trace("ExcludeRootJSONProvider compatibility with {} is {}", type, match);
     return match;
+  }
+
+  /**
+   * JAX-RS entities not listed as unwrapped in {@link ClassSerialisationConfig} but with
+   * {@link XmlRootElement} use unwrapped JSON here (same MOXy flags as explicitly unwrapped
+   * types).
+   */
+  private static boolean isUnwrappedFallbackCandidate(Class<?> type) {
+    if (!type.isAnnotationPresent(XmlRootElement.class)) {
+      return false;
+    }
+    LOG.trace("Unwrapped JSON fallback applies for {}", type.getName());
+    return true;
   }
 
   /**
