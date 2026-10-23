@@ -17,14 +17,29 @@
  *******************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
+import java.util.TreeMap;
 
 import net.jcip.annotations.NotThreadSafe;
 
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningQuotaException;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.ReservationAgent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.Resources;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -148,4 +163,117 @@ public class TestCapacityOverTimePolicy extends BaseSharingPolicyTest {
     runTest();
   }
 
+  /**
+   * A reservation of the same user that is in progress at the end of the
+   * window checked by the policy (the reservation end + 24h) must not
+   * make the integral check fail: both reservations below are far within
+   * the 25% average and 75% instantaneous limits.
+   */
+  @Test
+  public void testUserAllocationInProgressAtEndOfCheckedWindow()
+      throws PlanningException {
+    InMemoryPlan plan = createPlan();
+    // an arbitrary fixed start time
+    long t0 = 1791808200000L;
+
+    // 10% of the cluster for 2h, in progress at t0 + 31h, the end of the
+    // window checked for the next reservation (its end + 24h)
+    assertTrue(plan.addReservation(
+        createReservation(t0 + 30 * ONEHOUR, t0 + 32 * ONEHOUR, 0.1, null),
+        false));
+    // 10% of the cluster for 1h, ending at t0 + 7h
+    assertTrue(plan.addReservation(
+        createReservation(t0 + 6 * ONEHOUR, t0 + 7 * ONEHOUR, 0.1, null),
+        false));
+  }
+
+  /**
+   * Same as {@link #testUserAllocationInProgressAtEndOfCheckedWindow()}
+   * with daily periodic reservations: three reservations of 5% of the
+   * cluster for 1h each, crossing the period boundary, fit in the limits.
+   */
+  @Test
+  public void testPeriodicAllocationCrossingPeriodBoundary()
+      throws PlanningException {
+    InMemoryPlan plan = createPlan();
+    for (int i = 0; i < 3; i++) {
+      // 23:30 to 00:30 of each day
+      assertTrue(plan.addReservation(createReservation(
+          23 * ONEHOUR + 30 * ONEMINUTE, ONEDAY + 30 * ONEMINUTE, 0.05,
+          ONEDAYPERIOD), false));
+    }
+  }
+
+  /**
+   * Updating a reservation must not count its old version on top of the
+   * user's consumption, which already includes it: the update below keeps
+   * the reservation far within the 25% average limit.
+   */
+  @Test
+  public void testUpdateReservationWithinQuota() throws PlanningException {
+    InMemoryPlan plan = createPlan();
+    // an arbitrary fixed start time
+    long t0 = 1791808200000L;
+    ReservationId id = ReservationSystemTestUtil.getNewReservationId();
+
+    // 20% of the cluster for 20h, 16.7% on average over the 24h window
+    assertTrue(plan.addReservation(
+        createReservation(id, t0, t0 + 20 * ONEHOUR, 0.2, null), false));
+    // 20% of the cluster for 21h, 17.5% on average
+    assertTrue(plan.updateReservation(
+        createReservation(id, t0, t0 + 21 * ONEHOUR, 0.2, null)));
+    // 30% of the cluster for 21h, 26.25% on average, exceeds the limit
+    assertThrows(PlanningQuotaException.class, () -> plan.updateReservation(
+        createReservation(id, t0, t0 + 21 * ONEHOUR, 0.3, null)));
+  }
+
+  private InMemoryPlan createPlan() {
+    return new InMemoryPlan(mock(QueueMetrics.class), getInitializedPolicy(),
+        mock(ReservationAgent.class),
+        ReservationSystemTestUtil.calculateClusterResource(1000), 1000L,
+        new DefaultResourceCalculator(), Resource.newInstance(1024, 1),
+        Resource.newInstance(1024 * 8, 8), "dedicated", null, true,
+        ReservationSystemTestUtil.createMockRMContext());
+  }
+
+  /**
+   * Creates a reservation of user u1 using the given share of a 1000
+   * containers cluster over [start, end), folded onto the period (if
+   * any), where end - start must not exceed the period.
+   */
+  private InMemoryReservationAllocation createReservation(long start,
+      long end, double share, String recurrenceExpression) {
+    return createReservation(ReservationSystemTestUtil.getNewReservationId(),
+        start, end, share, recurrenceExpression);
+  }
+
+  private InMemoryReservationAllocation createReservation(ReservationId id,
+      long start, long end, double share, String recurrenceExpression) {
+    ResourceCalculator rc = new DefaultResourceCalculator();
+    Resource minAlloc = Resource.newInstance(1024, 1);
+    Resource alloc = Resources.multiply(minAlloc, share * 1000);
+    Map<ReservationInterval, Resource> allocations = new TreeMap<>();
+    long rStart = start;
+    long rEnd = end;
+    if (recurrenceExpression != null) {
+      long period = Long.parseLong(recurrenceExpression);
+      rStart = start % period;
+      rEnd = rStart + end - start;
+      if (rEnd > period) {
+        allocations.put(new ReservationInterval(rStart, period), alloc);
+        allocations.put(new ReservationInterval(0, rEnd - period), alloc);
+        rStart = 0;
+        rEnd = period;
+      } else {
+        allocations.put(new ReservationInterval(rStart, rEnd), alloc);
+      }
+    } else {
+      allocations.put(new ReservationInterval(rStart, rEnd), alloc);
+    }
+    ReservationDefinition rDef =
+        ReservationSystemTestUtil.createSimpleReservationDefinition(start,
+            end, end - start, 1, recurrenceExpression);
+    return new InMemoryReservationAllocation(id, rDef, "u1", "dedicated",
+        rStart, rEnd, allocations, rc, minAlloc);
+  }
 }
