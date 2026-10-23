@@ -38,4 +38,15 @@
         </description>
     </property>
 
+    <property>
+        <name>hdfs.fedbalance.verify.enabled</name>
+        <value>false</value>
+        <description>
+            Whether FedBalance should run the optional verification phase after
+            the final DistCp succeeds. The verification compares the source
+            and destination ContentSummary directory count, file count, and
+            length after excluding snapshot content.
+        </description>
+    </property>
+
 </configuration>
