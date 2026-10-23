@@ -269,6 +269,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private volatile boolean fsRunning;
 
   final ReplicaMap volumeMap;
+  /** Block pools whose replicas have been loaded into {@link #volumeMap}. */
+  private final Set<String> loadedBlockPools = ConcurrentHashMap.newKeySet();
   final Map<String, Set<Long>> deletingBlock;
   final RamDiskReplicaTracker ramDiskReplicaTracker;
   final RamDiskAsyncLazyPersistService asyncLazyPersistService;
@@ -3021,7 +3023,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override // FsDatasetSpi
   public ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
       throws IOException {
-    return initReplicaRecovery(rBlock.getBlock().getBlockPoolId(), volumeMap,
+    // Until the replicas are loaded, a missing replica does not mean this
+    // datanode lacks the block. Answering null would let block recovery treat
+    // it as absent and delete the block.
+    final String bpid = rBlock.getBlock().getBlockPoolId();
+    if (!loadedBlockPools.contains(bpid)) {
+      throw new IOException("Replicas of block pool " + bpid
+          + " are not loaded yet, cannot initReplicaRecovery for "
+          + rBlock.getBlock());
+    }
+    return initReplicaRecovery(bpid, volumeMap,
         rBlock.getBlock().getLocalBlock(), rBlock.getNewGenerationStamp(),
         datanode.getDnConf().getXceiverStopTimeout());
   }
@@ -3302,11 +3313,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         }
       }
     }
+    DataNodeFaultInjector.get().delayLoadingReplicas();
     try {
       volumes.getAllVolumesMap(bpid, volumeMap, ramDiskReplicaTracker);
     } catch (AddBlockPoolException e) {
       volumeExceptions.mergeException(e);
     }
+    loadedBlockPools.add(bpid);
     if (volumeExceptions.hasExceptions()) {
       throw volumeExceptions;
     }
@@ -3326,6 +3339,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   public void shutdownBlockPool(String bpid) {
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
       LOG.info("Removing block pool " + bpid);
+      loadedBlockPools.remove(bpid);
       Map<DatanodeStorage, BlockListAsLongs> blocksPerVolume
           = getBlockReports(bpid);
       volumeMap.cleanUpBlockPool(bpid);
