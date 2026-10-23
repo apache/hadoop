@@ -484,7 +484,7 @@ public class AbfsRestOperation {
 
       int status = httpOperation.getStatusCode();
       failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
-      retryPolicy = client.getRetryPolicy(failureReason);
+      retryPolicy = client.getRetryPolicy(tracingContext, failureReason);
 
       if (retryPolicy.shouldRetry(retryCount, httpOperation.getStatusCode())) {
         return false;
