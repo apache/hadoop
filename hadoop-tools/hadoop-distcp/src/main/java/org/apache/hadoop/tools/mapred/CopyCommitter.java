@@ -654,6 +654,13 @@ public class CopyCommitter extends FileOutputCommitter {
     DistCpUtils.compareFileLengthsAndChecksums(srcFileStatus.getLen(),
         srcfs, sourceFile, null, dstfs,
             targetFile, skipCrc, srcFileStatus.getLen());
+    // Concat changes the modification time preserved on the first chunk.
+    // Restore times after validation, which may also update the access time.
+    if (DistCpUtils.unpackAttributes(conf.get(CONF_LABEL_PRESERVE_STATUS))
+        .contains(FileAttribute.TIMES)) {
+      dstfs.setTimes(targetFile, srcFileStatus.getModificationTime(),
+          srcFileStatus.getAccessTime());
+    }
   }
 
   /**

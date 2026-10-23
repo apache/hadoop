@@ -19,13 +19,17 @@
 package org.apache.hadoop.tools.contract;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
+import static org.apache.hadoop.fs.CommonPathCapabilities.FS_ACLS;
+import static org.apache.hadoop.fs.CommonPathCapabilities.FS_XATTRS;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_DISTCP_JOB_ID;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +40,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryScope;
+import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
@@ -46,6 +55,7 @@ import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCp;
 import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpOptions;
+import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.tools.SimpleCopyListing;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 import org.apache.hadoop.tools.util.DistCpTestUtils;
@@ -55,6 +65,9 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,6 +88,12 @@ public abstract class AbstractContractDistCpTest
 
   /** Using offset to change modification time in tests. */
   private static final long MODIFICATION_TIME_OFFSET = 10000;
+
+  private static final long CHUNK_COPY_TIME = 1600000000000L;
+
+  // Keep reads and checksum verification from advancing the source atime.
+  private static final long CHUNK_COPY_ACCESS_TIME =
+      (System.currentTimeMillis() / 1000 + 86400) * 1000;
 
   public static final String SCALE_TEST_DISTCP_FILE_SIZE_KB
       = "scale.test.distcp.file.size.kb";
@@ -250,6 +269,243 @@ public abstract class AbstractContractDistCpTest
 
   protected Path getRemoteDir() {
     return remoteDir;
+  }
+
+  @ParameterizedTest(name = "preserveTimes={0}, direct={1}, atomic={2}")
+  @CsvSource({
+      "true, false, false",
+      "false, false, false",
+      "true, true, false",
+      "false, true, false",
+      "true, false, true",
+      "false, false, true"
+  })
+  public void testChunkCopyPreserveTimes(boolean preserveTimes,
+      boolean directWrite, boolean atomicCommit) throws Exception {
+    requireChunkCopySupport();
+    Path source = new Path(remoteDir, "source");
+    Path target = new Path(remoteDir, "target");
+    Map<String, FileStatus> sourceStatuses = createChunkCopyTree(source);
+
+    DistCpOptions.Builder builder = chunkCopyOptions(source, target,
+        preserveTimes).withDirectWrite(directWrite || shouldUseDirectWrite())
+        .withAtomicCommit(atomicCommit);
+    runDistCp(builder.build(), true);
+
+    // The source directory itself is in the copy listing, so its times and
+    // those of nested directories must be restored after all concatenations.
+    verifyChunkCopyTree(target, sourceStatuses, preserveTimes, true);
+  }
+
+  @ParameterizedTest(name = "preserveTimes={0}, renameTarget={1}")
+  @CsvSource({"true, false", "false, false", "true, true", "false, true"})
+  public void testChunkCopyOutsideParentScope(boolean preserveTimes,
+      boolean renameTarget)
+      throws Exception {
+    requireChunkCopySupport();
+    Path sourceParent = new Path(remoteDir, "source-parent");
+    Path source = new Path(sourceParent, "file");
+    Path targetParent = new Path(remoteDir, "target-parent");
+    Path target = new Path(targetParent,
+        renameTarget ? "renamed-file" : source.getName());
+    createChunkCopyFile(source, TEST_FILE_LEN * 3 + 1);
+    FileStatus sourceStatus = setChunkCopyTimes(source, 0);
+    FileStatus sourceParentStatus = setChunkCopyTimes(sourceParent, 1);
+    mkdirs(remoteFS, targetParent);
+    FileStatus targetParentStatus = setChunkCopyTimes(targetParent, 2);
+
+    DistCpOptions.Builder builder = chunkCopyOptions(source,
+        renameTarget ? target : targetParent, preserveTimes);
+    if (renameTarget) {
+      builder.withDirectWrite(true);
+    }
+    runDistCp(builder.build(), true);
+
+    assertChunkCopyTimes(sourceStatus, remoteFS.getFileStatus(target),
+        preserveTimes);
+    // Creating/concatenating children may change the destination parent's
+    // mtime naturally. It must not inherit the source parent's timestamps.
+    FileStatus parentAfterCopy = remoteFS.getFileStatus(targetParent);
+    Assertions.assertThat(parentAfterCopy.getModificationTime())
+        .describedAs("mtime of parent outside copy scope")
+        .isNotEqualTo(sourceParentStatus.getModificationTime());
+    assertEquals(targetParentStatus.getAccessTime(),
+        parentAfterCopy.getAccessTime(), "atime of parent outside copy scope");
+    verifyFileContents(remoteFS, target,
+        dataset((int) sourceStatus.getLen(), 'a', 26));
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  public void testChunkCopyUpdateRootTimes(boolean updateRoot)
+      throws Exception {
+    requireChunkCopySupport();
+    Path source = new Path(remoteDir, "source");
+    Path target = new Path(remoteDir, "target");
+    Map<String, FileStatus> sourceStatuses = createChunkCopyTree(source);
+    // Force an existing destination file to be replaced by a chunked copy.
+    createFile(remoteFS, new Path(target, "large"), true, new byte[1]);
+    FileStatus targetRootStatus = setChunkCopyTimes(target, 20);
+    DistCpOptions options = chunkCopyOptions(source, target, true)
+        .withSyncFolder(true).withUpdateRoot(updateRoot).build();
+
+    runDistCp(options, true);
+    verifyChunkCopyTree(target, sourceStatuses, true, updateRoot);
+    if (!updateRoot) {
+      assertEquals(targetRootStatus.getAccessTime(),
+          remoteFS.getFileStatus(target).getAccessTime(),
+          "-update must not preserve root times without -updateRoot");
+    }
+
+    // A fully skipped update must still preserve file times without
+    // attempting to concatenate nonexistent chunk files.
+    setChunkCopyTimes(new Path(target, "large"), 30);
+    Job skipped = runDistCp(options, true);
+    assertCounterInRange(skipped, CopyMapper.Counter.COPY, 0, 0);
+    assertCounterInRange(skipped, CopyMapper.Counter.SKIP, 1, -1);
+    assertCounterInRange(skipped, CopyMapper.Counter.BYTESCOPIED, 0, 0);
+    verifyChunkCopyTree(target, sourceStatuses, true, updateRoot);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  public void testChunkCopyPreserveOtherAttributes(boolean preserveTimes)
+      throws Exception {
+    requireChunkCopySupport();
+    skipIfUnsupported(SUPPORTS_UNIX_PERMISSIONS);
+    if (!remoteFS.hasPathCapability(remoteDir, FS_ACLS)
+        || !remoteFS.hasPathCapability(remoteDir, FS_XATTRS)) {
+      skip("ACL and XAttr support required");
+    }
+    Path source = new Path(remoteDir, "source");
+    Path target = new Path(remoteDir, "target");
+    Map<String, FileStatus> sourceStatuses = createChunkCopyTree(source);
+    Path sourceFile = new Path(source, "large");
+    remoteFS.setPermission(sourceFile, new FsPermission((short) 0640));
+    remoteFS.modifyAclEntries(sourceFile, Collections.singletonList(
+        new AclEntry.Builder().setScope(AclEntryScope.ACCESS)
+            .setType(AclEntryType.USER).setName("distcp-reader")
+            .setPermission(FsAction.READ).build()));
+    String xattrName = "user.distcp";
+    byte[] xattrValue = {1, 2, 3};
+    remoteFS.setXAttr(sourceFile, xattrName, xattrValue);
+    sourceStatuses.put("large", setChunkCopyTimes(sourceFile, 0));
+    sourceStatuses.put("", setChunkCopyTimes(source, 11));
+
+    runDistCp(chunkCopyOptions(source, target, preserveTimes)
+        .preserve("rbugpcax").build(), true);
+
+    // File listing entries omit extended ACLs: restoring all attributes from
+    // them after concat would erase ACLs already preserved by the mapper.
+    Path targetFile = new Path(target, "large");
+    assertEquals(remoteFS.getAclStatus(sourceFile).getEntries(),
+        remoteFS.getAclStatus(targetFile).getEntries(), "file ACL entries");
+    assertArrayEquals(xattrValue, remoteFS.getXAttr(targetFile, xattrName));
+    FileStatus expected = sourceStatuses.get("large");
+    FileStatus actual = remoteFS.getFileStatus(targetFile);
+    assertEquals(expected.getPermission(), actual.getPermission());
+    assertEquals(expected.getOwner(), actual.getOwner());
+    assertEquals(expected.getGroup(), actual.getGroup());
+    assertEquals(expected.getReplication(), actual.getReplication());
+    assertEquals(expected.getBlockSize(), actual.getBlockSize());
+    verifyChunkCopyTree(target, sourceStatuses, preserveTimes, true);
+  }
+
+  private void requireChunkCopySupport() throws IOException {
+    skipIfUnsupported(SUPPORTS_CONCAT);
+    skipIfUnsupported(SUPPORTS_SETTIMES);
+    skipIfUnsupported(SUPPORTS_BLOCK_LOCALITY);
+    conf.setInt("mapreduce.local.map.tasks.maximum", 2);
+  }
+
+  private DistCpOptions.Builder chunkCopyOptions(Path source, Path target,
+      boolean preserveTimes) {
+    DistCpOptions.Builder builder = new DistCpOptions.Builder(
+        Collections.singletonList(source), target)
+        .withBlocksPerChunk(1).withDirectWrite(shouldUseDirectWrite());
+    if (preserveTimes) {
+      builder.preserve(FileAttribute.TIMES);
+    }
+    return builder;
+  }
+
+  private Map<String, FileStatus> createChunkCopyTree(Path source)
+      throws IOException {
+    Map<String, FileStatus> statuses = new LinkedHashMap<>();
+    String[] names = {"large", "large2", "nested/large", "block", "small",
+        "empty"};
+    int[] lengths = {TEST_FILE_LEN * 3 + 1, TEST_FILE_LEN * 4,
+        TEST_FILE_LEN * 2, TEST_FILE_LEN, TEST_FILE_LEN / 2, 0};
+    for (int i = 0; i < names.length; i++) {
+      Path file = new Path(source, names[i]);
+      createChunkCopyFile(file, lengths[i]);
+      statuses.put(names[i], setChunkCopyTimes(file, i));
+    }
+    // Set directory times only after all children have been created.
+    statuses.put("nested", setChunkCopyTimes(new Path(source, "nested"), 10));
+    statuses.put("", setChunkCopyTimes(source, 11));
+    return statuses;
+  }
+
+  private void createChunkCopyFile(Path path, int length) throws IOException {
+    writeDataset(remoteFS, path, dataset(length, 'a', 26), length,
+        TEST_FILE_LEN, true);
+    if (length > TEST_FILE_LEN) {
+      FileStatus status = remoteFS.getFileStatus(path);
+      assertTrue(status.getLen() > status.getBlockSize(),
+          "File must exceed its block size to exercise chunked copying");
+      assertTrue(remoteFS.getFileBlockLocations(status, 0, length).length > 1,
+          "File must have multiple blocks to exercise concatenation");
+    }
+  }
+
+  private FileStatus setChunkCopyTimes(Path path, int offset)
+      throws IOException {
+    long mtime = CHUNK_COPY_TIME + offset * MODIFICATION_TIME_OFFSET;
+    remoteFS.setTimes(path, mtime,
+        CHUNK_COPY_ACCESS_TIME + offset * MODIFICATION_TIME_OFFSET);
+    FileStatus status = remoteFS.getFileStatus(path);
+    assertEquals(mtime, status.getModificationTime(), "source fixture mtime");
+    return status;
+  }
+
+  private void verifyChunkCopyTree(Path target,
+      Map<String, FileStatus> sourceStatuses, boolean preserveTimes,
+      boolean preserveRoot) throws IOException {
+    for (Map.Entry<String, FileStatus> entry : sourceStatuses.entrySet()) {
+      Path path = entry.getKey().isEmpty()
+          ? target : new Path(target, entry.getKey());
+      FileStatus sourceStatus = entry.getValue();
+      FileStatus targetStatus = remoteFS.getFileStatus(path);
+      assertEquals(sourceStatus.isDirectory(), targetStatus.isDirectory(),
+          path.toString());
+      assertChunkCopyTimes(sourceStatus, targetStatus,
+          preserveTimes && (preserveRoot || !entry.getKey().isEmpty()));
+      if (sourceStatus.isFile()) {
+        verifyFileContents(remoteFS, path,
+            dataset((int) sourceStatus.getLen(), 'a', 26));
+      }
+    }
+  }
+
+  private void assertChunkCopyTimes(FileStatus source, FileStatus target,
+      boolean preserveTimes) {
+    if (preserveTimes) {
+      assertEquals(source.getModificationTime(), target.getModificationTime(),
+          "mtime of " + target.getPath());
+      assertEquals(source.getAccessTime(), target.getAccessTime(),
+          "atime of " + target.getPath());
+    } else {
+      Assertions.assertThat(target.getModificationTime())
+          .describedAs("mtime should not be preserved for %s", target.getPath())
+          .isNotEqualTo(source.getModificationTime());
+      // Some filesystems do not expose an access time.
+      if (source.getAccessTime() > 0) {
+        Assertions.assertThat(target.getAccessTime())
+            .describedAs("atime should not be preserved for %s", target.getPath())
+            .isNotEqualTo(source.getAccessTime());
+      }
+    }
   }
 
   @Test
@@ -643,7 +899,14 @@ public abstract class AbstractContractDistCpTest
    * @throws Exception failure
    */
   private Job runDistCp(final DistCpOptions options) throws Exception {
-    Job job = new DistCp(conf, options).execute();
+    return runDistCp(options, false);
+  }
+
+  private Job runDistCp(final DistCpOptions options, boolean extraContextChecks)
+      throws Exception {
+    // Chunked copies need the CLI checks which disable listing randomization
+    // and determine whether the destination already exists.
+    Job job = new DistCp(conf, options).execute(extraContextChecks);
     assertNotNull(job, "Unexpected null job returned from DistCp execution.");
     assertTrue(job.isComplete(), "DistCp job did not complete.");
     assertTrue(job.isSuccessful(), "DistCp job did not complete successfully.");
