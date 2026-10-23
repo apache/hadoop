@@ -399,12 +399,23 @@ public abstract class GenericTestUtils {
     }
 
     if (!result) {
-      final String exceptionErrorMsg = "Timed out waiting for condition. "
-          + (org.apache.commons.lang3.StringUtils.isNotEmpty(errorMsg)
-          ? "Error Message: " + errorMsg : "")
-          + "\nThread diagnostics:\n" +
-          TimedOutTestsListener.buildThreadDiagnosticString();
-      throw new TimeoutException(exceptionErrorMsg);
+      // Dump now, while the threads are still hung, rather than leaving it to
+      // whoever handles the failure later.
+      boolean dumped =
+          TimedOutTestsListener.dumpForTimeout("GenericTestUtils.waitFor");
+      final StringBuilder exceptionErrorMsg =
+          new StringBuilder("Timed out waiting for condition.");
+      if (org.apache.commons.lang3.StringUtils.isNotEmpty(errorMsg)) {
+        exceptionErrorMsg.append(" Error Message: ").append(errorMsg);
+      }
+      // The marker records that a dump was printed, so it is only appended
+      // when one was: dumpForTimeout refuses when dumps are switched off or
+      // this JVM's budget is spent.
+      if (dumped) {
+        exceptionErrorMsg.append(' ')
+            .append(TimedOutTestsListener.DUMP_PRINTED_MARKER);
+      }
+      throw new TimeoutException(exceptionErrorMsg.toString());
     }
   }
 
