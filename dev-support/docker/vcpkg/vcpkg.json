@@ -1,16 +1,243 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "dependencies": [
-    "boost",
+    "boost-asio",
+    "boost-date-time",
+    "boost-system",
+    "boost-program-options",
     "protobuf",
     "openssl",
     "zlib"
   ],
-  "builtin-baseline": "289a69379604112a433874fe8b9812dad3103341",
+  "builtin-baseline": "9e593bb18ea69cc5095e012465dcd675a822ed0d",
   "overrides": [
     {
       "name": "protobuf",
-      "version": "3.25.5"
+      "version": "4.25.1"
+    },
+    {
+      "name": "boost-algorithm",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-align",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-any",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-array",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-asio",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-assert",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-bind",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-cmake",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-compat",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-concept-check",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-config",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-container",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-container-hash",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-context",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-coroutine",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-conversion",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-core",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-date-time",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-describe",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-detail",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-exception",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-function",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-function-types",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-functional",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-fusion",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-headers",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-integer",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-intrusive",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-io",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-iterator",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-lexical-cast",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-move",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-mp11",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-mpl",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-numeric-conversion",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-optional",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-pool",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-predef",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-preprocessor",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-program-options",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-range",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-regex",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-smart-ptr",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-static-assert",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-system",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-throw-exception",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-tokenizer",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-tuple",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-type-index",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-type-traits",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-typeof",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-uninstall",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-unordered",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-utility",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-variant2",
+      "version": "1.86.0"
+    },
+    {
+      "name": "boost-winapi",
+      "version": "1.86.0"
     }
   ]
 }
