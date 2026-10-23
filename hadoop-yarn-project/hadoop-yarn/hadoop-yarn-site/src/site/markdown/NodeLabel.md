@@ -28,7 +28,7 @@ Now we only support node partition, which is:
 * User need to configure how much resources of each partition can be used by different queues. For more detail, please refer next section.
 * There are two kinds of node partitions:
     * Exclusive: containers will be allocated to nodes with exactly match node partition. (e.g. asking partition=“x” will be allocated to node with partition=“x”, asking DEFAULT partition will be allocated to DEFAULT partition nodes).
-    * Non-exclusive: if a partition is non-exclusive, it shares idle resource to container requesting DEFAULT partition.
+    * Non-exclusive: if a partition is non-exclusive, it shares idle resource to container requesting DEFAULT partition. By default such borrowed resource is not bounded by the queue's maximum-capacity on the partition; administrators can optionally enforce it via ```yarn.scheduler.capacity.non-exclusive-label.queue-limit-enable``` (see the scheduler configuration section below).
 
 User can specify set of node labels which can be accessed by each queue, one application can only use subset of node labels that can be accessed by the queue which contains the application.
 
@@ -120,6 +120,7 @@ yarn.scheduler.capacity.`<queue-path>`.accessible-node-labels | Admin need speci
 yarn.scheduler.capacity.`<queue-path>`.accessible-node-labels.`<label>`.capacity | Set the percentage of the queue can access to nodes belong to `<label>` partition . The sum of `<label>` capacities for direct children under each parent, must be equal to 100. By default, it's 0.
 yarn.scheduler.capacity.`<queue-path>`.accessible-node-labels.`<label>`.maximum-capacity | Similar to yarn.scheduler.capacity.`<queue-path>`.maximum-capacity, it is for maximum-capacity for labels of each queue. By default, it's 100.
 yarn.scheduler.capacity.`<queue-path>`.default-node-label-expression | Value like “hbase”, which means: if applications submitted to the queue without specifying node label in their resource requests, it will use "hbase" as default-node-label-expression. By default, this is empty, so application will get containers from nodes without label.
+yarn.scheduler.capacity.non-exclusive-label.queue-limit-enable | When set to true, non-exclusive allocation (containers requesting DEFAULT partition that borrow idle resource from a non-exclusive `<label>` partition) will also respect the queue's maximum-capacity on the `<label>`, and the per-user limit of the queue will be computed the same way as exclusive allocation (based on the queue's guaranteed capacity and user-limit-factor). Queues that have no capacity configured on the `<label>` keep the old behavior and can still borrow all idle resource of the partition. This is useful for shared clusters without preemption enabled, to avoid one queue borrowing up all resource of a partition and starving labeled resource requests of other queues. By default, it's false.
 
 **An example of node label configuration**:
 
