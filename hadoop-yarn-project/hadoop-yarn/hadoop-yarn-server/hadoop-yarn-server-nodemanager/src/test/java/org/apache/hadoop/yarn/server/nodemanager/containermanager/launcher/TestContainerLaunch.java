@@ -2699,4 +2699,99 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     assertEquals(testVal2Expanded, env.get(testKey2));
   }
 
+  /**
+   * Test that ContainerLaunch.getEffectiveCredentials() merges system
+   * credentials (renewed HDFS delegation tokens pushed by RM via
+   * heartbeat) into the container's credentials.
+   *
+   * Without the fix, getEffectiveCredentials() would just return the
+   * container's original (stale) credentials. With the fix, it merges
+   * in the updated tokens from NMContext.getSystemCredentialsForApps().
+   */
+  @Test
+  @Timeout(value = 30)
+  public void testContainerLaunchUsesSystemCredentials() throws Exception {
+    ApplicationId appId = ApplicationId.newInstance(0, 0);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 0);
+
+    org.apache.hadoop.io.Text tokenAlias =
+        new org.apache.hadoop.io.Text("hdfs-dt");
+
+    // Old HDFS token — what the container was created with
+    org.apache.hadoop.security.token.Token<? extends
+        org.apache.hadoop.security.token.TokenIdentifier> oldToken =
+        new org.apache.hadoop.security.token.Token<>(
+            "old-id".getBytes(), "old-pass".getBytes(),
+            new org.apache.hadoop.io.Text("HDFS_DELEGATION_TOKEN"),
+            new org.apache.hadoop.io.Text("hdfs-service"));
+
+    // New HDFS token — pushed by RM after token replacement
+    org.apache.hadoop.security.token.Token<? extends
+        org.apache.hadoop.security.token.TokenIdentifier> newToken =
+        new org.apache.hadoop.security.token.Token<>(
+            "new-id".getBytes(), "new-pass".getBytes(),
+            new org.apache.hadoop.io.Text("HDFS_DELEGATION_TOKEN"),
+            new org.apache.hadoop.io.Text("hdfs-service"));
+
+    // Container credentials with old token
+    Credentials containerCreds = new Credentials();
+    containerCreds.addToken(tokenAlias, oldToken);
+
+    // Mock container
+    Container container = mock(Container.class);
+    when(container.getContainerId()).thenReturn(cId);
+    when(container.getCredentials()).thenReturn(containerCreds);
+
+    // Simulate RM pushing renewed credentials via heartbeat
+    Credentials systemCreds = new Credentials();
+    systemCreds.addToken(tokenAlias, newToken);
+    Map<ApplicationId, Credentials> systemCredsMap = new HashMap<>();
+    systemCredsMap.put(appId, systemCreds);
+    ((NMContext) context).setSystemCrendentialsForApps(systemCredsMap);
+
+    // Enable security so the merge path is triggered
+    Configuration secureConf = new Configuration(conf);
+    secureConf.set(
+        org.apache.hadoop.fs.CommonConfigurationKeysPublic
+            .HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    org.apache.hadoop.security.UserGroupInformation
+        .setConfiguration(secureConf);
+
+    try {
+      assertTrue(
+          org.apache.hadoop.security.UserGroupInformation.isSecurityEnabled(),
+          "Security should be enabled for this test");
+
+      // Create a real ContainerLaunch and call getEffectiveCredentials
+      Application app = mock(Application.class);
+      when(app.getAppId()).thenReturn(appId);
+      Dispatcher dispatcher = mock(Dispatcher.class);
+      ContainerLaunch launch = new ContainerLaunch(context, secureConf,
+          dispatcher, exec, app, container, dirsHandler, containerManager);
+
+      Credentials effective = launch.getEffectiveCredentials(container);
+
+      // The effective credentials should contain the NEW token
+      org.apache.hadoop.security.token.Token<? extends
+          org.apache.hadoop.security.token.TokenIdentifier> resultToken =
+          effective.getToken(tokenAlias);
+      assertNotNull(resultToken,
+          "HDFS token should exist in effective credentials");
+      assertEquals("new-id", new String(resultToken.getIdentifier()),
+          "Effective credentials should contain the renewed HDFS token "
+              + "from system credentials, not the stale original");
+
+      // Original container credentials should NOT be modified
+      org.apache.hadoop.security.token.Token<? extends
+          org.apache.hadoop.security.token.TokenIdentifier> origToken =
+          containerCreds.getToken(tokenAlias);
+      assertEquals("old-id", new String(origToken.getIdentifier()),
+          "Original container credentials must not be modified");
+    } finally {
+      org.apache.hadoop.security.UserGroupInformation.setConfiguration(conf);
+    }
+  }
+
 }
