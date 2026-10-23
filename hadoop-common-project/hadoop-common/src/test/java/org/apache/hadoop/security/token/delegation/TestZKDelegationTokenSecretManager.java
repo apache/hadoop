@@ -53,6 +53,7 @@ import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
@@ -95,6 +96,31 @@ public class TestZKDelegationTokenSecretManager {
   public void tearDown() throws Exception {
     if (zkServer != null) {
       zkServer.close();
+    }
+  }
+
+  /**
+   * A token manager leaked past tearDown() would otherwise kill the JVM
+   * when its remover thread loses the ZooKeeper connection;
+   * checkNoTermination() turns the recorded termination into a test
+   * failure instead.
+   */
+  @BeforeEach
+  public void disableSystemExit() {
+    ExitUtil.disableSystemExit();
+  }
+
+  /**
+   * Runs as its own lifecycle method so that the ExitUtil state is checked
+   * and reset even when tearDown() fails. A leaked remover thread that
+   * terminates after this point is reported by the next test.
+   */
+  @AfterEach
+  public void checkNoTermination() {
+    ExitUtil.ExitException ee = ExitUtil.getFirstExitException();
+    ExitUtil.resetFirstExitException();
+    if (ee != null) {
+      fail("ExitUtil.terminate was called", ee);
     }
   }
 
