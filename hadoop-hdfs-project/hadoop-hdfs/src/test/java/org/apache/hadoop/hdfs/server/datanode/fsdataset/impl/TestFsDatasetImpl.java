@@ -2122,6 +2122,46 @@ public class TestFsDatasetImpl {
     }
   }
 
+  /**
+   * HDFS-17850: append() must reject newGS equal to or less than the replica's
+   * generation stamp to avoid corrupt replica state from misbehaving clients.
+   */
+  @Test
+  @Timeout(value = 30)
+  public void testAppendRejectsSameOrLowerGenerationStamp() throws Exception {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      BlockReaderTestUtil util = new BlockReaderTestUtil(cluster,
+          new HdfsConfiguration(conf));
+      Path path = new Path("/testFile");
+      util.writeFile(path, 1);
+      String bpid = cluster.getNameNode().getNamesystem().getBlockPoolId();
+      DataNode dn = cluster.getDataNodes().get(0);
+      FsDatasetImpl dnFSDataset = (FsDatasetImpl) dn.getFSDataset();
+      List<ReplicaInfo> replicaInfos = dnFSDataset.getFinalizedBlocks(bpid);
+      assertEquals(1, replicaInfos.size());
+      LocatedBlock blk = util.getFileBlocks(path, 512).get(0);
+      ExtendedBlock block = blk.getBlock();
+      long blockLen = replicaInfos.get(0).getNumBytes();
+
+      // newGS == current GS must throw
+      LambdaTestUtils.intercept(IOException.class, "should be greater than the replica",
+          () -> dnFSDataset.append(block, block.getGenerationStamp(), blockLen));
+
+      // newGS < current GS must throw
+      LambdaTestUtils.intercept(IOException.class, "should be greater than the replica",
+          () -> dnFSDataset.append(block, block.getGenerationStamp() - 1, blockLen));
+
+      // newGS > current GS must succeed
+      ReplicaHandler h = dnFSDataset.append(block, block.getGenerationStamp() + 1,
+          blockLen);
+      h.close();
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   @Test
   @Timeout(value = 30)
   public void testAppend() {
