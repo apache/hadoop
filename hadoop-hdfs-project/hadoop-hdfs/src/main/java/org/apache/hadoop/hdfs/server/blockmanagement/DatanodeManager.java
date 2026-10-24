@@ -1601,9 +1601,13 @@ public class DatanodeManager {
 
   /**
    * Parse an IPv6 DataNode address given as "[addr]:port", "[addr]",
-   * "addr:port" or "addr". Without brackets, the last ':' separates the port
-   * if what follows it is a number and what precedes it is an IP literal. The
-   * address is normalized to the form DataNodes register with, see
+   * "addr:port" or "addr". Without brackets, a string that is a valid IP
+   * literal is an address with no port, so "2001:db8::1:2" is never split.
+   * Otherwise the last ':' separates the port if what follows it is a number
+   * and what precedes it is an IP literal, as in the expanded
+   * "2001:db8:0:0:0:0:0:1:9866" that DFSClient sends for favored nodes. A
+   * compressed address with a port must be bracketed. The address is
+   * normalized to the form DataNodes register with, see
    * {@link InetAddress#getHostAddress()}.
    *
    * @param addr a DataNode address.
@@ -1619,8 +1623,8 @@ public class DatanodeManager {
     }
     String host = addr.substring(0, idx);
     String port = addr.substring(idx + 1);
-    HostAndPort hostPort = !addr.startsWith("[") && StringUtils.isNumeric(port)
-        && InetAddresses.isInetAddress(host)
+    HostAndPort hostPort = !addr.startsWith("[") && !InetAddresses.isInetAddress(addr)
+        && StringUtils.isNumeric(port) && InetAddresses.isInetAddress(host)
         ? HostAndPort.fromParts(host, Integer.parseInt(port))
         : HostAndPort.fromString(addr);
     String ip = InetAddresses.forString(hostPort.getHost()).getHostAddress();

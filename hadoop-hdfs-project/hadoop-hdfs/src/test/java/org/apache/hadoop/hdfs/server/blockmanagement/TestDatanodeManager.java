@@ -232,6 +232,9 @@ public class TestDatanodeManager {
         .isEqualTo(HostAndPort.fromParts(ipv6, port));
     assertThat(DatanodeManager.parseIpv6Address("::ffff:" + ipv4))
         .isEqualTo(HostAndPort.fromHost(ipv4));
+    // A valid IPv6 literal is never split, even when its last group could be a port
+    assertThat(DatanodeManager.parseIpv6Address("2001:db8::1:2"))
+        .isEqualTo(HostAndPort.fromHost("2001:db8:0:0:0:0:1:2"));
     // A malformed IPv6 address is rejected, as a malformed IPv4 one is
     assertThatThrownBy(() -> dm.getDatanodeDescriptor("[2001:db8::zz]:" + port))
         .isInstanceOf(IllegalArgumentException.class);
