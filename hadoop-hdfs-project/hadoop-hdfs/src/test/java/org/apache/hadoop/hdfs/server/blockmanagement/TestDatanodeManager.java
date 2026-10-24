@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -234,6 +235,44 @@ public class TestDatanodeManager {
     // A malformed IPv6 address is rejected, as a malformed IPv4 one is
     assertThatThrownBy(() -> dm.getDatanodeDescriptor("[2001:db8::zz]:" + port))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  /**
+   * Slow peer reports keyed by IPv4, IPv6 and bracketed IPv6 info addresses
+   * must all resolve to their registered datanodes.
+   */
+  @Test
+  public void testSlowPeersResolvedForIpv4AndIpv6() throws IOException {
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    Mockito.when(fsn.hasWriteLock(RwLockMode.BM)).thenReturn(true);
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY, true);
+    DatanodeManager dm = mockDatanodeManager(fsn, conf);
+    try {
+      String[] ips = {"1.2.3.4", "2001:db8::1", "2001:db8::2", "5.6.7.8"};
+      for (int i = 0; i < ips.length; i++) {
+        dm.registerDatanode(new DatanodeRegistration(
+            new DatanodeID(ips[i], "", "uuid" + i, 9866, 9864, 0, 9867), null, null, "version"));
+      }
+      DatanodeDescriptor dnIpv4 = dm.getDatanodeByHost(ips[0]);
+      DatanodeDescriptor dnIpv6PlainKey = dm.getDatanodeByHost(ips[1]);
+      DatanodeDescriptor dnIpv6BracketedKey = dm.getDatanodeByHost(ips[2]);
+
+      // Keys are spelled out so the plain and bracketed IPv6 forms stay covered
+      // regardless of how DatanodeID formats its info address.
+      SlowPeerTracker tracker = dm.getSlowPeerTracker();
+      OutlierMetrics metrics = new OutlierMetrics(0.0, 0.0, 0.0, 5.0);
+      tracker.addReport("1.2.3.4:9864", ips[3], metrics);
+      tracker.addReport("2001:db8::1:9864", ips[3], metrics);
+      tracker.addReport("[2001:db8::2]:9864", ips[3], metrics);
+
+      assertThat(dm.getAllSlowDataNodes())
+          .containsExactlyInAnyOrder(dnIpv4, dnIpv6PlainKey, dnIpv6BracketedKey);
+    } finally {
+      // Stops the slow peer collector thread started by enabling peer stats.
+      dm.close();
+    }
   }
 
   /**

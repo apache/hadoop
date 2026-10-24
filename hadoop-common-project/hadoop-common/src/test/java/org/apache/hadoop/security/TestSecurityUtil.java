@@ -50,10 +50,12 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.LocalJavaKeyStoreProvider;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
@@ -386,6 +388,21 @@ public class TestSecurityUtil {
   }
 
   @Test
+  public void testGetByNameWithBracketedIPv6() throws Exception {
+    Configuration conf = new Configuration(false);
+    for (boolean useIp : new boolean[] {false, true}) {
+      conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, useIp);
+      SecurityUtil.setConfiguration(conf);
+      String msg = "use_ip=" + useIp;
+      for (String ip : new String[] {"::1", "2001:db8::1"}) {
+        assertEquals(InetAddress.getByName(ip), SecurityUtil.getByName("[" + ip + "]"), msg);
+      }
+      // the JDK does not accept an IPv4 literal in brackets either
+      assertThrows(UnknownHostException.class, () -> SecurityUtil.getByName("[127.0.0.1]"), msg);
+    }
+  }
+
+  @Test
   public void testSocketAddrWithNameToStaticName() {
     String staticHost = "host1";
     NetUtils.addStaticResolution(staticHost, "localhost");
@@ -640,5 +657,32 @@ public class TestSecurityUtil {
     assertThrows(UnknownHostException.class, () -> {
       qualifiedHostResolver.getByName(invalidHost);
     }, "Resolving an invalid host should throw UnknownHostException");
+  }
+
+  /**
+   * A failure to get the login user with security enabled must go through
+   * {@link ExitUtil#terminate(int, Throwable)} rather than exiting the JVM
+   * directly.
+   */
+  @Test
+  public void testDoAsLoginUserOrFatalTerminatesOnLoginFailure() {
+    IOException loginFailure = new IOException("login failed");
+    ExitUtil.disableSystemExit();
+    ExitUtil.resetFirstExitException();
+    try (MockedStatic<UserGroupInformation> ugi =
+        Mockito.mockStatic(UserGroupInformation.class)) {
+      ugi.when(UserGroupInformation::isSecurityEnabled).thenReturn(true);
+      ugi.when(UserGroupInformation::getLoginUser).thenThrow(loginFailure);
+
+      ExitUtil.ExitException ee = assertThrows(ExitUtil.ExitException.class,
+          () -> SecurityUtil.doAsLoginUserOrFatal(() -> {
+            throw new AssertionError("action should not run");
+          }));
+      assertEquals(-1, ee.getExitCode());
+      assertSame(loginFailure, ee.getCause());
+    } finally {
+      ExitUtil.enableSystemExit();
+      ExitUtil.resetFirstExitException();
+    }
   }
 }
