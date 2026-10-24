@@ -31,7 +31,7 @@ import org.apache.hadoop.io.Text;
  * support. Such a descriptor can be configured with a {@link Configuration}
  * object. Its main function is to generate a list of aggregation-id/value 
  * pairs. An aggregation id encodes an aggregation type which is used to 
- * guide the way to aggregate the value in the reduce/combiner phrase of an
+ * guide the way to aggregate the value in the reduce/combiner phase of an
  * Aggregate based job. 
  * The mapper in an Aggregate based map/reduce job may create one or more of
  * ValueAggregatorDescriptor objects at configuration time. For each input
@@ -58,7 +58,7 @@ public interface ValueAggregatorDescriptor {
    *          input value
    * @return a list of aggregation id/value pairs. An aggregation id encodes an
    *         aggregation type which is used to guide the way to aggregate the
-   *         value in the reduce/combiner phrase of an Aggregate based job.
+   *         value in the reduce/combiner phase of an Aggregate based job.
    */
   public ArrayList<Entry<Text, Text>> generateKeyValPairs(Object key,
                                                           Object val);
