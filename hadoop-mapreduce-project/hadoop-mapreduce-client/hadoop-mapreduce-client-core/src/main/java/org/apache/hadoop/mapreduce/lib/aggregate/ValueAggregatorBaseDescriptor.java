@@ -135,7 +135,7 @@ public class ValueAggregatorBaseDescriptor
    *          input value
    * @return a list of aggregation id/value pairs. An aggregation id encodes an
    *         aggregation type which is used to guide the way to aggregate the
-   *         value in the reduce/combiner phrase of an Aggregate based job.
+   *         value in the reduce/combiner phase of an Aggregate based job.
    */
   public ArrayList<Entry<Text, Text>> generateKeyValPairs(Object key,
                                                           Object val) {

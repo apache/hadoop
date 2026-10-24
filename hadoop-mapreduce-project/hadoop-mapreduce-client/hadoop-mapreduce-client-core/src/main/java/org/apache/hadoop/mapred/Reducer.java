@@ -65,7 +65,7 @@ import org.apache.hadoop.io.Closeable;
  *   <p>If equivalence rules for keys while grouping the intermediates are 
  *   different from those for grouping keys before reduction, then one may 
  *   specify a <code>Comparator</code> via 
- *   {@link JobConf#setOutputValueGroupingComparator(Class)}.Since 
+ *   {@link JobConf#setOutputValueGroupingComparator(Class)}. Since
  *   {@link JobConf#setOutputKeyComparatorClass(Class)} can be used to 
  *   control how intermediate keys are grouped, these can be used in conjunction 
  *   to simulate <i>secondary sort on values</i>.</p>
