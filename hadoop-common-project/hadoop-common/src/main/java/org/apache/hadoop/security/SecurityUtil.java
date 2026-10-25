@@ -54,6 +54,7 @@ import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ZKUtil;
@@ -180,8 +181,9 @@ public final class SecurityUtil {
   /**
    * Convert Kerberos principal name pattern to valid Kerberos principal
    * names. It replaces hostname pattern with hostname, which should be
-   * fully-qualified domain name. If hostname is null or "0.0.0.0", it uses
-   * dynamically looked-up fqdn of the current host instead.
+   * fully-qualified domain name. If hostname is null or a wildcard address
+   * such as "0.0.0.0", "::" or "[::]", it uses dynamically looked-up fqdn of the
+   * current host instead.
    * 
    * @param principalConfig
    *          the Kerberos principal name conf value to convert
@@ -243,11 +245,23 @@ public final class SecurityUtil {
   private static String replacePattern(String[] components, String hostname)
       throws IOException {
     String fqdn = hostname;
-    if (fqdn == null || fqdn.isEmpty() || fqdn.equals("0.0.0.0")) {
+    if (fqdn == null || fqdn.isEmpty() || isWildcardAddress(fqdn)) {
       fqdn = getLocalHostName(null);
     }
     return components[0] + "/" +
         StringUtils.toLowerCase(fqdn) + "@" + components[2];
+  }
+
+  /**
+   * Checks whether a host is the IPv4 or IPv6 wildcard address, in any
+   * spelling and with or without the brackets used around IPv6 literals.
+   */
+  private static boolean isWildcardAddress(String host) {
+    String address = host.startsWith("[") && host.endsWith("]")
+        ? host.substring(1, host.length() - 1) : host;
+    // A scoped address is never the wildcard, and parsing it can fail.
+    return address.indexOf('%') < 0 && InetAddresses.isInetAddress(address)
+        && InetAddresses.forString(address).isAnyLocalAddress();
   }
 
   /**
@@ -507,21 +521,22 @@ public final class SecurityUtil {
   /**
    * Perform the given action as the daemon's login user. If the login
    * user cannot be determined, this will log a FATAL error and exit
-   * the whole JVM.
+   * the whole JVM via {@link ExitUtil#terminate(int, Throwable)}.
    *
    * @param action action.
    * @param <T> generic type T.
    * @return generic type T.
    */
-  public static <T> T doAsLoginUserOrFatal(PrivilegedAction<T> action) { 
+  public static <T> T doAsLoginUserOrFatal(PrivilegedAction<T> action) {
     if (UserGroupInformation.isSecurityEnabled()) {
-      UserGroupInformation ugi = null;
-      try { 
+      UserGroupInformation ugi;
+      try {
         ugi = UserGroupInformation.getLoginUser();
       } catch (IOException e) {
         LOG.error("Exception while getting login user", e);
-        e.printStackTrace();
-        Runtime.getRuntime().exit(-1);
+        ExitUtil.terminate(-1, e);
+        // Not reached: terminate() either exits the JVM or throws.
+        throw new IllegalStateException(e);
       }
       return ugi.doAs(action);
     } else {
@@ -707,6 +722,11 @@ public final class SecurityUtil {
     @Override
     public InetAddress resolve(String host) throws UnknownHostException {
       InetAddress addr = null;
+
+      // URI.getHost() returns IPv6 literals in brackets, ex. "[::1]"
+      if (host.startsWith("[") && InetAddresses.isUriInetAddress(host)) {
+        host = host.substring(1, host.length() - 1);
+      }
 
       if (InetAddresses.isInetAddress(host)) {
         // valid ip address. use it as-is

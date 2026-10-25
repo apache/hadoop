@@ -24,6 +24,7 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.QueueCapacityConfigParser;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.MappingRuleCreator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ConfigSnapshot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -436,7 +437,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   private static final String LEGACY_QUEUE_MODE_ENABLED = PREFIX + "legacy-queue-mode.enabled";
   public static final boolean DEFAULT_LEGACY_QUEUE_MODE = true;
 
-  private ConfigurationProperties configurationProperties;
+  private ConfigSnapshot configSnapshot;
 
   public static QueueCapacityConfigParser getQueueCapacityConfigParser() {
     return queueCapacityConfigParser;
@@ -1213,26 +1214,25 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   /**
-   * Get all configuration properties parsed in a
-   * {@code ConfigurationProperties} object.
-   * @return configuration properties
+   * Get the snapshot of this configuration. It is taken on first use and not
+   * refreshed by later writes into this object (for example template entries
+   * written for dynamic queues), until {@link #refreshConfigSnapshot()} is
+   * called.
+   * @return the cached configuration snapshot
    */
-  public ConfigurationProperties getConfigurationProperties() {
-    if (configurationProperties == null) {
-      reinitializeConfigurationProperties();
+  public ConfigSnapshot getConfigSnapshot() {
+    if (configSnapshot == null) {
+      refreshConfigSnapshot();
     }
 
-    return configurationProperties;
+    return configSnapshot;
   }
 
   /**
-   * Reinitializes the cached {@code ConfigurationProperties} object.
+   * Takes a new snapshot of this configuration, replacing the cached one.
    */
-  @SuppressWarnings({"unchecked", "rawtypes"})
-  public void reinitializeConfigurationProperties() {
-    // Props are always Strings, therefore this cast is safe
-    Map<String, String> props = (Map) getProps();
-    configurationProperties = new ConfigurationProperties(props);
+  public void refreshConfigSnapshot() {
+    configSnapshot = ConfigSnapshot.of(this);
   }
 
   public void setQueueMaximumAllocationMb(QueuePath queue, int value) {
@@ -1793,8 +1793,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public Map<String, Set<String>> getConfiguredNodeLabelsByQueue() {
     Map<String, Set<String>> labelsByQueue = new HashMap<>();
     Map<String, String> schedulerEntries =
-        getConfigurationProperties().getPropertiesWithPrefix(
-            CapacitySchedulerConfiguration.PREFIX);
+        getConfigSnapshot().getRawPropertiesWithPrefix(
+            CapacitySchedulerConfiguration.PREFIX, false);
 
     for (Map.Entry<String, String> propertyEntry
         : schedulerEntries.entrySet()) {
@@ -2249,7 +2249,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * @return map of user weights, if they exist. Otherwise, return empty map.
    */
   public UserWeights getAllUserWeightsForQueue(QueuePath queuePath) {
-    return UserWeights.createByConfig(this, getConfigurationProperties(), queuePath);
+    return UserWeights.createByConfig(this, getConfigSnapshot(), queuePath);
   }
 
   public boolean getAssignMultipleEnabled() {

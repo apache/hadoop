@@ -2264,7 +2264,11 @@ public class DatanodeManager {
       if (StringUtils.isBlank(node) || !node.contains(IP_PORT_SEPARATOR)) {
         continue;
       }
-      String ipAddr = node.split(IP_PORT_SEPARATOR)[0];
+      // Port is after the last ':'; IPv6 hosts may be bracketed.
+      String ipAddr = node.substring(0, node.lastIndexOf(IP_PORT_SEPARATOR));
+      if (ipAddr.startsWith("[") && ipAddr.endsWith("]")) {
+        ipAddr = ipAddr.substring(1, ipAddr.length() - 1);
+      }
       DatanodeDescriptor datanodeByHost =
           host2DatanodeMap.getDatanodeByHost(ipAddr);
       if (datanodeByHost != null) {
