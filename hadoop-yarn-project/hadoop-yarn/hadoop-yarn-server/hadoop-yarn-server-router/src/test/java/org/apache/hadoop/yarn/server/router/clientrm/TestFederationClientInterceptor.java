@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -49,7 +50,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.MockApps;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -151,11 +154,14 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.utils.FederationApplicationHistory;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -174,6 +180,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -547,8 +554,90 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetApplicationReportRequest requestGet = GetApplicationReportRequest.newInstance(appId);
     // Same as the RM, so that clients fall back to their history server
     LambdaTestUtils.intercept(ApplicationNotFoundException.class,
-        "Application " + appId + " does not exist in any SubCluster.",
+        "Application " + appId + " does not exist in any SubCluster or history server.",
         () -> interceptor.getApplicationReport(requestGet));
+  }
+
+  /** History servers by RPC port, which answer that they do not know the application. */
+  private Map<Integer, ApplicationHistoryProtocol> setHistoryServers(
+      YarnConfiguration conf) throws Exception {
+    final Map<Integer, ApplicationHistoryProtocol> servers = new HashMap<>();
+    for (SubClusterId sc : subClusters) {
+      int port = 1000 + Integer.parseInt(sc.getId());
+      conf.set(YarnConfiguration.ROUTER_APPLICATION_HISTORY_ADDRESS_PREFIX + sc.getId(),
+          "ahs" + sc.getId() + ":" + port);
+      ApplicationHistoryProtocol server = mock(ApplicationHistoryProtocol.class);
+      when(server.getApplicationReport(any(GetApplicationReportRequest.class)))
+          .thenThrow(new ApplicationNotFoundException("not here"));
+      servers.put(port, server);
+    }
+    interceptor.setApplicationHistory(new FederationApplicationHistory(conf,
+        UserGroupInformation.createRemoteUser(user)) {
+      @Override
+      protected ApplicationHistoryProtocol createProxy(InetSocketAddress address) {
+        return servers.get(address.getPort());
+      }
+
+      @Override
+      public void close() {
+        // The proxies are mocks
+      }
+    });
+    return servers;
+  }
+
+  /**
+   * GetApplicationReport asks the history servers for an application that no
+   * RM knows any more, starting with the one of its home SubCluster.
+   */
+  @Test
+  public void testGetApplicationReportFromHistory() throws Exception {
+    Map<Integer, ApplicationHistoryProtocol> servers =
+        setHistoryServers(new YarnConfiguration(getConf()));
+
+    // Finished long ago: no RM knows it and its home SubCluster is gone
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    ApplicationReport report = Records.newRecord(ApplicationReport.class);
+    report.setApplicationId(appId);
+    report.setYarnApplicationState(YarnApplicationState.FINISHED);
+    ApplicationHistoryProtocol ahs3 = servers.get(1003);
+    Mockito.doReturn(GetApplicationReportResponse.newInstance(report))
+        .when(ahs3).getApplicationReport(any(GetApplicationReportRequest.class));
+    assertEquals(report, interceptor.getApplicationReport(
+        GetApplicationReportRequest.newInstance(appId)).getApplicationReport());
+
+    // Its home SubCluster is still known but its RM removed it: ask the
+    // history server of that SubCluster first
+    ApplicationId appId2 = ApplicationId.newInstance(System.currentTimeMillis(), 2);
+    stateStore.addApplicationHomeSubCluster(AddApplicationHomeSubClusterRequest.newInstance(
+        ApplicationHomeSubCluster.newInstance(appId2, SubClusterId.newInstance("3"))));
+    assertEquals(report, interceptor.getApplicationReport(
+        GetApplicationReportRequest.newInstance(appId2)).getApplicationReport());
+
+    // The first lookup asked all of them once, the second only SubCluster 3
+    for (Map.Entry<Integer, ApplicationHistoryProtocol> server : servers.entrySet()) {
+      Mockito.verify(server.getValue(), Mockito.times(server.getKey() == 1003 ? 2 : 1))
+          .getApplicationReport(any(GetApplicationReportRequest.class));
+    }
+  }
+
+  /**
+   * When a history server cannot be asked, an application that no RM knows
+   * any more may still be there: the client gets an error to retry.
+   */
+  @Test
+  public void testGetApplicationReportWithUnreachableHistory() throws Exception {
+    Map<Integer, ApplicationHistoryProtocol> servers =
+        setHistoryServers(new YarnConfiguration(getConf()));
+    Mockito.doThrow(new ConnectException("AHS is down"))
+        .when(servers.get(1000)).getApplicationReport(any(GetApplicationReportRequest.class));
+
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    YarnException e = assertThrows(YarnException.class, () -> interceptor.getApplicationReport(
+        GetApplicationReportRequest.newInstance(appId)));
+    assertFalse(e instanceof ApplicationNotFoundException,
+        "Must not claim " + appId + " does not exist: " + e);
+    assertTrue(e.getMessage().startsWith("Unable to ask every history server"), e.getMessage());
   }
 
   /**

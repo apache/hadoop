@@ -634,6 +634,17 @@ The RM removes a completed application once it keeps more than `yarn.resourceman
 
 **Note** The Router reports an application missing with `ApplicationNotFoundException`, so that clients fall back to their history server, only when every RM answered that it does not know the application. If some RM could not be asked or did not answer in time, the Router fails the request so that the client retries, as the application may be running there.
 
+#### How to configure the history servers of the SubClusters
+
+Once no RM knows an application any more, the Router asks the Application History Servers for it, the one of its home SubCluster first if known. Each SubCluster can have its own history server, configured on the Router with the SubCluster ID as suffix. Without any, the client RPC and REST interfaces of the Router use the Router's own `yarn.timeline-service.address` if `yarn.timeline-service.generic-application-history.enabled` is true, and the web proxy uses its history server as without federation.
+
+| Property                                                      | Example          | Description                                                                                                       |
+|:--------------------------------------------------------------|:-----------------|:------------------------------------------------------------------------------------------------------------------|
+| `yarn.router.application-history.address.<subClusterId>`        | `ahs-sc1:10200`  | RPC address of the history server of a SubCluster.                                                                |
+| `yarn.router.application-history.webapp.address.<subClusterId>` | `ahs-sc1:8188`   | Web address of the history server of a SubCluster, which the web proxy redirects to for the applications found there. |
+
+**Note** The Router asks the history servers as the client of the Router, as it asks the RMs, so that they apply their application ACLs to that user. The history servers must therefore allow the Router's user to impersonate the clients (`hadoop.proxyuser.<router user>.hosts` and `.groups`), as the RMs do. The web proxy asks them as its login user, as it asks the RMs.
+
 #### How to use Router Command Line
 
 ##### Cmd1: deregisterSubCluster

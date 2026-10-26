@@ -184,10 +184,38 @@ public abstract class AppReportFetcher {
   protected static class FetchedAppReport {
     private ApplicationReport appReport;
     private AppReportSource appReportSource;
+    private final boolean otherHistoryServer;
+    private final String ahsAppPageUrlBase;
 
     public FetchedAppReport(ApplicationReport appReport, AppReportSource appReportSource) {
       this.appReport = appReport;
       this.appReportSource = appReportSource;
+      this.otherHistoryServer = false;
+      this.ahsAppPageUrlBase = null;
+    }
+
+    /**
+     * A report fetched from another history server than the configured one.
+     *
+     * @param appReport the application report.
+     * @param ahsAppPageUrlBase the application page of that history server
+     *          without the application ID, or null if unknown.
+     */
+    public FetchedAppReport(ApplicationReport appReport, String ahsAppPageUrlBase) {
+      this.appReport = appReport;
+      this.appReportSource = AppReportSource.AHS;
+      this.otherHistoryServer = true;
+      this.ahsAppPageUrlBase = ahsAppPageUrlBase;
+    }
+
+    /**
+     * @param configuredAhsAppPageUrlBase the application page of the
+     *          configured history server.
+     * @return the application page of the history server the report was
+     *         fetched from without the application ID, or null if unknown.
+     */
+    public String getAhsAppPageUrlBase(String configuredAhsAppPageUrlBase) {
+      return otherHistoryServer ? ahsAppPageUrlBase : configuredAhsAppPageUrlBase;
     }
 
     public AppReportSource getAppReportSource() {

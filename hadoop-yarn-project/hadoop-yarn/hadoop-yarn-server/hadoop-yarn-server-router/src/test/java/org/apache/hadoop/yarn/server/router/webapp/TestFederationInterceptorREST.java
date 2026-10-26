@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
@@ -152,6 +153,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
+import java.net.ConnectException;
+import java.net.InetSocketAddress;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
+import org.apache.hadoop.yarn.server.federation.utils.FederationApplicationHistory;
+import org.apache.hadoop.yarn.util.Records;
+
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT;
@@ -169,6 +182,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -521,9 +537,9 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
-    AppInfo response = interceptor.getApp(null, appId.toString(), null);
-
-    assertNull(response);
+    // Not found, as the RM answers, instead of an empty response
+    assertThrows(NotFoundException.class,
+        () -> interceptor.getApp(null, appId.toString(), null));
   }
 
   /**
@@ -542,6 +558,87 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     assertNotNull(interceptor.getApp(null, appId.toString(), null));
     assertEquals(home, stateStoreUtil.queryApplicationHomeSC(appId));
+  }
+
+  /** Sets one history server per SubCluster; they do not know any application. */
+  private Map<Integer, ApplicationHistoryProtocol> setHistoryServers() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration(getConf());
+    final Map<Integer, ApplicationHistoryProtocol> servers = new HashMap<>();
+    for (SubClusterId sc : subClusters) {
+      int port = 1000 + Integer.parseInt(sc.getId());
+      conf.set(YarnConfiguration.ROUTER_APPLICATION_HISTORY_ADDRESS_PREFIX + sc.getId(),
+          "ahs" + sc.getId() + ":" + port);
+      ApplicationHistoryProtocol server = mock(ApplicationHistoryProtocol.class);
+      when(server.getApplicationReport(any(GetApplicationReportRequest.class)))
+          .thenThrow(new ApplicationNotFoundException("not here"));
+      servers.put(port, server);
+    }
+    interceptor.setApplicationHistory(new FederationApplicationHistory(conf,
+        UserGroupInformation.createRemoteUser(TEST_USER)) {
+      @Override
+      protected ApplicationHistoryProtocol createProxy(InetSocketAddress address) {
+        return servers.get(address.getPort());
+      }
+
+      @Override
+      public void close() {
+        // The proxies are mocks
+      }
+    });
+    return servers;
+  }
+
+  /**
+   * GetApp and GetAppState find an application that no RM knows any more in
+   * the history servers.
+   */
+  @Test
+  public void testGetApplicationFromHistory() throws Exception {
+    Map<Integer, ApplicationHistoryProtocol> servers = setHistoryServers();
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationReport report = Records.newRecord(ApplicationReport.class);
+    report.setApplicationId(appId);
+    report.setUser(TEST_USER);
+    report.setQueue(QUEUE_DEFAULT);
+    report.setYarnApplicationState(YarnApplicationState.FINISHED);
+    report.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
+    report.setStartTime(1000);
+    report.setFinishTime(3000);
+    report.setTrackingUrl("jhs:19888/jobhistory/job/job_1_1");
+    doReturn(GetApplicationReportResponse.newInstance(report))
+        .when(servers.get(1002)).getApplicationReport(any(GetApplicationReportRequest.class));
+
+    AppInfo appInfo = interceptor.getApp(null, appId.toString(), null);
+    assertNotNull(appInfo);
+    assertEquals(appId.toString(), appInfo.getAppId());
+    assertEquals(TEST_USER, appInfo.getUser());
+    assertEquals(YarnApplicationState.FINISHED, appInfo.getState());
+    assertEquals(FinalApplicationStatus.SUCCEEDED, appInfo.getFinalStatus());
+    assertEquals(2000, appInfo.getElapsedTime());
+    assertEquals("History", appInfo.getTrackingUI());
+    assertEquals("http://jhs:19888/jobhistory/job/job_1_1", appInfo.getTrackingUrl());
+
+    AppState appState = interceptor.getAppState(null, appId.toString());
+    assertEquals(YarnApplicationState.FINISHED.toString(), appState.getState());
+  }
+
+  /**
+   * When a history server cannot be asked, an application that no RM knows
+   * any more may still be there: GetApp and GetAppState answer 503, so that
+   * the client retries, instead of not found.
+   */
+  @Test
+  public void testGetApplicationWithUnreachableHistory() throws Exception {
+    Map<Integer, ApplicationHistoryProtocol> servers = setHistoryServers();
+    doThrow(new ConnectException("AHS is down"))
+        .when(servers.get(1000)).getApplicationReport(any(GetApplicationReportRequest.class));
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    WebApplicationException e = assertThrows(WebApplicationException.class,
+        () -> interceptor.getApp(null, appId.toString(), null));
+    assertEquals(Status.SERVICE_UNAVAILABLE.getStatusCode(), e.getResponse().getStatus());
+    e = assertThrows(WebApplicationException.class,
+        () -> interceptor.getAppState(null, appId.toString()));
+    assertEquals(Status.SERVICE_UNAVAILABLE.getStatusCode(), e.getResponse().getStatus());
   }
 
   /**
@@ -678,9 +775,9 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     ApplicationId appId =
         ApplicationId.newInstance(Time.now(), 1);
 
-    AppState response = interceptor.getAppState(null, appId.toString());
-
-    assertNull(response);
+    // Not found, as the RM answers, instead of an empty response
+    assertThrows(NotFoundException.class,
+        () -> interceptor.getAppState(null, appId.toString()));
   }
 
   /**

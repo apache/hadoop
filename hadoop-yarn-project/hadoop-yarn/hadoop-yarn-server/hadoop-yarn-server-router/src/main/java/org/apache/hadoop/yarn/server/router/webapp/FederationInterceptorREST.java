@@ -35,12 +35,14 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
@@ -68,6 +70,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
@@ -88,6 +91,8 @@ import org.apache.hadoop.yarn.server.federation.retry.FederationActionRetry;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.utils.FederationApplicationHistory;
+import org.apache.hadoop.yarn.server.federation.utils.FederationApplicationHistory.HistoryReport;
 import org.apache.hadoop.yarn.server.federation.utils.FederationApplicationRMProbe;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
@@ -229,6 +234,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   private long submitIntervalTime;
   private FederationApplicationRMProbe applicationProbe;
   private Map<SubClusterId, ApplicationClientProtocol> probeRMProxies;
+  private FederationApplicationHistory applicationHistory;
 
   private Map<SubClusterId, DefaultRequestInterceptorREST> interceptors;
   private LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> appInfosCaches;
@@ -293,6 +299,20 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     applicationProbe = new FederationApplicationRMProbe(
         this::getProbeRMProxyForSubCluster,
         FederationApplicationRMProbe.getTimeout(conf));
+    try {
+      applicationHistory = new FederationApplicationHistory(conf,
+          RouterServerUtil.getUserForSubClusters(conf, getUser()));
+    } catch (IOException e) {
+      throw new YarnRuntimeException(e);
+    }
+  }
+
+  @VisibleForTesting
+  protected void setApplicationHistory(FederationApplicationHistory applicationHistory) {
+    if (this.applicationHistory != null) {
+      this.applicationHistory.close();
+    }
+    this.applicationHistory = applicationHistory;
   }
 
   /**
@@ -719,25 +739,42 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     try {
       long startTime = clock.getTime();
-
-      // Get SubClusterInfo according to applicationId
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
-      if (interceptor == null) {
+      AppInfo response = getFromSubClusterOrHistory(appId,
+          interceptor -> interceptor.getApp(hsr, appId, unselectedFields),
+          report -> new AppInfo(report, WebAppUtils.getHttpSchemePrefix(getConf())));
+      if (response == null) {
         routerMetrics.incrAppsFailedRetrieved();
         return null;
       }
-      AppInfo response = interceptor.getApp(hsr, appId, unselectedFields);
       long stopTime = clock.getTime();
       routerMetrics.succeededAppsRetrieved(stopTime - startTime);
       return response;
     } catch (YarnException e) {
       routerMetrics.incrAppsFailedRetrieved();
       LOG.error("getApp Error, applicationId = {}.", appId, e);
-      return null;
+      throw toWebApplicationException(e);
+    } catch (AuthorizationException e) {
+      routerMetrics.incrAppsFailedRetrieved();
+      throw new ForbiddenException(e.getMessage());
     } catch (IllegalArgumentException e) {
       routerMetrics.incrAppsFailedRetrieved();
       throw e;
     }
+  }
+
+  /**
+   * Answer as the RM would for an application that no RM or history server
+   * knows (404), and so that the client retries if some could not tell (503),
+   * as the application may be running there.
+   *
+   * @param e the failure of {@link #getFromSubClusterOrHistory}.
+   * @return the exception to throw.
+   */
+  private static WebApplicationException toWebApplicationException(YarnException e) {
+    if (e instanceof ApplicationNotFoundException) {
+      return new NotFoundException(e.getMessage());
+    }
+    return new WebApplicationException(e.getMessage(), Status.SERVICE_UNAVAILABLE);
   }
 
   /**
@@ -1168,15 +1205,79 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public AppState getAppState(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
     try {
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByAppId(appId);
-      if (interceptor != null) {
-        return interceptor.getAppState(hsr, appId);
-      }
-    } catch (YarnException | IllegalArgumentException e) {
+      AppState response = getFromSubClusterOrHistory(appId,
+          interceptor -> interceptor.getAppState(hsr, appId),
+          report -> new AppState(report.getYarnApplicationState().toString()));
+      return response != null ? response : new AppState();
+    } catch (YarnException e) {
+      LOG.error("getAppState Error, applicationId = {}.", appId, e);
+      throw toWebApplicationException(e);
+    } catch (IllegalArgumentException e) {
       LOG.error("getHomeSubClusterInfoByAppId error, applicationId = {}.", appId, e);
       return null;
     }
-    return new AppState();
+  }
+
+  /** A call to the RM of the home SubCluster of an application. */
+  @FunctionalInterface
+  private interface HomeSubClusterCall<R> {
+    R call(DefaultRequestInterceptorREST interceptor) throws AuthorizationException;
+  }
+
+  /**
+   * Ask the RM of the home SubCluster of an application, or else the history
+   * servers, as the client of the Router, for the application that the RM
+   * removed once it completed.
+   *
+   * @param appId the application.
+   * @param fromRM the call to the RM.
+   * @param fromHistory the conversion of the report from a history server.
+   * @param <R> the result type.
+   * @return the result.
+   * @throws ApplicationNotFoundException if every RM and history server
+   *           answered that it does not know the application.
+   * @throws YarnException if some RM or history server could not tell.
+   * @throws AuthorizationException if the RM refused the call.
+   */
+  private <R> R getFromSubClusterOrHistory(String appId, HomeSubClusterCall<R> fromRM,
+      Function<ApplicationReport, R> fromHistory)
+      throws YarnException, AuthorizationException {
+    RouterServerUtil.validateApplicationId(appId);
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+
+    SubClusterId subClusterId = null;
+    // Set if some SubCluster could not tell whether it knows the application
+    YarnException unconfirmed = null;
+    try {
+      subClusterId = getApplicationHomeSubCluster(applicationId);
+    } catch (ApplicationNotFoundException e) {
+      LOG.debug("{} is not in any SubCluster.", applicationId);
+    } catch (YarnException e) {
+      unconfirmed = e;
+    }
+
+    DefaultRequestInterceptorREST interceptor = subClusterId == null ? null :
+        getOrCreateInterceptorForSubCluster(federationFacade.getSubCluster(subClusterId));
+    if (interceptor != null) {
+      try {
+        return fromRM.call(interceptor);
+      } catch (NotFoundException e) {
+        LOG.debug("{} is no longer in SubCluster {}.", applicationId, subClusterId);
+      }
+    }
+
+    // The RM removed the completed application, and its home SubCluster with
+    // it: ask the history servers, the one of its SubCluster first
+    HistoryReport history = applicationHistory.getApplicationReport(applicationId, subClusterId);
+    if (history != null) {
+      return fromHistory.apply(history.getApplicationReport());
+    }
+    if (unconfirmed != null) {
+      // Maybe running in a SubCluster that did not answer
+      throw unconfirmed;
+    }
+    throw new ApplicationNotFoundException(String.format(
+        "Application %s does not exist in any SubCluster or history server.", applicationId));
   }
 
   @Override
@@ -3366,6 +3467,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
     if (applicationProbe != null) {
       applicationProbe.close();
+    }
+    if (applicationHistory != null) {
+      applicationHistory.close();
     }
     if (probeRMProxies != null) {
       for (ApplicationClientProtocol proxy : probeRMProxies.values()) {

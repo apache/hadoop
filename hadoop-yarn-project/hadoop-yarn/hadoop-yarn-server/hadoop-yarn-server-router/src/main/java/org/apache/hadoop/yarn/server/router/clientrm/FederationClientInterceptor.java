@@ -137,6 +137,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSub
 import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.utils.FederationApplicationHistory;
+import org.apache.hadoop.yarn.server.federation.utils.FederationApplicationHistory.HistoryReport;
 import org.apache.hadoop.yarn.server.federation.utils.FederationApplicationRMProbe;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.router.RouterAuditLogger;
@@ -213,6 +215,7 @@ public class FederationClientInterceptor
   private boolean allowPartialResult;
   private FederationApplicationRMProbe applicationProbe;
   private Map<SubClusterId, ApplicationClientProtocol> probeRMProxies;
+  private FederationApplicationHistory applicationHistory;
 
   @Override
   public void init(String userName) {
@@ -277,6 +280,20 @@ public class FederationClientInterceptor
     applicationProbe = new FederationApplicationRMProbe(
         this::getProbeRMProxyForSubCluster,
         FederationApplicationRMProbe.getTimeout(conf));
+    try {
+      applicationHistory = new FederationApplicationHistory(conf,
+          RouterServerUtil.getUserForSubClusters(conf, user));
+    } catch (IOException e) {
+      throw new YarnRuntimeException(e);
+    }
+  }
+
+  @VisibleForTesting
+  protected void setApplicationHistory(FederationApplicationHistory applicationHistory) {
+    if (this.applicationHistory != null) {
+      this.applicationHistory.close();
+    }
+    this.applicationHistory = applicationHistory;
   }
 
   @Override
@@ -750,42 +767,47 @@ public class FederationClientInterceptor
     }
 
     long startTime = clock.getTime();
+    ApplicationId applicationId = request.getApplicationId();
     SubClusterId subClusterId = null;
+    // Set if some SubCluster could not tell whether it knows the application
+    YarnException unconfirmed = null;
 
     try {
       // Asks every SubCluster if the home SubCluster is not in the StateStore
-      subClusterId = getApplicationHomeSubCluster(request.getApplicationId());
-    } catch (YarnException e) {
-      // ApplicationNotFoundException as is, so that clients fall back to
-      // their history server
-      routerMetrics.incrAppsFailedRetrieved();
-      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APP_REPORT, UNKNOWN,
-          TARGET_CLIENT_RM_SERVICE, e.getMessage(), request.getApplicationId());
-      throw e;
-    }
-
-    ApplicationClientProtocol clientRMProxy =
-        getClientRMProxyForSubCluster(subClusterId);
-    GetApplicationReportResponse response = null;
-
-    try {
-      response = clientRMProxy.getApplicationReport(request);
+      subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (ApplicationNotFoundException e) {
-      // The RM removed the completed application
-      routerMetrics.incrAppsFailedRetrieved();
-      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APP_REPORT, UNKNOWN,
-          TARGET_CLIENT_RM_SERVICE, e.getMessage(), request.getApplicationId(), subClusterId);
-      throw e;
-    } catch (Exception e) {
-      routerMetrics.incrAppsFailedRetrieved();
-      String errMsg = String.format("Unable to get the application report for %s to SubCluster %s.",
-          request.getApplicationId(), subClusterId.getId());
-      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APP_REPORT, UNKNOWN,
-          TARGET_CLIENT_RM_SERVICE, errMsg, request.getApplicationId(), subClusterId);
-      RouterServerUtil.logAndThrowException(errMsg, e);
+      LOG.debug("{} is not in any SubCluster.", applicationId);
+    } catch (YarnException e) {
+      unconfirmed = e;
     }
 
-    if (response == null) {
+    GetApplicationReportResponse response = null;
+    boolean inRM = false;
+    if (subClusterId != null) {
+      ApplicationClientProtocol clientRMProxy =
+          getClientRMProxyForSubCluster(subClusterId);
+      try {
+        response = clientRMProxy.getApplicationReport(request);
+        inRM = true;
+      } catch (ApplicationNotFoundException e) {
+        LOG.debug("{} is no longer in SubCluster {}.", applicationId, subClusterId);
+      } catch (Exception e) {
+        routerMetrics.incrAppsFailedRetrieved();
+        String errMsg = String.format(
+            "Unable to get the application report for %s to SubCluster %s.",
+            applicationId, subClusterId.getId());
+        RouterAuditLogger.logFailure(user.getShortUserName(), GET_APP_REPORT, UNKNOWN,
+            TARGET_CLIENT_RM_SERVICE, errMsg, applicationId, subClusterId);
+        RouterServerUtil.logAndThrowException(errMsg, e);
+      }
+    }
+
+    if (!inRM) {
+      // The RM removed the completed application, and its home SubCluster
+      // with it: ask the history servers
+      response = getApplicationReportFromHistory(applicationId, subClusterId,
+          unconfirmed);
+    } else if (response == null) {
       LOG.error("No response when attempting to retrieve the report of "
           + "the application {} to SubCluster {}.",
           request.getApplicationId(), subClusterId.getId());
@@ -795,6 +817,43 @@ public class FederationClientInterceptor
     RouterAuditLogger.logSuccess(user.getShortUserName(), GET_APP_REPORT,
         TARGET_CLIENT_RM_SERVICE, request.getApplicationId());
     return response;
+  }
+
+  /**
+   * Get the report of an application that no RM knows from the history
+   * servers, as the client of the Router.
+   *
+   * @param applicationId the application.
+   * @param subClusterId its home SubCluster, or null if unknown.
+   * @param unconfirmed set if some RM could not tell whether it knows the
+   *          application.
+   * @return the report.
+   * @throws ApplicationNotFoundException if every RM and history server
+   *           answered that it does not know the application, so that the
+   *           client falls back to its own history server.
+   * @throws YarnException if some RM or history server could not tell, so
+   *           that the client retries: the application may be running.
+   */
+  private GetApplicationReportResponse getApplicationReportFromHistory(
+      ApplicationId applicationId, SubClusterId subClusterId,
+      YarnException unconfirmed) throws YarnException {
+    YarnException failure;
+    try {
+      HistoryReport history =
+          applicationHistory.getApplicationReport(applicationId, subClusterId);
+      if (history != null) {
+        return GetApplicationReportResponse.newInstance(history.getApplicationReport());
+      }
+      failure = unconfirmed != null ? unconfirmed : new ApplicationNotFoundException(
+          String.format("Application %s does not exist in any SubCluster or history server.",
+              applicationId));
+    } catch (YarnException e) {
+      failure = e;
+    }
+    routerMetrics.incrAppsFailedRetrieved();
+    RouterAuditLogger.logFailure(user.getShortUserName(), GET_APP_REPORT, UNKNOWN,
+        TARGET_CLIENT_RM_SERVICE, failure.getMessage(), applicationId);
+    throw failure;
   }
 
   /**
@@ -2137,6 +2196,9 @@ public class FederationClientInterceptor
     executorService.shutdown();
     if (applicationProbe != null) {
       applicationProbe.close();
+    }
+    if (applicationHistory != null) {
+      applicationHistory.close();
     }
     if (probeRMProxies != null) {
       for (ApplicationClientProtocol proxy : probeRMProxies.values()) {
