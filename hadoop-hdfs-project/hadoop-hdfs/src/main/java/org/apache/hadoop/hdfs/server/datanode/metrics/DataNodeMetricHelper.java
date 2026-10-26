@@ -76,7 +76,9 @@ public class DataNodeMetricHelper {
         "Finish time of the last directory scan"), beanClass.getLastDirScannerFinishTime())
         .addGauge(Interns.info("PendingAsyncDeletions",
             "The count of pending and running asynchronous disk operations"),
-            beanClass.getPendingAsyncDeletions());
+            beanClass.getPendingAsyncDeletions())
+        .addGauge(Interns.info("NumBlocks", "Datanode number of blocks"),
+            beanClass.getNumBlocks());
   }
 
 }

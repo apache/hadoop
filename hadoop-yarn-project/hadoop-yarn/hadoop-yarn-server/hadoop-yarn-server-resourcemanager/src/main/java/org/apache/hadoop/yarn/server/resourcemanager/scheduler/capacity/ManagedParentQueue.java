@@ -208,10 +208,10 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
           nodeLabel, templateQueuePath, resourceTypes);
       queueResourceQuotas.setConfiguredMinResource(nodeLabel, templateMinResource);
 
-      if (this.capacityConfigType.equals(CapacityConfigType.PERCENTAGE)
-          && !templateMinResource.equals(Resources.none())) {
-        throw new IOException("Managed Parent Queue " + this.getQueuePath()
-            + " config type is different from leaf queue template config type");
+      String templateConfigTypeError = QueueStructureChecks.checkLeafQueueTemplateConfigType(
+          this.getQueuePath(), this.capacityConfigType, templateMinResource);
+      if (templateConfigTypeError != null) {
+        throw new IOException(templateConfigTypeError);
       }
     }
   }
@@ -259,6 +259,26 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
       queueCapacities.setAbsoluteMaximumCapacity(label,
           queueCapacities.getMaximumCapacity(label)
           * getQueueCapacities().getAbsoluteMaximumCapacity(label));
+    }
+  }
+
+/**
+ * Recomputes leaf queue template capacities in ABSOLUTE_RESOURCE mode.
+ * This handles the case where a queue is recreated during RM recovery
+ * before any NodeManager has registered, causing the initial capacity
+ * to be computed as 0. The periodic queue management policy recalculates
+ * the template once cluster resources become available. No operation for other
+ * queue modes.
+ */
+  public void updateTemplateCapacitiesForAbsoluteResource() {
+    writeLock.lock();
+    try {
+      if (this.capacityConfigType.equals(
+          CapacityConfigType.ABSOLUTE_RESOURCE)) {
+        updateQueueCapacities(getLeafQueueTemplate().getQueueCapacities());
+      }
+    } finally {
+      writeLock.unlock();
     }
   }
 

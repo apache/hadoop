@@ -20,8 +20,10 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -32,30 +34,32 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ContainerListEntrySchema;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ContainerListResponseData;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 import org.apache.hadoop.fs.azurebfs.services.ListResponseData;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
 import org.apache.hadoop.fs.azurebfs.services.VersionedFileStatus;
 import org.apache.hadoop.fs.azurebfs.utils.DirectoryStateHelper;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -70,17 +74,18 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PAT
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LIST_MAX_RESULTS;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_METADATA_PREFIX;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_ARROW_LIST_PARSING;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_BLOB_LIST_PARSING;
 import static org.apache.hadoop.fs.azurebfs.services.RenameAtomicity.SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_MESSAGE;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_JDK_MESSAGE;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.rename;
-
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -108,32 +113,32 @@ public class ITestAzureBlobFileSystemListStatus extends
     config.set(AZURE_LIST_MAX_RESULTS, "5000");
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(getFileSystem().getUri(), config);
-      final List<Future<Void>> tasks = new ArrayList<>();
+    final List<Future<Void>> tasks = new ArrayList<>();
 
-      ExecutorService es = Executors.newFixedThreadPool(10);
-      for (int i = 0; i < TEST_FILES_NUMBER; i++) {
-        final Path fileName = new Path("/test" + i);
-        Callable<Void> callable = new Callable<Void>() {
-          @Override
-          public Void call() throws Exception {
-            touch(fileName);
-            return null;
-          }
-        };
+    ExecutorService es = Executors.newFixedThreadPool(10);
+    for (int i = 0; i < TEST_FILES_NUMBER; i++) {
+      final Path fileName = new Path("/test" + i);
+      Callable<Void> callable = new Callable<Void>() {
+        @Override
+        public Void call() throws Exception {
+          touch(fileName);
+          return null;
+        }
+      };
 
-        tasks.add(es.submit(callable));
-      }
+      tasks.add(es.submit(callable));
+    }
 
-      for (Future<Void> task : tasks) {
-        task.get();
-      }
+    for (Future<Void> task : tasks) {
+      task.get();
+    }
 
-      es.shutdownNow();
-      fs.registerListener(
-              new TracingHeaderValidator(getConfiguration().getClientCorrelationId(),
-                      fs.getFileSystemId(), FSOperationType.LISTSTATUS, true, 0));
-      FileStatus[] files = fs.listStatus(new Path("/"));
-      assertEquals(TEST_FILES_NUMBER, files.length /* user directory */);
+    es.shutdownNow();
+    fs.registerListener(
+            new TracingHeaderValidator(getConfiguration().getClientCorrelationId(),
+                    fs.getFileSystemId(), FSOperationType.LISTSTATUS, true, 0));
+    FileStatus[] files = fs.listStatus(new Path("/"));
+    assertEquals(TEST_FILES_NUMBER, files.length /* user directory */);
     fs.registerListener(
             new TracingHeaderValidator(getConfiguration().getClientCorrelationId(),
                     fs.getFileSystemId(), FSOperationType.GET_ATTR, true, 0));
@@ -211,12 +216,20 @@ public class ITestAzureBlobFileSystemListStatus extends
         spiedStore.listStatus(new Path("/"), "", fileStatuses,
             true, null, getTestTracingContext(spiedFs, true));
       });
-    Assertions.assertThat(ex.getStatusCode())
+    assertThat(ex.getStatusCode())
         .describedAs("Expecting Network Error status code")
         .isEqualTo(-1);
-    Assertions.assertThat(ex.getErrorMessage())
-        .describedAs("Expecting COPY_ABORTED error code")
-        .contains(ERR_BLOB_LIST_PARSING);
+    // The wrapping error message is chosen from the parser actually selected by
+    // the response Content-Type, not from the Photon config: even when Photon is
+    // enabled the service may return XML (fallback), yielding the XML parsing
+    // message. Accept either to keep the assertion stable across accounts.
+    final String errorMessage = ex.getErrorMessage();
+    assertThat(errorMessage != null
+        && (errorMessage.contains(ERR_ARROW_LIST_PARSING)
+            || errorMessage.contains(ERR_BLOB_LIST_PARSING)))
+        .describedAs("Expecting a list-response parsing failure message, was: %s",
+            errorMessage)
+        .isTrue();
   }
 
   /**
@@ -229,7 +242,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     Path path = path("/testFile");
     try(FSDataOutputStream ignored = fs.create(path)) {
       FileStatus[] testFiles = fs.listStatus(path);
-      assertEquals("length of test files", 1, testFiles.length);
+      assertEquals(1, testFiles.length, "length of test files");
       FileStatus status = testFiles[0];
       assertIsFileReference(status);
     }
@@ -247,18 +260,19 @@ public class ITestAzureBlobFileSystemListStatus extends
     ContractTestUtils.touch(fs, testFile0Path);
 
     FileStatus[] testFiles = fs.listStatus(testFile0Path);
-    assertEquals("Wrong listing size of file " + testFile0Path,
-        1, testFiles.length);
+    assertEquals(1, testFiles.length, "Wrong listing size of file " + testFile0Path);
     FileStatus file0 = testFiles[0];
-    assertEquals("Wrong path for " + file0, new Path(getTestUrl(),
-        testFolder + "/testFolder2/testFolder3/testFile"), file0.getPath());
+    assertEquals(new Path(getTestUrl(), testFolder + "/testFolder2/testFolder3/testFile"),
+        file0.getPath(), "Wrong path for " + file0);
     assertIsFileReference(file0);
   }
 
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testListNonExistentDir() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    fs.listStatus(new Path("/testFile/"));
+      Assertions.assertThrows(FileNotFoundException.class, () -> {
+          final AzureBlobFileSystem fs = getFileSystem();
+          fs.listStatus(new Path("/testFile/"));
+      });
   }
 
   @Test
@@ -296,23 +310,20 @@ public class ITestAzureBlobFileSystemListStatus extends
         () -> fs.listFiles(childF, false).next());
 
     // do some final checks on the status (failing due to version checks)
-    assertEquals("Path mismatch of " + locatedChildStatus,
-        childF, locatedChildStatus.getPath());
-    assertEquals("locatedstatus.equals(status)",
-        locatedChildStatus, childStatus);
-    assertEquals("status.equals(locatedstatus)",
-        childStatus, locatedChildStatus);
+    assertEquals(childF, locatedChildStatus.getPath(), "Path mismatch of " + locatedChildStatus);
+    assertEquals(locatedChildStatus, childStatus, "locatedstatus.equals(status)");
+    assertEquals(childStatus, locatedChildStatus, "status.equals(locatedstatus)");
   }
 
   private void assertIsDirectoryReference(FileStatus status) {
-    assertTrue("Not a directory: " + status, status.isDirectory());
-    assertFalse("Not a directory: " + status, status.isFile());
+    assertTrue(status.isDirectory(), "Not a directory: " + status);
+    assertFalse(status.isFile(), "Not a directory: " + status);
     assertEquals(0, status.getLen());
   }
 
   private void assertIsFileReference(FileStatus status) {
-    assertFalse("Not a file: " + status, status.isDirectory());
-    assertTrue("Not a file: " + status, status.isFile());
+    assertFalse(status.isDirectory(), "Not a file: " + status);
+    assertTrue(status.isFile(), "Not a file: " + status);
   }
 
   @Test
@@ -331,8 +342,8 @@ public class ITestAzureBlobFileSystemListStatus extends
     catch(IllegalArgumentException e) {
       exceptionThrown = true;
     }
-    assertTrue("Attempt to create file that ended with a dot should"
-        + " throw IllegalArgumentException", exceptionThrown);
+    assertTrue(exceptionThrown, "Attempt to create file that ended with a dot should"
+        + " throw IllegalArgumentException");
   }
 
   @Test
@@ -353,8 +364,8 @@ public class ITestAzureBlobFileSystemListStatus extends
     catch(IllegalArgumentException e) {
       exceptionThrown = true;
     }
-    assertTrue("Attempt to create file that ended with a dot should"
-        + " throw IllegalArgumentException", exceptionThrown);
+    assertTrue(exceptionThrown, "Attempt to create file that ended with a dot should"
+        + " throw IllegalArgumentException");
   }
 
   @Test
@@ -372,8 +383,8 @@ public class ITestAzureBlobFileSystemListStatus extends
     catch(IllegalArgumentException e) {
       exceptionThrown = true;
     }
-    assertTrue("Attempt to create file that ended with a dot should"
-        + " throw IllegalArgumentException", exceptionThrown);
+    assertTrue(exceptionThrown, "Attempt to create file that ended with a dot should"
+        + " throw IllegalArgumentException");
   }
 
   @Test
@@ -478,7 +489,7 @@ public class ITestAzureBlobFileSystemListStatus extends
         any(), any(TracingContext.class), any());
     Mockito.verify(spiedClient, times(1))
         .postListProcessing(eq("/testPath"), any(), any(), any());
-    Assertions.assertThat(list).hasSize(expectedSize);
+    assertThat(list).hasSize(expectedSize);
 
     if (expectedSize == 0) {
       Mockito.verify(spiedClient, times(1))
@@ -488,18 +499,18 @@ public class ITestAzureBlobFileSystemListStatus extends
           .getPathStatus(eq("/testPath"), any(), eq(null), eq(false));
     }
 
-    Assertions.assertThat(continuationTokenUsed[0])
+    assertThat(continuationTokenUsed[0])
         .describedAs("First continuation token used is not as expected")
         .isNull();
 
     if (expectedInvocations > 1) {
-      Assertions.assertThat(continuationTokenUsed[1])
+      assertThat(continuationTokenUsed[1])
           .describedAs("Second continuation token used is not as expected")
           .isEqualTo(firstCT);
     }
 
     if (expectedInvocations > 2) {
-      Assertions.assertThat(continuationTokenUsed[2])
+      assertThat(continuationTokenUsed[2])
           .describedAs("Third continuation token used is not as expected")
           .isEqualTo(secondCT);
     }
@@ -523,7 +534,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     // Assert that implicit directory is returned
     FileStatus[] fileStatuses = fs.listStatus(root);
-    Assertions.assertThat(fileStatuses.length)
+    assertThat(fileStatuses.length)
         .describedAs("List size is not expected").isEqualTo(1);
     assertImplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(dir));
 
@@ -532,7 +543,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     // Assert that only one entry of explicit directory is returned
     fileStatuses = fs.listStatus(root);
-    Assertions.assertThat(fileStatuses.length)
+    assertThat(fileStatuses.length)
         .describedAs("List size is not expected").isEqualTo(1);
     assertExplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(dir));
 
@@ -542,7 +553,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     // Assert that two entries are returned in alphabetic order.
     fileStatuses = fs.listStatus(root);
-    Assertions.assertThat(fileStatuses.length)
+    assertThat(fileStatuses.length)
         .describedAs("List size is not expected").isEqualTo(2);
     assertExplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(dir));
     assertFilePathFileStatus(fileStatuses[1], fs.makeQualified(file1));
@@ -553,7 +564,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     // Assert that three entries are returned in alphabetic order.
     fileStatuses = fs.listStatus(root);
-    Assertions.assertThat(fileStatuses.length)
+    assertThat(fileStatuses.length)
         .describedAs("List size is not expected").isEqualTo(3);
     assertExplicitDirectoryFileStatus(fileStatuses[0], fs.makeQualified(dir));
     assertFilePathFileStatus(fileStatuses[1], fs.makeQualified(file1));
@@ -571,12 +582,12 @@ public class ITestAzureBlobFileSystemListStatus extends
     createAzCopyFolder(implicitPath);
 
     FileStatus[] statuses = fs.listStatus(implicitPath);
-    Assertions.assertThat(statuses.length)
+    assertThat(statuses.length)
         .describedAs("List size is not expected").isGreaterThanOrEqualTo(1);
     assertImplicitDirectoryFileStatus(statuses[0], fs.makeQualified(statuses[0].getPath()));
 
     FileStatus[] statuses1 = fs.listStatus(new Path(statuses[0].getPath().toString()));
-    Assertions.assertThat(statuses1.length)
+    assertThat(statuses1.length)
         .describedAs("List size is not expected").isGreaterThanOrEqualTo(1);
     assertFilePathFileStatus(statuses1[0], fs.makeQualified(statuses1[0].getPath()));
   }
@@ -588,7 +599,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     fs.mkdirs(emptyDir);
 
     FileStatus[] statuses = fs.listStatus(emptyDir);
-    Assertions.assertThat(statuses.length)
+    assertThat(statuses.length)
         .describedAs("List size is not expected").isEqualTo(0);
   }
 
@@ -599,7 +610,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     fs.create(renamePendingJsonPath);
 
     FileStatus[] statuses = fs.listStatus(renamePendingJsonPath);
-    Assertions.assertThat(statuses.length)
+    assertThat(statuses.length)
         .describedAs("List size is not expected").isEqualTo(1);
     assertFilePathFileStatus(statuses[0], fs.makeQualified(statuses[0].getPath()));
   }
@@ -618,18 +629,18 @@ public class ITestAzureBlobFileSystemListStatus extends
         "/testContinuationToken", false, 1, null, getTestTracingContext(fs, true),
         fs.getAbfsStore().getUri());
 
-    Assertions.assertThat(listResponseData.getContinuationToken())
+    assertThat(listResponseData.getContinuationToken())
         .describedAs("Continuation Token Should not be null").isNotNull();
-    Assertions.assertThat(listResponseData.getFileStatusList())
+    assertThat(listResponseData.getFileStatusList())
         .describedAs("Listing Size Not as expected").hasSize(1);
 
     ListResponseData listResponseData1 =  fs.getAbfsStore().getClient().listPath(
         "/testContinuationToken", false, 1, listResponseData.getContinuationToken(), getTestTracingContext(fs, true),
         fs.getAbfsStore().getUri());
 
-    Assertions.assertThat(listResponseData1.getContinuationToken())
+    assertThat(listResponseData1.getContinuationToken())
         .describedAs("Continuation Token Should be null").isNull();
-    Assertions.assertThat(listResponseData1.getFileStatusList())
+    assertThat(listResponseData1.getFileStatusList())
         .describedAs("Listing Size Not as expected").hasSize(1);
   }
 
@@ -660,9 +671,9 @@ public class ITestAzureBlobFileSystemListStatus extends
         "/testInvalidContinuationToken", false, 1, "",
         getTestTracingContext(fs, true), fs.getAbfsStore().getUri());
 
-    Assertions.assertThat(listResponseData.getContinuationToken())
+    assertThat(listResponseData.getContinuationToken())
         .describedAs("Continuation Token Should Not be null").isNotNull();
-    Assertions.assertThat(listResponseData.getFileStatusList())
+    assertThat(listResponseData.getFileStatusList())
         .describedAs("Listing Size Not as expected").hasSize(1);
   }
 
@@ -726,7 +737,7 @@ public class ITestAzureBlobFileSystemListStatus extends
         .listPath(eq(ROOT_PATH), eq(false), eq(1), any(), any(), any());
 
     // Assert that after duplicate removal, only 7 unique entries are returned.
-    Assertions.assertThat(fileStatuses.length)
+    assertThat(fileStatuses.length)
         .describedAs("List size is not expected").isEqualTo(NUMBER_OF_UNIQUE_PATHS);
 
     // Assert that for duplicates, entry corresponding to marker blob is returned.
@@ -741,7 +752,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     // Assert that there are no duplicates in the returned file statuses.
     Set<Path> uniquePaths = new HashSet<>();
     for (FileStatus fileStatus : fileStatuses) {
-      Assertions.assertThat(uniquePaths.add(fileStatus.getPath()))
+      assertThat(uniquePaths.add(fileStatus.getPath()))
           .describedAs("Duplicate Entries found")
           .isTrue();
     }
@@ -749,13 +760,13 @@ public class ITestAzureBlobFileSystemListStatus extends
 
   private void assertFilePathFileStatus(final FileStatus fileStatus,
       final Path qualifiedPath) {
-    Assertions.assertThat(fileStatus.getPath())
+    assertThat(fileStatus.getPath())
         .describedAs("Path Not as expected").isEqualTo(qualifiedPath);
-    Assertions.assertThat(fileStatus.isFile())
+    assertThat(fileStatus.isFile())
         .describedAs("Expecting a File Path").isEqualTo(true);
-    Assertions.assertThat(fileStatus.isDirectory())
+    assertThat(fileStatus.isDirectory())
         .describedAs("Expecting a File Path").isEqualTo(false);
-    Assertions.assertThat(fileStatus.getModificationTime()).isNotEqualTo(0);
+    assertThat(fileStatus.getModificationTime()).isNotEqualTo(0);
   }
 
   private void assertImplicitDirectoryFileStatus(final FileStatus fileStatus,
@@ -763,7 +774,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     assertDirectoryFileStatus(fileStatus, qualifiedPath);
     DirectoryStateHelper.isImplicitDirectory(qualifiedPath, getFileSystem(),
         getTestTracingContext(getFileSystem(), true));
-    Assertions.assertThat(fileStatus.getModificationTime())
+    assertThat(fileStatus.getModificationTime())
         .describedAs("Last Modified Time Not as Expected").isEqualTo(0);
   }
 
@@ -772,19 +783,19 @@ public class ITestAzureBlobFileSystemListStatus extends
     assertDirectoryFileStatus(fileStatus, qualifiedPath);
     DirectoryStateHelper.isExplicitDirectory(qualifiedPath, getFileSystem(),
         getTestTracingContext(getFileSystem(), true));
-    Assertions.assertThat(fileStatus.getModificationTime())
+    assertThat(fileStatus.getModificationTime())
         .describedAs("Last Modified Time Not as Expected").isNotEqualTo(0);
   }
 
   private void assertDirectoryFileStatus(final FileStatus fileStatus,
       final Path qualifiedPath) {
-    Assertions.assertThat(fileStatus.getPath())
+    assertThat(fileStatus.getPath())
         .describedAs("Path Not as Expected").isEqualTo(qualifiedPath);
-    Assertions.assertThat(fileStatus.isDirectory())
+    assertThat(fileStatus.isDirectory())
         .describedAs("Expecting a Directory Path").isEqualTo(true);
-    Assertions.assertThat(fileStatus.isFile())
+    assertThat(fileStatus.isFile())
         .describedAs("Expecting a Directory Path").isEqualTo(false);
-    Assertions.assertThat(fileStatus.getLen())
+    assertThat(fileStatus.getLen())
         .describedAs("Content Length Not as Expected").isEqualTo(0);
   }
 
@@ -833,7 +844,8 @@ public class ITestAzureBlobFileSystemListStatus extends
    * verifying the correct header and directory state.
    */
   private void testIsDirectory(boolean expected, String... configName) throws Exception {
-    try (AzureBlobFileSystem fs = Mockito.spy(getFileSystem())) {
+    try (AzureBlobFileSystem fs = Mockito.spy(
+        (AzureBlobFileSystem) FileSystem.newInstance(getFileSystem().getConf()))) {
       assumeBlobServiceType();
       AbfsBlobClient abfsBlobClient = mockIngressClientHandler(fs);
       // Mock the operation to modify the headers
@@ -851,17 +863,17 @@ public class ITestAzureBlobFileSystemListStatus extends
           true, getTestTracingContext(fs, true),
           null).getResult();
 
-      Assertions.assertThat(abfsBlobClient.checkIsDir(op))
+      assertThat(abfsBlobClient.checkIsDir(op))
           .describedAs("Directory should be marked as " + expected)
           .isEqualTo(expected);
 
       // Verify the header and directory state
-      Assertions.assertThat(fileStatus.length)
+      assertThat(fileStatus.length)
           .describedAs("Expected directory state: " + expected)
           .isEqualTo(1);
 
       // Verify the header and directory state
-      Assertions.assertThat(fileStatus[0].isDirectory())
+      assertThat(fileStatus[0].isDirectory())
           .describedAs("Expected directory state: " + expected)
           .isEqualTo(expected);
 
@@ -888,5 +900,93 @@ public class ITestAzureBlobFileSystemListStatus extends
     testIsDirectory(true, "HDI_ISFOLDER", "Hdi_ISFOLDER", "Hdi_isfolder");
 
     testIsDirectory(true, "HDI_ISFOLDER", "Hdi_ISFOLDER1", "Test");
+  }
+
+  /**
+   * Tests container listing and deletion using {@link AbfsBlobClient}.
+   *
+   * Creates two containers, verifies they are returned by
+   * {@code listContainers} using a prefix filter, and then
+   * deletes them via the Blob endpoint.
+   *
+   * @throws Exception if any filesystem or container operation fails
+   */
+  @Test
+  public void testListAndDeleteContainers() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AbfsBlobClient blobClient =
+        fs.getAbfsStore().getClientHandler().getBlobClient();
+    final TracingContext tracingContext =
+        getTestTracingContext(fs, true);
+    // Blob/DFS-compliant container names
+    String container1 = "abfs-test-listtest1";
+    String container2 = "abfs-test-listtest2";
+    AzureBlobFileSystem fs1 = null;
+    AzureBlobFileSystem fs2 = null;
+
+    try {
+      // Resolve account name for constructing container URIs
+      String account = fs.getAbfsStore().getAbfsConfiguration().getAccountName();
+      // Create filesystem instances for both containers
+      fs1 = (AzureBlobFileSystem) FileSystem.get(
+          new URI("abfs://" + container1 + "@" + account), fs.getConf());
+      fs2 = (AzureBlobFileSystem) FileSystem.get(
+          new URI("abfs://" + container2 + "@" + account), fs.getConf());
+      // Create sample content to ensure containers are initialized
+      fs1.mkdirs(new Path("/dir1"));
+      fs1.create(new Path("/dir1/file1")).close();
+      fs2.mkdirs(new Path("/dir2"));
+      fs2.create(new Path("/dir2/file2")).close();
+      // List containers with prefix filter
+      ContainerListResponseData response =
+          blobClient.listContainers("abfs-test-", null, tracingContext);
+      assertThat(response)
+          .describedAs("listContainers response should not be null")
+          .isNotNull();
+      assertThat(response.getContainers())
+          .describedAs("Container list should contain created test containers")
+          .extracting(ContainerListEntrySchema::getName)
+          .contains(container1, container2);
+      // Delete containers
+      boolean deleted1 = deleteContainer(blobClient, container1, tracingContext);
+      boolean deleted2 = deleteContainer(blobClient, container2, tracingContext);
+      assertThat(deleted1)
+          .describedAs("First container should be deleted or already absent")
+          .isTrue();
+      assertThat(deleted2)
+          .describedAs("Second container should be deleted or already absent")
+          .isTrue();
+    } finally {
+      // Ensure filesystem instances are closed
+      if (fs1 != null) {
+        fs1.close();
+      }
+      if (fs2 != null) {
+        fs2.close();
+      }
+    }
+  }
+
+  /**
+   * Deletes a container using {@link AbfsBlobClient}.
+   *
+   * <p>Azure Blob delete semantics:
+   * <ul>
+   *   <li>202 (Accepted) – deletion request accepted</li>
+   *   <li>404 (Not Found) – container already deleted (idempotent success)</li>
+   * </ul>
+   *
+   * @return {@code true} if deletion is successful or container is already absent
+   * @throws Exception if the REST operation fails
+   */
+  private boolean deleteContainer(
+      AbfsBlobClient blobClient,
+      String container,
+      TracingContext tracingContext) throws Exception {
+    AbfsRestOperation op =
+        blobClient.deleteContainer(container, tracingContext);
+    int status = op.getResult().getStatusCode();
+    return status == HttpURLConnection.HTTP_ACCEPTED
+        || status == HttpURLConnection.HTTP_NOT_FOUND;
   }
 }

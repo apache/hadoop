@@ -173,7 +173,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     taskAttempt0 = TaskAttemptID.forName(attempt0);
     attempt1 = "attempt_" + jobId + "_m_000001_0";
     taskAttempt1 = TaskAttemptID.forName(attempt1);
-
+    assumeMultipartUploads(getFileSystem().getConf());
     outDir = path(getMethodName());
     abortMultipartUploadsUnderPath(outDir);
     cleanupDestDir();
@@ -733,8 +733,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     expectedOutput.append(KEY_1).append("\n");
     expectedOutput.append(KEY_2).append('\t').append(VAL_2).append("\n");
     String output = readFile(expectedFile);
-    assertEquals("Content of " + expectedFile,
-        expectedOutput.toString(), output);
+    assertEquals(expectedOutput.toString(), output,
+        "Content of " + expectedFile);
   }
 
   /**

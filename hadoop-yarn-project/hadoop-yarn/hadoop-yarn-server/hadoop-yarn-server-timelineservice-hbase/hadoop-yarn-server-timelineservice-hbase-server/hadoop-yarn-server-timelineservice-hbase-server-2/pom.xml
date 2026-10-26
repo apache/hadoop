@@ -22,13 +22,13 @@
   <parent>
     <artifactId>hadoop-yarn-server-timelineservice-hbase-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.5.0-SNAPSHOT</version>
+    <version>3.6.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>hadoop-yarn-server-timelineservice-hbase-server-2</artifactId>
   <name>Apache Hadoop YARN TimelineService HBase Server 2.5</name>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
 
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->
@@ -47,6 +47,10 @@
             <exclusion>
               <groupId>com.google.inject</groupId>
               <artifactId>guice</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.hbase</groupId>
+              <artifactId>hbase-shaded-client-byo-hadoop</artifactId>
             </exclusion>
           </exclusions>
         </dependency>
@@ -88,6 +92,7 @@
         <dependency>
           <groupId>org.apache.hbase</groupId>
           <artifactId>hbase-common</artifactId>
+          <scope>provided</scope>
           <exclusions>
             <exclusion>
               <groupId>org.apache.hadoop</groupId>
@@ -107,6 +112,7 @@
         <dependency>
           <groupId>org.apache.hbase</groupId>
           <artifactId>hbase-client</artifactId>
+          <scope>provided</scope>
           <exclusions>
             <exclusion>
               <groupId>org.apache.hadoop</groupId>

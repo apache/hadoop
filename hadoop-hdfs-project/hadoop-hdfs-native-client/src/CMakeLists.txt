@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 # Need this CMake policy for using the MultiThreaded MSVC runtime library.
 cmake_policy(SET CMP0091 NEW)

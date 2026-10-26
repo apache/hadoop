@@ -32,9 +32,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.util.JsonUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
-import org.eclipse.jetty.util.ajax.JSON;
 
 /**
  * JMX bean listing statuses of all node managers.
@@ -85,29 +85,29 @@ public class RMNMInfo implements RMNMInfoBeans {
     List<InfoMap> nodesInfo = new ArrayList<InfoMap>();
 
     for (final RMNode ni : nodes) {
-        SchedulerNodeReport report = scheduler.getNodeReport(ni.getNodeID());
-        InfoMap info = new InfoMap();
-        info.put("HostName", ni.getHostName());
-        info.put("Rack", ni.getRackName());
-        info.put("State", ni.getState().toString());
-        info.put("NodeId", ni.getNodeID());
-        info.put("NodeHTTPAddress", ni.getHttpAddress());
-        info.put("LastHealthUpdate",
-                        ni.getLastHealthReportTime());
-        info.put("HealthReport",
-                        ni.getHealthReport());
-        info.put("NodeManagerVersion",
-                ni.getNodeManagerVersion());
-        if(report != null) {
-          info.put("NumContainers", report.getNumContainers());
-          info.put("UsedMemoryMB", report.getUsedResource().getMemorySize());
-          info.put("AvailableMemoryMB",
-              report.getAvailableResource().getMemorySize());
-        }
+      SchedulerNodeReport report = scheduler.getNodeReport(ni.getNodeID());
+      InfoMap info = new InfoMap();
+      info.put("HostName", ni.getHostName());
+      info.put("Rack", ni.getRackName());
+      info.put("State", ni.getState().toString());
+      info.put("NodeId", ni.getNodeID().toString());
+      info.put("NodeHTTPAddress", ni.getHttpAddress());
+      info.put("LastHealthUpdate",
+                    ni.getLastHealthReportTime());
+      info.put("HealthReport",
+                    ni.getHealthReport());
+      info.put("NodeManagerVersion",
+            ni.getNodeManagerVersion());
+      if(report != null) {
+        info.put("NumContainers", report.getNumContainers());
+        info.put("UsedMemoryMB", report.getUsedResource().getMemorySize());
+        info.put("AvailableMemoryMB",
+                      report.getAvailableResource().getMemorySize());
+      }
 
-        nodesInfo.add(info);
+      nodesInfo.add(info);
     }
 
-    return JSON.toString(nodesInfo);
+    return JsonUtils.toString(nodesInfo);
   }
 }

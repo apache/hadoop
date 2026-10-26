@@ -67,6 +67,16 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.async.rpc.queue.size</name>
+    <value>1000</value>
+    <description>
+      The bounded queue capacity for each per-nameservice async handler thread
+      pool. When the queue is full, new requests are rejected with a
+      StandbyException to prevent unbounded memory growth. Must be at least 1.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.async.rpc.responder.count</name>
     <value>10</value>
     <description>

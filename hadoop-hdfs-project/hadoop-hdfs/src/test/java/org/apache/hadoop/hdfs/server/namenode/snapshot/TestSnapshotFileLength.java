@@ -26,15 +26,14 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -60,7 +59,7 @@ public class TestSnapshotFileLength {
   private final String file1Name = "file1";
   private final String snapshot1 = "snapshot1";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, BLOCKSIZE);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, BLOCKSIZE);
@@ -70,7 +69,7 @@ public class TestSnapshotFileLength {
     hdfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -84,7 +83,8 @@ public class TestSnapshotFileLength {
    * when accessing it via a snapshot path.
    *
    */
-  @Test (timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testSnapshotfileLength() throws Exception {
     hdfs.mkdirs(sub);
 
@@ -108,8 +108,9 @@ public class TestSnapshotFileLength {
         = SnapshotTestHelper.getSnapshotPath(sub, snapshot1, file1Name);
 
     final FileChecksum snapChksum1 = hdfs.getFileChecksum(file1snap1);
-    assertThat("file and snapshot file checksums are not equal",
-        hdfs.getFileChecksum(file1), is(snapChksum1));
+    assertThat(hdfs.getFileChecksum(file1))
+        .as("file and snapshot file checksums are not equal")
+        .isEqualTo(snapChksum1);
 
     // Append to the file.
     FSDataOutputStream out = hdfs.append(file1);
@@ -124,48 +125,54 @@ public class TestSnapshotFileLength {
           "Fail to get checksum, since file " + file1
               + " is under construction."));
     }
-    assertThat("snapshot checksum (post-open for append) has changed",
-        hdfs.getFileChecksum(file1snap1), is(snapChksum1));
+    assertThat(hdfs.getFileChecksum(file1snap1))
+        .as("snapshot checksum (post-open for append) has changed")
+        .isEqualTo(snapChksum1);
     try {
       AppendTestUtil.write(out, 0, toAppend);
       out.hflush();
       // Test reading from snapshot of file that is open for append
       byte[] dataFromSnapshot = DFSTestUtil.readFileBuffer(hdfs, file1snap1);
-      assertThat("Wrong data size in snapshot.",
-          dataFromSnapshot.length, is(origLen));
+      assertThat(dataFromSnapshot.length)
+          .as("Wrong data size in snapshot.")
+              .isEqualTo(origLen);
       // Verify that checksum didn't change
-      assertThat("snapshot checksum (post-append) has changed",
-          hdfs.getFileChecksum(file1snap1), is(snapChksum1));
+      assertThat(hdfs.getFileChecksum(file1snap1))
+          .as("snapshot checksum (post-append) has changed")
+          .isEqualTo(snapChksum1);
     } finally {
       out.close();
     }
-    assertThat("file and snapshot file checksums (post-close) are equal",
-        hdfs.getFileChecksum(file1), not(snapChksum1));
-    assertThat("snapshot file checksum (post-close) has changed",
-        hdfs.getFileChecksum(file1snap1), is(snapChksum1));
+    assertThat(hdfs.getFileChecksum(file1))
+        .as("file and snapshot file checksums (post-close) are equal")
+            .isNotEqualTo(snapChksum1);
+    assertThat(hdfs.getFileChecksum(file1snap1))
+        .as("snapshot file checksum (post-close) has changed")
+        .isEqualTo(snapChksum1);
 
     // Make sure we can read the entire file via its non-snapshot path.
     fileStatus = hdfs.getFileStatus(file1);
-    assertThat(fileStatus.getLen(), is((long) origLen + toAppend));
+    assertThat(fileStatus.getLen()).isEqualTo((long) origLen + toAppend);
     fis = hdfs.open(file1);
     bytesRead = fis.read(0, buffer, 0, buffer.length);
-    assertThat(bytesRead, is(origLen + toAppend));
+    assertThat(bytesRead).isEqualTo(origLen + toAppend);
     fis.close();
 
     // Try to open the file via its snapshot path.
     fis = hdfs.open(file1snap1);
     fileStatus = hdfs.getFileStatus(file1snap1);
-    assertThat(fileStatus.getLen(), is((long) origLen));
+    assertThat(fileStatus.getLen()).isEqualTo((long) origLen);
 
     // Make sure we can only read up to the snapshot length.
     bytesRead = fis.read(0, buffer, 0, buffer.length);
-    assertThat(bytesRead, is(origLen));
+    assertThat(bytesRead).isEqualTo(origLen);
     fis.close();
 
     byte[] dataFromSnapshot = DFSTestUtil.readFileBuffer(hdfs,
         file1snap1);
-    assertThat("Wrong data size in snapshot.",
-        dataFromSnapshot.length, is(origLen));
+    assertThat(dataFromSnapshot.length)
+        .as("Wrong data size in snapshot.")
+        .isEqualTo(origLen);
   }
 
   /**
@@ -174,7 +181,8 @@ public class TestSnapshotFileLength {
    *  cannot read a file beyond snapshot file length
    * @throws Exception
    */
-  @Test (timeout = 600000)
+  @Test
+  @Timeout(value = 600)
   public void testSnapshotFileLengthWithCatCommand() throws Exception {
 
     FSDataInputStream fis = null;
@@ -194,10 +202,10 @@ public class TestSnapshotFileLength {
 
     // Make sure we can read the entire file via its non-snapshot path.
     fileStatus = hdfs.getFileStatus(file1);
-    assertEquals("Unexpected file length", BLOCKSIZE * 2, fileStatus.getLen());
+    assertEquals(BLOCKSIZE * 2, fileStatus.getLen(), "Unexpected file length");
     fis = hdfs.open(file1);
     bytesRead = fis.read(buffer, 0, buffer.length);
-    assertEquals("Unexpected # bytes read", BLOCKSIZE * 2, bytesRead);
+    assertEquals(BLOCKSIZE * 2, bytesRead, "Unexpected # bytes read");
     fis.close();
 
     Path file1snap1 =
@@ -207,7 +215,7 @@ public class TestSnapshotFileLength {
     assertEquals(fileStatus.getLen(), BLOCKSIZE);
     // Make sure we can only read up to the snapshot length.
     bytesRead = fis.read(buffer, 0, buffer.length);
-    assertEquals("Unexpected # bytes read", BLOCKSIZE, bytesRead);
+    assertEquals(BLOCKSIZE, bytesRead, "Unexpected # bytes read");
     fis.close();
 
     PrintStream outBackup = System.out;
@@ -220,7 +228,7 @@ public class TestSnapshotFileLength {
     try {
       ToolRunner.run(conf, shell, new String[] { "-cat",
       "/TestSnapshotFileLength/sub1/.snapshot/snapshot1/file1" });
-      assertEquals("Unexpected # bytes from -cat", BLOCKSIZE, bao.size());
+      assertEquals(BLOCKSIZE, bao.size(), "Unexpected # bytes from -cat");
     } finally {
       System.setOut(outBackup);
       System.setErr(errBackup);

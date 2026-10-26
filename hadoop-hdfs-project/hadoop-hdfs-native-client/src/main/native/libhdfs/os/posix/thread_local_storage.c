@@ -52,8 +52,11 @@ void hdfsThreadDestructor(void *v)
   jthrowable jthr;
   char thr_name[MAXTHRID];
 
-  /* Detach the current thread from the JVM */
-  if ((env != NULL) && (*env != NULL)) {
+  /* Detach only threads that libhdfs attached to the JVM. Detaching a thread
+   * that the JVM (or an embedding application) attached frees a JNIEnv its
+   * owner still holds, and by the time this destructor runs that env may
+   * already have been freed, so the dereference below reads freed memory. */
+  if (state->attachedByLibhdfs && (env != NULL) && (*env != NULL)) {
     ret = (*env)->GetJavaVM(env, &vm);
 
     if (ret != 0) {
@@ -158,6 +161,8 @@ struct ThreadLocalState* threadLocalStorageCreate()
       "threadLocalStorageCreate: OOM - Unable to allocate thread local state\n");
     return NULL;
   }
+  state->attachedByLibhdfs = false;
+  state->env = NULL;
   state->lastExceptionStackTrace = NULL;
   state->lastExceptionRootCause = NULL;
   return state;

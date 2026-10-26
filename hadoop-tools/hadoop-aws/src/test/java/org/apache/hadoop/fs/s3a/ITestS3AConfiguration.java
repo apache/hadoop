@@ -60,6 +60,7 @@ import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.tags.IntegrationTest;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.HttpStatus;
 
@@ -83,12 +84,17 @@ import static org.junit.jupiter.api.Assertions.fail;
  * S3A tests for configuration, especially credentials.
  */
 @Timeout(value = S3A_TEST_TIMEOUT, unit = TimeUnit.MILLISECONDS)
+@IntegrationTest
 public class ITestS3AConfiguration extends AbstractHadoopTestBase {
   private static final String EXAMPLE_ID = "AKASOMEACCESSKEY";
   private static final String EXAMPLE_KEY =
       "RGV0cm9pdCBSZ/WQgY2xl/YW5lZCB1cAEXAMPLE";
   private static final String AP_ILLEGAL_ACCESS =
       "ARN of type accesspoint cannot be passed as a bucket";
+
+  private static final String US_EAST_1 = "us-east-1";
+
+  private static final String STS_ENDPOINT = "sts.us-east-1.amazonaws.com";
 
   private Configuration conf;
   private S3AFileSystem fs;
@@ -623,8 +629,9 @@ public class ITestS3AConfiguration extends AbstractHadoopTestBase {
 
     final String bucket = fs.getBucket();
     StsClient stsClient =
-        STSClientFactory.builder(config, bucket, new AnonymousAWSCredentialsProvider(), "",
-            "").build();
+        STSClientFactory.builder(config, bucket, new AnonymousAWSCredentialsProvider(),
+                STS_ENDPOINT, US_EAST_1).build();
+
 
     intercept(StsException.class, "", () ->
         stsClient.getSessionToken());

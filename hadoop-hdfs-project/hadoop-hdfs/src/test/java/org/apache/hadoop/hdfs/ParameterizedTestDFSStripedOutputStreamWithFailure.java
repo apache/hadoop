@@ -17,23 +17,22 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test striped file write operation with data node failures with parameterized
  * test cases.
  */
-@RunWith(Parameterized.class)
 public class ParameterizedTestDFSStripedOutputStreamWithFailure extends
     TestDFSStripedOutputStreamWithFailureBase{
   public static final Logger LOG = LoggerFactory.getLogger(
@@ -41,7 +40,6 @@ public class ParameterizedTestDFSStripedOutputStreamWithFailure extends
 
   private int base;
 
-  @Parameterized.Parameters
   public static Collection<Object[]> data() {
     List<Object[]> parameters = new ArrayList<>();
     for (int i = 0; i <= 10; i++) {
@@ -50,21 +48,24 @@ public class ParameterizedTestDFSStripedOutputStreamWithFailure extends
     return parameters;
   }
 
-  public ParameterizedTestDFSStripedOutputStreamWithFailure(int base) {
-    this.base = base;
+  public void initParameterizedTestDFSStripedOutputStreamWithFailure(int pBase) {
+    this.base = pBase;
   }
 
-  @Test(timeout = 240000)
-  public void runTestWithSingleFailure() {
+  @ParameterizedTest
+  @MethodSource("data")
+  @Timeout(value = 240)
+  public void runTestWithSingleFailure(int pBase) {
+    initParameterizedTestDFSStripedOutputStreamWithFailure(pBase);
     assumeTrue(base >= 0);
     if (base > lengths.size()) {
       base = base % lengths.size();
     }
     final int i = base;
     final Integer length = getLength(i);
-    assumeTrue("Skip test " + i + " since length=null.", length != null);
-    assumeTrue("Test " + i + ", length=" + length
-        + ", is not chosen to run.", RANDOM.nextInt(16) != 0);
+    assumeTrue(length != null, "Skip test " + i + " since length=null.");
+    assumeTrue(RANDOM.nextInt(16) != 0, "Test " + i + ", length=" + length
+        + ", is not chosen to run.");
     System.out.println("Run test " + i + ", length=" + length);
     runTest(length);
   }

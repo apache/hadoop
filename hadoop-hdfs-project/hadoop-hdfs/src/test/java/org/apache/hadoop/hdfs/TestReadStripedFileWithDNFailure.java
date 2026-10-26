@@ -17,13 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +38,7 @@ import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.tearDownC
 /**
  * Test online recovery with failed DNs. This test is parameterized.
  */
-@RunWith(Parameterized.class)
+@Timeout(300)
 public class TestReadStripedFileWithDNFailure {
   static final Logger LOG =
       LoggerFactory.getLogger(TestReadStripedFileWithDNFailure.class);
@@ -49,21 +46,16 @@ public class TestReadStripedFileWithDNFailure {
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem dfs;
 
-  @Rule
-  public Timeout globalTimeout = new Timeout(300000);
-
-  @BeforeClass
   public static void setup() throws IOException {
     cluster = initializeCluster();
     dfs = cluster.getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     tearDownCluster(cluster);
   }
 
-  @Parameterized.Parameters
   public static Collection<Object[]> getParameters() {
     ArrayList<Object[]> params = new ArrayList<>();
     for (int fileLength : FILE_LENGTHS) {
@@ -77,7 +69,8 @@ public class TestReadStripedFileWithDNFailure {
   private int fileLength;
   private int dnFailureNum;
 
-  public TestReadStripedFileWithDNFailure(int fileLength, int dnFailureNum) {
+  public void initTestReadStripedFileWithDNFailure(int pFileLength, int pDnFailureNum)
+      throws IOException {
     this.fileLength = fileLength;
     this.dnFailureNum = dnFailureNum;
   }
@@ -86,9 +79,12 @@ public class TestReadStripedFileWithDNFailure {
    * Shutdown tolerable number of Datanode before reading.
    * Verify the decoding works correctly.
    */
-  @Test
-  public void testReadWithDNFailure() throws Exception {
+  @MethodSource("getParameters")
+  @ParameterizedTest
+  public void testReadWithDNFailure(int pFileLength, int pDnFailureNum)
+      throws Exception {
     try {
+      initTestReadStripedFileWithDNFailure(pFileLength, pDnFailureNum);
       // setup a new cluster with no dead datanode
       setup();
       ReadStripedFileWithDecodingHelper.testReadWithDNFailure(cluster,

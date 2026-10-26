@@ -41,7 +41,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPB
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Extends the {@code BaseRouterClientRMTest} and overrides methods in order to

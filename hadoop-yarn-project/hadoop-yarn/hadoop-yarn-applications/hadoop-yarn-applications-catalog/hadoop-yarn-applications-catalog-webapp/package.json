@@ -20,6 +20,7 @@
         "apidoc": "0.17.7"
     },
     "resolutions": {
+        "color": "3.1.3",
         "triple-beam": "1.3.0"
     },
     "scripts": {

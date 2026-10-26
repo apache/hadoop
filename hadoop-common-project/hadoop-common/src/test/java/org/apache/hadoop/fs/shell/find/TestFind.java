@@ -213,6 +213,210 @@ public class TestFind {
     assertEquals(expected, expression.toString());
   }
 
+  // check -atime is correct handled
+  @Test
+  public void processOptionsAtime() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -atime 10";
+    String expected = "And(;Atime(10;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -amin is correctly handled
+  @Test
+  public void processOptionsAmin() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -amin 10";
+    String expected = "And(;Amin-Atime(10;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -blocksize is correctly handled
+  @Test
+  public void processOptionsBlocksize() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -blocksize 16";
+    String expected = "And(;Blocksize(16;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -empty is handled correctly
+  @Test
+  public void processOptionsEmpty() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -empty ";
+    String expected = "And(;Empty(;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -group is handled correctly
+  @Test
+  public void processOptionsGroup() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -group groupname";
+    String expected = "And(;Group(groupname;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -mtime is handled correctly
+  @Test
+  public void processOptionsMtime() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -mtime 40";
+    String expected = "And(;Mtime(40;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -mmin is handled correctly
+  @Test
+  public void processOptionsMmin() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -mmin 40";
+    String expected = "And(;Mmin-Mtime(40;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -newer is handled correctly
+  @Test
+  public void processOptionsNewer() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -newer 50";
+    String expected = "And(;Newer(50;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -nogroup is handled correctly
+  @Test
+  public void processOptionsNogroup() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -nogroup ";
+    String expected = "And(;Nogroup(;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -nouser is handled correctly
+  @Test
+  public void processOptionsNouser() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -nouser ";
+    String expected = "And(;Nouser(;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -perm is handled correctly
+  @Test
+  public void processOptionsPerm() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -perm permission";
+    String expected = "And(;Perm(permission;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -regex is handled correctly
+  @Test
+  public void processOptionsRegex() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -regex pattern";
+    String expected = "And(;Regex(pattern;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -iregex is handled correctly
+  @Test
+  public void processOptionsIregex() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -iregex pattern";
+    String expected = "And(;Iregex-Regex(pattern;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -replicas is handled correctly
+  @Test
+  public void processOptionsReplicas() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -replicas 60";
+    String expected = "And(;Replicas(60;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -size is handled correctly
+  @Test
+  public void processOptionsSize() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -size 60";
+    String expected = "And(;Size(60;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -type is handled correctly
+  @Test
+  public void processOptionsType() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -type d";
+    String expected = "And(;Type(d;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
+  // check -user is handled correctly
+  @Test
+  public void processOptionsUser() throws IOException {
+    Find find = new Find();
+    find.setConf(conf);
+    String args = "path -user username";
+    String expected = "And(;User(username;),Print(;))";
+    find.processOptions(getArgs(args));
+    Expression expression = find.getRootExpression();
+    assertEquals(expected, expression.toString());
+  }
+
   // check an implicit and is handled correctly
   @Test
   public void processOptionsNoop() throws IOException {

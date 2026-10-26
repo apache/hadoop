@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.util.Progressable;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * A progress callback for testing.
@@ -40,6 +40,6 @@ public class ProgressCounter implements Progressable {
   }
 
   public void assertCount(String message, int expected) {
-    assertEquals(message, expected, getCount());
+    assertEquals(expected, getCount(), message);
   }
 }

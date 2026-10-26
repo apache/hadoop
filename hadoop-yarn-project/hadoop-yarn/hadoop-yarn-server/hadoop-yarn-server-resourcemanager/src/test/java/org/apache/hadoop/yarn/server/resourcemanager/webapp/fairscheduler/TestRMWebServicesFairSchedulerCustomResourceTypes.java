@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.fairscheduler;
 
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.TestProperties;
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.BufferedClientResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.JsonCustomResourceTypeTestcase;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.XmlCustomResourceTypeTestCase;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -77,7 +77,8 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
     config.register(new JerseyBinder());
     config.register(RMWebServices.class);
     config.register(GenericExceptionHandler.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
   }
@@ -217,11 +218,9 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
 
     testCase.verify(json -> {
       try {
-        JSONObject queue = json.getJSONObject("scheduler")
+        JSONArray queues = json.getJSONObject("scheduler")
             .getJSONObject("schedulerInfo").getJSONObject("rootQueue")
-            .getJSONObject("childQueues").getJSONObject("queue");
-        JSONArray queues = new JSONArray();
-        queues.put(queue);
+            .getJSONObject("childQueues").getJSONArray("queue");
 
         assertEquals(1, queues.length());
 

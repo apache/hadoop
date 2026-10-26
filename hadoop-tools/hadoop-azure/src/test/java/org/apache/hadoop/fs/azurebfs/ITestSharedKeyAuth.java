@@ -19,8 +19,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -29,6 +28,7 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 public class ITestSharedKeyAuth extends AbstractAbfsIntegrationTest {
 
@@ -38,7 +38,7 @@ public class ITestSharedKeyAuth extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testWithWrongSharedKey() throws Exception {
-    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
+    assumeThat(this.getAuthType()).isEqualTo(AuthType.SharedKey);
     Configuration config = this.getRawConfiguration();
     config.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
         true);

@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azurebfs.extensions;
 import java.net.URI;
 import java.util.Date;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -55,23 +55,21 @@ public class TestCustomOauthTokenProvider extends AbstractAbfsTestWithTimeout {
         "not-a-real-account");
     CustomTokenProviderAdapter provider =
         (CustomTokenProviderAdapter) abfs.getTokenProvider();
-    assertEquals("User agent", INITED, provider.getUserAgentSuffix());
+    assertEquals(INITED, provider.getUserAgentSuffix(), "User agent");
 
     // now mimic the bind call
     ExtensionHelper.bind(provider,
         new URI("abfs://store@user.dfs.core.windows.net"),
         conf);
-    assertEquals("User agent", BOUND,
-        ExtensionHelper.getUserAgentSuffix(provider, ""));
+    assertEquals(BOUND, ExtensionHelper.getUserAgentSuffix(provider, ""), "User agent");
     AzureADToken token = provider.getToken();
-    assertEquals("Access token propagation",
-        ACCESS_TOKEN, token.getAccessToken());
+    assertEquals(ACCESS_TOKEN, token.getAccessToken(), "Access token propagation");
     Date expiry = token.getExpiry();
     long time = expiry.getTime();
-    assertTrue("date wrong: " + expiry,
-        time <= System.currentTimeMillis());
+    assertTrue(
+       time <= System.currentTimeMillis(), "date wrong: " + expiry);
     // once closed, the UA state changes.
     provider.close();
-    assertEquals("User agent", CLOSED, provider.getUserAgentSuffix());
+    assertEquals(CLOSED, provider.getUserAgentSuffix(), "User agent");
   }
 }

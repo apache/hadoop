@@ -33,12 +33,11 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +55,7 @@ import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.findFirst
 import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.initializeCluster;
 import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.tearDownCluster;
 
+@Timeout(300)
 public class TestReadStripedFileWithDecoding {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestReadStripedFileWithDecoding.class);
@@ -63,16 +63,13 @@ public class TestReadStripedFileWithDecoding {
   private MiniDFSCluster cluster;
   private DistributedFileSystem dfs;
 
-  @Rule
-  public Timeout globalTimeout = new Timeout(300000);
-
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     cluster = initializeCluster();
     dfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     tearDownCluster(cluster);
   }
@@ -92,7 +89,7 @@ public class TestReadStripedFileWithDecoding {
     // corrupt the first data block
     int dnIndex = ReadStripedFileWithDecodingHelper.findFirstDataNode(
         cluster, dfs, file, CELL_SIZE * NUM_DATA_UNITS);
-    Assert.assertNotEquals(-1, dnIndex);
+    Assertions.assertNotEquals(-1, dnIndex);
     LocatedStripedBlock slb = (LocatedStripedBlock) dfs.getClient()
         .getLocatedBlocks(file.toString(), 0, CELL_SIZE * NUM_DATA_UNITS)
         .get(0);
@@ -101,7 +98,7 @@ public class TestReadStripedFileWithDecoding {
     // Find the first block file.
     File storageDir = cluster.getInstanceStorageDir(dnIndex, 0);
     File blkFile = MiniDFSCluster.getBlockFile(storageDir, blks[0].getBlock());
-    Assert.assertTrue("Block file does not exist", blkFile.exists());
+    Assertions.assertTrue(blkFile.exists(), "Block file does not exist");
     // corrupt the block file
     LOG.info("Deliberately corrupting file " + blkFile.getName());
     try (FileOutputStream out = new FileOutputStream(blkFile)) {
@@ -124,7 +121,7 @@ public class TestReadStripedFileWithDecoding {
       final BlockManager bm = ns.getBlockManager();
       BlockInfo blockInfo = (ns.getFSDirectory().getINode4Write(file.toString())
           .asFile().getBlocks())[0];
-      Assert.assertEquals(1, bm.getCorruptReplicas(blockInfo).size());
+      Assertions.assertEquals(1, bm.getCorruptReplicas(blockInfo).size());
     } finally {
       for (DataNode dn : cluster.getDataNodes()) {
         DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, false);
@@ -141,7 +138,7 @@ public class TestReadStripedFileWithDecoding {
 
     int dnIndex = findFirstDataNode(cluster, dfs, file,
         CELL_SIZE * NUM_DATA_UNITS);
-    Assert.assertNotEquals(-1, dnIndex);
+    Assertions.assertNotEquals(-1, dnIndex);
     LocatedStripedBlock slb = (LocatedStripedBlock) dfs.getClient()
         .getLocatedBlocks(file.toString(), 0, CELL_SIZE * NUM_DATA_UNITS)
         .get(0);
@@ -164,7 +161,7 @@ public class TestReadStripedFileWithDecoding {
       final BlockManager bm = fsn.getBlockManager();
       DatanodeDescriptor dnd =
           NameNodeAdapter.getDatanode(fsn, dn.getDatanodeId());
-      Assert.assertTrue(bm.containsInvalidateBlock(
+      Assertions.assertTrue(bm.containsInvalidateBlock(
           blks[0].getLocations()[0], b) || dnd.containsInvalidateBlock(b));
     } finally {
       DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, false);
@@ -201,8 +198,8 @@ public class TestReadStripedFileWithDecoding {
         CELL_SIZE * NUM_DATA_UNITS);
     int dnIndex2 = findDataNodeAtIndex(cluster, dfs, file,
         CELL_SIZE * NUM_DATA_UNITS, 2);
-    Assert.assertNotEquals(-1, dnIndex);
-    Assert.assertNotEquals(-1, dnIndex2);
+    Assertions.assertNotEquals(-1, dnIndex);
+    Assertions.assertNotEquals(-1, dnIndex2);
 
     LocatedStripedBlock slb = (LocatedStripedBlock) dfs.getClient()
         .getLocatedBlocks(file.toString(), 0, CELL_SIZE * NUM_DATA_UNITS)
@@ -216,7 +213,7 @@ public class TestReadStripedFileWithDecoding {
     // Find the first block file.
     File storageDir = cluster.getInstanceStorageDir(dnIndex, 0);
     File blkFile = MiniDFSCluster.getBlockFile(storageDir, blks[0].getBlock());
-    Assert.assertTrue("Block file does not exist", blkFile.exists());
+    Assertions.assertTrue(blkFile.exists(), "Block file does not exist");
     // Corrupt the block file.
     LOG.info("Deliberately corrupting file " + blkFile.getName());
     try (FileOutputStream out = new FileOutputStream(blkFile)) {
@@ -227,7 +224,7 @@ public class TestReadStripedFileWithDecoding {
     // Find the second block file.
     File storageDir2 = cluster.getInstanceStorageDir(dnIndex2, 0);
     File blkFile2 = MiniDFSCluster.getBlockFile(storageDir2, blks[1].getBlock());
-    Assert.assertTrue("Block file does not exist", blkFile2.exists());
+    Assertions.assertTrue(blkFile2.exists(), "Block file does not exist");
     // Corrupt the second block file.
     LOG.info("Deliberately corrupting file " + blkFile2.getName());
     try (FileOutputStream out = new FileOutputStream(blkFile2)) {
@@ -257,7 +254,7 @@ public class TestReadStripedFileWithDecoding {
         return bm.getCorruptReplicas(blockInfo).size() == 2;
       }, 250, 60000);
       // Double check.
-      Assert.assertEquals(2, bm.getCorruptReplicas(blockInfo).size());
+      Assertions.assertEquals(2, bm.getCorruptReplicas(blockInfo).size());
 
       DatanodeDescriptor dnd =
           NameNodeAdapter.getDatanode(ns, cluster.getDataNodes().get(dnIndex).getDatanodeId());
@@ -276,7 +273,7 @@ public class TestReadStripedFileWithDecoding {
         return bm.containsInvalidateBlock(
             blks[0].getLocations()[0], b) || dnd.containsInvalidateBlock(b);
       }, 250, 60000);
-      Assert.assertTrue(bm.containsInvalidateBlock(
+      Assertions.assertTrue(bm.containsInvalidateBlock(
           blks[0].getLocations()[0], b) || dnd.containsInvalidateBlock(b));
 
       GenericTestUtils.waitFor(() -> {
@@ -284,7 +281,7 @@ public class TestReadStripedFileWithDecoding {
             blks[1].getLocations()[0], b2) || dnd2.containsInvalidateBlock(b2);
       }, 250, 60000);
 
-      Assert.assertTrue(bm.containsInvalidateBlock(
+      Assertions.assertTrue(bm.containsInvalidateBlock(
           blks[1].getLocations()[0], b2) || dnd2.containsInvalidateBlock(b2));
 
     } finally {

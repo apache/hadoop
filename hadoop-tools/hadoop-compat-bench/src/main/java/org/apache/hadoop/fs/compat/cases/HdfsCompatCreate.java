@@ -20,11 +20,15 @@ package org.apache.hadoop.fs.compat.cases;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.compat.common.*;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.Assert;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @HdfsCompatCaseGroup(name = "Create")
 public class HdfsCompatCreate extends AbstractHdfsCompatCase {
@@ -43,7 +47,7 @@ public class HdfsCompatCreate extends AbstractHdfsCompatCase {
   @HdfsCompatCase
   public void mkdirs() throws IOException {
     fs().mkdirs(path);
-    Assert.assertTrue(fs().exists(path));
+    assertTrue(fs().exists(path));
   }
 
   @HdfsCompatCase
@@ -51,7 +55,7 @@ public class HdfsCompatCreate extends AbstractHdfsCompatCase {
     FSDataOutputStream out = null;
     try {
       out = fs().create(path, true);
-      Assert.assertTrue(fs().exists(path));
+      assertTrue(fs().exists(path));
     } finally {
       IOUtils.closeStream(out);
     }
@@ -62,7 +66,7 @@ public class HdfsCompatCreate extends AbstractHdfsCompatCase {
     Path file = new Path(path, "file-no-parent");
     try {
       fs().createNonRecursive(file, true, 1024, (short) 1, 1048576, null);
-      Assert.fail("Should fail since parent does not exist");
+      fail("Should fail since parent does not exist");
     } catch (IOException ignored) {
     }
   }
@@ -70,7 +74,7 @@ public class HdfsCompatCreate extends AbstractHdfsCompatCase {
   @HdfsCompatCase
   public void createNewFile() throws IOException {
     HdfsCompatUtil.createFile(fs(), path, 0);
-    Assert.assertFalse(fs().createNewFile(path));
+    assertFalse(fs().createNewFile(path));
   }
 
   @HdfsCompatCase
@@ -84,7 +88,7 @@ public class HdfsCompatCreate extends AbstractHdfsCompatCase {
       out.close();
       out = null;
       FileStatus fileStatus = fs().getFileStatus(path);
-      Assert.assertEquals(128 + 64, fileStatus.getLen());
+      assertEquals(128 + 64, fileStatus.getLen());
     } finally {
       IOUtils.closeStream(out);
     }
@@ -101,7 +105,7 @@ public class HdfsCompatCreate extends AbstractHdfsCompatCase {
       out.write("Hello World!".getBytes(StandardCharsets.UTF_8));
       out.close();
       out = null;
-      Assert.assertTrue(fs().exists(file));
+      assertTrue(fs().exists(file));
     } finally {
       IOUtils.closeStream(out);
     }
@@ -119,7 +123,7 @@ public class HdfsCompatCreate extends AbstractHdfsCompatCase {
       out.close();
       out = null;
       FileStatus fileStatus = fs().getFileStatus(path);
-      Assert.assertEquals(128 + 64, fileStatus.getLen());
+      assertEquals(128 + 64, fileStatus.getLen());
     } finally {
       IOUtils.closeStream(out);
     }

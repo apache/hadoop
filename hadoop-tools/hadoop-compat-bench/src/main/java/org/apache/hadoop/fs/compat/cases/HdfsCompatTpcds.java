@@ -19,12 +19,15 @@ package org.apache.hadoop.fs.compat.cases;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.compat.common.*;
-import org.junit.Assert;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @HdfsCompatCaseGroup(name = "TPCDS")
 public class HdfsCompatTpcds extends AbstractHdfsCompatCase {
@@ -62,22 +65,22 @@ public class HdfsCompatTpcds extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void mkdirs() throws IOException {
-    Assert.assertTrue(fs().mkdirs(path));
+    assertTrue(fs().mkdirs(path));
   }
 
   @HdfsCompatCase
   public void getFileStatus() throws IOException {
     HdfsCompatUtil.createFile(fs(), path, FILE_LEN);
     FileStatus fileStatus = fs().getFileStatus(path);
-    Assert.assertEquals(FILE_LEN, fileStatus.getLen());
+    assertEquals(FILE_LEN, fileStatus.getLen());
   }
 
   @HdfsCompatCase
   public void listStatus() throws IOException {
     HdfsCompatUtil.createFile(fs(), new Path(path, "file"), FILE_LEN);
     FileStatus[] files = fs().listStatus(path);
-    Assert.assertEquals(1, files.length);
-    Assert.assertEquals(FILE_LEN, files[0].getLen());
+    assertEquals(1, files.length);
+    assertEquals(FILE_LEN, files[0].getLen());
   }
 
   @HdfsCompatCase
@@ -88,8 +91,8 @@ public class HdfsCompatTpcds extends AbstractHdfsCompatCase {
     while (it.hasNext()) {
       files.add(it.next());
     }
-    Assert.assertEquals(1, files.size());
-    Assert.assertEquals(FILE_LEN, files.get(0).getLen());
+    assertEquals(1, files.size());
+    assertEquals(FILE_LEN, files.get(0).getLen());
   }
 
   @HdfsCompatCase
@@ -106,16 +109,16 @@ public class HdfsCompatTpcds extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void getServerDefaults() throws IOException {
-    Assert.assertNotNull(fs().getServerDefaults(path));
+    assertNotNull(fs().getServerDefaults(path));
   }
 
   @HdfsCompatCase
   public void getTrashRoot() throws IOException {
-    Assert.assertNotNull(fs().getTrashRoot(path));
+    assertNotNull(fs().getTrashRoot(path));
   }
 
   @HdfsCompatCase
   public void makeQualified() throws IOException {
-    Assert.assertNotNull(fs().makeQualified(path));
+    assertNotNull(fs().makeQualified(path));
   }
 }

@@ -36,8 +36,9 @@ import java.util.stream.Collectors;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.xml.bind.JAXBException;
+import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
@@ -46,6 +47,7 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -53,8 +55,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import org.glassfish.jersey.jettison.JettisonJaxbContext;
-import org.glassfish.jersey.jettison.JettisonMarshaller;
+import org.eclipse.persistence.jaxb.MarshallerProperties;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
@@ -195,13 +196,7 @@ public final class TestWebServiceUtil {
 
     String actual = OBJECT_WRITER.writeValueAsString(jsonNode);
     updateTestDataAutomatically(expectedResourceFilename, actual);
-    assertEquals(
-        // Deserialize/serialise again with the exact same settings
-        // to make sure jackson upgrade doesn't break the test
-        OBJECT_WRITER.writeValueAsString(
-            MAPPER.readTree(
-                Objects.requireNonNull(getResourceAsString(expectedResourceFilename)))),
-        actual);
+    assertEquals(getResourceAsString(expectedResourceFilename), actual);
   }
 
   /**
@@ -350,28 +345,46 @@ public final class TestWebServiceUtil {
 
   public static String toEntity(Object obj, Class<?> klass, String mediaType)
       throws Exception {
-    if (mediaType == MediaType.APPLICATION_JSON) {
+    if (MediaType.APPLICATION_JSON.equals(mediaType)) {
       return toJson(obj, klass);
     }
-    if(mediaType == MediaType.APPLICATION_XML) {
+    if(MediaType.APPLICATION_XML.equals(mediaType)) {
       return toXml(obj, klass);
     }
     return null;
   }
 
   public static String toJson(Object obj, Class<?> klass) throws Exception {
+    JAXBContext jc = new JAXBContextResolver().getContext(klass);
+    Marshaller marshaller = jc.createMarshaller();
+    marshaller.setProperty(MarshallerProperties.MEDIA_TYPE, MediaType.APPLICATION_JSON);
+    marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
     StringWriter stringWriter = new StringWriter();
-    JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(klass);
-    JettisonMarshaller jettisonMarshaller = jettisonJaxbContext.createJsonMarshaller();
-    jettisonMarshaller.marshallToJSON(obj, stringWriter);
+    marshaller.marshal(obj, stringWriter);
     return stringWriter.toString();
   }
 
-  public static String toXml(Object obj, Class<?> klass) throws JAXBException {
+  public static String toXml(Object obj, Class<?> klass) throws Exception {
+    JAXBContext jc = new JAXBContextResolver().getContext(klass);
+    Marshaller marshaller = jc.createMarshaller();
+    marshaller.setProperty(MarshallerProperties.MEDIA_TYPE, MediaType.APPLICATION_XML);
+    marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
     StringWriter stringWriter = new StringWriter();
-    JettisonJaxbContext jettisonJaxbContext = new JettisonJaxbContext(klass);
-    Marshaller marshaller = jettisonJaxbContext.createMarshaller();
     marshaller.marshal(obj, stringWriter);
     return stringWriter.toString();
+  }
+
+  public static <T> T fromJson(String json, Class<T> klass) {
+    try {
+      JAXBContext jc = new JAXBContextResolver().getContext(klass);
+      if (jc == null) {
+        jc = JAXBContext.newInstance(klass);
+      }
+      Unmarshaller unmarshaller = jc.createUnmarshaller();
+      unmarshaller.setProperty(MarshallerProperties.MEDIA_TYPE, MediaType.APPLICATION_JSON);
+      return unmarshaller.unmarshal(new StreamSource(new StringReader(json)), klass).getValue();
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to read from json: " + json, e);
+    }
   }
 }

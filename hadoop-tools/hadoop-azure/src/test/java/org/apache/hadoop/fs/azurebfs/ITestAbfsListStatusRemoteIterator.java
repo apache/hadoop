@@ -29,9 +29,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +48,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.verify;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test ListStatusRemoteIterator operation.
@@ -71,7 +71,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     ListingSupport listingSupport = Mockito.spy(getFileSystem().getAbfsStore());
     RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(testDir,
         listingSupport, getTestTracingContext(getFileSystem(), true));
-    Assertions.assertThat(fsItr)
+    assertThat(fsItr)
         .describedAs("RemoteIterator should be instance of "
             + "AbfsListStatusRemoteIterator by default")
         .isInstanceOf(AbfsListStatusRemoteIterator.class);
@@ -99,7 +99,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     ListingSupport listingSupport = Mockito.spy(getFileSystem().getAbfsStore());
     RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(testDir,
         listingSupport, getTestTracingContext(getFileSystem(), true));
-    Assertions.assertThat(fsItr)
+    assertThat(fsItr)
         .describedAs("RemoteIterator should be instance of "
             + "AbfsListStatusRemoteIterator by default")
         .isInstanceOf(AbfsListStatusRemoteIterator.class);
@@ -128,7 +128,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
 
     RemoteIterator<FileStatus> fsItr =
         getFileSystem().listStatusIterator(testDir);
-    Assertions.assertThat(fsItr)
+    assertThat(fsItr)
         .describedAs("RemoteIterator should not be instance of "
             + "AbfsListStatusRemoteIterator when it is disabled")
         .isNotInstanceOf(AbfsListStatusRemoteIterator.class);
@@ -150,7 +150,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
 
     RemoteIterator<FileStatus> fsItr = getFileSystem().listStatusIterator(
         testDir);
-    Assertions.assertThat(fsItr).describedAs(
+    assertThat(fsItr).describedAs(
             "RemoteIterator should not be instance of "
                 + "AbfsListStatusRemoteIterator when it is disabled")
         .isNotInstanceOf(AbfsListStatusRemoteIterator.class);
@@ -182,7 +182,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     setPageSize(10);
     RemoteIterator<FileStatus> fsItr = getFileSystem()
         .listStatusIterator(testDir);
-    Assertions.assertThat(fsItr.hasNext())
+    assertThat(fsItr.hasNext())
         .describedAs("hasNext returns false for empty directory")
         .isFalse();
   }
@@ -195,9 +195,9 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     getFileSystem().create(testFile);
     setPageSize(10);
     RemoteIterator<FileStatus> fsItr = fs.listStatusIterator(testFile);
-    Assertions.assertThat(fsItr.hasNext())
+    assertThat(fsItr.hasNext())
         .describedAs("hasNext returns true for file").isTrue();
-    Assertions.assertThat(fsItr.next().getPath().toString())
+    assertThat(fsItr.next().getPath().toString())
         .describedAs("next returns the file itself")
         .endsWith(testFileName);
   }
@@ -227,16 +227,16 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
       List<String> fileNames) {
     assertPathDns(fileStatus.getPath());
     String pathStr = fileStatus.getPath().toString();
-    Assert.assertTrue(
-        String.format("Could not remove path %s from filenames %s", pathStr,
-            fileNames), fileNames.remove(pathStr));
+    Assertions.assertTrue(
+    fileNames.remove(pathStr), String.format("Could not remove path %s from filenames %s", pathStr,
+            fileNames));
   }
 
   private void verifyIteratorResultCount(int itrCount, List<String> fileNames) {
-    Assertions.assertThat(itrCount).describedAs(
+    assertThat(itrCount).describedAs(
             "Number of iterations should be equal to the files created")
         .isEqualTo(TEST_FILES_NUMBER);
-    Assertions.assertThat(fileNames)
+    assertThat(fileNames)
         .describedAs("After removing every item found from the iterator, "
             + "there should be no more elements in the fileNames")
         .hasSize(0);
@@ -291,7 +291,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
         tasks.add(es.submit(() -> {
           touch(filePath);
           synchronized (fileNames) {
-            Assert.assertTrue(fileNames.add(filePath.toString()));
+            Assertions.assertTrue(fileNames.add(filePath.toString()));
           }
           return null;
         }));
@@ -303,7 +303,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
       es.shutdownNow();
     }
     LOG.debug(fileNames.toString());
-    Assertions.assertThat(fileNames)
+    assertThat(fileNames)
         .describedAs("File creation incorrect or fileNames not added to list")
         .hasSize(ITestAbfsListStatusRemoteIterator.TEST_FILES_NUMBER);
     return fileNames;

@@ -324,17 +324,16 @@ public class AMRMTokenSecretManager extends
   }
 
   public void recover(RMState state) {
-    if (state.getAMRMTokenSecretManagerState() != null) {
+    AMRMTokenSecretManagerState tokenState = getTokenState(state);
+    if (tokenState != null) {
       // recover the current master key
-      MasterKey currentKey =
-          state.getAMRMTokenSecretManagerState().getCurrentMasterKey();
+      MasterKey currentKey = tokenState.getCurrentMasterKey();
       this.currentMasterKey =
           new MasterKeyData(currentKey, createSecretKey(currentKey.getBytes()
             .array()));
 
       // recover the next master key if not null
-      MasterKey nextKey =
-          state.getAMRMTokenSecretManagerState().getNextMasterKey();
+      MasterKey nextKey = tokenState.getNextMasterKey();
       if (nextKey != null) {
         this.nextMasterKey =
             new MasterKeyData(nextKey, createSecretKey(nextKey.getBytes()
@@ -342,5 +341,32 @@ public class AMRMTokenSecretManager extends
         this.timer.schedule(new NextKeyActivator(), this.activationDelay);
       }
     }
+  }
+
+  private AMRMTokenSecretManagerState getTokenState(RMState state) {
+    AMRMTokenSecretManagerState result = state.getAMRMTokenSecretManagerState();
+    return result == null ? null : validateAndUpdateState(result);
+  }
+
+  private AMRMTokenSecretManagerState validateAndUpdateState(AMRMTokenSecretManagerState state) {
+    MasterKey currentKey = state.getCurrentMasterKey();
+    MasterKey nextKey = state.getNextMasterKey();
+    boolean updateRequired = false;
+    if (!validateMasterKey(currentKey)) {
+      state.setCurrentMasterKey(createNewMasterKey().getMasterKey());
+      updateRequired = true;
+    }
+    if (!validateMasterKey(nextKey)) {
+      state.setNextMasterKey(createNewMasterKey().getMasterKey());
+      updateRequired = true;
+    }
+    if (updateRequired) {
+      rmContext.getStateStore().storeOrUpdateAMRMTokenSecretManager(state, true);
+    }
+    return state;
+  }
+
+  private boolean validateMasterKey(MasterKey masterKey) {
+    return masterKey == null || validateSecretKeyLength(masterKey.getBytes().array());
   }
 }

@@ -28,9 +28,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,12 +56,12 @@ public final class TestAbfsPerfTracker {
     this.url = new URL("http", "www.microsoft.com", "/bogusFile");
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     executorService = Executors.newCachedThreadPool();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     executorService.shutdown();
   }

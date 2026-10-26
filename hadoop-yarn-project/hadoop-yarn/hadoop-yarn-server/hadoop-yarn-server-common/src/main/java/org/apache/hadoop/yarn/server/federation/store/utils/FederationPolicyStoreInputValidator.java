@@ -158,5 +158,9 @@ public final class FederationPolicyStoreInputValidator {
       throw new FederationStateStoreInvalidInputException(
           "The queues that needs to be deleted cannot be empty.");
     }
+
+    for (String queue : queues) {
+      checkQueue(queue);
+    }
   }
 }

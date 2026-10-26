@@ -95,15 +95,15 @@ public class S3ALocatedFileStatus extends LocatedFileStatus implements EtagSourc
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder(
-        super.toString());
+    final StringBuilder sb = new StringBuilder("S3ALocatedFileStatus{");
+    sb.append(super.toString());
     sb.append("[eTag='").
         append(eTag != null ? eTag : "")
         .append('\'');
     sb.append(", versionId='")
         .append(versionId != null ? versionId: "")
         .append('\'');
-    sb.append(']');
+    sb.append('}');
     return sb.toString();
   }
 }

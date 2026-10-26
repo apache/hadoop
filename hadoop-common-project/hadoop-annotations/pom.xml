@@ -20,61 +20,41 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.5.0-SNAPSHOT</version>
+    <version>3.6.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-annotations</artifactId>
-  <version>3.5.0-SNAPSHOT</version>
+  <version>3.6.0-SNAPSHOT</version>
   <description>Apache Hadoop Annotations</description>
   <name>Apache Hadoop Annotations</name>
   <packaging>jar</packaging>
 
   <dependencies>
     <dependency>
-      <groupId>jdiff</groupId>
+      <groupId>io.github.zhtttylz</groupId>
       <artifactId>jdiff</artifactId>
       <scope>provided</scope>
     </dependency>
   </dependencies>
 
-  <profiles>
-    <profile>
-      <id>jdk1.8</id>
-      <activation>
-        <jdk>1.8</jdk>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>jdk.tools</groupId>
-          <artifactId>jdk.tools</artifactId>
-          <version>1.8</version>
-          <scope>system</scope>
-          <systemPath>${java.home}/../lib/tools.jar</systemPath>
-        </dependency>
-      </dependencies>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>build-helper-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>add-source</id>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>add-source</goal>
-                </goals>
-                <configuration>
-                  <sources>
-                    <source>${basedir}/src/main/java8</source>
-                  </sources>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
-
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <!-- override the parent config to use source and target
+             instead of release to use JDK internal API -->
+        <configuration combine.self="override">
+          <source>${javac.version}</source>
+          <target>${javac.version}</target>
+          <compilerArgs>
+            <arg>--add-modules</arg>
+            <arg>jdk.javadoc</arg>
+            <arg>--add-exports</arg>
+            <arg>jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>

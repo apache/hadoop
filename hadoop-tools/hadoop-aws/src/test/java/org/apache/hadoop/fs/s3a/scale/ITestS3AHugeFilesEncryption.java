@@ -27,6 +27,8 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.EncryptionTestUtils;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.test.tags.ScaleTest;
+
 import org.junit.jupiter.api.BeforeEach;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
@@ -43,6 +45,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
  * is set in the configuration. The testing bucket must be configured with this
  * same key else test might fail.
  */
+@ScaleTest
 public class ITestS3AHugeFilesEncryption extends AbstractSTestS3AHugeFiles {
 
   @BeforeEach

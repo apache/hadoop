@@ -20,7 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
@@ -39,6 +40,7 @@ public class ITestAbfsUnbuffer extends AbstractAbfsIntegrationTest {
   public ITestAbfsUnbuffer() throws Exception {
   }
 
+  @BeforeEach
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -53,17 +55,17 @@ public class ITestAbfsUnbuffer extends AbstractAbfsIntegrationTest {
   public void testUnbuffer() throws IOException {
     // Open file, read half the data, and then call unbuffer
     try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
-      assertTrue("unexpected stream type "
-              + inputStream.getWrappedStream().getClass().getSimpleName(),
-              inputStream.getWrappedStream() instanceof AbfsInputStream);
+      assertTrue(
+             inputStream.getWrappedStream() instanceof AbfsInputStream, "unexpected stream type "
+              + inputStream.getWrappedStream().getClass().getSimpleName());
       readAndAssertBytesRead(inputStream, 8);
-      assertFalse("AbfsInputStream buffer should not be null",
-              isBufferNull(inputStream));
+      assertFalse(
+             isBufferNull(inputStream), "AbfsInputStream buffer should not be null");
       inputStream.unbuffer();
 
       // Check the the underlying buffer is null
-      assertTrue("AbfsInputStream buffer should be null",
-              isBufferNull(inputStream));
+      assertTrue(
+             isBufferNull(inputStream), "AbfsInputStream buffer should be null");
     }
   }
 
@@ -78,7 +80,7 @@ public class ITestAbfsUnbuffer extends AbstractAbfsIntegrationTest {
    */
   private static void readAndAssertBytesRead(FSDataInputStream inputStream,
                                              int bytesToRead) throws IOException {
-    assertEquals("AbfsInputStream#read did not read the correct number of "
-            + "bytes", bytesToRead, inputStream.read(new byte[bytesToRead]));
+    assertEquals(bytesToRead, inputStream.read(new byte[bytesToRead]),
+        "AbfsInputStream#read did not read the correct number of "+ "bytes");
   }
 }

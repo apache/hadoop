@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.federation.store.sql;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.CallableStatement;
@@ -43,15 +44,15 @@ public class FederationQueryRunner {
   public final static String YARN_ROUTER_CURRENT_KEY_ID = "YARN_ROUTER_CURRENT_KEY_ID";
 
   public final static String QUERY_SEQUENCE_TABLE_SQL =
-      "SELECT nextVal FROM sequenceTable WHERE sequenceName = %s";
+      "SELECT nextVal FROM sequenceTable WHERE sequenceName = ?";
 
   public final static String INSERT_SEQUENCE_TABLE_SQL =
-      "INSERT INTO sequenceTable(sequenceName, nextVal) VALUES(%s, %d)";
+      "INSERT INTO sequenceTable(sequenceName, nextVal) VALUES(?, ?)";
 
   public final static String UPDATE_SEQUENCE_TABLE_SQL =
-      "UPDATE sequenceTable SET nextVal = %d WHERE sequenceName = %s";
+      "UPDATE sequenceTable SET nextVal = ? WHERE sequenceName = ?";
 
-  public final static String DELETE_QUEUE_SQL = "DELETE FROM policies WHERE queue = %s";
+  public final static String DELETE_QUEUE_SQL = "DELETE FROM policies WHERE queue = ?";
 
   public static final Logger LOG = LoggerFactory.getLogger(FederationQueryRunner.class);
 
@@ -215,38 +216,40 @@ public class FederationQueryRunner {
     int maxSequenceValue = 0;
     boolean insertDone = false;
     boolean committed = false;
-    Statement statement = null;
 
     try {
+      DbType dbType = DatabaseProduct.getDbType(connection);
+      // Build the FOR UPDATE variant of the SELECT template once (string op on the
+      // parameterized constant, before binding so the ? placeholder is preserved).
+      String forUpdateSQL = DatabaseProduct.addForUpdateClause(dbType, QUERY_SEQUENCE_TABLE_SQL);
 
       // Step1. Query SequenceValue.
       while (maxSequenceValue == 0) {
-        // Query SQL.
-        String sql = String.format(QUERY_SEQUENCE_TABLE_SQL, quoteString(sequenceName));
-        DbType dbType = DatabaseProduct.getDbType(connection);
-        String forUpdateSQL = DatabaseProduct.addForUpdateClause(dbType, sql);
-        statement = connection.createStatement();
-        ResultSet rs = statement.executeQuery(forUpdateSQL);
-        if (rs.next()) {
-          maxSequenceValue = rs.getInt("nextVal");
-        } else if (insertDone) {
-          throw new SQLException("Invalid state of SEQUENCE_TABLE for " + sequenceName);
-        } else {
-          insertDone = true;
-          close(statement);
-          statement = connection.createStatement();
-          String insertSQL = String.format(INSERT_SEQUENCE_TABLE_SQL, quoteString(sequenceName), 1);
-          try {
-            statement.executeUpdate(insertSQL);
-          } catch (SQLException e) {
-            // If the record is already inserted by some other thread continue to select.
-            if (isDuplicateKeyError(dbType, e)) {
-              continue;
+        try (PreparedStatement select = connection.prepareStatement(forUpdateSQL)) {
+          select.setString(1, sequenceName);
+          try (ResultSet rs = select.executeQuery()) {
+            if (rs.next()) {
+              maxSequenceValue = rs.getInt("nextVal");
+            } else if (insertDone) {
+              throw new SQLException("Invalid state of SEQUENCE_TABLE for " + sequenceName);
+            } else {
+              insertDone = true;
+              try (PreparedStatement insert =
+                       connection.prepareStatement(INSERT_SEQUENCE_TABLE_SQL)) {
+                insert.setString(1, sequenceName);
+                insert.setInt(2, 1);
+                try {
+                  insert.executeUpdate();
+                } catch (SQLException e) {
+                  // If the record is already inserted by some other thread continue to select.
+                  if (isDuplicateKeyError(dbType, e)) {
+                    continue;
+                  }
+                  LOG.error("Unable to insert into SEQUENCE_TABLE for {}.", sequenceName, e);
+                  throw e;
+                }
+              }
             }
-            LOG.error("Unable to insert into SEQUENCE_TABLE for {}.", sequenceName, e);
-            throw e;
-          } finally {
-            close(statement);
           }
         }
       }
@@ -254,36 +257,34 @@ public class FederationQueryRunner {
       // Step2. Increase SequenceValue.
       if (isUpdate) {
         int nextSequenceValue = maxSequenceValue + 1;
-        close(statement);
-        statement = connection.createStatement();
-        String updateSQL =
-            String.format(UPDATE_SEQUENCE_TABLE_SQL, nextSequenceValue, quoteString(sequenceName));
-        statement.executeUpdate(updateSQL);
-        maxSequenceValue = nextSequenceValue;
+        try (PreparedStatement update =
+                 connection.prepareStatement(UPDATE_SEQUENCE_TABLE_SQL)) {
+          update.setInt(1, nextSequenceValue);
+          update.setString(2, sequenceName);
+          update.executeUpdate();
+          maxSequenceValue = nextSequenceValue;
+        }
       }
 
       connection.commit();
       committed = true;
       return maxSequenceValue;
-    } catch(SQLException e){
+    } catch (SQLException e) {
       throw new SQLException("Unable to selectOrUpdateSequenceTable due to: " + e.getMessage(), e);
     } finally {
       if (!committed) {
         rollbackDBConn(connection);
       }
-      close(statement);
     }
   }
 
   public void updateSequenceTable(Connection connection, String sequenceName, int sequenceValue)
       throws SQLException {
-    String updateSQL =
-        String.format(UPDATE_SEQUENCE_TABLE_SQL, sequenceValue, quoteString(sequenceName));
     boolean committed = false;
-    Statement statement = null;
-    try {
-      statement = connection.createStatement();
-      statement.executeUpdate(updateSQL);
+    try (PreparedStatement statement = connection.prepareStatement(UPDATE_SEQUENCE_TABLE_SQL)) {
+      statement.setInt(1, sequenceValue);
+      statement.setString(2, sequenceName);
+      statement.executeUpdate();
       connection.commit();
       committed = true;
     } catch (SQLException e) {
@@ -292,18 +293,21 @@ public class FederationQueryRunner {
       if (!committed) {
         rollbackDBConn(connection);
       }
-      close(statement);
     }
   }
 
+  /**
+   * Drop a queue from the policy.
+   * @param connection DB connection
+   * @param queue queue name
+   * @throws SQLException failure
+   */
   public void deletePolicyByQueue(Connection connection, String queue)
       throws SQLException {
-    String deleteSQL = String.format(DELETE_QUEUE_SQL, quoteString(queue));
     boolean committed = false;
-    Statement statement = null;
-    try {
-      statement = connection.createStatement();
-      statement.executeUpdate(deleteSQL);
+    try (PreparedStatement statement = connection.prepareStatement(DELETE_QUEUE_SQL)) {
+      statement.setString(1, queue);
+      statement.executeUpdate();
       connection.commit();
       committed = true;
     } catch (SQLException e) {
@@ -312,7 +316,6 @@ public class FederationQueryRunner {
       if (!committed) {
         rollbackDBConn(connection);
       }
-      close(statement);
     }
   }
 
@@ -339,9 +342,9 @@ public class FederationQueryRunner {
 
   private String getTruncateStatement(DbType dbType, String tableName) {
     if (isMYSQL(dbType)) {
-      return ("DELETE FROM \"" + tableName + "\"");
+      return "DELETE FROM `" + tableName + "`";
     } else {
-      return("DELETE FROM " + tableName);
+      return "DELETE FROM " + tableName;
     }
   }
 
@@ -357,9 +360,5 @@ public class FederationQueryRunner {
     } catch (SQLException e) {
       LOG.warn("Failed to rollback db connection ", e);
     }
-  }
-
-  static String quoteString(String input) {
-    return "'" + input + "'";
   }
 }

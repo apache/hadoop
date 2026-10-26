@@ -73,6 +73,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.ECRedundancy.DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.ECRedundancy.DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED_DEFAILT;
+
 /**
  * This class supports writing files in striped layout and erasure coded format.
  * Each stripe contains a sequence of cells.
@@ -283,6 +286,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
   private CompletionService<Void> flushAllExecutorCompletionService;
   private int blockGroupIndex;
   private long datanodeRestartTimeout;
+  private final int failedBlocksTolerated;
 
   /** Construct a new output stream for creating a file. */
   DFSStripedOutputStream(DFSClient dfsClient, String src, HdfsFileStatus stat,
@@ -322,6 +326,15 @@ public class DFSStripedOutputStream extends DFSOutputStream
     currentPackets = new DFSPacket[streamers.size()];
     datanodeRestartTimeout = dfsClient.getConf().getDatanodeRestartTimeout();
     setCurrentStreamer(0);
+
+    int failedBlocksToleratedTmp = dfsClient.getConfiguration().getInt(
+        DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED,
+        DFS_CLIENT_EC_WRITE_FAILED_BLOCKS_TOLERATED_DEFAILT);
+    if (failedBlocksToleratedTmp < 0) {
+      failedBlocksToleratedTmp = ecPolicy.getNumParityUnits();
+    }
+    failedBlocksTolerated = Math.min(failedBlocksToleratedTmp,
+        ecPolicy.getNumParityUnits());
   }
 
   /** Construct a new output stream for appending to a file. */
@@ -402,11 +415,11 @@ public class DFSStripedOutputStream extends DFSOutputStream
       LOG.debug("original failed streamers: {}", failedStreamers);
       LOG.debug("newly failed streamers: {}", newFailed);
     }
-    if (failCount > (numAllBlocks - numDataBlocks)) {
+    if (failCount > failedBlocksTolerated) {
       closeAllStreamers();
       throw new IOException("Failed: the number of failed blocks = "
-          + failCount + " > the number of parity blocks = "
-          + (numAllBlocks - numDataBlocks));
+          + failCount + " > the number of failed blocks tolerated = "
+          + failedBlocksTolerated);
     }
     return newFailed;
   }
@@ -687,7 +700,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
       // 2) create new block outputstream
       newFailed = waitCreatingStreamers(healthySet);
       if (newFailed.size() + failedStreamers.size() >
-          numAllBlocks - numDataBlocks) {
+          failedBlocksTolerated) {
         // The write has failed, Close all the streamers.
         closeAllStreamers();
         throw new IOException(

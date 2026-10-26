@@ -17,15 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 
 import java.io.File;
 
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
@@ -48,13 +49,13 @@ public class TestCreateEditsLog {
 
   private MiniDFSCluster cluster;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     deleteIfExists(HDFS_DIR);
     deleteIfExists(TEST_DIR);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -68,7 +69,8 @@ public class TestCreateEditsLog {
    * Tests that an edits log created using CreateEditsLog is valid and can be
    * loaded successfully by a namenode.
    */
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testCanLoadCreatedEditsLog() throws Exception {
     // Format namenode.
     HdfsConfiguration conf = new HdfsConfiguration();

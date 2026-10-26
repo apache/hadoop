@@ -19,12 +19,14 @@
 package org.apache.hadoop.mapreduce.v2.app.webapp.dao;
 
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.yarn.util.Times;
 
 @XmlRootElement(name = "taskAttempt")
+@XmlType(name = "")
 public class ReduceTaskAttemptInfo extends TaskAttemptInfo {
 
   protected long shuffleFinishTime;

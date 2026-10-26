@@ -31,8 +31,9 @@ import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure.Policy;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Verify the behaviours of HdfsClientConfigKeys.BlockWrite.
@@ -46,6 +47,7 @@ import org.junit.Test;
  * MIN_REPLICATION is set to 0 or less than zero, an exception will be thrown
  * if a replacement could not be found.
  */
+@Tag("slow")
 public class TestReplaceDatanodeFailureReplication {
   static final Logger LOG = LoggerFactory
       .getLogger(TestReplaceDatanodeFailureReplication.class);
@@ -127,7 +129,7 @@ public class TestReplaceDatanodeFailureReplication {
       for (SlowWriter s : slowwriters) {
         try {
           s.out.getCurrentBlockReplication();
-          Assert.fail(
+          Assertions.fail(
               "Must throw exception as failed to add a new datanode for write "
                   + "pipeline, minimum failure replication");
         } catch (IOException e) {
@@ -198,7 +200,7 @@ public class TestReplaceDatanodeFailureReplication {
       cluster.waitFirstBRCompleted(0, 10000);
       // check replication and interrupt.
       for (SlowWriter s : slowwriters) {
-        Assert.assertEquals(failRF, s.out.getCurrentBlockReplication());
+        Assertions.assertEquals(failRF, s.out.getCurrentBlockReplication());
         s.interruptRunning();
       }
 
@@ -228,7 +230,7 @@ public class TestReplaceDatanodeFailureReplication {
         for (int j = 0, x;; j++) {
           x = in.read();
           if ((x) != -1) {
-            Assert.assertEquals(j, x);
+            Assertions.assertEquals(j, x);
           } else {
             return;
           }

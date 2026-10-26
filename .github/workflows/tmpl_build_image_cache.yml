@@ -1,0 +1,62 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: Build Image Cache
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        required: false
+        type: string
+        description: Operating system to create build image cache for.
+        default: ubuntu_24
+
+# Default to minimal permissions for workflow.
+permissions:
+  packages: read
+
+jobs:
+  main:
+    name: build-image-cache-${{ inputs.os }}-${{ github.ref_name }}
+    if: github.repository == 'apache/hadoop'
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+    steps:
+      - name: Checkout Hadoop repository
+        uses: actions/checkout@v6
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      - name: Login to DockerHub
+        uses: docker/login-action@06fb636fac595d6fb4b28a5dfcb21a6f5091859c # v4.5.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build image cache for ${{ inputs.os }}-${{ github.ref_name }}
+        id: docker_build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: ./dev-support/docker/
+          file: ./dev-support/docker/Dockerfile_${{ inputs.os }}
+          push: true
+          tags: ghcr.io/apache/hadoop/gha-build-${{ inputs.os }}-image-cache:${{ github.ref_name }}-static
+          cache-from: type=registry,ref=ghcr.io/apache/hadoop/gha-build-${{ inputs.os }}-image-cache:${{ github.ref_name }}
+          cache-to: type=registry,ref=ghcr.io/apache/hadoop/gha-build-${{ inputs.os }}-image-cache:${{ github.ref_name }},mode=max
+      - name: Image digest for ${{ inputs.os }}-${{ github.ref_name }}
+        run: echo ${{ steps.docker_build.outputs.digest }}

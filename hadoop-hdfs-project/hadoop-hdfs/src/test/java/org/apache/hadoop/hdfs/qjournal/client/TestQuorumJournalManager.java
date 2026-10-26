@@ -24,11 +24,11 @@ import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeSegment;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeTxns;
 import static org.apache.hadoop.hdfs.qjournal.client.SpyQJournalUtil.spyGetJournaledEdits;
 import static org.apache.hadoop.hdfs.qjournal.client.TestQuorumJournalManagerUnit.futureThrows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.eq;
 import java.io.Closeable;
 import java.io.File;
@@ -46,9 +46,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.net.MockDomainNameResolver;
+import org.apache.hadoop.test.TestName;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 import org.apache.hadoop.util.Lists;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,11 +71,10 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
 
@@ -98,10 +99,11 @@ public class TestQuorumJournalManager {
     GenericTestUtils.setLogLevel(ProtobufRpcEngine2.LOG, Level.TRACE);
   }
 
-  @Rule
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  @RegisterExtension
   public TestName name = new TestName();
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new Configuration();
     if (!name.getMethodName().equals("testSelectThreadCounts")) {
@@ -127,7 +129,7 @@ public class TestQuorumJournalManager {
     assertEquals(1, qjm.getLoggerSetForTests().getEpoch());
   }
 
-  @After
+  @AfterEach
   public void shutdown() throws IOException, InterruptedException,
       TimeoutException {
     IOUtils.cleanupWithLogger(LOG, toClose.toArray(new Closeable[0]));
@@ -808,7 +810,8 @@ public class TestQuorumJournalManager {
     }
   }
   
-  @Test(timeout=20000)
+  @Test
+  @Timeout(value = 20)
   public void testCrashBetweenSyncLogAndPersistPaxosData() throws Exception {
     JournalFaultInjector faultInjector =
         JournalFaultInjector.instance = Mockito.mock(JournalFaultInjector.class);
@@ -1073,8 +1076,8 @@ public class TestQuorumJournalManager {
         .filter((t) -> t.getName().contains(expectedName)).count();
     // The number of threads for the stopped jn shouldn't be more than the
     // configured value.
-    assertTrue("Number of threads are : " + num,
-        num <= DFSConfigKeys.DFS_QJOURNAL_PARALLEL_READ_NUM_THREADS_DEFAULT);
+    assertTrue(num <= DFSConfigKeys.DFS_QJOURNAL_PARALLEL_READ_NUM_THREADS_DEFAULT,
+        "Number of threads are : " + num);
   }
 
   @Test

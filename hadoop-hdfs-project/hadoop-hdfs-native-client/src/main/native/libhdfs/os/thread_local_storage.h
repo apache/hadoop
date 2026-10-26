@@ -28,6 +28,8 @@
 
 #include <jni.h>
 
+#include <stdbool.h>
+
 /*
  * Most operating systems support the more efficient __thread construct, which
  * is initialized by the linker.  The following macros use this technique on the
@@ -52,11 +54,13 @@
 #endif
 
 struct ThreadLocalState {
+  /* Whether libhdfs attached this thread to the JVM. */
+  bool attachedByLibhdfs;
   /* The JNIEnv associated with the current thread */
   JNIEnv *env;
-  /* The last exception stack trace that occured on this thread */
+  /* The last exception stack trace that occurred on this thread */
   char *lastExceptionStackTrace;
-  /* The last exception root cause that occured on this thread */
+  /* The last exception root cause that occurred on this thread */
   char *lastExceptionRootCause;
 };
 

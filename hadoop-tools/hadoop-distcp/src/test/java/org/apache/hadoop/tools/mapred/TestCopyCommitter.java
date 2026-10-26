@@ -48,7 +48,11 @@ import org.apache.hadoop.tools.GlobbedCopyListing;
 import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
 import org.apache.hadoop.security.Credentials;
-import org.junit.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.*;
@@ -82,7 +86,7 @@ public class TestCopyCommitter {
     return job;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void create() throws IOException {
     clusterConfig = getJobForClient().getConfiguration();
     clusterConfig.setLong(
@@ -97,14 +101,14 @@ public class TestCopyCommitter {
         .build();
   }
 
-  @AfterClass
+  @AfterAll
   public static void destroy() {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Before
+  @BeforeEach
   public void createMetaFolder() throws IOException {
     config = new Configuration(clusterConfig);
     config.set(DistCpConstants.CONF_LABEL_META_FOLDER, "/meta");
@@ -112,12 +116,12 @@ public class TestCopyCommitter {
     cluster.getFileSystem().mkdirs(meta);
   }
 
-  @After
+  @AfterEach
   public void cleanupMetaFolder() throws IOException {
     Path meta = new Path("/meta");
     if (cluster.getFileSystem().exists(meta)) {
       cluster.getFileSystem().delete(meta, true);
-      Assert.fail("Expected meta folder to be deleted");
+      fail("Expected meta folder to be deleted");
     }
   }
 
@@ -129,11 +133,11 @@ public class TestCopyCommitter {
         taskAttemptContext.getTaskAttemptID().getJobID());
     OutputCommitter committer = new CopyCommitter(null, taskAttemptContext);
     committer.commitJob(jobContext);
-    Assert.assertEquals("Commit Successful", taskAttemptContext.getStatus());
+    assertEquals("Commit Successful", taskAttemptContext.getStatus());
 
     //Test for idempotent commit
     committer.commitJob(jobContext);
-    Assert.assertEquals("Commit Successful", taskAttemptContext.getStatus());
+    assertEquals("Commit Successful", taskAttemptContext.getStatus());
   }
 
   @Test
@@ -412,12 +416,12 @@ public class TestCopyCommitter {
 
       committer.commitJob(jobContext);
       verifyFoldersAreInSync(fs, targetBase, sourceBase);
-      Assert.assertEquals(4, fs.listStatus(new Path(targetBase)).length);
+      assertEquals(4, fs.listStatus(new Path(targetBase)).length);
 
       //Test for idempotent commit
       committer.commitJob(jobContext);
       verifyFoldersAreInSync(fs, targetBase, sourceBase);
-      Assert.assertEquals(4, fs.listStatus(new Path(targetBase)).length);
+      assertEquals(4, fs.listStatus(new Path(targetBase)).length);
     } finally {
       TestDistCpUtils.delete(fs, "/tmp1");
       conf.set(DistCpConstants.CONF_LABEL_DELETE_MISSING, "false");
@@ -486,7 +490,7 @@ public class TestCopyCommitter {
       assertPathExists(fs, "Final path", new Path(finalPath));
       try {
         committer.commitJob(jobContext);
-        Assert.fail("Should not be able to atomic-commit to pre-existing path.");
+        fail("Should not be able to atomic-commit to pre-existing path.");
       } catch(Exception exception) {
         assertPathExists(fs, "Work path", new Path(workPath));
         assertPathExists(fs, "Final path", new Path(finalPath));
@@ -558,17 +562,17 @@ public class TestCopyCommitter {
       try {
         committer.commitJob(jobContext);
         if (!skipCrc) {
-          Assert.fail("Expected commit to fail");
+          fail("Expected commit to fail");
         }
         Path sourcePath = new Path(sourceBase + srcFilename);
         CopyListingFileStatus sourceCurrStatus =
-                new CopyListingFileStatus(fs.getFileStatus(sourcePath));
-        Assert.assertEquals("Checksum should not be equal",
-            CopyMapper.ChecksumComparison.FALSE,
+            new CopyListingFileStatus(fs.getFileStatus(sourcePath));
+        assertEquals(CopyMapper.ChecksumComparison.FALSE,
             DistCpUtils.checksumsAreEqual(
                 fs, new Path(sourceBase + srcFilename), null,
                 fs, new Path(targetBase + srcFilename),
-                sourceCurrStatus.getLen()));
+                sourceCurrStatus.getLen()),
+            "Checksum should not be equal");
       } catch(IOException exception) {
         if (skipCrc) {
           LOG.error("Unexpected exception is found", exception);
@@ -619,10 +623,9 @@ public class TestCopyCommitter {
       new CopyCommitter(null, taskContext).commitJob(jobContext);
 
       FileStatus result = fs.getFileStatus(new Path(targetBase + filename));
-      Assert.assertEquals("mtime after concat", mtime,
-          result.getModificationTime());
-      Assert.assertEquals("Zero is a valid atime, not the -1 sentinel", 0,
-          result.getAccessTime());
+      assertEquals(mtime, result.getModificationTime(), "mtime after concat");
+      assertEquals(0, result.getAccessTime(),
+          "Zero is a valid atime, not the -1 sentinel");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp1");
       TestDistCpUtils.delete(fs, "/meta");
@@ -774,7 +777,7 @@ public class TestCopyCommitter {
       for (FileStatus status : fStatus) {
         if (status.isDirectory()) {
           stack.push(status.getPath());
-          Assert.assertEquals(sourcePerm, status.getPermission());
+          assertEquals(sourcePerm, status.getPermission());
         }
       }
     }
@@ -791,10 +794,10 @@ public class TestCopyCommitter {
       while (sourceReader.next(srcRelPath, srcFileStatus)) {
         Path targetFile = new Path(targetRoot.toString() + "/" + srcRelPath);
         FileStatus targetStatus = fs.getFileStatus(targetFile);
-        Assert.assertEquals(srcFileStatus.getModificationTime(),
-                targetStatus.getModificationTime());
-        Assert.assertEquals(srcFileStatus.getAccessTime(),
-                targetStatus.getAccessTime());
+        assertEquals(srcFileStatus.getModificationTime(),
+            targetStatus.getModificationTime());
+        assertEquals(srcFileStatus.getAccessTime(),
+            targetStatus.getAccessTime());
       }
     } finally {
       IOUtils.closeStream(sourceReader);

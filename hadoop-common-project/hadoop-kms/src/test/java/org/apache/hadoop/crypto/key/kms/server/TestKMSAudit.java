@@ -118,7 +118,10 @@ public class TestKMSAudit {
     kmsAudit.evictCacheForTesting();
     String out = getAndResetLogOutput();
     System.out.println(out);
-    boolean doesMatch = out.matches(
+    String cleanedOut =
+        out.replaceAll("fs\\.default\\.name in core-default\\.xml is deprecated\\. " +
+        "Instead, use fs\\.defaultFS", "");
+    boolean doesMatch = cleanedOut.matches(
         "OK\\[op=DECRYPT_EEK, key=k1, user=luser@REALM, accessCount=1, "
             + "interval=[^m]{1,4}ms\\] testmsg"
             // Not aggregated !!
@@ -156,11 +159,14 @@ public class TestKMSAudit {
     kmsAudit.evictCacheForTesting();
     String out = getAndResetLogOutput();
     System.out.println(out);
+    String cleanedOut =
+        out.replaceAll("fs\\.default\\.name in core-default\\.xml is deprecated\\. " +
+        "Instead, use fs\\.defaultFS", "");
 
     // The UNAUTHORIZED will trigger cache invalidation, which then triggers
     // the aggregated OK (accessCount=5). But the order of the UNAUTHORIZED and
     // the aggregated OK is arbitrary - no correctness concerns, but flaky here.
-    boolean doesMatch = out.matches(
+    boolean doesMatch = cleanedOut.matches(
         "UNAUTHORIZED\\[op=GENERATE_EEK, key=k2, user=luser@REALM\\] "
             + "OK\\[op=GENERATE_EEK, key=k3, user=luser@REALM, accessCount=1,"
             + " interval=[^m]{1,4}ms\\] testmsg"
@@ -169,7 +175,7 @@ public class TestKMSAudit {
             + "UNAUTHORIZED\\[op=GENERATE_EEK, key=k3, user=luser@REALM\\] "
             + "OK\\[op=GENERATE_EEK, key=k3, user=luser@REALM, accessCount=1,"
             + " interval=[^m]{1,4}ms\\] testmsg");
-    doesMatch = doesMatch || out.matches(
+    doesMatch = doesMatch || cleanedOut.matches(
         "UNAUTHORIZED\\[op=GENERATE_EEK, key=k2, user=luser@REALM\\] "
             + "OK\\[op=GENERATE_EEK, key=k3, user=luser@REALM, accessCount=1,"
             + " interval=[^m]{1,4}ms\\] testmsg"

@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EQUAL;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.THOUSAND;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.DOUBLE_PRECISION_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.constants.MetricsConstants.RETRY;
@@ -75,18 +74,24 @@ import static org.apache.hadoop.util.StringUtils.formatPercent;
  * retry operations in Azure Blob File System (ABFS).
  */
 public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
-  private static final Logger LOG = LoggerFactory.getLogger(AbfsBackoffMetrics.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      AbfsBackoffMetrics.class);
+
   private static final List<RetryValue> RETRY_LIST = Arrays.asList(
-          RetryValue.values());
+      RetryValue.values());
+
+  private final boolean isRetryMetricEnabled;
 
   /**
    * Constructor to initialize the IOStatisticsStore with counters and gauges.
    */
-  public AbfsBackoffMetrics() {
+  public AbfsBackoffMetrics(final boolean isRetryMetricEnabled) {
+    this.isRetryMetricEnabled = isRetryMetricEnabled;
     IOStatisticsStore ioStatisticsStore = iostatisticsStore()
-            .withCounters(getMetricNames(TYPE_COUNTER))
-            .withGauges(getMetricNames(TYPE_GAUGE))
-            .build();
+        .withCounters(getMetricNames(TYPE_COUNTER))
+        .withGauges(getMetricNames(TYPE_GAUGE))
+        .build();
     setIOStatistics(ioStatisticsStore);
   }
 
@@ -98,15 +103,15 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
    */
   private String[] getMetricNames(StatisticTypeEnum type) {
     return Arrays.stream(AbfsBackoffMetricsEnum.values())
-            .filter(backoffMetricsEnum -> backoffMetricsEnum
-                    .getStatisticType()
-                    .equals(type))
-            .flatMap(backoffMetricsEnum ->
-                    RETRY.equals(backoffMetricsEnum.getType())
-                            ? RETRY_LIST.stream().map(retryCount ->
-                            getMetricName(backoffMetricsEnum, retryCount))
-                            : Stream.of(backoffMetricsEnum.getName())
-            ).toArray(String[]::new);
+        .filter(backoffMetricsEnum -> backoffMetricsEnum
+            .getStatisticType()
+            .equals(type))
+        .flatMap(backoffMetricsEnum ->
+            RETRY.equals(backoffMetricsEnum.getType())
+                ? RETRY_LIST.stream().map(retryCount ->
+                getMetricName(backoffMetricsEnum, retryCount))
+                : Stream.of(backoffMetricsEnum.getName())
+        ).toArray(String[]::new);
   }
 
   /**
@@ -116,7 +121,8 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
    * @param retryValue the retry value
    * @return the constructed metric name
    */
-  private String getMetricName(AbfsBackoffMetricsEnum metric, RetryValue retryValue) {
+  private String getMetricName(AbfsBackoffMetricsEnum metric,
+      RetryValue retryValue) {
     if (metric == null) {
       LOG.error("ABFS Backoff Metric should not be null");
       return EMPTY_STRING;
@@ -134,15 +140,16 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
    * @param retryValue the retry value
    * @return the value of the metric
    */
-  public long getMetricValue(AbfsBackoffMetricsEnum metric, RetryValue retryValue) {
+  public long getMetricValue(AbfsBackoffMetricsEnum metric,
+      RetryValue retryValue) {
     String metricName = getMetricName(metric, retryValue);
     switch (metric.getStatisticType()) {
-      case TYPE_COUNTER:
-        return lookupCounterValue(metricName);
-      case TYPE_GAUGE:
-        return lookupGaugeValue(metricName);
-      default:
-        return 0;
+    case TYPE_COUNTER:
+      return lookupCounterValue(metricName);
+    case TYPE_GAUGE:
+      return lookupGaugeValue(metricName);
+    default:
+      return 0;
     }
   }
 
@@ -162,18 +169,19 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
    * @param metric the metric enum
    * @param retryValue the retry value
    */
-  public void incrementMetricValue(AbfsBackoffMetricsEnum metric, RetryValue retryValue) {
+  public void incrementMetricValue(AbfsBackoffMetricsEnum metric,
+      RetryValue retryValue) {
     String metricName = getMetricName(metric, retryValue);
     switch (metric.getStatisticType()) {
-      case TYPE_COUNTER:
-        incCounterValue(metricName);
-        break;
-      case TYPE_GAUGE:
-        incGaugeValue(metricName);
-        break;
-      default:
-        // Do nothing
-        break;
+    case TYPE_COUNTER:
+      incCounterValue(metricName);
+      break;
+    case TYPE_GAUGE:
+      incGaugeValue(metricName);
+      break;
+    default:
+      // Do nothing
+      break;
     }
   }
 
@@ -193,18 +201,20 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
    * @param value the new value of the metric
    * @param retryValue the retry value
    */
-  public void setMetricValue(AbfsBackoffMetricsEnum metric, long value, RetryValue retryValue) {
+  public void setMetricValue(AbfsBackoffMetricsEnum metric,
+      long value,
+      RetryValue retryValue) {
     String metricName = getMetricName(metric, retryValue);
     switch (metric.getStatisticType()) {
-      case TYPE_COUNTER:
-        setCounterValue(metricName, value);
-        break;
-      case TYPE_GAUGE:
-        setGaugeValue(metricName, value);
-        break;
-      default:
-        // Do nothing
-        break;
+    case TYPE_COUNTER:
+      setCounterValue(metricName, value);
+      break;
+    case TYPE_GAUGE:
+      setGaugeValue(metricName, value);
+      break;
+    default:
+      // Do nothing
+      break;
     }
   }
 
@@ -227,9 +237,10 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
    * @return String metrics value with precision
    */
   private String getPrecisionMetrics(AbfsBackoffMetricsEnum metricName,
-                                     RetryValue retryCount,
-                                     long denominator) {
-    return format(DOUBLE_PRECISION_FORMAT, (double) getMetricValue(metricName, retryCount) / denominator);
+      RetryValue retryCount,
+      long denominator) {
+    return format(DOUBLE_PRECISION_FORMAT,
+        (double) getMetricValue(metricName, retryCount) / denominator);
   }
 
   /**
@@ -240,25 +251,24 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
   private void getRetryMetrics(StringBuilder metricBuilder) {
     for (RetryValue retryCount : RETRY_LIST) {
       long totalRequests = getMetricValue(TOTAL_REQUESTS, retryCount);
-      metricBuilder.append(REQUEST_COUNT)
-              .append(retryCount.getValue())
-              .append(REQUESTS)
-              .append(getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, retryCount));
+      if (getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, retryCount) > 0) {
+        metricBuilder.append(REQUEST_COUNT)
+            .append(retryCount.getValue())
+            .append(REQUESTS)
+            .append(getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED, retryCount));
+      }
 
       if (totalRequests > 0) {
         metricBuilder.append(MIN_MAX_AVERAGE)
-                .append(retryCount.getValue())
-                .append(REQUESTS)
-                .append(getPrecisionMetrics(MIN_BACK_OFF, retryCount, THOUSAND))
-                .append(SECONDS)
-                .append(getPrecisionMetrics(MAX_BACK_OFF, retryCount, THOUSAND))
-                .append(SECONDS)
-                .append(getPrecisionMetrics(TOTAL_BACK_OFF, retryCount, totalRequests * THOUSAND))
-                .append(SECONDS);
-      } else {
-        metricBuilder.append(MIN_MAX_AVERAGE)
-                .append(retryCount.getValue())
-                .append(REQUESTS + EQUAL + 0 + SECONDS);
+            .append(retryCount.getValue())
+            .append(REQUESTS)
+            .append(getPrecisionMetrics(MIN_BACK_OFF, retryCount, THOUSAND))
+            .append(SECONDS)
+            .append(getPrecisionMetrics(MAX_BACK_OFF, retryCount, THOUSAND))
+            .append(SECONDS)
+            .append(getPrecisionMetrics(TOTAL_BACK_OFF, retryCount,
+                totalRequests * THOUSAND))
+            .append(SECONDS);
       }
     }
   }
@@ -269,29 +279,42 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
    * @param metricBuilder the string builder to append the metrics
    */
   private void getBaseMetrics(StringBuilder metricBuilder) {
-    long totalRequestsThrottled = getMetricValue(NUMBER_OF_NETWORK_FAILED_REQUESTS)
+    long totalRequestsThrottled =
+        getMetricValue(NUMBER_OF_NETWORK_FAILED_REQUESTS)
             + getMetricValue(NUMBER_OF_IOPS_THROTTLED_REQUESTS)
             + getMetricValue(NUMBER_OF_OTHER_THROTTLED_REQUESTS)
             + getMetricValue(NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS);
 
-    metricBuilder.append(BANDWIDTH_THROTTLED_REQUESTS)
-            .append(getMetricValue(NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS))
-            .append(IOPS_THROTTLED_REQUESTS)
-            .append(getMetricValue(NUMBER_OF_IOPS_THROTTLED_REQUESTS))
-            .append(OTHER_THROTTLED_REQUESTS)
-            .append(getMetricValue(NUMBER_OF_OTHER_THROTTLED_REQUESTS))
-            .append(PERCENTAGE_THROTTLED_REQUESTS)
-            .append(formatPercent(totalRequestsThrottled/ (double) getMetricValue(TOTAL_NUMBER_OF_REQUESTS), 3))
-            .append(NETWORK_ERROR_REQUESTS)
-            .append(getMetricValue(NUMBER_OF_NETWORK_FAILED_REQUESTS))
-            .append(SUCCESS_REQUESTS_WITHOUT_RETRY)
-            .append(getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED_WITHOUT_RETRYING))
-            .append(FAILED_REQUESTS)
-            .append(getMetricValue(NUMBER_OF_REQUESTS_FAILED))
-            .append(TOTAL_REQUESTS_COUNT)
-            .append(getMetricValue(TOTAL_NUMBER_OF_REQUESTS))
-            .append(MAX_RETRY)
-            .append(getMetricValue(MAX_RETRY_COUNT));
+    appendIfPositive(metricBuilder, BANDWIDTH_THROTTLED_REQUESTS,
+        getMetricValue(NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS));
+
+    appendIfPositive(metricBuilder, IOPS_THROTTLED_REQUESTS,
+        getMetricValue(NUMBER_OF_IOPS_THROTTLED_REQUESTS));
+
+    appendIfPositive(metricBuilder, OTHER_THROTTLED_REQUESTS,
+        getMetricValue(NUMBER_OF_OTHER_THROTTLED_REQUESTS));
+
+    // For percentage, we always want it (even if 0%)
+    if (totalRequestsThrottled > 0) {
+      appendAlways(metricBuilder, PERCENTAGE_THROTTLED_REQUESTS,
+          formatPercent(totalRequestsThrottled / (double) getMetricValue(
+              TOTAL_NUMBER_OF_REQUESTS), 3));
+    }
+
+    appendIfPositive(metricBuilder, NETWORK_ERROR_REQUESTS,
+        getMetricValue(NUMBER_OF_NETWORK_FAILED_REQUESTS));
+
+    appendIfPositive(metricBuilder, SUCCESS_REQUESTS_WITHOUT_RETRY,
+        getMetricValue(NUMBER_OF_REQUESTS_SUCCEEDED_WITHOUT_RETRYING));
+
+    appendIfPositive(metricBuilder, FAILED_REQUESTS,
+        getMetricValue(NUMBER_OF_REQUESTS_FAILED));
+
+    appendIfPositive(metricBuilder, TOTAL_REQUESTS_COUNT,
+        getMetricValue(TOTAL_NUMBER_OF_REQUESTS));
+
+    appendIfPositive(metricBuilder, MAX_RETRY,
+        getMetricValue(MAX_RETRY_COUNT));
   }
 
   /**
@@ -305,7 +328,9 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
       return EMPTY_STRING;
     }
     StringBuilder metricBuilder = new StringBuilder();
-    getRetryMetrics(metricBuilder);
+    if (isRetryMetricEnabled) {
+      getRetryMetrics(metricBuilder);
+    }
     getBaseMetrics(metricBuilder);
     return metricBuilder.toString();
   }

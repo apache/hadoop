@@ -1161,21 +1161,85 @@
   applies selected actions to them\. If no &lt;path&gt; is specified
   then defaults to the current working directory\. If no
   expression is specified then defaults to -print\.
-  
+\s*
   The following primary expressions are recognised:
+    -atime n
+    -amin n
+      Evaluates as true if the file access time subtracted from
+      the start time is n days \(or minutes if -amin is used\)\.
+\s*
+    -blocksize n
+      Evaluates to true if the block size of the file is n\.
+\s*
+    -empty
+      Evaluates as true if the file is empty or directory has no
+      contents\.
+\s*
+    -group groupname
+      Evaluates as true if the file belongs to the specified
+      group\.
+\s*
+    -mtime n
+    -mmin n
+      Evaluates as true if the file modification time subtracted
+      from the start time is n days \(or minutes if -mmin is used\)
+\s*
     -name pattern
     -iname pattern
       Evaluates as true if the basename of the file matches the
       pattern using standard file system globbing\.
       If -iname is used then the match is case insensitive\.
-  
+\s*
+    -newer file
+      Evaluates as true if the modification time of the current
+      file is more recent than the modification time of the
+      specified file\.
+\s*
+    -nogroup
+      Evaluates as true if the file does not have a valid group\.
+\s*
+    -nouser
+      Evaluates as true if the file does not have a valid owner\.
+\s*
+    -perm \[-\]mode
+    -perm \[-\]onum
+      Evaluates as true if the file permissions match that
+      specified\. If the hyphen is specified then the expression
+      shall evaluate as true if at least the bits specified
+      match, otherwise an exact match is required\.
+      The mode may be specified using either symbolic notation,
+      eg 'u=rwx,g\+x\+w' or as an octal number\.
+\s*
     -print
     -print0
       Always evaluates to true. Causes the current pathname to be
       written to standard output followed by a newline. If the -print0
       expression is used then an ASCII NULL character is appended rather
       than a newline.
-  
+\s*
+    -regex pattern
+    -iregex pattern
+      Evaluates as true if the whole file path matches the
+      regular expression pattern\. If -iregex is used then
+      the match is case insensitive\.
+\s*
+    -replicas n
+      Evaluates to true if the number of file replicas is n\.
+\s*
+    -size n\[c\]
+      Evaluates to true if the file size in 512 byte blocks is n\.
+      If n is followed by the character 'c' then the size is in
+      bytes\.
+\s*
+    -type filetype
+      Evaluates to true if the file type matches that specified.
+      The following file type values are supported:
+      'd' \(directory\), 'l' \(symbolic link\), 'f' \(regular file\)\.
+\s*
+    -user username
+      Evaluates as true if the owner of the file matches the
+      specified user\.
+\s*
   The following operators are recognised:
     expression -a expression
     expression -and expression

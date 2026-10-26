@@ -397,7 +397,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               nodeLabels, physicalResource, nodeAttributes, nodeStatus);
 
       if (containerReports != null && !containerReports.isEmpty()) {
-        LOG.info("Registering with RM using containers.size : {}." + containerReports.size());
+        LOG.info("Registering with RM using containers.size : {}.", containerReports.size());
       }
       if (logAggregationEnabled) {
         // pull log aggregation status for application running in this NM

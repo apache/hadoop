@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.fs.azurebfs.utils;
 
 public enum MetricFormat {
@@ -24,13 +25,11 @@ public enum MetricFormat {
   INTERNAL_FOOTER_METRIC_FORMAT,  // <client-correlation-id>:<client-req-id>:<filesystem-id>
   // :<footer-metric-results>
 
-  INTERNAL_METRIC_FORMAT, // <client-correlation-id>:<client-req-id>:<filesystem-id>
+  INTERNAL_METRIC_FORMAT; // <client-correlation-id>:<client-req-id>:<filesystem-id>
   // :<backoff-metric-results>:<footer-metric-results>
-
-  EMPTY;
 
   @Override
   public String toString() {
-    return this == EMPTY ? "" : this.name();
+    return this.name();
   }
 }

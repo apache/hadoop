@@ -23,7 +23,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.compress.zstd.ZStandardCompressor;
 import org.apache.hadoop.io.compress.zstd.ZStandardDecompressor;
-import org.apache.hadoop.util.NativeCodeLoader;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -59,36 +58,36 @@ public class ZStandardCodec implements
     return conf;
   }
 
-  public static void checkNativeCodeLoaded() {
-    if (!NativeCodeLoader.isNativeCodeLoaded() ||
-        !NativeCodeLoader.buildSupportsZstd()) {
-      throw new RuntimeException("native zStandard library "
-          + "not available: this version of libhadoop was built "
-          + "without zstd support.");
-    }
-    if (!ZStandardCompressor.isNativeCodeLoaded()) {
-      throw new RuntimeException("native zStandard library not "
-          + "available: ZStandardCompressor has not been loaded.");
-    }
-    if (!ZStandardDecompressor.isNativeCodeLoaded()) {
-      throw new RuntimeException("native zStandard library not "
-          + "available: ZStandardDecompressor has not been loaded.");
-    }
-  }
-
-  public static boolean isNativeCodeLoaded() {
-    return ZStandardCompressor.isNativeCodeLoaded()
-        && ZStandardDecompressor.isNativeCodeLoaded();
-  }
-
   public static String getLibraryName() {
-    return ZStandardCompressor.getLibraryName();
+    return "zstd-jni";
   }
 
   public static int getCompressionLevel(Configuration conf) {
     return conf.getInt(
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_LEVEL_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_LEVEL_DEFAULT);
+  }
+
+  /**
+   * Returns the number of compression worker threads to be used by the
+   * ZStandard compressor. A value of 0 (the default) disables worker
+   * threads, matching the upstream zstd default. Negative values are
+   * rejected.
+   *
+   * @param conf the configuration to read from
+   * @return the configured number of zstd compression worker threads
+   * @throws IllegalArgumentException if the configured value is negative
+   */
+  public static int getCompressionWorkers(Configuration conf) {
+    int workers = conf.getInt(
+        CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_WORKERS_KEY,
+        CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_WORKERS_DEFAULT);
+    if (workers < 0) {
+      throw new IllegalArgumentException(
+          CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_WORKERS_KEY
+              + " must be >= 0, got " + workers);
+    }
+    return workers;
   }
 
   public static int getCompressionBufferSize(Configuration conf) {
@@ -121,8 +120,7 @@ public class ZStandardCodec implements
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out)
       throws IOException {
-    return Util.
-        createOutputStreamWithCodecPool(this, conf, out);
+    return Util.createOutputStreamWithCodecPool(this, conf, out);
   }
 
   /**
@@ -138,9 +136,7 @@ public class ZStandardCodec implements
   public CompressionOutputStream createOutputStream(OutputStream out,
       Compressor compressor)
       throws IOException {
-    checkNativeCodeLoaded();
-    return new CompressorStream(out, compressor,
-        getCompressionBufferSize(conf));
+    return new CompressorStream(out, compressor, getCompressionBufferSize(conf));
   }
 
   /**
@@ -150,7 +146,6 @@ public class ZStandardCodec implements
    */
   @Override
   public Class<? extends Compressor> getCompressorType() {
-    checkNativeCodeLoaded();
     return ZStandardCompressor.class;
   }
 
@@ -161,9 +156,10 @@ public class ZStandardCodec implements
    */
   @Override
   public Compressor createCompressor() {
-    checkNativeCodeLoaded();
     return new ZStandardCompressor(
-        getCompressionLevel(conf), getCompressionBufferSize(conf));
+        getCompressionLevel(conf),
+        getCompressionWorkers(conf),
+        getCompressionBufferSize(conf));
   }
 
 
@@ -178,8 +174,7 @@ public class ZStandardCodec implements
   @Override
   public CompressionInputStream createInputStream(InputStream in)
       throws IOException {
-    return Util.
-        createInputStreamWithCodecPool(this, conf, in);
+    return Util.createInputStreamWithCodecPool(this, conf, in);
   }
 
   /**
@@ -195,7 +190,6 @@ public class ZStandardCodec implements
   public CompressionInputStream createInputStream(InputStream in,
                                                   Decompressor decompressor)
       throws IOException {
-    checkNativeCodeLoaded();
     return new DecompressorStream(in, decompressor,
         getDecompressionBufferSize(conf));
   }
@@ -208,7 +202,6 @@ public class ZStandardCodec implements
    */
   @Override
   public Class<? extends Decompressor> getDecompressorType() {
-    checkNativeCodeLoaded();
     return ZStandardDecompressor.class;
   }
 
@@ -219,7 +212,6 @@ public class ZStandardCodec implements
    */
   @Override
   public Decompressor createDecompressor() {
-    checkNativeCodeLoaded();
     return new ZStandardDecompressor(getDecompressionBufferSize(conf));
   }
 

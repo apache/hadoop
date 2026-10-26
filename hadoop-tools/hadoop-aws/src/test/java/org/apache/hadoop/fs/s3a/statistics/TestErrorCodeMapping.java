@@ -23,7 +23,9 @@ import java.util.Collection;
 
 import org.apache.hadoop.fs.s3a.statistics.impl.StatisticsFromAwsSdkImpl;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
-import org.junit.jupiter.params.ParameterizedTest;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_400_BAD_REQUEST;
@@ -42,6 +44,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Test mapping logic of {@link StatisticsFromAwsSdkImpl}.
  */
+@ParameterizedClass(name = "http {0} to {1}")
+@MethodSource("params")
 public class TestErrorCodeMapping extends AbstractHadoopTestBase {
 
   /**
@@ -61,19 +65,17 @@ public class TestErrorCodeMapping extends AbstractHadoopTestBase {
     });
   }
 
-  private int code;
+  private final int code;
 
-  private String name;
+  private final String name;
 
-  public void initTestErrorCodeMapping(final int pCode, final String pName) {
-    this.code = pCode;
-    this.name = pName;
+  public TestErrorCodeMapping(final int code, final String name) {
+    this.code = code;
+    this.name = name;
   }
 
-  @ParameterizedTest(name = "http {0} to {1}")
-  @MethodSource("params")
-  public void testMapping(int pCode, String pName) throws Throwable {
-    initTestErrorCodeMapping(pCode, pName);
+  @Test
+  public void testMapping() {
     assertThat(mapErrorStatusCodeToStatisticName(code))
         .describedAs("Mapping of status code %d", code)
         .isEqualTo(name);

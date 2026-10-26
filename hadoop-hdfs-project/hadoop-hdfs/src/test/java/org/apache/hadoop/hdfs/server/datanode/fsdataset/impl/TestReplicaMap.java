@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit test for ReplicasMap class
@@ -35,7 +34,7 @@ public class TestReplicaMap {
   private final String bpid = "BP-TEST";
   private final  Block block = new Block(1234, 1234, 1234);
   
-  @Before
+  @BeforeEach
   public void setup() {
     map.add(bpid, new FinalizedReplica(block, null, null));
   }

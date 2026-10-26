@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<!--
+  Baidu BOS FileSystem Contract Configuration
+  This file defines the capabilities and limitations of the BOS filesystem.
+-->
+<configuration>
+
+  <!-- ============================================================ -->
+  <!-- Basic FileSystem Capabilities -->
+  <!-- ============================================================ -->
+
+  <property>
+    <name>fs.contract.supports-append</name>
+    <value>false</value>
+    <description>
+      BOS does not support appending to existing files.
+      Object stores generally do not support append operations.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-concat</name>
+    <value>false</value>
+    <description>
+      BOS does not support concatenating multiple files into one.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-truncate</name>
+    <value>false</value>
+    <description>
+      BOS does not support truncating files.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.is-blobstore</name>
+    <value>true</value>
+    <description>
+      BOS is an object/blob store, not a real filesystem.
+      This means files are only visible after close(), not after create() or flush().
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.create-visibility-delayed</name>
+    <value>true</value>
+    <description>
+      BOS files are not visible until after close() is called.
+      This is standard behavior for object stores.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-hflush</name>
+    <value>false</value>
+    <description>
+      BOS does not support hflush(). Data is only persisted on close().
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-hsync</name>
+    <value>false</value>
+    <description>
+      BOS does not support hsync(). Data is only persisted on close().
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-seek</name>
+    <value>true</value>
+    <description>
+      BOS supports random access (seek) operations on files.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-seek-on-closed-file</name>
+    <value>true</value>
+    <description>
+      BOS allows seek operations on closed files (will fail on subsequent read).
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.rejects-seek-past-eof</name>
+    <value>true</value>
+    <description>
+      BOS will throw an exception when seeking past end of file.
+    </description>
+  </property>
+
+  <!-- ============================================================ -->
+  <!-- Path and Naming -->
+  <!-- ============================================================ -->
+
+  <property>
+    <name>fs.contract.is-case-sensitive</name>
+    <value>true</value>
+    <description>
+      BOS paths are case-sensitive.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.is-banded-seek</name>
+    <value>false</value>
+    <description>
+      BOS does not use banded seeking.
+    </description>
+  </property>
+
+  <!-- ============================================================ -->
+  <!-- Rename Behavior -->
+  <!-- ============================================================ -->
+
+  <property>
+    <name>fs.contract.rename-overwrites-dest</name>
+    <value>true</value>
+    <description>
+      BOS rename will overwrite the destination if it exists.
+      Note: This is implemented via copy + delete.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.rename-returns-false-if-source-missing</name>
+    <value>true</value>
+    <description>
+      BOS rename returns false if source does not exist.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.rename-returns-false-if-dest-parent-missing</name>
+    <value>false</value>
+    <description>
+      BOS rename will create parent directories of destination if needed.
+      This is set to false because rename-creates-dest-dirs is true.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.rename-remove-dest-if-empty-dir</name>
+    <value>false</value>
+    <description>
+      BOS rename will remove destination if it is an empty directory.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.rename-creates-dest-dirs</name>
+    <value>true</value>
+    <description>
+      BOS rename will create parent directories of destination if needed.
+    </description>
+  </property>
+
+  <!-- ============================================================ -->
+  <!-- Delete Behavior -->
+  <!-- ============================================================ -->
+
+  <property>
+    <name>fs.contract.supports-atomic-delete</name>
+    <value>false</value>
+    <description>
+      BOS delete operations are not atomic (implemented via multiple API calls).
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-atomic-rename</name>
+    <value>false</value>
+    <description>
+      BOS rename is not atomic (implemented via copy + delete).
+    </description>
+  </property>
+
+  <!-- ============================================================ -->
+  <!-- Directory Operations -->
+  <!-- ============================================================ -->
+
+  <property>
+    <name>fs.contract.create-overwrites-directory</name>
+    <value>false</value>
+    <description>
+      BOS create() will not overwrite a directory.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-getfilestatus</name>
+    <value>true</value>
+    <description>
+      BOS supports getFileStatus operation.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-block-locality</name>
+    <value>true</value>
+    <description>
+      BOS provides block location information (though it may be synthetic).
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.is-emulated-directory</name>
+    <value>true</value>
+    <description>
+      BOS emulates directories in object storage mode.
+      Directories are not immediately visible until explicitly created.
+    </description>
+  </property>
+
+  <!-- ============================================================ -->
+  <!-- Permission and Security -->
+  <!-- ============================================================ -->
+
+  <property>
+    <name>fs.contract.supports-unix-permissions</name>
+    <value>false</value>
+    <description>
+      BOS does not fully support Unix-style permissions.
+      Note: Hierarchical namespace buckets have limited permission support.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-strict-exceptions</name>
+    <value>true</value>
+    <description>
+      BOS throws specific exception types (FileNotFoundException, etc.)
+      rather than generic IOException.
+    </description>
+  </property>
+
+  <!-- ============================================================ -->
+  <!-- Advanced Features -->
+  <!-- ============================================================ -->
+
+  <property>
+    <name>fs.contract.supports-symlinks</name>
+    <value>false</value>
+    <description>
+      BOS does not support symbolic links.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-xattr</name>
+    <value>false</value>
+    <description>
+      BOS does not support extended attributes (xattrs).
+    </description>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-availablebytes</name>
+    <value>true</value>
+    <description>
+      BOS InputStream supports available() method.
+    </description>
+  </property>
+
+  <!-- ============================================================ -->
+  <!-- Content Summary -->
+  <!-- ============================================================ -->
+
+  <property>
+    <name>fs.contract.supports-content-summary</name>
+    <value>true</value>
+    <description>
+      BOS supports getContentSummary() operation.
+    </description>
+  </property>
+
+  <!-- ============================================================ -->
+  <!-- Root Directory Tests -->
+  <!-- ============================================================ -->
+
+  <property>
+    <name>fs.contract.test-root-tests-enabled</name>
+    <value>false</value>
+    <description>
+      Root directory tests are disabled for BOS to avoid
+      destructive operations on the bucket root.
+    </description>
+  </property>
+
+  <!-- ============================================================ -->
+  <!-- Performance and Limits -->
+  <!-- ============================================================ -->
+
+  <property>
+    <name>fs.contract.supports-unbuffer</name>
+    <value>false</value>
+    <description>
+      BOS does not support the unbuffer() operation on streams.
+    </description>
+  </property>
+
+</configuration>

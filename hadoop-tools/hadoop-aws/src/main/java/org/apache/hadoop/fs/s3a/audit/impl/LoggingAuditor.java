@@ -61,6 +61,7 @@ import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MULTIPART_UPLOAD_ENABLE
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_UPLOADS_ENABLED;
 import static org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer.isRequestMultipartIO;
 import static org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer.isRequestNotAlwaysInSpan;
+import static org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer.isRequestAuditedOutsideOfCurrentSpan;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.OUTSIDE_SPAN;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_ENABLED;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_ENABLED_DEFAULT;
@@ -69,6 +70,8 @@ import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.UNAUDITED_OPERATI
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.extractJobID;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.HEADER_REFERRER;
 import static org.apache.hadoop.fs.s3a.statistics.impl.StatisticsFromAwsSdkImpl.mapErrorStatusCodeToStatisticName;
+import static software.amazon.s3.analyticsaccelerator.request.Constants.OPERATION_NAME;
+import static software.amazon.s3.analyticsaccelerator.request.Constants.SPAN_ID;
 
 /**
  * The LoggingAuditor logs operations at DEBUG (in SDK Request) and
@@ -84,7 +87,6 @@ public class LoggingAuditor
    */
   private static final Logger LOG =
       LoggerFactory.getLogger(LoggingAuditor.class);
-
 
   /**
    * Some basic analysis for the logs.
@@ -267,7 +269,14 @@ public class LoggingAuditor
    */
   private class LoggingAuditSpan extends AbstractAuditSpanImpl {
 
-    private final HttpReferrerAuditHeader referrer;
+    private HttpReferrerAuditHeader referrer;
+
+    /**
+     * Builder for the referrer header. Requests that execute outside S3A, such as in AAL, will initially have SpanId
+     * of  the outside-span operation. For such requests, the spanId and operation name in this builder is overwritten
+     * in the modifyHttpRequest execution interceptor.
+     */
+    private final HttpReferrerAuditHeader.Builder headerBuilder;
 
     /**
      * Attach Range of data for GetObject Request.
@@ -300,7 +309,7 @@ public class LoggingAuditor
         final String path2) {
       super(spanId, operationName);
 
-      this.referrer = HttpReferrerAuditHeader.builder()
+      this.headerBuilder = HttpReferrerAuditHeader.builder()
           .withContextId(getAuditorId())
           .withSpanId(spanId)
           .withOperationName(operationName)
@@ -312,8 +321,9 @@ public class LoggingAuditor
               currentThreadID())
           .withAttribute(PARAM_TIMESTAMP, Long.toString(getTimestamp()))
           .withEvaluated(context.getEvaluatedEntries())
-          .withFilter(filters)
-          .build();
+          .withFilter(filters);
+
+      this.referrer = this.headerBuilder.build();
 
       this.description = referrer.buildHttpReferrer();
     }
@@ -384,6 +394,26 @@ public class LoggingAuditor
       SdkHttpRequest httpRequest = context.httpRequest();
       SdkRequest sdkRequest = context.request();
 
+      // If spanId and operationName are set in execution attributes, then use these values,
+      // instead of the ones in the current span. This is useful when requests are happening in dependencies such as
+      // the analytics accelerator library (AAL), where they cannot be attached to the correct span. In which case, AAL
+      // will attach the current spanId and operationName via execution attributes during it's request creation. These
+      // can then used to update the values in the logger and referrer header. Without this overwriting, the operation
+      // name and corresponding span will be whichever is active on the thread the request is getting executed on.
+      boolean isRequestAuditedOutsideCurrentSpan = isRequestAuditedOutsideOfCurrentSpan(executionAttributes);
+
+      String spanId = isRequestAuditedOutsideCurrentSpan ?
+              executionAttributes.getAttribute(SPAN_ID) : getSpanId();
+
+      String operationName = isRequestAuditedOutsideCurrentSpan ?
+              executionAttributes.getAttribute(OPERATION_NAME) : getOperationName();
+
+      if (isRequestAuditedOutsideCurrentSpan) {
+        this.headerBuilder.withSpanId(spanId);
+        this.headerBuilder.withOperationName(operationName);
+        this.referrer = this.headerBuilder.build();
+      }
+
       // attach range for GetObject requests
       attachRangeFromRequest(httpRequest, executionAttributes);
 
@@ -400,11 +430,12 @@ public class LoggingAuditor
             .appendHeader(HEADER_REFERRER, header)
             .build();
       }
+
       if (LOG.isDebugEnabled()) {
         LOG.debug("[{}] {} Executing {} with {}; {}",
             currentThreadID(),
-            getSpanId(),
-            getOperationName(),
+            spanId,
+            operationName,
             analyzer.analyze(context.request()),
             header);
       }
@@ -533,10 +564,12 @@ public class LoggingAuditor
           + analyzer.analyze(context.request());
       final String unaudited = getSpanId() + " "
           + UNAUDITED_OPERATION + " " + error;
+      // If request is attached to a span in the modifyHttpRequest, as is the case for requests made by AAL, treat it
+      // as an audited request.
       if (isRequestNotAlwaysInSpan(context.request())) {
-        // can get by auditing during a copy, so don't overreact
+        // can get by auditing during a copy, so don't overreact.
         LOG.debug(unaudited);
-      } else {
+      } else if (!isRequestAuditedOutsideOfCurrentSpan(executionAttributes)) {
         final RuntimeException ex = new AuditFailureException(unaudited);
         LOG.debug(unaudited, ex);
         if (isRejectOutOfSpan()) {
@@ -547,5 +580,4 @@ public class LoggingAuditor
       super.beforeExecution(context, executionAttributes);
     }
   }
-
 }

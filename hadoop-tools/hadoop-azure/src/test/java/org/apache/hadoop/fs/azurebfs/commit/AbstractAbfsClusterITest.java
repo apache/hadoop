@@ -23,14 +23,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 import org.junit.jupiter.api.AfterAll;
-import org.junit.Assume;
-import org.junit.Rule;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.rules.TemporaryFolder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
@@ -43,12 +39,14 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.util.DurationInfo;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assumeScaleTestsEnabled;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.SCALE_TEST_TIMEOUT_MILLIS;
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.assumeScaleTestsEnabled;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_OVERRIDE_OWNER_SP;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_OVERRIDE_OWNER_SP_LIST;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_FS_CLIENT_SERVICE_PRINCIPAL_OBJECT_ID;
 import static org.apache.hadoop.io.IOUtils.closeStream;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Tests which create a yarn minicluster.
@@ -78,7 +76,7 @@ public abstract class AbstractAbfsClusterITest extends
 
   @Override
   protected int getTestTimeoutMillis() {
-    return AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS;
+    return SCALE_TEST_TIMEOUT_MILLIS;
   }
 
   @BeforeEach
@@ -206,15 +204,6 @@ public abstract class AbstractAbfsClusterITest extends
 
 
   /**
-   * We stage work into a temporary directory rather than directly under
-   * the user's home directory, as that is often rejected by CI test
-   * runners.
-   */
-  @Rule
-  public final TemporaryFolder stagingFilesDir = new TemporaryFolder();
-
-
-  /**
    * binding on demand rather than in a BeforeClass static method.
    * Subclasses can override this to change the binding options.
    * @return the cluster binding
@@ -279,7 +268,7 @@ public abstract class AbstractAbfsClusterITest extends
 
   protected void assumeValidTestConfigPresent(final String key) {
     String configuredValue = getConfiguration().get(key);
-    Assume.assumeTrue(configuredValue != null && !configuredValue.isEmpty());
+    assumeThat(configuredValue != null && !configuredValue.isEmpty()).isTrue();
   }
 
 }

@@ -79,5 +79,12 @@ export default Ember.Controller.extend({
       return this.model.timelineHealth.get('isTimelineUnHealthy');
     }
     return true;
-  }.property('model.timelineHealth')
+  }.property('model.timelineHealth'),
+
+  isSchedulerUiEnabled: function() {
+    if (this.model && this.model.clusterInfo) {
+      return this.model.clusterInfo.get('firstObject').get('schedulerUiEnabled');
+    }
+    return false;
+  }.property('model.isSchedulerUiEnabled')
 });

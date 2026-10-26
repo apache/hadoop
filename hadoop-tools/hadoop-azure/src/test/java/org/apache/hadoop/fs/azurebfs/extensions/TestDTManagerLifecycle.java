@@ -20,9 +20,9 @@ package org.apache.hadoop.fs.azurebfs.extensions;
 
 import java.net.URI;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsTestWithTimeout;
@@ -54,12 +54,12 @@ public class TestDTManagerLifecycle extends AbstractAbfsTestWithTimeout {
 
   public static final Text KIND2 = new Text("kind2");
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = StubDelegationTokenManager.useStubDTManager(new Configuration());
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
   }
 
@@ -70,8 +70,7 @@ public class TestDTManagerLifecycle extends AbstractAbfsTestWithTimeout {
    */
   protected void assertTokenKind(final Text kind,
       final Token<DelegationTokenIdentifier> dt) {
-    assertEquals("Token Kind",
-        kind, dt.getKind());
+    assertEquals(kind, dt.getKind(), "Token Kind");
   }
 
   /**
@@ -88,19 +87,19 @@ public class TestDTManagerLifecycle extends AbstractAbfsTestWithTimeout {
     StubDelegationTokenManager stub = getTokenManager(manager);
 
     // this is automatically inited
-    assertTrue("Not initialized: " + stub, stub.isInitialized());
+    assertTrue(stub.isInitialized(), "Not initialized: " + stub);
     Token<DelegationTokenIdentifier> dt = stub.getDelegationToken(RENEWER);
     assertTokenKind(StubAbfsTokenIdentifier.TOKEN_KIND, dt);
 
-    assertNull("canonicalServiceName in " + stub,
-        manager.getCanonicalServiceName());
-    assertEquals("Issued count number in " + stub, 1, stub.getIssued());
+    assertNull(
+       manager.getCanonicalServiceName(), "canonicalServiceName in " + stub);
+    assertEquals(1, stub.getIssued(), "Issued count number in " + stub);
     StubAbfsTokenIdentifier id = decodeIdentifier(dt);
-    assertEquals("Sequence number in " + id, 1, id.getSequenceNumber());
+    assertEquals(1, id.getSequenceNumber(), "Sequence number in " + id);
     stub.renewDelegationToken(dt);
-    assertEquals("Renewal count in " + stub, 1, stub.getRenewals());
+    assertEquals(1, stub.getRenewals(), "Renewal count in " + stub);
     stub.cancelDelegationToken(dt);
-    assertEquals("Cancel count in " + stub, 1, stub.getCancellations());
+    assertEquals(1, stub.getCancellations(), "Cancel count in " + stub);
   }
 
   protected StubDelegationTokenManager getTokenManager(final AbfsDelegationTokenManager manager) {
@@ -114,15 +113,15 @@ public class TestDTManagerLifecycle extends AbstractAbfsTestWithTimeout {
   public void testBindingLifecycle() throws Throwable {
     AbfsDelegationTokenManager manager = new AbfsDelegationTokenManager(conf);
     StubDelegationTokenManager stub = getTokenManager(manager);
-    assertTrue("Not initialized: " + stub, stub.isInitialized());
+    assertTrue(stub.isInitialized(), "Not initialized: " + stub);
     stub.bind(FSURI, conf);
-    assertEquals("URI in " + stub, FSURI, stub.getFsURI());
+    assertEquals(FSURI, stub.getFsURI(), "URI in " + stub);
     decodeIdentifier(stub.getDelegationToken(RENEWER));
     stub.close();
-    assertTrue("Not closed: " + stub, stub.isClosed());
+    assertTrue(stub.isClosed(), "Not closed: " + stub);
     // and for resilience
     stub.close();
-    assertTrue("Not closed: " + stub, stub.isClosed());
+    assertTrue(stub.isClosed(), "Not closed: " + stub);
   }
 
   @Test
@@ -130,14 +129,12 @@ public class TestDTManagerLifecycle extends AbstractAbfsTestWithTimeout {
     AbfsDelegationTokenManager manager = new AbfsDelegationTokenManager(conf);
     manager.bind(FSURI, conf);
     StubDelegationTokenManager stub = getTokenManager(manager);
-    assertEquals("Service in " + manager,
-        ABFS, stub.createServiceText().toString());
-    assertEquals("Binding URI of " + stub, FSURI, stub.getFsURI());
+    assertEquals(ABFS, stub.createServiceText().toString(), "Service in " + manager);
+    assertEquals(FSURI, stub.getFsURI(), "Binding URI of " + stub);
 
     Token<DelegationTokenIdentifier> token = manager.getDelegationToken(
         RENEWER);
-    assertEquals("Service in " + token,
-        ABFS, token.getService().toString());
+    assertEquals(ABFS, token.getService().toString(), "Service in " + token);
     decodeIdentifier(token);
     assertTokenKind(StubAbfsTokenIdentifier.TOKEN_KIND, token);
 
@@ -148,12 +145,12 @@ public class TestDTManagerLifecycle extends AbstractAbfsTestWithTimeout {
     assertTokenKind(KIND2, dt2);
 
     // change the token kind and, unless it is registered, it will not decode.
-    assertNull("Token is of unknown kind, must not decode",
-        dt2.decodeIdentifier());
+    assertNull(
+       dt2.decodeIdentifier(), "Token is of unknown kind, must not decode");
 
     // closing the manager will close the stub too.
     manager.close();
-    assertTrue("Not closed: " + stub, stub.isClosed());
+    assertTrue(stub.isClosed(), "Not closed: " + stub);
   }
 
   /**
@@ -170,22 +167,21 @@ public class TestDTManagerLifecycle extends AbstractAbfsTestWithTimeout {
     // create a DT manager in the renewer codepath.
     AbfsDelegationTokenManager manager = new AbfsDelegationTokenManager(conf);
     StubDelegationTokenManager stub = getTokenManager(manager);
-    assertNull("Stub should not bebound " + stub, stub.getFsURI());
+    assertNull(stub.getFsURI(), "Stub should not bebound " + stub);
 
     StubAbfsTokenIdentifier dtId =
         (StubAbfsTokenIdentifier) dt.decodeIdentifier();
     String idStr = dtId.toString();
-    assertEquals("URI in " + idStr, FSURI, dtId.getUri());
-    assertEquals("renewer in " + idStr,
-        RENEWER, dtId.getRenewer().toString());
+    assertEquals(FSURI, dtId.getUri(), "URI in " + idStr);
+    assertEquals(RENEWER, dtId.getRenewer().toString(), "renewer in " + idStr);
     manager.renewDelegationToken(dt);
-    assertEquals("Renewal count in " + stub, 1, stub.getRenewals());
+    assertEquals(1, stub.getRenewals(), "Renewal count in " + stub);
     manager.cancelDelegationToken(dt);
-    assertEquals("Cancel count in " + stub, 1, stub.getCancellations());
+    assertEquals(1, stub.getCancellations(), "Cancel count in " + stub);
 
     // closing the manager will close the stub too.
     manager.close();
-    assertTrue("Not closed: " + stub, stub.isClosed());
+    assertTrue(stub.isClosed(), "Not closed: " + stub);
   }
 
 }

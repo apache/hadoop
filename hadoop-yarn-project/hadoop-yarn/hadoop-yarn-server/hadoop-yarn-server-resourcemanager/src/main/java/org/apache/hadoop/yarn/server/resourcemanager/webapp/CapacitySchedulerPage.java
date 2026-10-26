@@ -345,7 +345,7 @@ class CapacitySchedulerPage extends RmView {
               $title(join("Absolute Capacity:", percent(absCap))).
               span().$style(join(Q_GIVEN, ";font-size:1px;", width(capPercent))).
             __('.').__().
-              span().$style(join(width(usedCapPercent),
+              span().$style(join(barWidth(usedCapPercent),
                 ";font-size:1px;left:0%;", absUsedCap > absCap ? Q_OVER : Q_UNDER)).
             __('.').__().
               span(".q", info.getQueuePath()).__().
@@ -490,7 +490,7 @@ class CapacitySchedulerPage extends RmView {
           //label is not enabled in the cluster or there's only "default" label,
           ul.li().
             a(_Q).$style(width(Q_MAX_WIDTH)).
-              span().$style(join(width(used), ";left:0%;",
+              span().$style(join(barWidth(used), ";left:0%;",
                   used > 1 ? Q_OVER : Q_UNDER)).__(".").__().
               span(".q", "root").__().
             span().$class("qstats").$style(left(Q_STATS_POS)).
@@ -510,7 +510,7 @@ class CapacitySchedulerPage extends RmView {
                 "Partition: " + nodeLabelDisplay + " " + label.getResource();
             ul.li().
             a(_Q).$style(width(Q_MAX_WIDTH)).
-              span().$style(join(width(used), ";left:0%;",
+              span().$style(join(barWidth(used), ";left:0%;",
                   used > 1 ? Q_OVER : Q_UNDER)).__(".").__().
               span(".q", partitionUiTag).__().
             span().$class("qstats").$style(left(Q_STATS_POS)).
@@ -520,7 +520,7 @@ class CapacitySchedulerPage extends RmView {
             UL<Hamlet> underLabel = html.ul("#pq");
             underLabel.li().
             a(_Q).$style(width(Q_MAX_WIDTH)).
-              span().$style(join(width(used), ";left:0%;",
+              span().$style(join(barWidth(used), ";left:0%;",
                   used > 1 ? Q_OVER : Q_UNDER)).__(".").__().
               span(".q", "root").__().
             span().$class("qstats").$style(left(Q_STATS_POS)).
@@ -686,6 +686,10 @@ class CapacitySchedulerPage extends RmView {
 
   static String width(float f) {
     return StringUtils.format("width:%.1f%%", f * 100);
+  }
+
+  static String barWidth(float f) {
+    return width(Math.max(0f, Math.min(f, 1f)));
   }
 
   static String left(float f) {

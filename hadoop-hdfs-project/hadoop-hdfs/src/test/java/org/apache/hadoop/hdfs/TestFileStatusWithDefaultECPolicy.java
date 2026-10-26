@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -28,24 +28,21 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * This test ensures the statuses of EC files with the default policy.
  */
+@Timeout(300)
 public class TestFileStatusWithDefaultECPolicy {
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
   private DFSClient client;
 
-  @Rule
-  public Timeout globalTimeout = new Timeout(300000);
-
-  @Before
+  @BeforeEach
   public void before() throws IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
     cluster =
@@ -56,7 +53,7 @@ public class TestFileStatusWithDefaultECPolicy {
     fs.enableErasureCodingPolicy(getEcPolicy().getName());
   }
 
-  @After
+  @AfterEach
   public void after() {
     if (cluster != null) {
       cluster.shutdown();
@@ -100,8 +97,7 @@ public class TestFileStatusWithDefaultECPolicy {
     assertTrue(ecPolicy1.equals(ecPolicy3));
     ContractTestUtils.assertErasureCoded(fs, file);
     FileStatus status = fs.getFileStatus(file);
-    assertTrue(file + " should have erasure coding set in " +
-            "FileStatus#toString(): " + status,
-        status.toString().contains("isErasureCoded=true"));
+    assertTrue(status.toString().contains("isErasureCoded=true"),
+        file + " should have erasure coding set in " + "FileStatus#toString(): " + status);
   }
 }

@@ -19,13 +19,14 @@
 package org.apache.hadoop.fs.azurebfs.commit;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestLoadManifestsStage;
 import org.junit.jupiter.api.BeforeEach;
+
+import static org.apache.hadoop.fs.azurebfs.utils.AbfsTestUtils.SCALE_TEST_TIMEOUT_MILLIS;
 
 /**
  * ABFS storage test of saving and loading a large number
@@ -58,7 +59,7 @@ public class ITestAbfsLoadManifestsStage extends TestLoadManifestsStage {
 
   @Override
   protected int getTestTimeoutMillis() {
-    return AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS;
+    return SCALE_TEST_TIMEOUT_MILLIS;
   }
 
   /**

@@ -30,8 +30,9 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
 import org.apache.hadoop.net.Node;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -42,9 +43,9 @@ import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test to ensure that the StorageType and StorageID sent from Namenode
@@ -58,7 +59,7 @@ public class TestNamenodeStorageDirectives {
 
   private MiniDFSCluster cluster;
 
-  @After
+  @AfterEach
   public void tearDown() {
     shutdown();
   }
@@ -192,7 +193,8 @@ public class TestNamenodeStorageDirectives {
    * Types.
    * @throws IOException
    */
-  @Test(timeout=120000)
+  @Test
+  @Timeout(value = 120)
   public void testTargetStorageTypes() throws ReconfigurationException,
       InterruptedException, TimeoutException, IOException {
     // DISK and not anything else.
@@ -311,7 +313,8 @@ public class TestNamenodeStorageDirectives {
     return dnManager.getDatanode(dnId).getStorageInfos()[0];
   }
 
-  @Test(timeout=60000)
+  @Test
+  @Timeout(value = 60)
   public void testStorageIDBlockPlacementSpecific()
       throws ReconfigurationException, InterruptedException, TimeoutException,
       IOException {

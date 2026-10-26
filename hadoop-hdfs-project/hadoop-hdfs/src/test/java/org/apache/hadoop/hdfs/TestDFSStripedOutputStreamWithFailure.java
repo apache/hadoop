@@ -25,7 +25,9 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,19 +35,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test striped file write operation with data node failures with fixed
  * parameter test cases.
  */
+@Tag("slow")
 public class TestDFSStripedOutputStreamWithFailure extends
     TestDFSStripedOutputStreamWithFailureBase{
   public static final Logger LOG = LoggerFactory.getLogger(
       TestDFSStripedOutputStreamWithFailure.class);
 
-  @Test(timeout=300000)
+  @Test
+  @Timeout(value = 300)
   public void testMultipleDatanodeFailure56() throws Exception {
     runTestWithMultipleFailure(getLength(56));
   }
@@ -62,7 +66,8 @@ public class TestDFSStripedOutputStreamWithFailure extends
     runTestWithMultipleFailure(getLength(lenIndex));
   }
 
-  @Test(timeout=240000)
+  @Test
+  @Timeout(value = 240)
   public void testBlockTokenExpired() throws Exception {
     // Make sure killPos is greater than the length of one stripe
     final int length = dataBlocks * cellSize * 3;
@@ -86,7 +91,8 @@ public class TestDFSStripedOutputStreamWithFailure extends
     }
   }
 
-  @Test(timeout = 90000)
+  @Test
+  @Timeout(value = 90)
   public void testAddBlockWhenNoSufficientDataBlockNumOfNodes()
       throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
@@ -105,7 +111,7 @@ public class TestDFSStripedOutputStreamWithFailure extends
       cluster.triggerHeartbeats();
       DatanodeInfo[] info = dfs.getClient().datanodeReport(
           DatanodeReportType.LIVE);
-      assertEquals("Mismatches number of live Dns", numDatanodes, info.length);
+      assertEquals(numDatanodes, info.length, "Mismatches number of live Dns");
       final Path dirFile = new Path(dir, "ecfile");
       LambdaTestUtils.intercept(
           IOException.class,
@@ -200,7 +206,8 @@ public class TestDFSStripedOutputStreamWithFailure extends
     }
   }
 
-  @Test(timeout = 90000)
+  @Test
+  @Timeout(value = 90)
   public void testAddBlockWhenNoSufficientParityNumOfNodes()
       throws IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
@@ -218,7 +225,7 @@ public class TestDFSStripedOutputStreamWithFailure extends
       cluster.triggerHeartbeats();
       DatanodeInfo[] info = dfs.getClient().datanodeReport(
           DatanodeReportType.LIVE);
-      assertEquals("Mismatches number of live Dns", numDatanodes, info.length);
+      assertEquals(numDatanodes, info.length, "Mismatches number of live Dns");
       Path srcPath = new Path(dir, "testAddBlockWhenNoSufficientParityNodes");
       int fileLength = cellSize - 1000;
       final byte[] expected = StripedFileTestUtil.generateBytes(fileLength);

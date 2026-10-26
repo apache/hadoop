@@ -29,10 +29,12 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.util.JsonUtils;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
-import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -56,6 +58,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
@@ -285,6 +288,38 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     assertThat(conn.getResponseCode()).isEqualTo(200);
     final int after = metrics.responses2xx();
     assertThat(after).isGreaterThan(before);
+  }
+
+  @Test
+  public void testHttpServer2ThreadPoolMetrics() throws Exception {
+    final int maxThreads = 32;
+    final int acceptorCount = 2;
+    final int selectorCount = 4;
+    final Configuration conf = new Configuration();
+    conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, maxThreads);
+    conf.setInt(HttpServer2.HTTP_ACCEPTOR_COUNT_KEY, acceptorCount);
+    conf.setInt(HttpServer2.HTTP_SELECTOR_COUNT_KEY, selectorCount);
+    conf.setBoolean(
+        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED, true);
+    final HttpServer2 testServer = createTestServer(conf);
+    try {
+      testServer.start();
+      final HttpServer2Metrics metrics = testServer.getMetrics();
+
+      assertThat(metrics.maxThreads()).isEqualTo(maxThreads);
+      assertThat(metrics.acceptorThreads()).isEqualTo(acceptorCount);
+      assertThat(metrics.selectorThreads()).isEqualTo(selectorCount);
+
+      // Worker gauges are defined as the pool counts minus acceptors+selectors.
+      assertThat(metrics.maxWorkerThreads())
+          .isEqualTo(maxThreads - acceptorCount - selectorCount);
+      assertThat(metrics.workerThreads())
+          .isEqualTo(metrics.threads() - acceptorCount - selectorCount);
+      assertThat(metrics.busyWorkerThreads())
+          .isEqualTo(metrics.busyThreads() - acceptorCount - selectorCount);
+    } finally {
+      testServer.stop();
+    }
   }
 
   /**
@@ -561,7 +596,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   @SuppressWarnings("unchecked")
   private static Map<String, Object> parse(String jsonString) {
-    return (Map<String, Object>) JSON.parse(jsonString);
+    return JsonUtils.parse(jsonString,
+        new TypeReference<Map<String, Object>>() {});
   }
 
   @Test public void testJersey() throws Exception {
@@ -633,6 +669,26 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation>any())).thenReturn(false);
     Mockito.when(context.getAttribute(HttpServer2.ADMINS_ACL)).thenReturn(acls);
     assertFalse(HttpServer2.isInstrumentationAccessAllowed(context, request, response));
+  }
+
+  @Test
+  public void testAddConnectors() throws Exception {
+    HttpServer2.Builder builder = new HttpServer2.Builder()
+        .setName("test").setConf(new Configuration()).setFindPort(false);
+    URI endpoint = URI.create("http://testaddress.com:8080/my-app");
+    InetAddress[] addresses = new InetAddress[2];
+    // IPv4 test address
+    addresses[0] = InetAddress.getByName("192.168.1.100");
+    // IPv6 test address
+    addresses[1] = InetAddress.getByName("fd00::1");
+    HttpConfiguration httpConfig = new HttpConfiguration();
+    final int backlogSize = 2048;
+    final int idleTimeout = 1000;
+
+    server = builder.addConnectors(
+        endpoint, addresses, server, httpConfig, backlogSize, idleTimeout);
+    //the expected value is 3: the loopback address and the two addresses
+    assertEquals(server.getListeners().toArray().length, 3);
   }
 
   @Test public void testBindAddress() throws Exception {

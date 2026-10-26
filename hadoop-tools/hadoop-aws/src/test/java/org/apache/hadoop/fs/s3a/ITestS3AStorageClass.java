@@ -24,7 +24,8 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.conf.Configuration;
@@ -49,6 +50,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Tests of storage class.
  */
+@ParameterizedClass(name="-{0}")
+@MethodSource("params")
 public class ITestS3AStorageClass extends AbstractS3ATestBase {
 
   /**
@@ -62,10 +65,10 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
     });
   }
 
-  private String fastUploadBufferType;
+  private final String fastUploadBufferType;
 
-  public void initITestS3AStorageClass(String pFastUploadBufferType) {
-    this.fastUploadBufferType = pFastUploadBufferType;
+  public ITestS3AStorageClass(String fastUploadBufferType) {
+    this.fastUploadBufferType = fastUploadBufferType;
   }
 
   @Override
@@ -83,11 +86,8 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
    * This test ensures the default storage class configuration (no config or null)
    * works well with create and copy operations
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "fast-upload-buffer-{0}")
-  public void testCreateAndCopyObjectWithStorageClassDefault(
-      String pFastUploadBufferType) throws Throwable {
-    initITestS3AStorageClass(pFastUploadBufferType);
+  @Test
+  public void testCreateAndCopyObjectWithStorageClassDefault() throws Throwable {
     Configuration conf = this.createConfiguration();
     S3AContract contract = (S3AContract) createContract(conf);
     contract.init();
@@ -108,11 +108,8 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
    * Verify object can be created and copied correctly
    * with specified storage class
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "fast-upload-buffer-{0}")
-  public void testCreateAndCopyObjectWithStorageClassReducedRedundancy(
-      String pFastUploadBufferType) throws Throwable {
-    initITestS3AStorageClass(pFastUploadBufferType);
+  @Test
+  public void testCreateAndCopyObjectWithStorageClassReducedRedundancy() throws Throwable {
     Configuration conf = this.createConfiguration();
     conf.set(STORAGE_CLASS, STORAGE_CLASS_REDUCED_REDUNDANCY);
     S3AContract contract = (S3AContract) createContract(conf);
@@ -136,11 +133,8 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
    * Archive storage classes have different behavior
    * from general storage classes
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "fast-upload-buffer-{0}")
-  public void testCreateAndCopyObjectWithStorageClassGlacier(
-      String pFastUploadBufferType) throws Throwable {
-    initITestS3AStorageClass(pFastUploadBufferType);
+  @Test
+  public void testCreateAndCopyObjectWithStorageClassGlacier() throws Throwable {
     Configuration conf = this.createConfiguration();
     conf.set(STORAGE_CLASS, STORAGE_CLASS_GLACIER);
     S3AContract contract = (S3AContract) createContract(conf);
@@ -168,11 +162,8 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
    * Verify object can be created and copied correctly
    * with completely invalid storage class
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "fast-upload-buffer-{0}")
-  public void testCreateAndCopyObjectWithStorageClassInvalid(
-      String pFastUploadBufferType) throws Throwable {
-    initITestS3AStorageClass(pFastUploadBufferType);
+  @Test
+  public void testCreateAndCopyObjectWithStorageClassInvalid() throws Throwable {
     Configuration conf = this.createConfiguration();
     conf.set(STORAGE_CLASS, "testing");
     S3AContract contract = (S3AContract) createContract(conf);
@@ -196,11 +187,8 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
    * Verify object can be created and copied correctly
    * with empty string configuration
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "fast-upload-buffer-{0}")
-  public void testCreateAndCopyObjectWithStorageClassEmpty(
-      String pFastUploadBufferType) throws Throwable {
-    initITestS3AStorageClass(pFastUploadBufferType);
+  @Test
+  public void testCreateAndCopyObjectWithStorageClassEmpty() throws Throwable {
     Configuration conf = this.createConfiguration();
     conf.set(STORAGE_CLASS, "");
     S3AContract contract = (S3AContract) createContract(conf);

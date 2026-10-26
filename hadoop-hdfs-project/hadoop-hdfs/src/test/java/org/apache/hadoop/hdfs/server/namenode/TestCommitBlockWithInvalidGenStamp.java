@@ -27,12 +27,14 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 
 public class TestCommitBlockWithInvalidGenStamp {
@@ -41,7 +43,7 @@ public class TestCommitBlockWithInvalidGenStamp {
   private FSDirectory dir;
   private DistributedFileSystem dfs;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     final Configuration conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
@@ -52,7 +54,7 @@ public class TestCommitBlockWithInvalidGenStamp {
     dfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -81,17 +83,17 @@ public class TestCommitBlockWithInvalidGenStamp {
       try{
         dfs.getClient().getNamenode().complete(file.toString(),
             dfs.getClient().getClientName(), previous, fileNode.getId());
-        Assert.fail("should throw exception because invalid genStamp");
+        fail("should throw exception because invalid genStamp");
       } catch (IOException e) {
-        Assert.assertTrue(e.toString().contains(
+        assertTrue(e.toString().contains(
             "Commit block with mismatching GS. NN has " +
-            newBlock + ", client submits " + newBlockClone));
+                newBlock + ", client submits " + newBlockClone));
       }
       previous = new ExtendedBlock(cluster.getNamesystem().getBlockPoolId(),
           newBlock);
       boolean complete =  dfs.getClient().getNamenode().complete(file.toString(),
       dfs.getClient().getClientName(), previous, fileNode.getId());
-      Assert.assertTrue("should complete successfully", complete);
+      assertTrue(complete, "should complete successfully");
     } finally {
       IOUtils.cleanupWithLogger(null, out);
     }

@@ -29,6 +29,10 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+
+/**
+ * Interface for listing support in Azure Blob File System.
+ */
 public interface ListingSupport {
 
   /**

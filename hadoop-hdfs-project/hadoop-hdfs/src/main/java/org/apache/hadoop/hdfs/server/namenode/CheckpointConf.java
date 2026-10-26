@@ -54,6 +54,12 @@ public class CheckpointConf {
   */
   private double quietMultiplier;
 
+  /**
+   * Whether enable the standby namenode to upload fsiamge to multiple other namenodes in
+   * parallel, in the cluster with observer namenodes.
+   */
+  private final boolean parallelUploadEnabled;
+
   public CheckpointConf(Configuration conf) {
     checkpointCheckPeriod = conf.getTimeDuration(
         DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY,
@@ -68,6 +74,9 @@ public class CheckpointConf {
     legacyOivImageDir = conf.get(DFS_NAMENODE_LEGACY_OIV_IMAGE_DIR_KEY);
     quietMultiplier = conf.getDouble(DFS_NAMENODE_CHECKPOINT_QUIET_MULTIPLIER_KEY,
       DFS_NAMENODE_CHECKPOINT_QUIET_MULTIPLIER_DEFAULT);
+    parallelUploadEnabled = conf.getBoolean(
+        DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_ENABLED_KEY,
+        DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_ENABLED_DEFAULT);
     warnForDeprecatedConfigs(conf);
   }
   
@@ -105,5 +114,9 @@ public class CheckpointConf {
 
   public double getQuietPeriod() {
     return this.checkpointPeriod * this.quietMultiplier;
+  }
+
+  public boolean isParallelUploadEnabled() {
+    return parallelUploadEnabled;
   }
 }

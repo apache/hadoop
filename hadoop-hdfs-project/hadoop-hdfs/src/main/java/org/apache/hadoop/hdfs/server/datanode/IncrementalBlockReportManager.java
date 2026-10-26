@@ -128,6 +128,13 @@ class IncrementalBlockReportManager {
       = Maps.newHashMap();
 
   /**
+   * Total number of pending block entries across all storages. Maintained
+   * incrementally so that the size can be checked in O(1) on the hot path
+   * ({@link #addRDBI}) without iterating over all storages.
+   */
+  private long pendingBlockCount = 0;
+
+  /**
    * If this flag is set then an IBR will be sent by the actor
    * thread after waiting for the IBR timer to elapse.
    */
@@ -138,12 +145,22 @@ class IncrementalBlockReportManager {
 
   /** The timestamp of the last IBR. */
   private volatile long lastIBR;
+
+  /**
+   * Maximum number of pending block entries allowed before the queue is
+   * cleared to prevent the DataNode from running out of memory when the
+   * target NameNode is unreachable. 0 disables the check.
+   */
+  private final long maxPendingBlocks;
+
   private DataNodeMetrics dnMetrics;
 
   IncrementalBlockReportManager(
       final long ibrInterval,
+      final long maxPendingBlocks,
       final DataNodeMetrics dnMetrics) {
     this.ibrInterval = ibrInterval;
+    this.maxPendingBlocks = maxPendingBlocks;
     this.lastIBR = monotonicNow() - ibrInterval;
     this.dnMetrics = dnMetrics;
   }
@@ -175,6 +192,8 @@ class IncrementalBlockReportManager {
         reports.add(new StorageReceivedDeletedBlocks(entry.getKey(), rdbi));
       }
     }
+    // All entries have been drained from the map.
+    pendingBlockCount = 0;
 
     /* set blocks to zero */
     this.dnMetrics.resetBlocksInPendingIBR();
@@ -185,7 +204,10 @@ class IncrementalBlockReportManager {
 
   private synchronized void putMissing(StorageReceivedDeletedBlocks[] reports) {
     for (StorageReceivedDeletedBlocks r : reports) {
-      pendingIBRs.get(r.getStorage()).putMissing(r.getBlocks());
+      final PerStorageIBR perStorage = pendingIBRs.get(r.getStorage());
+      if (perStorage != null) {
+        pendingBlockCount += perStorage.putMissing(r.getBlocks());
+      }
     }
     if (reports.length > 0) {
       readyToSend = true;
@@ -253,10 +275,12 @@ class IncrementalBlockReportManager {
     // There may only be one such entry.
     for (PerStorageIBR perStorage : pendingIBRs.values()) {
       if (perStorage.remove(rdbi.getBlock()) != null) {
+        pendingBlockCount--;
         break;
       }
     }
     getPerStorageIBR(storage).put(rdbi);
+    pendingBlockCount++;
   }
 
   synchronized void notifyNamenodeBlock(ReceivedDeletedBlockInfo rdbi,
@@ -296,12 +320,46 @@ class IncrementalBlockReportManager {
     }
   }
 
-  void clearIBRs() {
+  synchronized void clearIBRs() {
     pendingIBRs.clear();
+    pendingBlockCount = 0;
+  }
+
+  /**
+   * Clear the pending IBR queue if it has grown beyond
+   * {@code maxPendingBlocks}. This bounds the DataNode's heap footprint when
+   * the target NameNode is unreachable and the queue would otherwise grow
+   * without bound (for example, a NameNode id listed in
+   * {@code dfs.ha.namenodes.<nsId>} whose RPC address is not configured).
+   *
+   * The caller is responsible for triggering a Full Block Report after a clear
+   * so that the NameNode gets a complete, consistent view once it becomes
+   * reachable again.
+   *
+   * @return true if the queue was cleared; false otherwise.
+   */
+  synchronized boolean clearIBRsIfNeeded() {
+    if (maxPendingBlocks <= 0 || pendingBlockCount < maxPendingBlocks) {
+      return false;
+    }
+    LOG.warn("Clearing {} pending IBR block entries because the count reached "
+        + "the limit {}. The target NameNode appears to be unreachable; a "
+        + "Full Block Report will be sent to resync once it is reachable "
+        + "again.", pendingBlockCount, maxPendingBlocks);
+    clearIBRs();
+    return true;
+  }
+
+  /**
+   * @return the number of pending block entries across all storages.
+   */
+  @VisibleForTesting
+  synchronized long getPendingBlockCount() {
+    return pendingBlockCount;
   }
 
   @VisibleForTesting
-  int getPendingIBRSize() {
+  synchronized int getPendingIBRSize() {
     return pendingIBRs.size();
   }
 }

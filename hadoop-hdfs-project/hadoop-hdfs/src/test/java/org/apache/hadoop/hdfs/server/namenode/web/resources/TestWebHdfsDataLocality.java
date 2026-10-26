@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.web.resources;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
@@ -45,10 +50,7 @@ import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.hdfs.web.resources.PostOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 /**
@@ -67,9 +69,6 @@ public class TestWebHdfsDataLocality {
 
   private static final String LOCALHOST =
       InetAddress.getLoopbackAddress().getHostName();
-
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testDataLocality() throws Exception {
@@ -104,7 +103,7 @@ public class TestWebHdfsDataLocality {
           final DatanodeInfo chosen = NamenodeWebHdfsMethods.chooseDatanode(
               namenode, f, PutOpParam.Op.CREATE, -1L, blocksize, null,
               LOCALHOST, null);
-          Assert.assertEquals(ipAddr, chosen.getIpAddr());
+          assertEquals(ipAddr, chosen.getIpAddr());
         }
       }
   
@@ -118,9 +117,9 @@ public class TestWebHdfsDataLocality {
       final LocatedBlocks locatedblocks = NameNodeAdapter.getBlockLocations(
           namenode, f, 0, 1);
       final List<LocatedBlock> lb = locatedblocks.getLocatedBlocks();
-      Assert.assertEquals(1, lb.size());
+      assertEquals(1, lb.size());
       final DatanodeInfo[] locations = lb.get(0).getLocations();
-      Assert.assertEquals(1, locations.length);
+      assertEquals(1, locations.length);
       final DatanodeInfo expected = locations[0];
       
       //For GETFILECHECKSUM, OPEN and APPEND,
@@ -131,7 +130,7 @@ public class TestWebHdfsDataLocality {
         final DatanodeInfo chosen = NamenodeWebHdfsMethods.chooseDatanode(
             namenode, f, GetOpParam.Op.GETFILECHECKSUM, -1L, blocksize, null,
             LOCALHOST, status);
-        Assert.assertEquals(expected, chosen);
+        assertEquals(expected, chosen);
       }
   
       { //test OPEN
@@ -139,7 +138,7 @@ public class TestWebHdfsDataLocality {
         final DatanodeInfo chosen = NamenodeWebHdfsMethods.chooseDatanode(
             namenode, f, GetOpParam.Op.OPEN, 0, blocksize, null,
             LOCALHOST, status);
-        Assert.assertEquals(expected, chosen);
+        assertEquals(expected, chosen);
       }
 
       { //test APPEND
@@ -147,7 +146,7 @@ public class TestWebHdfsDataLocality {
         final DatanodeInfo chosen = NamenodeWebHdfsMethods.chooseDatanode(
             namenode, f, PostOpParam.Op.APPEND, -1L, blocksize, null,
             LOCALHOST, status);
-        Assert.assertEquals(expected, chosen);
+        assertEquals(expected, chosen);
       }
     } finally {
       cluster.shutdown();
@@ -188,10 +187,9 @@ public class TestWebHdfsDataLocality {
       final LocatedBlocks locatedblocks = NameNodeAdapter.getBlockLocations(
           namenode, f, 0, 1);
       final List<LocatedBlock> lb = locatedblocks.getLocatedBlocks();
-      Assert.assertEquals(1, lb.size());
+      assertEquals(1, lb.size());
       final DatanodeInfo[] locations = lb.get(0).getLocations();
-      Assert.assertEquals(3, locations.length);
-      
+      assertEquals(3, locations.length);
       
       //For GETFILECHECKSUM, OPEN and APPEND,
       //the chosen datanode must be different with exclude nodes.
@@ -205,8 +203,7 @@ public class TestWebHdfsDataLocality {
               namenode, f, GetOpParam.Op.GETFILECHECKSUM, -1L, blocksize,
               sb.toString(), LOCALHOST, status);
           for (int j = 0; j <= i; j++) {
-            Assert.assertNotEquals(locations[j].getHostName(),
-                chosen.getHostName());
+            assertNotEquals(locations[j].getHostName(), chosen.getHostName());
           }
         }
 
@@ -216,8 +213,7 @@ public class TestWebHdfsDataLocality {
               namenode, f, GetOpParam.Op.OPEN, 0, blocksize, sb.toString(),
               LOCALHOST, status);
           for (int j = 0; j <= i; j++) {
-            Assert.assertNotEquals(locations[j].getHostName(),
-                chosen.getHostName());
+            assertNotEquals(locations[j].getHostName(), chosen.getHostName());
           }
         }
   
@@ -227,8 +223,7 @@ public class TestWebHdfsDataLocality {
               .chooseDatanode(namenode, f, PostOpParam.Op.APPEND, -1L,
                   blocksize, sb.toString(), LOCALHOST, status);
           for (int j = 0; j <= i; j++) {
-            Assert.assertNotEquals(locations[j].getHostName(),
-                chosen.getHostName());
+            assertNotEquals(locations[j].getHostName(), chosen.getHostName());
           }
         }
         
@@ -256,7 +251,7 @@ public class TestWebHdfsDataLocality {
           DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT,
           "DataNode2", LOCALHOST, null);
     } catch (Exception e) {
-      Assert.fail("Failed to exclude DataNode2" + e.getMessage());
+      fail("Failed to exclude DataNode2" + e.getMessage());
     } finally {
       cluster.shutdown();
     }
@@ -266,9 +261,11 @@ public class TestWebHdfsDataLocality {
   public void testChooseDatanodeBeforeNamesystemInit() throws Exception {
     NameNode nn = mock(NameNode.class);
     when(nn.getNamesystem()).thenReturn(null);
-    exception.expect(IOException.class);
-    exception.expectMessage("Namesystem has not been initialized yet.");
-    NamenodeWebHdfsMethods.chooseDatanode(nn, "/path", PutOpParam.Op.CREATE, 0,
-        DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT, null, LOCALHOST, null);
+
+    IOException ex = assertThrows(IOException.class, () -> {
+      NamenodeWebHdfsMethods.chooseDatanode(nn, "/path", PutOpParam.Op.CREATE, 0,
+          DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT, null, LOCALHOST, null);
+    });
+    assertTrue(ex.getMessage().contains("Namesystem has not been initialized yet."));
   }
 }

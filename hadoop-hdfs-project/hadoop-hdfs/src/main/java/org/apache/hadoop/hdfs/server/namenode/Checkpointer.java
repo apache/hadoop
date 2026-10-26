@@ -143,7 +143,8 @@ class Checkpointer extends Daemon {
       try {
         long now = monotonicNow();
         boolean shouldCheckpoint = false;
-        if(now >= lastCheckpointTime + checkpointPeriodMSec) {
+        if(lastCheckpointTime == 0
+            || now >= lastCheckpointTime + checkpointPeriodMSec) {
           shouldCheckpoint = true;
         } else if(now >= lastEditLogCheckTime + periodMSec) {
           long txns = countUncheckpointedTxns();

@@ -35,7 +35,7 @@ import org.apache.hadoop.metrics2.util.SampleQuantiles;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests hflushing concurrently from many threads.

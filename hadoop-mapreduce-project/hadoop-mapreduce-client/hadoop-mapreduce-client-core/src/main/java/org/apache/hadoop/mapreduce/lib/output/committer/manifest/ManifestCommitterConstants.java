@@ -221,7 +221,7 @@ public final class ManifestCommitterConstants {
   public static final boolean OPT_DELETE_TARGET_FILES_DEFAULT = false;
 
   /**
-   * Name of the factory: {@value}.
+   * Name of the factory.
    */
   public static final String MANIFEST_COMMITTER_FACTORY =
       ManifestCommitterFactory.class.getName();
@@ -235,7 +235,6 @@ public final class ManifestCommitterConstants {
 
   /**
    * Default classname of the store operations.
-   * Value: {@value}.
    */
   public static final String STORE_OPERATIONS_CLASS_DEFAULT =
       ManifestStoreOperationsThroughFileSystem.class.getName();

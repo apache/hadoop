@@ -21,8 +21,8 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
@@ -37,9 +37,9 @@ import org.apache.hadoop.security.token.Token;
 
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.FULL_TOKEN_KIND;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.SESSION_TOKEN_KIND;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests related to S3A DT support.
@@ -48,7 +48,7 @@ public class TestS3ADelegationTokenSupport {
 
   private static URI externalUri;
 
-  @BeforeClass
+  @BeforeAll
   public static void classSetup() throws Exception {
     externalUri = new URI(PublicDatasetTestUtils.DEFAULT_EXTERNAL_FILE);
   }
@@ -65,7 +65,7 @@ public class TestS3ADelegationTokenSupport {
     AbstractS3ATokenIdentifier identifier
         = new SessionTokenIdentifier();
     assertEquals(SESSION_TOKEN_KIND, identifier.getKind());
-    assertTrue("issue date is not set", identifier.getIssueDate() > 0L);
+    assertTrue(identifier.getIssueDate() > 0L, "issue date is not set");
   }
 
   @Test
@@ -91,21 +91,20 @@ public class TestS3ADelegationTokenSupport {
     decoded.validate();
     MarshalledCredentials creds
         = ((SessionTokenIdentifier) decoded).getMarshalledCredentials();
-    assertNotNull("credentials",
-        MarshalledCredentialBinding.toAWSCredentials(creds,
-        MarshalledCredentials.CredentialTypeRequired.AnyNonEmpty, ""));
+    assertNotNull(MarshalledCredentialBinding.toAWSCredentials(creds,
+        MarshalledCredentials.CredentialTypeRequired.AnyNonEmpty, ""),
+        "credentials");
     assertEquals(alice, decoded.getOwner());
     UserGroupInformation decodedUser = decoded.getUser();
-    assertEquals("name of " + decodedUser,
-        "alice",
-        decodedUser.getUserName());
-    assertEquals("renewer", renewer, decoded.getRenewer());
-    assertEquals("Authentication method of " + decodedUser,
-        UserGroupInformation.AuthenticationMethod.TOKEN,
-        decodedUser.getAuthenticationMethod());
+    assertEquals("alice",
+        decodedUser.getUserName(), "name of " + decodedUser);
+    assertEquals(renewer, decoded.getRenewer(), "renewer");
+    assertEquals(UserGroupInformation.AuthenticationMethod.TOKEN,
+        decodedUser.getAuthenticationMethod(),
+        "Authentication method of " + decodedUser);
     assertEquals("origin", decoded.getOrigin());
-    assertEquals("issue date", identifier.getIssueDate(),
-        decoded.getIssueDate());
+    assertEquals(identifier.getIssueDate(),
+        decoded.getIssueDate(), "issue date");
     EncryptionSecrets encryptionSecrets = decoded.getEncryptionSecrets();
     assertEquals(S3AEncryptionMethods.SSE_S3, encryptionSecrets.getEncryptionMethod());
     assertEquals(encryptionKey, encryptionSecrets.getEncryptionKey());
@@ -138,11 +137,11 @@ public class TestS3ADelegationTokenSupport {
 
     SessionTokenIdentifier result = S3ATestUtils.roundTrip(id, null);
     String ids = id.toString();
-    assertEquals("URI in " + ids, id.getUri(), result.getUri());
-    assertEquals("credentials in " + ids,
-        id.getMarshalledCredentials(),
-        result.getMarshalledCredentials());
-    assertEquals("renewer in " + ids, renewer, id.getRenewer());
+    assertEquals(id.getUri(), result.getUri(), "URI in " + ids);
+    assertEquals(id.getMarshalledCredentials(),
+        result.getMarshalledCredentials(),
+        "credentials in " + ids);
+    assertEquals(renewer, id.getRenewer(), "renewer in " + ids);
     EncryptionSecrets encryptionSecrets = result.getEncryptionSecrets();
     assertEquals(S3AEncryptionMethods.DSSE_KMS, encryptionSecrets.getEncryptionMethod());
     assertEquals(encryptionKey, encryptionSecrets.getEncryptionKey());
@@ -161,11 +160,11 @@ public class TestS3ADelegationTokenSupport {
 
     SessionTokenIdentifier result = S3ATestUtils.roundTrip(id, null);
     String ids = id.toString();
-    assertEquals("URI in " + ids, id.getUri(), result.getUri());
-    assertEquals("credentials in " + ids,
-        id.getMarshalledCredentials(),
-        result.getMarshalledCredentials());
-    assertEquals("renewer in " + ids, new Text(), id.getRenewer());
+    assertEquals(id.getUri(), result.getUri(), "URI in " + ids);
+    assertEquals(id.getMarshalledCredentials(),
+        result.getMarshalledCredentials(),
+        "credentials in " + ids);
+    assertEquals(new Text(), id.getRenewer(), "renewer in " + ids);
   }
 
   @Test
@@ -179,11 +178,11 @@ public class TestS3ADelegationTokenSupport {
 
     RoleTokenIdentifier result = S3ATestUtils.roundTrip(id, null);
     String ids = id.toString();
-    assertEquals("URI in " + ids, id.getUri(), result.getUri());
-    assertEquals("credentials in " + ids,
-        id.getMarshalledCredentials(),
-        result.getMarshalledCredentials());
-    assertEquals("renewer in " + ids, new Text(), id.getRenewer());
+    assertEquals(id.getUri(), result.getUri(), "URI in " + ids);
+    assertEquals(id.getMarshalledCredentials(),
+        result.getMarshalledCredentials(),
+        "credentials in " + ids);
+    assertEquals(new Text(), id.getRenewer(), "renewer in " + ids);
   }
 
   @Test
@@ -198,11 +197,11 @@ public class TestS3ADelegationTokenSupport {
 
     FullCredentialsTokenIdentifier result = S3ATestUtils.roundTrip(id, null);
     String ids = id.toString();
-    assertEquals("URI in " + ids, id.getUri(), result.getUri());
-    assertEquals("credentials in " + ids,
-        id.getMarshalledCredentials(),
-        result.getMarshalledCredentials());
-    assertEquals("renewer in " + ids, renewer, result.getRenewer());
+    assertEquals(id.getUri(), result.getUri(), "URI in " + ids);
+    assertEquals(id.getMarshalledCredentials(),
+        result.getMarshalledCredentials(),
+        "credentials in " + ids);
+    assertEquals(renewer, result.getRenewer(), "renewer in " + ids);
   }
 
   /**

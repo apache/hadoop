@@ -19,14 +19,17 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public final class TestHttpPolicy {
-
-  @Test(expected = HadoopIllegalArgumentException.class)
+  @Test
   public void testInvalidPolicyValue() {
-    Configuration conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, "invalid");
-    DFSUtil.getHttpPolicy(conf);
+    assertThrows(HadoopIllegalArgumentException.class, () -> {
+      Configuration conf = new Configuration();
+      conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, "invalid");
+      DFSUtil.getHttpPolicy(conf);
+    });
   }
 }

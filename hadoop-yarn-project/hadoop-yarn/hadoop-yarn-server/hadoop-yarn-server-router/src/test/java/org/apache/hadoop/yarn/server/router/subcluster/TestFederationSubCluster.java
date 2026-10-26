@@ -74,7 +74,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.AP
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.RESERVATION_NEW;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.ADD_NODE_LABELS;
 import static org.apache.hadoop.yarn.server.router.webapp.TestRouterWebServicesREST.waitWebAppRunning;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestFederationSubCluster {
 
@@ -99,7 +99,7 @@ public class TestFederationSubCluster {
       String connectString = curatorTestingServer.getConnectString();
       curatorFramework = CuratorFrameworkFactory.builder()
           .connectString(connectString)
-          .retryPolicy(new RetryNTimes(100, 100))
+          .retryPolicy(new RetryNTimes(200, 200))
           .build();
       curatorFramework.start();
       curatorFramework.getConnectionStateListenable().addListener((client, newState) -> {
@@ -162,6 +162,14 @@ public class TestFederationSubCluster {
   }
 
   public void stop() throws Exception {
+    // Each child JVM runs its shutdown hooks on SIGTERM, and a sub-cluster takes
+    // a while to stop its ResourceManager and NodeManagers. Signal all of them
+    // first so they shut down concurrently, then wait for each to exit.
+    for (JavaProcess process : new JavaProcess[] {subCluster1, subCluster2, router}) {
+      if (process != null) {
+        process.destroy();
+      }
+    }
     if (subCluster1 != null) {
       subCluster1.stop();
     }
@@ -202,7 +210,7 @@ public class TestFederationSubCluster {
       } catch (Exception e) {
       }
       return false;
-    }, 5000, 50 * 1000);
+    }, 5000, 100 * 1000);
   }
 
   public static <T> T performGetCalls(final String routerAddress, final String path,

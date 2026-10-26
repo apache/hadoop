@@ -30,8 +30,14 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 @InterfaceStability.Evolving
 public class AbfsDriverException extends AbfsRestOperationException {
 
+  /** Default error message used when no inner exception is provided. */
   private static final String ERROR_MESSAGE = "Runtime Exception Occurred In ABFS Driver";
 
+  /**
+   * Constructs an {@code AbfsDriverException} with the specified inner exception.
+   *
+   * @param innerException the underlying exception that caused the failure
+   */
   public AbfsDriverException(final Exception innerException) {
     super(
         AzureServiceErrorCode.UNKNOWN.getStatusCode(),
@@ -42,6 +48,13 @@ public class AbfsDriverException extends AbfsRestOperationException {
         innerException);
   }
 
+  /**
+   * Constructs an {@code AbfsDriverException} with the specified inner exception
+   * and activity ID for correlation.
+   *
+   * @param innerException the underlying exception that caused the failure
+   * @param activityId the request or operation ID for traceability
+   */
   public AbfsDriverException(final Exception innerException, final String activityId) {
     super(
         AzureServiceErrorCode.UNKNOWN.getStatusCode(),
@@ -52,6 +65,13 @@ public class AbfsDriverException extends AbfsRestOperationException {
         null);
   }
 
+  /**
+   * Constructs an {@code AbfsDriverException} with a custom error message and
+   * inner exception.
+   *
+   * @param errorMessage a custom error message describing the failure
+   * @param innerException the underlying exception that caused the failure
+   */
   public AbfsDriverException(final String errorMessage, final Exception innerException) {
     super(
         AzureServiceErrorCode.UNKNOWN.getStatusCode(),

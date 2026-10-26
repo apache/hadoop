@@ -104,6 +104,7 @@ public class CustomSdkSigner  extends AbstractAwsS3V4Signer implements Signer {
 
   /**
    * Parse the bucket name from the host.
+   * This does not work for path-style access; the hostname of the endpoint is returned.
    * @param host hostname
    * @return the parsed bucket name; if "kms" is KMS signing.
    */

@@ -28,7 +28,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.junit.jupiter.params.ParameterizedTest;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,9 +56,11 @@ import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_B
 /**
  * Test the prefetching input stream with LRU cache eviction on S3ACachingInputStream.
  */
+@ParameterizedClass(name="max-blocks-{0}")
+@MethodSource("params")
 public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
 
-  private String maxBlocks;
+  private final String maxBlocks;
 
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
@@ -65,8 +69,8 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
     });
   }
 
-  public void initITestS3APrefetchingLruEviction(final String pMaxBlocks) {
-    this.maxBlocks = pMaxBlocks;
+  public ITestS3APrefetchingLruEviction(final String maxBlocks) {
+    this.maxBlocks = maxBlocks;
   }
 
   private static final Logger LOG =
@@ -91,10 +95,8 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
     return conf;
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "max-blocks-{0}")
-  public void testSeeksWithLruEviction(String pMaxBlocks) throws Throwable {
-    initITestS3APrefetchingLruEviction(pMaxBlocks);
+  @Test
+  public void testSeeksWithLruEviction() throws Throwable {
     IOStatistics ioStats;
     byte[] data = ContractTestUtils.dataset(SMALL_FILE_SIZE, 'x', 26);
     // Path for file which should have length > block size so S3ACachingInputStream is used

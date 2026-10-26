@@ -18,13 +18,19 @@
 
 package org.apache.hadoop.fs.contract.rawlocal;
 
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
+@ParameterizedClass(name="buffer-{0}")
+@MethodSource("params")
 public class TestRawLocalContractVectoredRead extends AbstractContractVectoredReadTest {
 
-  public TestRawLocalContractVectoredRead() {
+  public TestRawLocalContractVectoredRead(final String bufferType) {
+    super(bufferType);
   }
 
   @Override

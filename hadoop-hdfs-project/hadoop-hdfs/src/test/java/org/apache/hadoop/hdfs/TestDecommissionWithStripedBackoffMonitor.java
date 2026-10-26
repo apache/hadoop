@@ -22,11 +22,13 @@ import org.apache.hadoop.hdfs.server.blockmanagement
     .DatanodeAdminBackoffMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement
     .DatanodeAdminMonitorInterface;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Class to run all the stripped decommission tests with the
  * DatanodeAdminBackoffMonitor.
  */
+@Tag("slow")
 public class TestDecommissionWithStripedBackoffMonitor
     extends TestDecommissionWithStriped{
 

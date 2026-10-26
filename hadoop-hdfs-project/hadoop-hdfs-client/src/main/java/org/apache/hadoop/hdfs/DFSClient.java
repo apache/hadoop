@@ -1079,6 +1079,26 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
+   * Create an input stream using pre-fetched block locations, skipping the
+   * NameNode RPC to get block locations.
+   * @param src file name
+   * @param buffersize ignored
+   * @param verifyChecksum verify checksums before returning data to client
+   * @param locatedBlocks pre-fetched block locations for this file
+   * @return an input stream for reading the file
+   * @throws IOException on I/O error
+   */
+  public DFSInputStream open(String src, int buffersize, boolean verifyChecksum,
+      LocatedBlocks locatedBlocks) throws IOException {
+    Preconditions.checkArgument(locatedBlocks != null,
+        "null locatedBlocks");
+    checkOpen();
+    try (TraceScope ignored = newPathTraceScope("newDFSInputStream", src)) {
+      return openInternal(locatedBlocks, src, verifyChecksum);
+    }
+  }
+
+  /**
    * Create an input stream from the {@link HdfsPathHandle} if the
    * constraints encoded from {@link
    * DistributedFileSystem#createPathHandle(FileStatus, Options.HandleOpt...)}

@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -69,14 +70,18 @@ import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestDatanodeManager {
   
@@ -141,9 +146,9 @@ public class TestDatanodeManager {
 
     //Verify DatanodeManager has the correct count
     Map<String, Integer> mapToCheck = dm.getDatanodesSoftwareVersions();
-    assertNull("should be no more version0 nodes", mapToCheck.get("version0"));
-    assertEquals("should be one version1 node",
-        mapToCheck.get("version1").intValue(), 1);
+    assertNull(mapToCheck.get("version0"), "should be no more version0 nodes");
+    assertEquals(mapToCheck.get("version1").intValue(), 1,
+        "should be one version1 node");
   }
 
   /**
@@ -172,8 +177,8 @@ public class TestDatanodeManager {
             new DatanodeID(ipNew, "", storageID, 9000, 0, 0, 0),
             null, null, "version"));
 
-    assertNull("should be no node with old ip", dm.getDatanodeByHost(ipOld));
-    assertNotNull("should be a node with new ip", dm.getDatanodeByHost(ipNew));
+    assertNull(dm.getDatanodeByHost(ipOld), "should be no node with old ip");
+    assertNotNull(dm.getDatanodeByHost(ipNew), "should be a node with new ip");
 
     storageID = "someStorageID2";
     String hostnameOld = "someHostNameOld" + storageID;
@@ -187,8 +192,46 @@ public class TestDatanodeManager {
             new DatanodeID("ip", hostnameNew, storageID, 9000, 0, 0, 0),
             null, null, "version"));
 
-    assertNull("should be no node with old hostname", dm.getDatanodeByHostName(hostnameOld));
-    assertNotNull("should be a node with new hostname", dm.getDatanodeByHostName(hostnameNew));
+    assertNull(dm.getDatanodeByHostName(hostnameOld), "should be no node with old hostname");
+    assertNotNull(dm.getDatanodeByHostName(hostnameNew), "should be a node with new hostname");
+  }
+
+  /**
+   * Slow peer reports keyed by IPv4, IPv6 and bracketed IPv6 info addresses
+   * must all resolve to their registered datanodes.
+   */
+  @Test
+  public void testSlowPeersResolvedForIpv4AndIpv6() throws IOException {
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    Mockito.when(fsn.hasWriteLock(RwLockMode.BM)).thenReturn(true);
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY, true);
+    DatanodeManager dm = mockDatanodeManager(fsn, conf);
+    try {
+      String[] ips = {"1.2.3.4", "2001:db8::1", "2001:db8::2", "5.6.7.8"};
+      for (int i = 0; i < ips.length; i++) {
+        dm.registerDatanode(new DatanodeRegistration(
+            new DatanodeID(ips[i], "", "uuid" + i, 9866, 9864, 0, 9867), null, null, "version"));
+      }
+      DatanodeDescriptor dnIpv4 = dm.getDatanodeByHost(ips[0]);
+      DatanodeDescriptor dnIpv6PlainKey = dm.getDatanodeByHost(ips[1]);
+      DatanodeDescriptor dnIpv6BracketedKey = dm.getDatanodeByHost(ips[2]);
+
+      // Keys are spelled out so the plain and bracketed IPv6 forms stay covered
+      // regardless of how DatanodeID formats its info address.
+      SlowPeerTracker tracker = dm.getSlowPeerTracker();
+      OutlierMetrics metrics = new OutlierMetrics(0.0, 0.0, 0.0, 5.0);
+      tracker.addReport("1.2.3.4:9864", ips[3], metrics);
+      tracker.addReport("2001:db8::1:9864", ips[3], metrics);
+      tracker.addReport("[2001:db8::2]:9864", ips[3], metrics);
+
+      assertThat(dm.getAllSlowDataNodes())
+          .containsExactlyInAnyOrder(dnIpv4, dnIpv6PlainKey, dnIpv6BracketedKey);
+    } finally {
+      // Stops the slow peer collector thread started by enabling peer stats.
+      dm.close();
+    }
   }
 
   /**
@@ -254,17 +297,19 @@ public class TestDatanodeManager {
         } else { //This storageID has never been registered
           //Ensure IP address is unique to storageID
           String ip = "someIP" + storageID;
+          String hostname = "hostname" + storageID;
           Mockito.when(dr.getIpAddr()).thenReturn(ip);
           Mockito.when(dr.getXferAddr()).thenReturn(ip + ":9000");
           Mockito.when(dr.getXferPort()).thenReturn(9000);
+          Mockito.when(dr.getHostName()).thenReturn(hostname);
         }
         //Pick a random version to register with
         Mockito.when(dr.getSoftwareVersion()).thenReturn(
           "version" + rng.nextInt(5));
 
         LOG.info("Registering node storageID: " + dr.getDatanodeUuid() +
-          ", version: " + dr.getSoftwareVersion() + ", IP address: "
-          + dr.getXferAddr());
+            ", version: " + dr.getSoftwareVersion() + ", IP address: "
+            + dr.getXferAddr() + ", hostname: " + dr.getHostName());
 
         //Register this random node
         dm.registerDatanode(dr);
@@ -291,13 +336,14 @@ public class TestDatanodeManager {
         LOG.info("Still in map: " + entry.getKey() + " has "
           + entry.getValue());
       }
-      assertEquals("The map of version counts returned by DatanodeManager was"
-        + " not what it was expected to be on iteration " + i, 0,
-        mapToCheck.size());
+      assertEquals(0, mapToCheck.size(),
+          "The map of version counts returned by DatanodeManager was"
+              + " not what it was expected to be on iteration " + i);
     }
   }
   
-  @Test (timeout = 100000)
+  @Test
+  @Timeout(value = 100)
   public void testRejectUnresolvedDatanodes() throws IOException {
     //Create the DatanodeManager which will be tested
     FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
@@ -327,12 +373,12 @@ public class TestDatanodeManager {
     try {
       //Register this node
       dm.registerDatanode(dr);
-      Assert.fail("Expected an UnresolvedTopologyException");
+      fail("Expected an UnresolvedTopologyException");
     } catch (UnresolvedTopologyException ute) {
       LOG.info("Expected - topology is not resolved and " +
           "registration is rejected.");
     } catch (Exception e) {
-      Assert.fail("Expected an UnresolvedTopologyException");
+      fail("Expected an UnresolvedTopologyException");
     }
   }
   
@@ -487,29 +533,29 @@ public class TestDatanodeManager {
     DatanodeInfo[] sortedLocs = block.getLocations();
     storageIDs = block.getStorageIDs();
     storageTypes = block.getStorageTypes();
-    assertThat(sortedLocs.length, is(totalDNs));
-    assertThat(storageIDs.length, is(totalDNs));
-    assertThat(storageTypes.length, is(totalDNs));
+    assertThat(sortedLocs.length).isEqualTo(totalDNs);
+    assertThat(storageIDs.length).isEqualTo(totalDNs);
+    assertThat(storageTypes.length).isEqualTo(totalDNs);
     for (int i = 0; i < sortedLocs.length; i++) {
-      assertThat(((DatanodeInfoWithStorage) sortedLocs[i]).getStorageID(),
-        is(storageIDs[i]));
-      assertThat(((DatanodeInfoWithStorage) sortedLocs[i]).getStorageType(),
-        is(storageTypes[i]));
+      assertThat(((DatanodeInfoWithStorage) sortedLocs[i]).getStorageID())
+          .isEqualTo(storageIDs[i]);
+      assertThat(((DatanodeInfoWithStorage) sortedLocs[i]).getStorageType())
+          .isEqualTo(storageTypes[i]);
     }
     // Ensure the local node is first.
-    assertThat(sortedLocs[0].getIpAddr(), is(targetIp));
+    assertThat(sortedLocs[0].getIpAddr()).isEqualTo(targetIp);
     // Ensure the two decommissioned DNs were moved to the end.
-    assertThat(sortedLocs[sortedLocs.length - 1].getAdminState(),
-      is(DatanodeInfo.AdminStates.DECOMMISSIONED));
-    assertThat(sortedLocs[sortedLocs.length - 2].getAdminState(),
-      is(DatanodeInfo.AdminStates.DECOMMISSIONED));
+    assertThat(sortedLocs[sortedLocs.length - 1].getAdminState())
+        .isEqualTo(DatanodeInfo.AdminStates.DECOMMISSIONED);
+    assertThat(sortedLocs[sortedLocs.length - 2].getAdminState())
+        .isEqualTo(DatanodeInfo.AdminStates.DECOMMISSIONED);
     // check that the StorageType of datanoodes immediately
     // preceding the decommissioned datanodes is PROVIDED
     for (int i = 0; i < providedStorages; i++) {
       assertThat(
           ((DatanodeInfoWithStorage)
-              sortedLocs[sortedLocs.length - 3 - i]).getStorageType(),
-          is(StorageType.PROVIDED));
+              sortedLocs[sortedLocs.length - 3 - i]).getStorageType())
+          .isEqualTo(StorageType.PROVIDED);
     }
   }
 
@@ -640,8 +686,7 @@ public class TestDatanodeManager {
     assertEquals(locs[1].getIpAddr(), sortedLocs[2].getIpAddr());
     assertEquals(locs[4].getIpAddr(), sortedLocs[3].getIpAddr());
     // Ensure the two decommissioned DNs were moved to the end.
-    assertThat(sortedLocs[4].getAdminState(),
-        is(DatanodeInfo.AdminStates.DECOMMISSIONED));
+    assertThat(sortedLocs[4].getAdminState()).isEqualTo(DatanodeInfo.AdminStates.DECOMMISSIONED);
     assertEquals(locs[0].getIpAddr(), sortedLocs[4].getIpAddr());
 
     // Test client not in cluster but same rack with locs[3].
@@ -656,9 +701,60 @@ public class TestDatanodeManager {
     assertEquals(locs[1].getIpAddr(), sortedLocs2[2].getIpAddr());
     assertEquals(locs[4].getIpAddr(), sortedLocs2[3].getIpAddr());
     // Ensure the two decommissioned DNs were moved to the end.
-    assertThat(sortedLocs[4].getAdminState(),
-        is(DatanodeInfo.AdminStates.DECOMMISSIONED));
+    assertThat(sortedLocs[4].getAdminState()).
+        isEqualTo(DatanodeInfo.AdminStates.DECOMMISSIONED);
     assertEquals(locs[0].getIpAddr(), sortedLocs2[4].getIpAddr());
+  }
+
+  @Test
+  public void testGetBlockLocationWithDeadDatanodeReader()
+      throws IOException, URISyntaxException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERLOAD_KEY, true);
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 0);
+    conf.setInt(
+        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 0);
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    Mockito.when(fsn.hasWriteLock(RwLockMode.BM)).thenReturn(true);
+    URL shellScript = getClass().getResource(
+        "/" + Shell.appendScriptExtension("topology-script"));
+    Path resourcePath = Paths.get(shellScript.toURI());
+    FileUtil.setExecutable(resourcePath.toFile(), true);
+    conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY,
+        resourcePath.toString());
+    DatanodeManager dm = mockDatanodeManager(fsn, conf);
+
+    int totalDNs = 5;
+    DatanodeInfo[] locs = new DatanodeInfo[totalDNs];
+    for (int i = 0; i < totalDNs; i++) {
+      String uuid = "UUID-" + i;
+      String ip = "IP-" + i / 2 + "-" + i;
+      DatanodeRegistration dr = Mockito.mock(DatanodeRegistration.class);
+      Mockito.when(dr.getDatanodeUuid()).thenReturn(uuid);
+      Mockito.when(dr.getIpAddr()).thenReturn(ip);
+      dm.registerDatanode(dr);
+      locs[i] = dm.getDatanode(uuid);
+      locs[i].setXceiverCount(i);
+    }
+
+    locs[3].setLastUpdateMonotonic(0);
+    dm.removeDeadDatanode(locs[3], true);
+    assertThat(locs[3].getParent()).isNull();
+    assertThat(dm.getDatanodeByHost(locs[3].getIpAddr())).isSameAs(locs[3]);
+
+    ExtendedBlock b = new ExtendedBlock("somePoolID", 1234);
+    LocatedBlock block = new LocatedBlock(b,
+        new DatanodeInfo[] {locs[1], locs[2], locs[4]});
+    List<LocatedBlock> blocks = new ArrayList<>();
+    blocks.add(block);
+
+    dm.sortLocatedBlocks(locs[3].getIpAddr(), blocks);
+    DatanodeInfo[] sortedLocs = block.getLocations();
+    assertEquals(locs[2].getIpAddr(), sortedLocs[0].getIpAddr());
   }
 
   @Test
@@ -793,8 +889,7 @@ public class TestDatanodeManager {
     assertEquals(locs[4].getIpAddr(), sortedLocs[2].getIpAddr());
     assertEquals(locs[1].getIpAddr(), sortedLocs[3].getIpAddr());
     // Ensure the two decommissioned DNs were moved to the end.
-    assertThat(sortedLocs[4].getAdminState(),
-        is(DatanodeInfo.AdminStates.DECOMMISSIONED));
+    assertThat(sortedLocs[4].getAdminState()).isEqualTo(DatanodeInfo.AdminStates.DECOMMISSIONED);
     assertEquals(locs[0].getIpAddr(), sortedLocs[4].getIpAddr());
 
     // Test client not in cluster but same rack with locs[3].
@@ -809,8 +904,8 @@ public class TestDatanodeManager {
     assertEquals(locs[4].getIpAddr(), sortedLocs2[2].getIpAddr());
     assertEquals(locs[1].getIpAddr(), sortedLocs2[3].getIpAddr());
     // Ensure the two decommissioned DNs were moved to the end.
-    assertThat(sortedLocs[4].getAdminState(),
-        is(DatanodeInfo.AdminStates.DECOMMISSIONED));
+    assertThat(sortedLocs[4].getAdminState()).
+        isEqualTo(DatanodeInfo.AdminStates.DECOMMISSIONED);
     assertEquals(locs[0].getIpAddr(), sortedLocs2[4].getIpAddr());
   }
 
@@ -884,8 +979,8 @@ public class TestDatanodeManager {
     assertEquals(locs[1].getIpAddr(), sortedLocs[2].getIpAddr());
     assertEquals(locs[4].getIpAddr(), sortedLocs[3].getIpAddr());
     // Ensure the two decommissioned DNs were moved to the end.
-    assertThat(sortedLocs[4].getAdminState(),
-        is(DatanodeInfo.AdminStates.DECOMMISSIONED));
+    assertThat(sortedLocs[4].getAdminState()).
+        isEqualTo(DatanodeInfo.AdminStates.DECOMMISSIONED);
     assertEquals(locs[0].getIpAddr(), sortedLocs[4].getIpAddr());
 
     // Test client not in cluster but same rack with locs[3].
@@ -900,8 +995,8 @@ public class TestDatanodeManager {
     assertEquals(locs[1].getIpAddr(), sortedLocs2[2].getIpAddr());
     assertEquals(locs[4].getIpAddr(), sortedLocs2[3].getIpAddr());
     // Ensure the two decommissioned DNs were moved to the end.
-    assertThat(sortedLocs[4].getAdminState(),
-        is(DatanodeInfo.AdminStates.DECOMMISSIONED));
+    assertThat(sortedLocs[4].getAdminState()).
+        isEqualTo(DatanodeInfo.AdminStates.DECOMMISSIONED);
     assertEquals(locs[0].getIpAddr(), sortedLocs2[4].getIpAddr());
   }
 
@@ -954,12 +1049,11 @@ public class TestDatanodeManager {
     // Sort the list so that we know which one is which
     Collections.sort(both);
 
-    Assert.assertEquals("Incorrect number of hosts reported",
-        2, both.size());
-    Assert.assertEquals("Unexpected host or host in unexpected position",
-        "127.0.0.1:12345", both.get(0).getInfoAddr());
-    Assert.assertEquals("Unexpected host or host in unexpected position",
-        "127.0.0.1:23456", both.get(1).getInfoAddr());
+    assertEquals(2, both.size(), "Incorrect number of hosts reported");
+    assertEquals("127.0.0.1:12345", both.get(0).getInfoAddr(),
+        "Unexpected host or host in unexpected position");
+    assertEquals("127.0.0.1:23456", both.get(1).getInfoAddr(),
+        "Unexpected host or host in unexpected position");
 
     // Remove one node from includes, but do not add it to excludes.
     hm.refresh(oneNode, noNodes);
@@ -968,10 +1062,10 @@ public class TestDatanodeManager {
     List<DatanodeDescriptor> onlyOne =
         dm.getDatanodeListForReport(HdfsConstants.DatanodeReportType.ALL);
 
-    Assert.assertEquals("Incorrect number of hosts reported",
-        1, onlyOne.size());
-    Assert.assertEquals("Unexpected host reported",
-        "127.0.0.1:23456", onlyOne.get(0).getInfoAddr());
+    assertEquals(1, onlyOne.size(),
+        "Incorrect number of hosts reported");
+    assertEquals("127.0.0.1:23456", onlyOne.get(0).getInfoAddr(),
+        "Unexpected host reported");
 
     // Remove all nodes from includes
     hm.refresh(noNodes, noNodes);
@@ -983,12 +1077,12 @@ public class TestDatanodeManager {
     // Sort the list so that we know which one is which
     Collections.sort(bothAgain);
 
-    Assert.assertEquals("Incorrect number of hosts reported",
-        2, bothAgain.size());
-    Assert.assertEquals("Unexpected host or host in unexpected position",
-        "127.0.0.1:12345", bothAgain.get(0).getInfoAddr());
-    Assert.assertEquals("Unexpected host or host in unexpected position",
-        "127.0.0.1:23456", bothAgain.get(1).getInfoAddr());
+    assertEquals(2, bothAgain.size(),
+        "Incorrect number of hosts reported");
+    assertEquals("127.0.0.1:12345", bothAgain.get(0).getInfoAddr(),
+        "Unexpected host or host in unexpected position");
+    assertEquals("127.0.0.1:23456", bothAgain.get(1).getInfoAddr(),
+        "Unexpected host or host in unexpected position");
   }
 
   /**

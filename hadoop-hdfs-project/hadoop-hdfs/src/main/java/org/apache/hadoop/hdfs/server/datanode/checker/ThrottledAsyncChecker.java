@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.checker;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FluentFuture;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
@@ -145,9 +146,8 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
     final ListenableFuture<V> lf;
 
     if (diskCheckTimeout > 0) {
-      lf = TimeoutFuture
-          .create(lfWithoutTimeout, diskCheckTimeout, TimeUnit.MILLISECONDS,
-              scheduledExecutorService);
+      lf = FluentFuture.from(lfWithoutTimeout)
+          .withTimeout(diskCheckTimeout, TimeUnit.MILLISECONDS, scheduledExecutorService);
     } else {
       lf = lfWithoutTimeout;
     }

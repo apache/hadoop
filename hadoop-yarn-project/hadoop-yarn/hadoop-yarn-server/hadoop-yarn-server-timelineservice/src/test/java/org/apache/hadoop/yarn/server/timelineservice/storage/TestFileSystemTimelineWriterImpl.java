@@ -27,14 +27,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
@@ -43,11 +46,16 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
+import static org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl.buildEntityTypeSubpath;
+import static org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl.escape;
 
-public class TestFileSystemTimelineWriterImpl {
+public class TestFileSystemTimelineWriterImpl extends AbstractHadoopTestBase {
+  private static final Logger LOG =
+          LoggerFactory.getLogger(TestFileSystemTimelineWriterImpl.class);
+
+  public static final String UP = ".." + File.separator;
+
   @TempDir
   private File tmpFolder;
 
@@ -84,12 +92,10 @@ public class TestFileSystemTimelineWriterImpl {
     te.addEntity(entity2);
 
     Map<String, TimelineMetric> aggregatedMetrics =
-        new HashMap<String, TimelineMetric>();
+        new HashMap<>();
     aggregatedMetrics.put(metricId, metric);
 
-    FileSystemTimelineWriterImpl fsi = null;
-    try {
-      fsi = new FileSystemTimelineWriterImpl();
+    try (FileSystemTimelineWriterImpl fsi = new FileSystemTimelineWriterImpl()) {
       Configuration conf = new YarnConfiguration();
       String outputRoot = tmpFolder.getAbsolutePath();
       conf.set(FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
@@ -105,45 +111,41 @@ public class TestFileSystemTimelineWriterImpl {
           File.separator + "cluster_id" + File.separator + "user_id" +
           File.separator + "flow_name" + File.separator + "flow_version" +
           File.separator + "12345678" + File.separator + "app_id" +
-          File.separator + type + File.separator + id +
+          File.separator + type
+          + File.separator + id +
           FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
-      Path path = new Path(fileName);
-      FileSystem fs = FileSystem.get(conf);
-      assertTrue(fs.exists(path),
-          "Specified path(" + fileName + ") should exist: ");
-      FileStatus fileStatus = fs.getFileStatus(path);
-      assertFalse(fileStatus.isDirectory(), "Specified path should be a file");
-      List<String> data = readFromFile(fs, path);
+      List<String> data = readFromFile(FileSystem.get(conf), new Path(fileName), 2);
       // ensure there's only one entity + 1 new line
-      assertEquals(2, data.size(), "data size is:" + data.size());
-      String d = data.get(0);
+      Assertions.assertThat(data).hasSize(2);
       // confirm the contents same as what was written
-      assertEquals(d, TimelineUtils.dumpTimelineRecordtoJSON(entity));
+      assertRecordMatches(data.get(0), entity);
 
       // verify aggregated metrics
       String fileName2 = fsi.getOutputRoot() + File.separator + "entities" +
           File.separator + "cluster_id" + File.separator + "user_id" +
           File.separator + "flow_name" + File.separator + "flow_version" +
           File.separator + "12345678" + File.separator + "app_id" +
-          File.separator + type2 + File.separator + id2 +
+          File.separator + type2
+          + File.separator + id2 +
           FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
       Path path2 = new Path(fileName2);
-      assertTrue(fs.exists(path2),
-          "Specified path(" + fileName + ") should exist: ");
-      FileStatus fileStatus2 = fs.getFileStatus(path2);
-      assertFalse(fileStatus2.isDirectory(), "Specified path should be a file");
-      List<String> data2 = readFromFile(fs, path2);
+      List<String> data2 = readFromFile(FileSystem.get(conf), path2, 2);
       // ensure there's only one entity + 1 new line
-      assertEquals(2, data2.size(), "data size is:" + data2.size());
-      String metricToString = data2.get(0);
+      Assertions.assertThat(data).hasSize(2);
       // confirm the contents same as what was written
-      assertEquals(metricToString,
-          TimelineUtils.dumpTimelineRecordtoJSON(entity2));
-    } finally {
-      if (fsi != null) {
-        fsi.close();
-      }
+      assertRecordMatches(data2.get(0), entity2);
     }
+  }
+
+  /**
+   * Assert a read in string matches the json value of the entity
+   * @param d record
+   * @param entity expected
+   */
+  private static void assertRecordMatches(final String d, final TimelineEntity entity)
+      throws IOException {
+    Assertions.assertThat(d)
+        .isEqualTo(TimelineUtils.dumpTimelineRecordtoJSON(entity));
   }
 
   @Test
@@ -165,9 +167,7 @@ public class TestFileSystemTimelineWriterImpl {
     entity2.setCreatedTime(1425016503000L);
     te2.addEntity(entity2);
 
-    FileSystemTimelineWriterImpl fsi = null;
-    try {
-      fsi = new FileSystemTimelineWriterImpl();
+    try (FileSystemTimelineWriterImpl fsi = new FileSystemTimelineWriterImpl()) {
       Configuration conf = new YarnConfiguration();
       String outputRoot = tmpFolder.getAbsolutePath();
       conf.set(FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
@@ -183,33 +183,19 @@ public class TestFileSystemTimelineWriterImpl {
               "flow_version", 12345678L, "app_id"),
           te2, UserGroupInformation.createRemoteUser("user_id"));
 
-      String fileName = outputRoot + File.separator + "entities" +
-          File.separator + "cluster_id" + File.separator + "user_id" +
-          File.separator + "flow_name" + File.separator + "flow_version" +
-          File.separator + "12345678" + File.separator + "app_id" +
-          File.separator + type + File.separator + id +
-          FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+      String fileName = outputRoot + File.separator + "entities"
+          + File.separator + buildEntityTypeSubpath("cluster_id", "user_id",
+          "flow_name" ,"flow_version" ,12345678, "app_id", type)
+          + File.separator + id
+          + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
       Path path = new Path(fileName);
       FileSystem fs = FileSystem.get(conf);
-      assertTrue(fs.exists(path),
-          "Specified path(" + fileName + ") should exist: ");
-      FileStatus fileStatus = fs.getFileStatus(path);
-      assertFalse(fileStatus.isDirectory(), "Specified path should be a file");
-      List<String> data = readFromFile(fs, path);
-      assertEquals(3, data.size(), "data size is:" + data.size());
-      String d = data.get(0);
+      List<String> data = readFromFile(fs, path, 3);
       // confirm the contents same as what was written
-      assertEquals(d, TimelineUtils.dumpTimelineRecordtoJSON(entity));
+      assertRecordMatches(data.get(0), entity);
 
-
-      String metricToString = data.get(1);
       // confirm the contents same as what was written
-      assertEquals(metricToString,
-          TimelineUtils.dumpTimelineRecordtoJSON(entity2));
-    } finally {
-      if (fsi != null) {
-        fsi.close();
-      }
+      assertRecordMatches(data.get(1), entity2);
     }
   }
 
@@ -225,9 +211,7 @@ public class TestFileSystemTimelineWriterImpl {
     entity.setCreatedTime(1425016501000L);
     te.addEntity(entity);
 
-    FileSystemTimelineWriterImpl fsi = null;
-    try {
-      fsi = new FileSystemTimelineWriterImpl();
+    try (FileSystemTimelineWriterImpl fsi = new FileSystemTimelineWriterImpl()) {
       Configuration conf = new YarnConfiguration();
       String outputRoot = tmpFolder.getAbsolutePath();
       conf.set(FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
@@ -239,32 +223,86 @@ public class TestFileSystemTimelineWriterImpl {
               "flow_version", 12345678L, "app_id"),
           te, UserGroupInformation.createRemoteUser("user_id"));
 
-      String fileName = outputRoot + File.separator + "entities" +
-          File.separator + "cluster_id" + File.separator + "user_id" +
-          File.separator + "" + File.separator + "flow_version" +
-          File.separator + "12345678" + File.separator + "app_id" +
-          File.separator + type + File.separator + id +
-          FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
-      Path path = new Path(fileName);
-      FileSystem fs = FileSystem.get(conf);
-      assertTrue(fs.exists(path),
-          "Specified path(" + fileName + ") should exist: ");
-      FileStatus fileStatus = fs.getFileStatus(path);
-      assertFalse(fileStatus.isDirectory(), "specified path should be a file");
-      List<String> data = readFromFile(fs, path);
-      assertEquals(2, data.size(), "data size is:" + data.size());
-      String d = data.get(0);
+      String fileName = outputRoot + File.separator + "entities"
+          + File.separator + buildEntityTypeSubpath("cluster_id", "user_id",
+          "" ,"flow_version" ,12345678, "app_id", type)
+          + File.separator + id
+          + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+
+      List<String> data = readFromFile(FileSystem.get(conf), new Path(fileName), 2);
       // confirm the contents same as what was written
-      assertEquals(d, TimelineUtils.dumpTimelineRecordtoJSON(entity));
-    } finally {
-      if (fsi != null) {
-        fsi.close();
-      }
+      assertRecordMatches(data.get(0), entity);
     }
   }
 
-  private List<String> readFromFile(FileSystem fs, Path path)
+  /**
+   * Stress test the escaping logic.
+   */
+  @Test
+  void testWriteEntitiesWithEscaping() throws Exception {
+    String id = UP + "appid";
+    String type = UP + "type";
+
+    TimelineEntities te = new TimelineEntities();
+    TimelineEntity entity = new TimelineEntity();
+    entity.setId(id);
+    entity.setType(type);
+    entity.setCreatedTime(1425016501000L);
+    te.addEntity(entity);
+
+    try (FileSystemTimelineWriterImpl fsi = new FileSystemTimelineWriterImpl()) {
+      Configuration conf = new YarnConfiguration();
+      String outputRoot = tmpFolder.getAbsolutePath();
+      conf.set(FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
+          outputRoot);
+      fsi.init(conf);
+      fsi.start();
+      final String flowName = UP + "flow_name?";
+      final String flowVersion = UP + "flow_version/";
+      fsi.write(
+          new TimelineCollectorContext("cluster_id", "user_id", flowName,
+              flowVersion, 12345678L, "app_id"),
+          te, UserGroupInformation.createRemoteUser("user_id"));
+
+      String fileName = outputRoot + File.separator + "entities"
+          + File.separator + buildEntityTypeSubpath("cluster_id", "user_id",
+          flowName, flowVersion,12345678, "app_id", type)
+          + File.separator + escape(id, "id")
+          + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+
+      List<String> data = readFromFile(FileSystem.get(conf), new Path(fileName), 2);
+      // confirm the contents same as what was written
+      assertRecordMatches(data.get(0), entity);
+    }
+  }
+
+  /**
+   * Test escape downgrades file separators and inserts the fallback on a null input.
+   */
+  @Test
+  public void testEscapingAndFallback() throws Throwable {
+    Assertions.assertThat(escape("", "fallback"))
+        .isEqualTo("fallback");
+    Assertions.assertThat(escape(File.separator, "fallback"))
+        .isEqualTo("_");
+    Assertions.assertThat(escape("?:", ""))
+        .isEqualTo("__");
+  }
+
+  /**
+   * Read a file line by line, logging its name first and verifying it is actually a file.
+   * Asserts the number of lines read is as expected.
+   * @param fs fs
+   * @param path path
+   * @param entryCount number of entries expected.
+   * @return a possibly empty list of lines
+   * @throws IOException IO failure
+   */
+  private List<String> readFromFile(FileSystem fs, Path path, int entryCount)
           throws IOException {
+
+    LOG.info("Reading file from {}", path);
+    assertIsFile(fs, path);
     BufferedReader br = new BufferedReader(
             new InputStreamReader(fs.open(path)));
     List<String> data = new ArrayList<>();
@@ -274,6 +312,7 @@ public class TestFileSystemTimelineWriterImpl {
       line = br.readLine();
       data.add(line);
     }
+    Assertions.assertThat(data).hasSize(entryCount);
     return data;
   }
 

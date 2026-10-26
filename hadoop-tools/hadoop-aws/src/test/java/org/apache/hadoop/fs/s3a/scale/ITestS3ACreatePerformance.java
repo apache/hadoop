@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.test.tags.ScaleTest;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -32,6 +34,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 /**
  * Tests for create(): performance and/or load testing.
  */
+@ScaleTest
 public class ITestS3ACreatePerformance extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestS3ADirectoryPerformance.class);

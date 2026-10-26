@@ -313,4 +313,9 @@ public final class InternalConstants {
   public static final String UPLOAD_PROGRESS_LOG_NAME =
       "org.apache.hadoop.fs.s3a.S3AFileSystem.Progress";
 
+  /**
+   * AWS Error code for conditional put failure on s3 express buckets: {@value}.
+   */
+  public static final String PRECONDITION_FAILED = "PreconditionFailed";
+
 }

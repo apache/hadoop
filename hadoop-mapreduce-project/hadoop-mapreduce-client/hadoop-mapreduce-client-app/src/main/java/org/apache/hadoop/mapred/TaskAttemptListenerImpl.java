@@ -34,9 +34,13 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.mapred.proto.TaskUmbilicalProtocolProtos;
+import org.apache.hadoop.mapred.protocolPB.TaskUmbilicalProtocolPB;
+import org.apache.hadoop.mapred.protocolPB.TaskUmbilicalProtocolServerSideTranslatorPB;
 import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
@@ -62,12 +66,13 @@ import org.apache.hadoop.mapreduce.v2.app.security.authorize.MRAMPolicyProvider;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 /**
- * This class is responsible for talking to the task umblical.
+ * This class is responsible for talking to the task umbilical.
  * It also converts all the old data structures
  * to yarn data structures.
  * 
@@ -82,32 +87,32 @@ public class TaskAttemptListenerImpl extends CompositeService
   private static final Logger LOG =
       LoggerFactory.getLogger(TaskAttemptListenerImpl.class);
 
-  private AppContext context;
+  private final AppContext context;
   private Server server;
   protected TaskHeartbeatHandler taskHeartbeatHandler;
-  private RMHeartbeatHandler rmHeartbeatHandler;
+  private final RMHeartbeatHandler rmHeartbeatHandler;
   private long commitWindowMs;
   private InetSocketAddress address;
-  private ConcurrentMap<WrappedJvmID, org.apache.hadoop.mapred.Task>
+  private final ConcurrentMap<WrappedJvmID, org.apache.hadoop.mapred.Task>
     jvmIDToActiveAttemptMap
-      = new ConcurrentHashMap<WrappedJvmID, org.apache.hadoop.mapred.Task>();
+      = new ConcurrentHashMap<>();
 
-  private ConcurrentMap<TaskAttemptId,
+  private final ConcurrentMap<TaskAttemptId,
       AtomicReference<TaskAttemptStatus>> attemptIdToStatus
         = new ConcurrentHashMap<>();
 
   /**
    * A Map to keep track of the history of logging each task attempt.
    */
-  private ConcurrentHashMap<TaskAttemptID, TaskProgressLogPair>
+  private final ConcurrentHashMap<TaskAttemptID, TaskProgressLogPair>
       taskAttemptLogProgressStamps = new ConcurrentHashMap<>();
 
-  private Set<WrappedJvmID> launchedJVMs = Collections
-      .newSetFromMap(new ConcurrentHashMap<WrappedJvmID, Boolean>());
+  private final Set<WrappedJvmID> launchedJVMs = Collections
+      .newSetFromMap(new ConcurrentHashMap<>());
 
   private JobTokenSecretManager jobTokenSecretManager = null;
-  private AMPreemptionPolicy preemptionPolicy;
-  private byte[] encryptedSpillKey;
+  private final AMPreemptionPolicy preemptionPolicy;
+  private final byte[] encryptedSpillKey;
 
   public TaskAttemptListenerImpl(AppContext context,
       JobTokenSecretManager jobTokenSecretManager,
@@ -155,11 +160,19 @@ public class TaskAttemptListenerImpl extends CompositeService
   protected void startRpcServer() {
     Configuration conf = getConfig();
     try {
-      server = new RPC.Builder(conf).setProtocol(TaskUmbilicalProtocol.class)
-          .setInstance(this).setBindAddress("0.0.0.0")
+      RPC.setProtocolEngine(conf, TaskUmbilicalProtocolPB.class,
+          ProtobufRpcEngine2.class);
+      TaskUmbilicalProtocolServerSideTranslatorPB translator =
+          new TaskUmbilicalProtocolServerSideTranslatorPB(this);
+      BlockingService blockingService =
+          TaskUmbilicalProtocolProtos.TaskUmbilicalProtocolService
+              .newReflectiveBlockingService(translator);
+      server = new RPC.Builder(conf)
+          .setProtocol(TaskUmbilicalProtocolPB.class)
+          .setInstance(blockingService)
+          .setBindAddress("0.0.0.0")
           .setPortRangeConfig(MRJobConfig.MR_AM_JOB_CLIENT_PORT_RANGE)
-          .setNumHandlers(
-          conf.getInt(MRJobConfig.MR_AM_TASK_LISTENER_THREAD_COUNT, 
+          .setNumHandlers(conf.getInt(MRJobConfig.MR_AM_TASK_LISTENER_THREAD_COUNT,
           MRJobConfig.DEFAULT_MR_AM_TASK_LISTENER_THREAD_COUNT))
           .setVerbose(false).setSecretManager(jobTokenSecretManager).build();
 
@@ -186,8 +199,11 @@ public class TaskAttemptListenerImpl extends CompositeService
 
   @Override
   protected void serviceStop() throws Exception {
-    stopRpcServer();
-    super.serviceStop();
+    try {
+      stopRpcServer();
+    } finally {
+      super.serviceStop();
+    }
   }
 
   protected void stopRpcServer() {
@@ -213,7 +229,7 @@ public class TaskAttemptListenerImpl extends CompositeService
    */
   @Override
   public boolean canCommit(TaskAttemptID taskAttemptID) throws IOException {
-    LOG.info("Commit go/no-go request from " + taskAttemptID.toString());
+    LOG.info("Commit go/no-go request from {}", taskAttemptID.toString());
     // An attempt is asking if it can commit its output. This can be decided
     // only by the task which is managing the multiple attempts. So redirect the
     // request there.
@@ -248,7 +264,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   @Override
   public void commitPending(TaskAttemptID taskAttemptID, TaskStatus taskStatsu)
           throws IOException, InterruptedException {
-    LOG.info("Commit-pending state update from " + taskAttemptID.toString());
+    LOG.info("Commit-pending state update from {}", taskAttemptID.toString());
     // An attempt is asking if it can commit its output. This can be decided
     // only by the task which is managing the multiple attempts. So redirect the
     // request there.
@@ -265,7 +281,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   @Override
   public void preempted(TaskAttemptID taskAttemptID, TaskStatus taskStatus)
           throws IOException, InterruptedException {
-    LOG.info("Preempted state update from " + taskAttemptID.toString());
+    LOG.info("Preempted state update from {}", taskAttemptID.toString());
     // An attempt is telling us that it got preempted.
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
         TypeConverter.toYarn(taskAttemptID);
@@ -280,7 +296,7 @@ public class TaskAttemptListenerImpl extends CompositeService
 
   @Override
   public void done(TaskAttemptID taskAttemptID) throws IOException {
-    LOG.info("Done acknowledgment from " + taskAttemptID.toString());
+    LOG.info("Done acknowledgment from {}", taskAttemptID.toString());
 
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
         TypeConverter.toYarn(taskAttemptID);
@@ -295,7 +311,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   public void fatalError(TaskAttemptID taskAttemptID, String msg, boolean fastFail)
       throws IOException {
     // This happens only in Child and in the Task.
-    LOG.error("Task: " + taskAttemptID + " - exited : " + msg);
+    LOG.error("Task: {} - exited : {}", taskAttemptID, msg);
     reportDiagnosticInfo(taskAttemptID, "Error: " + msg);
 
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
@@ -312,8 +328,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   public void fsError(TaskAttemptID taskAttemptID, String message)
       throws IOException {
     // This happens only in Child.
-    LOG.error("Task: " + taskAttemptID + " - failed due to FSError: "
-        + message);
+    LOG.error("Task: {} - failed due to FSError: {}", taskAttemptID, message);
     reportDiagnosticInfo(taskAttemptID, "FSError: " + message);
 
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
@@ -335,8 +350,8 @@ public class TaskAttemptListenerImpl extends CompositeService
   public MapTaskCompletionEventsUpdate getMapCompletionEvents(
       JobID jobIdentifier, int startIndex, int maxEvents,
       TaskAttemptID taskAttemptID) throws IOException {
-    LOG.info("MapCompletionEvents request from " + taskAttemptID.toString()
-        + ". startIndex " + startIndex + " maxEvents " + maxEvents);
+    LOG.info("MapCompletionEvents request from {}. startIndex {} maxEvents {}",
+        taskAttemptID.toString(), startIndex, maxEvents);
 
     // TODO: shouldReset is never used. See TT. Ask for Removal.
     boolean shouldReset = false;
@@ -355,8 +370,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   public void reportDiagnosticInfo(TaskAttemptID taskAttemptID, String diagnosticInfo)
  throws IOException {
     diagnosticInfo = StringInterner.weakIntern(diagnosticInfo);
-    LOG.info("Diagnostics report from " + taskAttemptID.toString() + ": "
-        + diagnosticInfo);
+    LOG.info("Diagnostics report from {}: {}", taskAttemptID.toString(), diagnosticInfo);
 
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
       TypeConverter.toYarn(taskAttemptID);
@@ -389,8 +403,7 @@ public class TaskAttemptListenerImpl extends CompositeService
       // down gracefully or receiving a thread dump signal. Tolerate unknown
       // tasks as long as they have unregistered recently.
       if (!taskHeartbeatHandler.hasRecentlyUnregistered(yarnAttemptID)) {
-        LOG.error("Status update was called with illegal TaskAttemptId: "
-            + yarnAttemptID);
+        LOG.error("Status update was called with illegal TaskAttemptId: {}", yarnAttemptID);
         feedback.setTaskFound(false);
       }
       return feedback;
@@ -400,14 +413,14 @@ public class TaskAttemptListenerImpl extends CompositeService
     if (getConfig().getBoolean(MRJobConfig.TASK_PREEMPTION, false)
         && preemptionPolicy.isPreempted(yarnAttemptID)) {
       feedback.setPreemption(true);
-      LOG.info("Setting preemption bit for task: "+ yarnAttemptID
-          + " of type " + yarnAttemptID.getTaskId().getTaskType());
+      LOG.info("Setting preemption bit for task: {} of type {}", yarnAttemptID,
+          yarnAttemptID.getTaskId().getTaskType());
     }
 
     if (taskStatus == null) {
       //We are using statusUpdate only as a simple ping
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Ping from " + taskAttemptID.toString());
+        LOG.debug("Ping from {}", taskAttemptID.toString());
       }
       // Consider ping from the tasks for liveliness check
       if (getConfig().getBoolean(MRJobConfig.MR_TASK_ENABLE_PING_FOR_LIVELINESS_CHECK,
@@ -459,9 +472,9 @@ public class TaskAttemptListenerImpl extends CompositeService
     
     //set the fetch failures
     if (taskStatus.getFetchFailedMaps() != null 
-        && taskStatus.getFetchFailedMaps().size() > 0) {
-      taskAttemptStatus.fetchFailedMaps = 
-        new ArrayList<org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId>();
+        && !taskStatus.getFetchFailedMaps().isEmpty()) {
+      taskAttemptStatus.fetchFailedMaps =
+          new ArrayList<>();
       for (TaskAttemptID failedMapId : taskStatus.getFetchFailedMaps()) {
         taskAttemptStatus.fetchFailedMaps.add(
             TypeConverter.toYarn(failedMapId));
@@ -505,7 +518,7 @@ public class TaskAttemptListenerImpl extends CompositeService
     // A rough imitation of code from TaskTracker.
 
     JVMId jvmId = context.jvmId;
-    LOG.info("JVM with ID : " + jvmId + " asked for a task");
+    LOG.info("JVM with ID : {} asked for a task", jvmId);
 
     JvmTask jvmTask = null;
     // TODO: Is it an authorized container to get a task? Otherwise return null.
@@ -519,13 +532,13 @@ public class TaskAttemptListenerImpl extends CompositeService
     // Try to look up the task. We remove it directly as we don't give
     // multiple tasks to a JVM
     if (!jvmIDToActiveAttemptMap.containsKey(wJvmID)) {
-      LOG.info("JVM with ID: " + jvmId + " is invalid and will be killed.");
+      LOG.info("JVM with ID: {} is invalid and will be killed.", jvmId);
       jvmTask = TASK_FOR_INVALID_JVM;
     } else {
       if (!launchedJVMs.contains(wJvmID)) {
         jvmTask = null;
-        LOG.info("JVM with ID: " + jvmId
-            + " asking for task before AM launch registered. Given null task");
+        LOG.info("JVM with ID: {} asking for task before AM launch registered. Given null task",
+            jvmId);
       } else {
         // remove the task as it is no more needed and free up the memory.
         // Also we have already told the JVM to process a task, so it is no
@@ -533,7 +546,7 @@ public class TaskAttemptListenerImpl extends CompositeService
         org.apache.hadoop.mapred.Task task =
             jvmIDToActiveAttemptMap.remove(wJvmID);
         launchedJVMs.remove(wJvmID);
-        LOG.info("JVM with ID: " + jvmId + " given task: " + task.getTaskID());
+        LOG.info("JVM with ID: {} given task: {}", jvmId, task.getTaskID());
         task.setEncryptedSpillKey(encryptedSpillKey);
         jvmTask = new JvmTask(task, false);
       }
@@ -594,7 +607,7 @@ public class TaskAttemptListenerImpl extends CompositeService
         protocol, clientVersion, clientMethodsHash);
   }
 
-  // task checkpoint bookeeping
+  // task checkpoint bookkeeping
   @Override
   public TaskCheckpointID getCheckpointID(TaskID taskId) {
     TaskId tid = TypeConverter.toYarn(taskId);
@@ -634,8 +647,8 @@ public class TaskAttemptListenerImpl extends CompositeService
       // it processes the update, or by another IPC server handler
       done = lastStatusRef.compareAndSet(lastStatus, taskAttemptStatus);
       if (!done) {
-        LOG.info("TaskAttempt " + yarnAttemptID +
-            ": lastStatusRef changed by another thread, retrying...");
+        LOG.info("TaskAttempt {}: lastStatusRef changed by another thread, retrying...",
+            yarnAttemptID);
         // let's revert taskAttemptStatus.fetchFailedMaps
         taskAttemptStatus.fetchFailedMaps = fetchFailedMaps;
       }
@@ -687,12 +700,10 @@ public class TaskAttemptListenerImpl extends CompositeService
       if (doLog) {
         prevProgress = processedProgress;
         logTimeStamp = timestamp;
-        LOG.info("Progress of TaskAttempt " + taskAttemptID + " is : "
-            + progress);
+        LOG.info("Progress of TaskAttempt {} is : {}", taskAttemptID, progress);
       } else {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Progress of TaskAttempt " + taskAttemptID + " is : "
-              + progress);
+          LOG.debug("Progress of TaskAttempt {} is : {}", taskAttemptID, progress);
         }
       }
     }

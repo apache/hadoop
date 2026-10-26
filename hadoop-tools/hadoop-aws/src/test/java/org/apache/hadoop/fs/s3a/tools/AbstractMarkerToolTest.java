@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,6 +72,7 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
   }
 
   @Override
+  @AfterEach
   public void teardown() throws Exception {
     // do this ourselves to avoid audits teardown failing
     // when surplus markers are found

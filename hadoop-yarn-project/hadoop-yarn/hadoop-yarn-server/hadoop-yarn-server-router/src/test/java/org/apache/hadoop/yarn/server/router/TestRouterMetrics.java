@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.yarn.server.router;
 
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,23 +41,22 @@ public class TestRouterMetrics {
 
   private static final Double ASSERT_DOUBLE_DELTA = 0.01;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() {
 
     LOG.info("Test: aggregate metrics are initialized correctly");
 
-    Assert.assertEquals(0, metrics.getNumSucceededAppsCreated());
-    Assert.assertEquals(0, metrics.getNumSucceededAppsSubmitted());
-    Assert.assertEquals(0, metrics.getNumSucceededAppsKilled());
-    Assert.assertEquals(0, metrics.getNumSucceededAppsRetrieved());
-    Assert.assertEquals(0,
-        metrics.getNumSucceededAppAttemptsRetrieved());
+    assertEquals(0, metrics.getNumSucceededAppsCreated());
+    assertEquals(0, metrics.getNumSucceededAppsSubmitted());
+    assertEquals(0, metrics.getNumSucceededAppsKilled());
+    assertEquals(0, metrics.getNumSucceededAppsRetrieved());
+    assertEquals(0, metrics.getNumSucceededAppAttemptsRetrieved());
 
-    Assert.assertEquals(0, metrics.getAppsFailedCreated());
-    Assert.assertEquals(0, metrics.getAppsFailedSubmitted());
-    Assert.assertEquals(0, metrics.getAppsFailedKilled());
-    Assert.assertEquals(0, metrics.getAppsFailedRetrieved());
-    Assert.assertEquals(0,
+    assertEquals(0, metrics.getAppsFailedCreated());
+    assertEquals(0, metrics.getAppsFailedSubmitted());
+    assertEquals(0, metrics.getAppsFailedKilled());
+    assertEquals(0, metrics.getAppsFailedRetrieved());
+    assertEquals(0,
         metrics.getAppAttemptsFailedRetrieved());
 
     LOG.info("Test: aggregate metrics are updated correctly");
@@ -73,15 +73,15 @@ public class TestRouterMetrics {
 
     goodSubCluster.getNewApplication(100);
 
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededAppsCreated());
-    Assert.assertEquals(100, metrics.getLatencySucceededAppsCreated(), 0);
+    assertEquals(100, metrics.getLatencySucceededAppsCreated(), 0);
 
     goodSubCluster.getNewApplication(200);
 
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededAppsCreated());
-    Assert.assertEquals(150, metrics.getLatencySucceededAppsCreated(), 0);
+    assertEquals(150, metrics.getLatencySucceededAppsCreated(), 0);
   }
 
   /**
@@ -94,7 +94,7 @@ public class TestRouterMetrics {
 
     badSubCluster.getNewApplication();
 
-    Assert.assertEquals(totalBadbefore + 1, metrics.getAppsFailedCreated());
+    assertEquals(totalBadbefore + 1, metrics.getAppsFailedCreated());
   }
 
   /**
@@ -108,15 +108,15 @@ public class TestRouterMetrics {
 
     goodSubCluster.submitApplication(100);
 
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededAppsSubmitted());
-    Assert.assertEquals(100, metrics.getLatencySucceededAppsSubmitted(), 0);
+    assertEquals(100, metrics.getLatencySucceededAppsSubmitted(), 0);
 
     goodSubCluster.submitApplication(200);
 
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededAppsSubmitted());
-    Assert.assertEquals(150, metrics.getLatencySucceededAppsSubmitted(), 0);
+    assertEquals(150, metrics.getLatencySucceededAppsSubmitted(), 0);
   }
 
   /**
@@ -129,7 +129,7 @@ public class TestRouterMetrics {
 
     badSubCluster.submitApplication();
 
-    Assert.assertEquals(totalBadbefore + 1, metrics.getAppsFailedSubmitted());
+    assertEquals(totalBadbefore + 1, metrics.getAppsFailedSubmitted());
   }
 
   /**
@@ -143,15 +143,15 @@ public class TestRouterMetrics {
 
     goodSubCluster.forceKillApplication(100);
 
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededAppsKilled());
-    Assert.assertEquals(100, metrics.getLatencySucceededAppsKilled(), 0);
+    assertEquals(100, metrics.getLatencySucceededAppsKilled(), 0);
 
     goodSubCluster.forceKillApplication(200);
 
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededAppsKilled());
-    Assert.assertEquals(150, metrics.getLatencySucceededAppsKilled(), 0);
+    assertEquals(150, metrics.getLatencySucceededAppsKilled(), 0);
   }
 
   /**
@@ -164,7 +164,7 @@ public class TestRouterMetrics {
 
     badSubCluster.forceKillApplication();
 
-    Assert.assertEquals(totalBadbefore + 1, metrics.getAppsFailedKilled());
+    assertEquals(totalBadbefore + 1, metrics.getAppsFailedKilled());
   }
 
   /**
@@ -178,15 +178,15 @@ public class TestRouterMetrics {
 
     goodSubCluster.getApplicationReport(100);
 
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededAppsRetrieved());
-    Assert.assertEquals(100, metrics.getLatencySucceededGetAppReport(), 0);
+    assertEquals(100, metrics.getLatencySucceededGetAppReport(), 0);
 
     goodSubCluster.getApplicationReport(200);
 
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededAppsRetrieved());
-    Assert.assertEquals(150, metrics.getLatencySucceededGetAppReport(), 0);
+    assertEquals(150, metrics.getLatencySucceededGetAppReport(), 0);
   }
 
   /**
@@ -199,7 +199,7 @@ public class TestRouterMetrics {
 
     badSubCluster.getApplicationReport();
 
-    Assert.assertEquals(totalBadbefore + 1, metrics.getAppsFailedRetrieved());
+    assertEquals(totalBadbefore + 1, metrics.getAppsFailedRetrieved());
   }
 
   /**
@@ -214,16 +214,16 @@ public class TestRouterMetrics {
 
     goodSubCluster.getApplicationAttemptReport(100);
 
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededAppAttemptReportRetrieved());
-    Assert.assertEquals(100,
+    assertEquals(100,
         metrics.getLatencySucceededGetAppAttemptReport(), ASSERT_DOUBLE_DELTA);
 
     goodSubCluster.getApplicationAttemptReport(200);
 
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededAppAttemptReportRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetAppAttemptReport(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -238,7 +238,7 @@ public class TestRouterMetrics {
 
     badSubCluster.getApplicationAttemptReport();
 
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getAppAttemptReportFailedRetrieved());
   }
 
@@ -253,16 +253,16 @@ public class TestRouterMetrics {
 
     goodSubCluster.getApplicationsReport(100);
 
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededMultipleAppsRetrieved());
-    Assert.assertEquals(100, metrics.getLatencySucceededMultipleGetAppReport(),
+    assertEquals(100, metrics.getLatencySucceededMultipleGetAppReport(),
         0);
 
     goodSubCluster.getApplicationsReport(200);
 
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededMultipleAppsRetrieved());
-    Assert.assertEquals(150, metrics.getLatencySucceededMultipleGetAppReport(),
+    assertEquals(150, metrics.getLatencySucceededMultipleGetAppReport(),
         0);
   }
 
@@ -277,7 +277,7 @@ public class TestRouterMetrics {
 
     badSubCluster.getApplicationsReport();
 
-    Assert.assertEquals(totalBadbefore + 1,
+    assertEquals(totalBadbefore + 1,
         metrics.getMultipleAppsFailedRetrieved());
   }
 
@@ -289,14 +289,14 @@ public class TestRouterMetrics {
   public void testSucceededGetClusterMetrics() {
     long totalGoodBefore = metrics.getNumSucceededGetClusterMetricsRetrieved();
     goodSubCluster.getClusterMetrics(100);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetClusterMetricsRetrieved());
-    Assert.assertEquals(100, metrics.getLatencySucceededGetClusterMetricsRetrieved(),
+    assertEquals(100, metrics.getLatencySucceededGetClusterMetricsRetrieved(),
         0);
     goodSubCluster.getClusterMetrics(200);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetClusterMetricsRetrieved());
-    Assert.assertEquals(150, metrics.getLatencySucceededGetClusterMetricsRetrieved(),
+    assertEquals(150, metrics.getLatencySucceededGetClusterMetricsRetrieved(),
         0);
   }
 
@@ -308,7 +308,7 @@ public class TestRouterMetrics {
   public void testGetClusterMetricsFailed() {
     long totalBadbefore = metrics.getClusterMetricsFailedRetrieved();
     badSubCluster.getClusterMetrics();
-    Assert.assertEquals(totalBadbefore + 1,
+    assertEquals(totalBadbefore + 1,
         metrics.getClusterMetricsFailedRetrieved());
   }
 
@@ -1011,12 +1011,12 @@ public class TestRouterMetrics {
   public void testSucceededGetClusterNodes() {
     long totalGoodBefore = metrics.getNumSucceededGetClusterNodesRetrieved();
     goodSubCluster.getClusterNodes(150);
-    Assert.assertEquals(totalGoodBefore + 1, metrics.getNumSucceededGetClusterNodesRetrieved());
-    Assert.assertEquals(150, metrics.getLatencySucceededGetClusterNodesRetrieved(),
+    assertEquals(totalGoodBefore + 1, metrics.getNumSucceededGetClusterNodesRetrieved());
+    assertEquals(150, metrics.getLatencySucceededGetClusterNodesRetrieved(),
         ASSERT_DOUBLE_DELTA);
     goodSubCluster.getClusterNodes(300);
-    Assert.assertEquals(totalGoodBefore + 2, metrics.getNumSucceededGetClusterNodesRetrieved());
-    Assert.assertEquals(225, metrics.getLatencySucceededGetClusterNodesRetrieved(),
+    assertEquals(totalGoodBefore + 2, metrics.getNumSucceededGetClusterNodesRetrieved());
+    assertEquals(225, metrics.getLatencySucceededGetClusterNodesRetrieved(),
         ASSERT_DOUBLE_DELTA);
   }
 
@@ -1024,19 +1024,19 @@ public class TestRouterMetrics {
   public void testGetClusterNodesFailed() {
     long totalBadBefore = metrics.getClusterNodesFailedRetrieved();
     badSubCluster.getClusterNodes();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getClusterNodesFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getClusterNodesFailedRetrieved());
   }
 
   @Test
   public void testSucceededGetNodeToLabels() {
     long totalGoodBefore = metrics.getNumSucceededGetNodeToLabelsRetrieved();
     goodSubCluster.getNodeToLabels(150);
-    Assert.assertEquals(totalGoodBefore + 1, metrics.getNumSucceededGetNodeToLabelsRetrieved());
-    Assert.assertEquals(150, metrics.getLatencySucceededGetNodeToLabelsRetrieved(),
+    assertEquals(totalGoodBefore + 1, metrics.getNumSucceededGetNodeToLabelsRetrieved());
+    assertEquals(150, metrics.getLatencySucceededGetNodeToLabelsRetrieved(),
         ASSERT_DOUBLE_DELTA);
     goodSubCluster.getNodeToLabels(300);
-    Assert.assertEquals(totalGoodBefore + 2, metrics.getNumSucceededGetNodeToLabelsRetrieved());
-    Assert.assertEquals(225, metrics.getLatencySucceededGetNodeToLabelsRetrieved(),
+    assertEquals(totalGoodBefore + 2, metrics.getNumSucceededGetNodeToLabelsRetrieved());
+    assertEquals(225, metrics.getLatencySucceededGetNodeToLabelsRetrieved(),
         ASSERT_DOUBLE_DELTA);
   }
 
@@ -1044,19 +1044,19 @@ public class TestRouterMetrics {
   public void testGetNodeToLabelsFailed() {
     long totalBadBefore = metrics.getNodeToLabelsFailedRetrieved();
     badSubCluster.getNodeToLabels();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getNodeToLabelsFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getNodeToLabelsFailedRetrieved());
   }
 
   @Test
   public void testSucceededLabelsToNodes() {
     long totalGoodBefore = metrics.getNumSucceededGetLabelsToNodesRetrieved();
     goodSubCluster.getLabelToNodes(150);
-    Assert.assertEquals(totalGoodBefore + 1, metrics.getNumSucceededGetLabelsToNodesRetrieved());
-    Assert.assertEquals(150, metrics.getLatencySucceededGetLabelsToNodesRetrieved(),
+    assertEquals(totalGoodBefore + 1, metrics.getNumSucceededGetLabelsToNodesRetrieved());
+    assertEquals(150, metrics.getLatencySucceededGetLabelsToNodesRetrieved(),
         ASSERT_DOUBLE_DELTA);
     goodSubCluster.getLabelToNodes(300);
-    Assert.assertEquals(totalGoodBefore + 2, metrics.getNumSucceededGetLabelsToNodesRetrieved());
-    Assert.assertEquals(225, metrics.getLatencySucceededGetLabelsToNodesRetrieved(),
+    assertEquals(totalGoodBefore + 2, metrics.getNumSucceededGetLabelsToNodesRetrieved());
+    assertEquals(225, metrics.getLatencySucceededGetLabelsToNodesRetrieved(),
         ASSERT_DOUBLE_DELTA);
   }
 
@@ -1064,21 +1064,21 @@ public class TestRouterMetrics {
   public void testGetLabelsToNodesFailed() {
     long totalBadBefore = metrics.getLabelsToNodesFailedRetrieved();
     badSubCluster.getLabelToNodes();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getLabelsToNodesFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getLabelsToNodesFailedRetrieved());
   }
 
   @Test
   public void testSucceededClusterNodeLabels() {
     long totalGoodBefore = metrics.getNumSucceededGetClusterNodeLabelsRetrieved();
     goodSubCluster.getClusterNodeLabels(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetClusterNodeLabelsRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetClusterNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getClusterNodeLabels(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetClusterNodeLabelsRetrieved());
-    Assert.assertEquals(225, metrics.getLatencySucceededGetClusterNodeLabelsRetrieved(),
+    assertEquals(225, metrics.getLatencySucceededGetClusterNodeLabelsRetrieved(),
         ASSERT_DOUBLE_DELTA);
   }
 
@@ -1086,21 +1086,21 @@ public class TestRouterMetrics {
   public void testClusterNodeLabelsFailed() {
     long totalBadBefore = metrics.getGetClusterNodeLabelsFailedRetrieved();
     badSubCluster.getClusterNodeLabels();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getGetClusterNodeLabelsFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getGetClusterNodeLabelsFailedRetrieved());
   }
 
   @Test
   public void testSucceededQueueUserAcls() {
     long totalGoodBefore = metrics.getNumSucceededGetQueueUserAclsRetrieved();
     goodSubCluster.getQueueUserAcls(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetQueueUserAclsRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetQueueUserAclsRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getQueueUserAcls(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetQueueUserAclsRetrieved());
-    Assert.assertEquals(225, metrics.getLatencySucceededGetQueueUserAclsRetrieved(),
+    assertEquals(225, metrics.getLatencySucceededGetQueueUserAclsRetrieved(),
         ASSERT_DOUBLE_DELTA);
   }
 
@@ -1108,20 +1108,20 @@ public class TestRouterMetrics {
   public void testQueueUserAclsFailed() {
     long totalBadBefore = metrics.getQueueUserAclsFailedRetrieved();
     badSubCluster.getQueueUserAcls();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getQueueUserAclsFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getQueueUserAclsFailedRetrieved());
   }
   @Test
   public void testSucceededListReservations() {
     long totalGoodBefore = metrics.getNumSucceededListReservationsRetrieved();
     goodSubCluster.getListReservations(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededListReservationsRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededListReservationsRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getListReservations(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededListReservationsRetrieved());
-    Assert.assertEquals(225, metrics.getLatencySucceededListReservationsRetrieved(),
+    assertEquals(225, metrics.getLatencySucceededListReservationsRetrieved(),
         ASSERT_DOUBLE_DELTA);
   }
 
@@ -1129,21 +1129,21 @@ public class TestRouterMetrics {
   public void testListReservationsFailed() {
     long totalBadBefore = metrics.getListReservationsFailedRetrieved();
     badSubCluster.getListReservations();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getListReservationsFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getListReservationsFailedRetrieved());
   }
 
   @Test
   public void testSucceededGetApplicationAttempts() {
     long totalGoodBefore = metrics.getNumSucceededAppAttemptsRetrieved();
     goodSubCluster.getApplicationAttempts(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededAppAttemptsRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededAppAttemptRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getApplicationAttempts(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededAppAttemptsRetrieved());
-    Assert.assertEquals(225, metrics.getLatencySucceededAppAttemptRetrieved(),
+    assertEquals(225, metrics.getLatencySucceededAppAttemptRetrieved(),
         ASSERT_DOUBLE_DELTA);
   }
 
@@ -1151,21 +1151,21 @@ public class TestRouterMetrics {
   public void testGetApplicationAttemptsFailed() {
     long totalBadBefore = metrics.getAppAttemptsFailedRetrieved();
     badSubCluster.getApplicationAttempts();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getAppAttemptsFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getAppAttemptsFailedRetrieved());
   }
 
   @Test
   public void testSucceededGetContainerReport() {
     long totalGoodBefore = metrics.getNumSucceededGetContainerReportRetrieved();
     goodSubCluster.getContainerReport(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetContainerReportRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetContainerReportRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getContainerReport(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetContainerReportRetrieved());
-    Assert.assertEquals(225, metrics.getLatencySucceededGetContainerReportRetrieved(),
+    assertEquals(225, metrics.getLatencySucceededGetContainerReportRetrieved(),
         ASSERT_DOUBLE_DELTA);
   }
 
@@ -1173,21 +1173,21 @@ public class TestRouterMetrics {
   public void testGetContainerReportFailed() {
     long totalBadBefore = metrics.getContainerReportFailedRetrieved();
     badSubCluster.getContainerReport();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getContainerReportFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getContainerReportFailedRetrieved());
   }
 
   @Test
   public void testSucceededGetContainers() {
     long totalGoodBefore = metrics.getNumSucceededGetContainersRetrieved();
     goodSubCluster.getContainers(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetContainersRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetContainersRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getContainers(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetContainersRetrieved());
-    Assert.assertEquals(225, metrics.getLatencySucceededGetContainersRetrieved(),
+    assertEquals(225, metrics.getLatencySucceededGetContainersRetrieved(),
         ASSERT_DOUBLE_DELTA);
   }
 
@@ -1195,21 +1195,21 @@ public class TestRouterMetrics {
   public void testGetContainersFailed() {
     long totalBadBefore = metrics.getContainersFailedRetrieved();
     badSubCluster.getContainers();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getContainersFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getContainersFailedRetrieved());
   }
 
   @Test
   public void testSucceededGetResourceTypeInfo() {
     long totalGoodBefore = metrics.getNumSucceededGetResourceTypeInfoRetrieved();
     goodSubCluster.getResourceTypeInfo(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetResourceTypeInfoRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetResourceTypeInfoRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getResourceTypeInfo(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetResourceTypeInfoRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetResourceTypeInfoRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1217,21 +1217,21 @@ public class TestRouterMetrics {
   public void testGetResourceTypeInfoFailed() {
     long totalBadBefore = metrics.getGetResourceTypeInfoRetrieved();
     badSubCluster.getResourceTypeInfo();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getGetResourceTypeInfoRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getGetResourceTypeInfoRetrieved());
   }
 
   @Test
   public void testSucceededFailApplicationAttempt() {
     long totalGoodBefore = metrics.getNumSucceededFailAppAttemptRetrieved();
     goodSubCluster.getFailApplicationAttempt(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededFailAppAttemptRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededFailAppAttemptRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getFailApplicationAttempt(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededFailAppAttemptRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededFailAppAttemptRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1239,21 +1239,21 @@ public class TestRouterMetrics {
   public void testFailApplicationAttemptFailed() {
     long totalBadBefore = metrics.getFailApplicationAttemptFailedRetrieved();
     badSubCluster.getFailApplicationAttempt();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getFailApplicationAttemptFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getFailApplicationAttemptFailedRetrieved());
   }
 
   @Test
   public void testSucceededUpdateApplicationPriority() {
     long totalGoodBefore = metrics.getNumSucceededUpdateAppPriorityRetrieved();
     goodSubCluster.getUpdateApplicationPriority(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededUpdateAppPriorityRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededUpdateAppPriorityRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getUpdateApplicationPriority(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededUpdateAppPriorityRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededUpdateAppPriorityRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1261,7 +1261,7 @@ public class TestRouterMetrics {
   public void testUpdateApplicationPriorityFailed() {
     long totalBadBefore = metrics.getUpdateApplicationPriorityFailedRetrieved();
     badSubCluster.getUpdateApplicationPriority();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getUpdateApplicationPriorityFailedRetrieved());
   }
 
@@ -1269,14 +1269,14 @@ public class TestRouterMetrics {
   public void testSucceededUpdateAppTimeoutsRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededUpdateAppTimeoutsRetrieved();
     goodSubCluster.getUpdateApplicationTimeouts(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededUpdateAppTimeoutsRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededUpdateAppTimeoutsRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getUpdateApplicationTimeouts(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededUpdateAppTimeoutsRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededUpdateAppTimeoutsRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1284,7 +1284,7 @@ public class TestRouterMetrics {
   public void testUpdateAppTimeoutsFailed() {
     long totalBadBefore = metrics.getUpdateApplicationTimeoutsFailedRetrieved();
     badSubCluster.getUpdateApplicationTimeouts();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getUpdateApplicationTimeoutsFailedRetrieved());
   }
 
@@ -1292,14 +1292,14 @@ public class TestRouterMetrics {
   public void testSucceededSignalToContainerRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededSignalToContainerRetrieved();
     goodSubCluster.getSignalToContainerTimeouts(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededSignalToContainerRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededSignalToContainerRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getSignalToContainerTimeouts(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededSignalToContainerRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededSignalToContainerRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1307,7 +1307,7 @@ public class TestRouterMetrics {
   public void testSignalToContainerFailed() {
     long totalBadBefore = metrics.getSignalToContainerFailedRetrieved();
     badSubCluster.getSignalContainer();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getSignalToContainerFailedRetrieved());
   }
 
@@ -1315,14 +1315,14 @@ public class TestRouterMetrics {
   public void testSucceededGetQueueInfoRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetQueueInfoRetrieved();
     goodSubCluster.getQueueInfoRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetQueueInfoRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetQueueInfoRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getQueueInfoRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetQueueInfoRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetQueueInfoRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1330,7 +1330,7 @@ public class TestRouterMetrics {
   public void testGetQueueInfoFailed() {
     long totalBadBefore = metrics.getQueueInfoFailedRetrieved();
     badSubCluster.getQueueInfo();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getQueueInfoFailedRetrieved());
   }
 
@@ -1338,14 +1338,14 @@ public class TestRouterMetrics {
   public void testSucceededMoveApplicationAcrossQueuesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededMoveApplicationAcrossQueuesRetrieved();
     goodSubCluster.moveApplicationAcrossQueuesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededMoveApplicationAcrossQueuesRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededMoveApplicationAcrossQueuesRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.moveApplicationAcrossQueuesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededMoveApplicationAcrossQueuesRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededMoveApplicationAcrossQueuesRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1353,7 +1353,7 @@ public class TestRouterMetrics {
   public void testMoveApplicationAcrossQueuesRetrievedFailed() {
     long totalBadBefore = metrics.getMoveApplicationAcrossQueuesFailedRetrieved();
     badSubCluster.moveApplicationAcrossQueuesFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getMoveApplicationAcrossQueuesFailedRetrieved());
   }
 
@@ -1361,14 +1361,14 @@ public class TestRouterMetrics {
   public void testSucceededGetResourceProfilesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetResourceProfilesRetrieved();
     goodSubCluster.getResourceProfilesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetResourceProfilesRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetResourceProfilesRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getResourceProfilesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetResourceProfilesRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetResourceProfilesRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1376,7 +1376,7 @@ public class TestRouterMetrics {
   public void testGetResourceProfilesRetrievedFailed() {
     long totalBadBefore = metrics.getResourceProfilesFailedRetrieved();
     badSubCluster.getResourceProfilesFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getResourceProfilesFailedRetrieved());
   }
 
@@ -1384,14 +1384,14 @@ public class TestRouterMetrics {
   public void testSucceededGetResourceProfileRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetResourceProfileRetrieved();
     goodSubCluster.getResourceProfileRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetResourceProfileRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetResourceProfileRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getResourceProfileRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetResourceProfileRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetResourceProfileRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1399,7 +1399,7 @@ public class TestRouterMetrics {
   public void testGetResourceProfileRetrievedFailed() {
     long totalBadBefore = metrics.getResourceProfileFailedRetrieved();
     badSubCluster.getResourceProfileFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getResourceProfileFailedRetrieved());
   }
 
@@ -1407,14 +1407,14 @@ public class TestRouterMetrics {
   public void testSucceededGetAttributesToNodesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetAttributesToNodesRetrieved();
     goodSubCluster.getAttributesToNodesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetAttributesToNodesRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetAttributesToNodesRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getAttributesToNodesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetAttributesToNodesRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetAttributesToNodesRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1422,7 +1422,7 @@ public class TestRouterMetrics {
   public void testGetAttributesToNodesRetrievedFailed() {
     long totalBadBefore = metrics.getAttributesToNodesFailedRetrieved();
     badSubCluster.getAttributesToNodesFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getAttributesToNodesFailedRetrieved());
   }
 
@@ -1430,14 +1430,14 @@ public class TestRouterMetrics {
   public void testGetClusterNodeAttributesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetClusterNodeAttributesRetrieved();
     goodSubCluster.getClusterNodeAttributesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetClusterNodeAttributesRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetClusterNodeAttributesRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getClusterNodeAttributesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetClusterNodeAttributesRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetClusterNodeAttributesRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1445,7 +1445,7 @@ public class TestRouterMetrics {
   public void testGetClusterNodeAttributesRetrievedFailed() {
     long totalBadBefore = metrics.getClusterNodeAttributesFailedRetrieved();
     badSubCluster.getClusterNodeAttributesFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getClusterNodeAttributesFailedRetrieved());
   }
 
@@ -1453,14 +1453,14 @@ public class TestRouterMetrics {
   public void testGetNodesToAttributesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetNodesToAttributesRetrieved();
     goodSubCluster.getNodesToAttributesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetNodesToAttributesRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetNodesToAttributesRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getNodesToAttributesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetNodesToAttributesRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetNodesToAttributesRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1468,7 +1468,7 @@ public class TestRouterMetrics {
   public void testGetNodesToAttributesRetrievedFailed() {
     long totalBadBefore = metrics.getNodesToAttributesFailedRetrieved();
     badSubCluster.getNodesToAttributesFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getNodesToAttributesFailedRetrieved());
   }
 
@@ -1476,14 +1476,14 @@ public class TestRouterMetrics {
   public void testGetNewReservationRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetNewReservationRetrieved();
     goodSubCluster.getNewReservationRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetNewReservationRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetNewReservationRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getNewReservationRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetNewReservationRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetNewReservationRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1491,7 +1491,7 @@ public class TestRouterMetrics {
   public void testGetNewReservationRetrievedFailed() {
     long totalBadBefore = metrics.getNewReservationFailedRetrieved();
     badSubCluster.getNewReservationFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getNewReservationFailedRetrieved());
   }
 
@@ -1499,14 +1499,14 @@ public class TestRouterMetrics {
   public void testGetSubmitReservationRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededSubmitReservationRetrieved();
     goodSubCluster.getSubmitReservationRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededSubmitReservationRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededSubmitReservationRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getSubmitReservationRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededSubmitReservationRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededSubmitReservationRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1514,7 +1514,7 @@ public class TestRouterMetrics {
   public void testGetSubmitReservationRetrievedFailed() {
     long totalBadBefore = metrics.getSubmitReservationFailedRetrieved();
     badSubCluster.getSubmitReservationFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getSubmitReservationFailedRetrieved());
   }
 
@@ -1522,14 +1522,14 @@ public class TestRouterMetrics {
   public void testGetUpdateReservationRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededUpdateReservationRetrieved();
     goodSubCluster.getUpdateReservationRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededUpdateReservationRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededUpdateReservationRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getUpdateReservationRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededUpdateReservationRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededUpdateReservationRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1537,7 +1537,7 @@ public class TestRouterMetrics {
   public void testGetUpdateReservationRetrievedFailed() {
     long totalBadBefore = metrics.getUpdateReservationFailedRetrieved();
     badSubCluster.getUpdateReservationFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getUpdateReservationFailedRetrieved());
   }
 
@@ -1545,14 +1545,14 @@ public class TestRouterMetrics {
   public void testGetDeleteReservationRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededDeleteReservationRetrieved();
     goodSubCluster.getDeleteReservationRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededDeleteReservationRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededDeleteReservationRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getDeleteReservationRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededDeleteReservationRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededDeleteReservationRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1560,7 +1560,7 @@ public class TestRouterMetrics {
   public void testGetDeleteReservationRetrievedFailed() {
     long totalBadBefore = metrics.getDeleteReservationFailedRetrieved();
     badSubCluster.getDeleteReservationFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getDeleteReservationFailedRetrieved());
   }
 
@@ -1568,14 +1568,14 @@ public class TestRouterMetrics {
   public void testGetListReservationRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededListReservationRetrieved();
     goodSubCluster.getListReservationRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededListReservationRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededListReservationRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getListReservationRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededListReservationRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededListReservationRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1583,7 +1583,7 @@ public class TestRouterMetrics {
   public void testGetListReservationRetrievedFailed() {
     long totalBadBefore = metrics.getListReservationFailedRetrieved();
     badSubCluster.getListReservationFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getListReservationFailedRetrieved());
   }
 
@@ -1591,14 +1591,14 @@ public class TestRouterMetrics {
   public void testGetAppActivitiesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetAppActivitiesRetrieved();
     goodSubCluster.getAppActivitiesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetAppActivitiesRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetAppActivitiesRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getAppActivitiesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetAppActivitiesRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetAppActivitiesRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1606,7 +1606,7 @@ public class TestRouterMetrics {
   public void testGetAppActivitiesRetrievedFailed() {
     long totalBadBefore = metrics.getAppActivitiesFailedRetrieved();
     badSubCluster.getAppActivitiesFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getAppActivitiesFailedRetrieved());
   }
 
@@ -1614,14 +1614,14 @@ public class TestRouterMetrics {
   public void testGetAppStatisticsLatencyRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetAppStatisticsRetrieved();
     goodSubCluster.getAppStatisticsRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetAppStatisticsRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetAppStatisticsRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getAppStatisticsRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetAppStatisticsRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetAppStatisticsRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1629,7 +1629,7 @@ public class TestRouterMetrics {
   public void testGetAppStatisticsRetrievedFailed() {
     long totalBadBefore = metrics.getAppStatisticsFailedRetrieved();
     badSubCluster.getAppStatisticsFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getAppStatisticsFailedRetrieved());
   }
 
@@ -1637,14 +1637,14 @@ public class TestRouterMetrics {
   public void testGetAppPriorityLatencyRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetAppPriorityRetrieved();
     goodSubCluster.getAppPriorityRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetAppPriorityRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetAppPriorityRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getAppPriorityRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetAppPriorityRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetAppPriorityRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1652,7 +1652,7 @@ public class TestRouterMetrics {
   public void testGetAppPriorityRetrievedFailed() {
     long totalBadBefore = metrics.getAppPriorityFailedRetrieved();
     badSubCluster.getAppPriorityFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getAppPriorityFailedRetrieved());
   }
 
@@ -1660,14 +1660,14 @@ public class TestRouterMetrics {
   public void testGetAppQueueLatencyRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetAppQueueRetrieved();
     goodSubCluster.getAppQueueRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetAppQueueRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetAppQueueRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getAppQueueRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetAppQueueRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetAppQueueRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1675,7 +1675,7 @@ public class TestRouterMetrics {
   public void testGetAppQueueRetrievedFailed() {
     long totalBadBefore = metrics.getAppQueueFailedRetrieved();
     badSubCluster.getAppQueueFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getAppQueueFailedRetrieved());
   }
 
@@ -1683,14 +1683,14 @@ public class TestRouterMetrics {
   public void testUpdateAppQueueLatencyRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededUpdateAppQueueRetrieved();
     goodSubCluster.getUpdateQueueRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededUpdateAppQueueRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededUpdateAppQueueRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getUpdateQueueRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededUpdateAppQueueRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededUpdateAppQueueRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1698,7 +1698,7 @@ public class TestRouterMetrics {
   public void testUpdateAppQueueRetrievedFailed() {
     long totalBadBefore = metrics.getUpdateAppQueueFailedRetrieved();
     badSubCluster.getUpdateQueueFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getUpdateAppQueueFailedRetrieved());
   }
 
@@ -1706,14 +1706,14 @@ public class TestRouterMetrics {
   public void testGetAppTimeoutLatencyRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetAppTimeoutRetrieved();
     goodSubCluster.getAppTimeoutRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetAppTimeoutRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetAppTimeoutRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getAppTimeoutRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetAppTimeoutRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetAppTimeoutRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1721,7 +1721,7 @@ public class TestRouterMetrics {
   public void testGetAppTimeoutRetrievedFailed() {
     long totalBadBefore = metrics.getAppTimeoutFailedRetrieved();
     badSubCluster.getAppTimeoutFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getAppTimeoutFailedRetrieved());
   }
 
@@ -1729,14 +1729,14 @@ public class TestRouterMetrics {
   public void testGetAppTimeoutsLatencyRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetAppTimeoutsRetrieved();
     goodSubCluster.getAppTimeoutsRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetAppTimeoutsRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetAppTimeoutsRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getAppTimeoutsRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetAppTimeoutsRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetAppTimeoutsRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1744,7 +1744,7 @@ public class TestRouterMetrics {
   public void testGetAppTimeoutsRetrievedFailed() {
     long totalBadBefore = metrics.getAppTimeoutsFailedRetrieved();
     badSubCluster.getAppTimeoutsFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getAppTimeoutsFailedRetrieved());
   }
 
@@ -1752,14 +1752,14 @@ public class TestRouterMetrics {
   public void testGetRMNodeLabelsRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetRMNodeLabelsRetrieved();
     goodSubCluster.getRMNodeLabelsRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetRMNodeLabelsRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetRMNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getRMNodeLabelsRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetRMNodeLabelsRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetRMNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1767,7 +1767,7 @@ public class TestRouterMetrics {
   public void testGetRMNodeLabelsRetrievedFailed() {
     long totalBadBefore = metrics.getRMNodeLabelsFailedRetrieved();
     badSubCluster.getRMNodeLabelsFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getRMNodeLabelsFailedRetrieved());
   }
 
@@ -1775,14 +1775,14 @@ public class TestRouterMetrics {
   public void testCheckUserAccessToQueueRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededCheckUserAccessToQueueRetrieved();
     goodSubCluster.getCheckUserAccessToQueueRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededCheckUserAccessToQueueRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededCheckUserAccessToQueueRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getCheckUserAccessToQueueRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededCheckUserAccessToQueueRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededCheckUserAccessToQueueRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1790,7 +1790,7 @@ public class TestRouterMetrics {
   public void testCheckUserAccessToQueueRetrievedFailed() {
     long totalBadBefore = metrics.getCheckUserAccessToQueueFailedRetrieved();
     badSubCluster.getCheckUserAccessToQueueFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getCheckUserAccessToQueueFailedRetrieved());
   }
 
@@ -1798,14 +1798,14 @@ public class TestRouterMetrics {
   public void testGetDelegationTokenRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetDelegationTokenRetrieved();
     goodSubCluster.getGetDelegationTokenRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetDelegationTokenRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetDelegationTokenRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getGetDelegationTokenRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetDelegationTokenRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetDelegationTokenRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1813,7 +1813,7 @@ public class TestRouterMetrics {
   public void testGetDelegationTokenRetrievedFailed() {
     long totalBadBefore = metrics.getDelegationTokenFailedRetrieved();
     badSubCluster.getDelegationTokenFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getDelegationTokenFailedRetrieved());
   }
 
@@ -1821,14 +1821,14 @@ public class TestRouterMetrics {
   public void testRenewDelegationTokenRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededRenewDelegationTokenRetrieved();
     goodSubCluster.getRenewDelegationTokenRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededRenewDelegationTokenRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededRenewDelegationTokenRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getRenewDelegationTokenRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededRenewDelegationTokenRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededRenewDelegationTokenRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1836,7 +1836,7 @@ public class TestRouterMetrics {
   public void testRenewDelegationTokenRetrievedFailed() {
     long totalBadBefore = metrics.getRenewDelegationTokenFailedRetrieved();
     badSubCluster.getRenewDelegationTokenFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getRenewDelegationTokenFailedRetrieved());
   }
 
@@ -1844,14 +1844,14 @@ public class TestRouterMetrics {
   public void testRefreshAdminAclsRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededRefreshAdminAclsRetrieved();
     goodSubCluster.getRefreshAdminAclsRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededRefreshAdminAclsRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededRefreshAdminAclsRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getRefreshAdminAclsRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededRefreshAdminAclsRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededRefreshAdminAclsRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1859,7 +1859,7 @@ public class TestRouterMetrics {
   public void testRefreshAdminAclsRetrievedFailed() {
     long totalBadBefore = metrics.getNumRefreshAdminAclsFailedRetrieved();
     badSubCluster.getRefreshAdminAclsFailedRetrieved();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getNumRefreshAdminAclsFailedRetrieved());
   }
 
@@ -1867,14 +1867,14 @@ public class TestRouterMetrics {
   public void testRefreshServiceAclsRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededRefreshServiceAclsRetrieved();
     goodSubCluster.getRefreshServiceAclsRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededRefreshServiceAclsRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededRefreshServiceAclsRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getRefreshServiceAclsRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededRefreshServiceAclsRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededRefreshServiceAclsRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1882,7 +1882,7 @@ public class TestRouterMetrics {
   public void testRefreshServiceAclsRetrievedFailed() {
     long totalBadBefore = metrics.getNumRefreshServiceAclsFailedRetrieved();
     badSubCluster.getRefreshServiceAclsFailedRetrieved();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getNumRefreshServiceAclsFailedRetrieved());
   }
 
@@ -1890,14 +1890,14 @@ public class TestRouterMetrics {
   public void testReplaceLabelsOnNodesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededReplaceLabelsOnNodesRetrieved();
     goodSubCluster.getNumSucceededReplaceLabelsOnNodesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededReplaceLabelsOnNodesRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededReplaceLabelsOnNodesRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getNumSucceededReplaceLabelsOnNodesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededReplaceLabelsOnNodesRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededReplaceLabelsOnNodesRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1905,7 +1905,7 @@ public class TestRouterMetrics {
   public void testReplaceLabelsOnNodesRetrievedFailed() {
     long totalBadBefore = metrics.getNumReplaceLabelsOnNodesFailedRetrieved();
     badSubCluster.getReplaceLabelsOnNodesFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getNumReplaceLabelsOnNodesFailedRetrieved());
   }
 
@@ -1913,14 +1913,14 @@ public class TestRouterMetrics {
   public void testReplaceLabelsOnNodeRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededReplaceLabelsOnNodeRetrieved();
     goodSubCluster.getNumSucceededReplaceLabelsOnNodeRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededReplaceLabelsOnNodeRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededReplaceLabelsOnNodeRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getNumSucceededReplaceLabelsOnNodeRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededReplaceLabelsOnNodeRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededReplaceLabelsOnNodeRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1928,7 +1928,7 @@ public class TestRouterMetrics {
   public void testReplaceLabelOnNodeRetrievedFailed() {
     long totalBadBefore = metrics.getNumReplaceLabelsOnNodeFailedRetrieved();
     badSubCluster.getReplaceLabelsOnNodeFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getNumReplaceLabelsOnNodeFailedRetrieved());
   }
 
@@ -1936,14 +1936,14 @@ public class TestRouterMetrics {
   public void testDumpSchedulerLogsRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededDumpSchedulerLogsRetrieved();
     goodSubCluster.getDumpSchedulerLogsRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededDumpSchedulerLogsRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededDumpSchedulerLogsRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getDumpSchedulerLogsRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededDumpSchedulerLogsRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededDumpSchedulerLogsRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1951,7 +1951,7 @@ public class TestRouterMetrics {
   public void testDumpSchedulerLogsRetrievedFailed() {
     long totalBadBefore = metrics.getDumpSchedulerLogsFailedRetrieved();
     badSubCluster.getDumpSchedulerLogsFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getDumpSchedulerLogsFailedRetrieved());
   }
 
@@ -1959,14 +1959,14 @@ public class TestRouterMetrics {
   public void testGetActivitiesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetActivitiesRetrieved();
     goodSubCluster.getActivitiesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetActivitiesRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetActivitiesRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getActivitiesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetActivitiesRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetActivitiesRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1974,7 +1974,7 @@ public class TestRouterMetrics {
   public void testGetActivitiesRetrievedFailed() {
     long totalBadBefore = metrics.getActivitiesFailedRetrieved();
     badSubCluster.getActivitiesFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getActivitiesFailedRetrieved());
   }
 
@@ -1982,14 +1982,14 @@ public class TestRouterMetrics {
   public void testGetBulkActivitiesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetBulkActivitiesRetrieved();
     goodSubCluster.getBulkActivitiesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetBulkActivitiesRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetBulkActivitiesRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getBulkActivitiesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetBulkActivitiesRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetBulkActivitiesRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -1997,7 +1997,7 @@ public class TestRouterMetrics {
   public void testGetBulkActivitiesRetrievedFailed() {
     long totalBadBefore = metrics.getBulkActivitiesFailedRetrieved();
     badSubCluster.getBulkActivitiesFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getBulkActivitiesFailedRetrieved());
   }
 
@@ -2005,14 +2005,14 @@ public class TestRouterMetrics {
   public void testDeregisterSubClusterRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededDeregisterSubClusterRetrieved();
     goodSubCluster.getDeregisterSubClusterRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededDeregisterSubClusterRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededDeregisterSubClusterRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getDeregisterSubClusterRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededDeregisterSubClusterRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededDeregisterSubClusterRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -2020,7 +2020,7 @@ public class TestRouterMetrics {
   public void testDeregisterSubClusterRetrievedFailed() {
     long totalBadBefore = metrics.getDeregisterSubClusterFailedRetrieved();
     badSubCluster.getDeregisterSubClusterFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getDeregisterSubClusterFailedRetrieved());
   }
 
@@ -2028,14 +2028,14 @@ public class TestRouterMetrics {
   public void testAddToClusterNodeLabelsRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededAddToClusterNodeLabelsRetrieved();
     goodSubCluster.addToClusterNodeLabelsRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededAddToClusterNodeLabelsRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededAddToClusterNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.addToClusterNodeLabelsRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededAddToClusterNodeLabelsRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededAddToClusterNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -2043,7 +2043,7 @@ public class TestRouterMetrics {
   public void testGetSchedulerConfigurationRetrievedFailed() {
     long totalBadBefore = metrics.getSchedulerConfigurationFailedRetrieved();
     badSubCluster.getSchedulerConfigurationFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getSchedulerConfigurationFailedRetrieved());
   }
 
@@ -2051,14 +2051,14 @@ public class TestRouterMetrics {
   public void testGetSchedulerConfigurationRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetSchedulerConfigurationRetrieved();
     goodSubCluster.getSchedulerConfigurationRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetSchedulerConfigurationRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetSchedulerConfigurationRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getSchedulerConfigurationRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetSchedulerConfigurationRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetSchedulerConfigurationRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -2066,7 +2066,7 @@ public class TestRouterMetrics {
   public void testUpdateSchedulerConfigurationRetrievedFailed() {
     long totalBadBefore = metrics.getUpdateSchedulerConfigurationFailedRetrieved();
     badSubCluster.updateSchedulerConfigurationFailedRetrieved();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getUpdateSchedulerConfigurationFailedRetrieved());
   }
 
@@ -2074,14 +2074,14 @@ public class TestRouterMetrics {
   public void testUpdateSchedulerConfigurationRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededUpdateSchedulerConfigurationRetrieved();
     goodSubCluster.getUpdateSchedulerConfigurationRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededUpdateSchedulerConfigurationRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededUpdateSchedulerConfigurationRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getUpdateSchedulerConfigurationRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededUpdateSchedulerConfigurationRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededUpdateSchedulerConfigurationRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -2089,21 +2089,21 @@ public class TestRouterMetrics {
   public void testGetClusterInfoRetrievedFailed() {
     long totalBadBefore = metrics.getClusterInfoFailedRetrieved();
     badSubCluster.getClusterInfoFailed();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getClusterInfoFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getClusterInfoFailedRetrieved());
   }
 
   @Test
   public void testGetClusterInfoRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetClusterInfoRetrieved();
     goodSubCluster.getClusterInfoRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetClusterInfoRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetClusterInfoRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getClusterInfoRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetClusterInfoRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetClusterInfoRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -2111,21 +2111,21 @@ public class TestRouterMetrics {
   public void testGetClusterUserInfoRetrievedFailed() {
     long totalBadBefore = metrics.getClusterUserInfoFailedRetrieved();
     badSubCluster.getClusterUserInfoFailed();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getClusterUserInfoFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getClusterUserInfoFailedRetrieved());
   }
 
   @Test
   public void testGetClusterUserInfoRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetClusterUserInfoRetrieved();
     goodSubCluster.getClusterUserInfoRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetClusterUserInfoRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetClusterUserInfoRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getClusterUserInfoRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetClusterUserInfoRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetClusterUserInfoRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -2133,21 +2133,21 @@ public class TestRouterMetrics {
   public void testUpdateNodeResourceRetrievedFailed() {
     long totalBadBefore = metrics.getUpdateNodeResourceFailedRetrieved();
     badSubCluster.getUpdateNodeResourceFailed();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getUpdateNodeResourceFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getUpdateNodeResourceFailedRetrieved());
   }
 
   @Test
   public void testUpdateNodeResourceRetrieved() {
-    long totalGoodBefore = metrics.getNumSucceededGetClusterUserInfoRetrieved();
+    long totalGoodBefore = metrics.getNumSucceededUpdateNodeResourceRetrieved();
     goodSubCluster.getUpdateNodeResourceRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededUpdateNodeResourceRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededUpdateNodeResourceRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getUpdateNodeResourceRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededUpdateNodeResourceRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededUpdateNodeResourceRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -2155,21 +2155,21 @@ public class TestRouterMetrics {
   public void testRefreshNodesResourcesRetrievedFailed() {
     long totalBadBefore = metrics.getRefreshNodesResourcesFailedRetrieved();
     badSubCluster.getRefreshNodesResourcesFailed();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getRefreshNodesResourcesFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getRefreshNodesResourcesFailedRetrieved());
   }
 
   @Test
   public void testRefreshNodesResourcesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededRefreshNodesResourcesRetrieved();
     goodSubCluster.getRefreshNodesResourcesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededRefreshNodesResourcesRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededRefreshNodesResourcesRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getRefreshNodesResourcesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededRefreshNodesResourcesRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededRefreshNodesResourcesRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -2177,7 +2177,7 @@ public class TestRouterMetrics {
   public void testCheckForDecommissioningNodesFailedRetrieved() {
     long totalBadBefore = metrics.getCheckForDecommissioningNodesFailedRetrieved();
     badSubCluster.getCheckForDecommissioningNodesFailed();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getCheckForDecommissioningNodesFailedRetrieved());
   }
 
@@ -2185,14 +2185,14 @@ public class TestRouterMetrics {
   public void testCheckForDecommissioningNodesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededCheckForDecommissioningNodesRetrieved();
     goodSubCluster.getCheckForDecommissioningNodesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededCheckForDecommissioningNodesRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededCheckForDecommissioningNodesRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getCheckForDecommissioningNodesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededCheckForDecommissioningNodesRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededCheckForDecommissioningNodesRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -2200,21 +2200,21 @@ public class TestRouterMetrics {
   public void testRefreshClusterMaxPriorityFailedRetrieved() {
     long totalBadBefore = metrics.getRefreshClusterMaxPriorityFailedRetrieved();
     badSubCluster.getRefreshClusterMaxPriorityFailed();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getRefreshClusterMaxPriorityFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getRefreshClusterMaxPriorityFailedRetrieved());
   }
 
   @Test
   public void testRefreshClusterMaxPriorityRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededRefreshClusterMaxPriorityRetrieved();
     goodSubCluster.getRefreshClusterMaxPriorityRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededRefreshClusterMaxPriorityRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededRefreshClusterMaxPriorityRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getRefreshClusterMaxPriorityRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededRefreshClusterMaxPriorityRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededRefreshClusterMaxPriorityRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -2222,21 +2222,21 @@ public class TestRouterMetrics {
   public void testGetMapAttributesToNodesFailedRetrieved() {
     long totalBadBefore = metrics.getMapAttributesToNodesFailedRetrieved();
     badSubCluster.getMapAttributesToNodesFailed();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getMapAttributesToNodesFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getMapAttributesToNodesFailedRetrieved());
   }
 
   @Test
   public void testGetMapAttributesToNodesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededMapAttributesToNodesRetrieved();
     goodSubCluster.getMapAttributesToNodesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededMapAttributesToNodesRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededMapAttributesToNodesRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getMapAttributesToNodesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededMapAttributesToNodesRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededMapAttributesToNodesRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -2244,21 +2244,21 @@ public class TestRouterMetrics {
   public void testGetGroupsForUserFailedRetrieved() {
     long totalBadBefore = metrics.getGroupsForUserFailedRetrieved();
     badSubCluster.getGroupsForUserFailed();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getGroupsForUserFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getGroupsForUserFailedRetrieved());
   }
 
   @Test
   public void testGetGroupsForUserRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetGroupsForUsersRetrieved();
     goodSubCluster.getGroupsForUsersRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetGroupsForUsersRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetGroupsForUsersRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getGroupsForUsersRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetGroupsForUsersRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetGroupsForUsersRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -2266,21 +2266,21 @@ public class TestRouterMetrics {
   public void testSaveFederationQueuePolicyFailedRetrieved() {
     long totalBadBefore = metrics.getSaveFederationQueuePolicyFailedRetrieved();
     badSubCluster.getSaveFederationQueuePolicyFailedRetrieved();
-    Assert.assertEquals(totalBadBefore + 1, metrics.getSaveFederationQueuePolicyFailedRetrieved());
+    assertEquals(totalBadBefore + 1, metrics.getSaveFederationQueuePolicyFailedRetrieved());
   }
 
   @Test
   public void testSaveFederationQueuePolicyRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededSaveFederationQueuePolicyRetrieved();
     goodSubCluster.getSaveFederationQueuePolicyRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededSaveFederationQueuePolicyRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededSaveFederationQueuePolicyRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getSaveFederationQueuePolicyRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededSaveFederationQueuePolicyRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededSaveFederationQueuePolicyRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -2288,7 +2288,7 @@ public class TestRouterMetrics {
   public void testGetBatchSaveFederationQueuePoliciesFailedRetrieved() {
     long totalBadBefore = metrics.getBatchSaveFederationQueuePoliciesFailedRetrieved();
     badSubCluster.getBatchSaveFederationQueuePoliciesFailedRetrieved();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getBatchSaveFederationQueuePoliciesFailedRetrieved());
   }
 
@@ -2296,15 +2296,15 @@ public class TestRouterMetrics {
   public void testGetBatchSaveFederationQueuePoliciesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededBatchSaveFederationQueuePoliciesRetrieved();
     goodSubCluster.getBatchSaveFederationQueuePoliciesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededBatchSaveFederationQueuePoliciesRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededBatchSaveFederationQueuePoliciesRetrieved(),
         ASSERT_DOUBLE_DELTA);
     goodSubCluster.getBatchSaveFederationQueuePoliciesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededBatchSaveFederationQueuePoliciesRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededBatchSaveFederationQueuePoliciesRetrieved(),
         ASSERT_DOUBLE_DELTA);
   }
@@ -2313,7 +2313,7 @@ public class TestRouterMetrics {
   public void testListFederationQueuePoliciesFailedRetrieved() {
     long totalBadBefore = metrics.getListFederationQueuePoliciesFailedRetrieved();
     badSubCluster.getListFederationQueuePoliciesFailedRetrieved();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getListFederationQueuePoliciesFailedRetrieved());
   }
 
@@ -2321,14 +2321,14 @@ public class TestRouterMetrics {
   public void testListFederationQueuePoliciesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededListFederationQueuePoliciesFailedRetrieved();
     goodSubCluster.getListFederationQueuePoliciesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededListFederationQueuePoliciesFailedRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededListFederationQueuePoliciesRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getListFederationQueuePoliciesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededListFederationQueuePoliciesFailedRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededListFederationQueuePoliciesRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -2336,7 +2336,7 @@ public class TestRouterMetrics {
   public void testGetFederationSubClustersFailedRetrieved() {
     long totalBadBefore = metrics.getFederationSubClustersFailedRetrieved();
     badSubCluster.getFederationSubClustersFailedRetrieved();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getFederationSubClustersFailedRetrieved());
   }
 
@@ -2344,14 +2344,14 @@ public class TestRouterMetrics {
   public void testGetFederationSubClustersRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededGetFederationSubClustersRetrieved();
     goodSubCluster.getFederationSubClustersRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetFederationSubClustersRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededGetFederationSubClustersRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getFederationSubClustersRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetFederationSubClustersRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededGetFederationSubClustersRetrieved(), ASSERT_DOUBLE_DELTA);
   }
 
@@ -2359,7 +2359,7 @@ public class TestRouterMetrics {
   public void testDeleteFederationPoliciesByQueuesFailedRetrieved() {
     long totalBadBefore = metrics.getDeleteFederationPoliciesByQueuesRetrieved();
     badSubCluster.getDeleteFederationPoliciesByQueuesFailedRetrieved();
-    Assert.assertEquals(totalBadBefore + 1,
+    assertEquals(totalBadBefore + 1,
         metrics.getDeleteFederationPoliciesByQueuesRetrieved());
   }
 
@@ -2367,15 +2367,15 @@ public class TestRouterMetrics {
   public void testDeleteFederationPoliciesByQueuesRetrieved() {
     long totalGoodBefore = metrics.getNumSucceededDeleteFederationPoliciesByQueuesRetrieved();
     goodSubCluster.deleteFederationPoliciesByQueuesRetrieved(150);
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededDeleteFederationPoliciesByQueuesRetrieved());
-    Assert.assertEquals(150,
+    assertEquals(150,
         metrics.getLatencySucceededDeleteFederationPoliciesByQueuesRetrieved(),
         ASSERT_DOUBLE_DELTA);
     goodSubCluster.deleteFederationPoliciesByQueuesRetrieved(300);
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededDeleteFederationPoliciesByQueuesRetrieved());
-    Assert.assertEquals(225,
+    assertEquals(225,
         metrics.getLatencySucceededDeleteFederationPoliciesByQueuesRetrieved(),
         ASSERT_DOUBLE_DELTA);
   }

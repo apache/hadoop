@@ -265,6 +265,9 @@ public class TestMountTableResolver {
 
     mtEntry = mountTable.getMountPoint("/user/a1");
     assertEquals("/user", mtEntry.getSourcePath());
+
+    mtEntry = mountTable.getMountPoint("");
+    assertNull(mtEntry);
   }
 
   @Test

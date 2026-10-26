@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.times;
 
 import java.io.IOException;
@@ -33,6 +33,9 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import java.util.function.Supplier;
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +46,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferServer;
@@ -53,19 +59,12 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.Assert;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
 import org.mockito.Mockito;
 import org.slf4j.event.Level;
+import org.junit.jupiter.api.Tag;
 
-@RunWith(Parameterized.class)
+@Tag("slow")
 public class TestEncryptedTransfer {
   {
     GenericTestUtils.setLogLevel(
@@ -73,11 +72,7 @@ public class TestEncryptedTransfer {
     GenericTestUtils.setLogLevel(
         LoggerFactory.getLogger(DataTransferSaslUtil.class), Level.DEBUG);
   }
-
-  @Rule
-  public Timeout timeout = new Timeout(300000);
   
-  @Parameters
   public static Collection<Object[]> data() {
     Collection<Object[]> params = new ArrayList<Object[]>();
     params.add(new Object[]{null});
@@ -114,16 +109,16 @@ public class TestEncryptedTransfer {
   }
   
   String resolverClazz;
-  public TestEncryptedTransfer(String resolverClazz){
-    this.resolverClazz = resolverClazz;
+  public void initTestEncryptedTransfer(String pResolverClazz) throws IOException {
+    this.resolverClazz = pResolverClazz;
+    setup();
   }
 
-  @Before
   public void setup() throws IOException {
     conf = new Configuration();
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException {
     if (fs != null) {
       fs.close();
@@ -206,29 +201,39 @@ public class TestEncryptedTransfer {
     }
   }
 
-  @Test
-  public void testEncryptedReadDefaultAlgorithmCipherSuite()
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testEncryptedReadDefaultAlgorithmCipherSuite(String pResolverClazz)
       throws IOException {
+    initTestEncryptedTransfer(pResolverClazz);
     testEncryptedRead("", "", false, false);
   }
 
-  @Test
-  public void testEncryptedReadWithRC4() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testEncryptedReadWithRC4(String pResolverClazz) throws IOException {
+    initTestEncryptedTransfer(pResolverClazz);
     testEncryptedRead("rc4", "", false, false);
   }
 
-  @Test
-  public void testEncryptedReadWithAES() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testEncryptedReadWithAES(String pResolverClazz) throws IOException {
+    initTestEncryptedTransfer(pResolverClazz);
     testEncryptedRead("", "AES/CTR/NoPadding", true, false);
   }
 
-  @Test
-  public void testEncryptedReadAfterNameNodeRestart() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testEncryptedReadAfterNameNodeRestart(String pResolverClazz) throws IOException {
+    initTestEncryptedTransfer(pResolverClazz);
     testEncryptedRead("", "", false, true);
   }
 
-  @Test
-  public void testClientThatDoesNotSupportEncryption() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testClientThatDoesNotSupportEncryption(String pResolverClazz) throws IOException {
+    initTestEncryptedTransfer(pResolverClazz);
     // Set short retry timeouts so this test runs faster
     conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
 
@@ -260,8 +265,10 @@ public class TestEncryptedTransfer {
     }
   }
 
-  @Test
-  public void testLongLivedReadClientAfterRestart() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testLongLivedReadClientAfterRestart(String pResolverClazz) throws IOException {
+    initTestEncryptedTransfer(pResolverClazz);
     FileChecksum checksum = writeUnencryptedAndThenRestartEncryptedCluster();
 
     assertEquals(PLAIN_TEXT, DFSTestUtil.readFile(fs, TEST_PATH));
@@ -276,8 +283,10 @@ public class TestEncryptedTransfer {
     assertEquals(checksum, fs.getFileChecksum(TEST_PATH));
   }
 
-  @Test
-  public void testLongLivedWriteClientAfterRestart() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testLongLivedWriteClientAfterRestart(String pResolverClazz) throws IOException {
+    initTestEncryptedTransfer(pResolverClazz);
     setEncryptionConfigKeys();
     cluster = new MiniDFSCluster.Builder(conf).build();
 
@@ -295,9 +304,11 @@ public class TestEncryptedTransfer {
     writeTestDataToFile(fs);
     assertEquals(PLAIN_TEXT + PLAIN_TEXT, DFSTestUtil.readFile(fs, TEST_PATH));
   }
-  
-  @Test
-  public void testLongLivedClient() throws IOException, InterruptedException {
+
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testLongLivedClient(String pResolverClazz) throws IOException, InterruptedException {
+    initTestEncryptedTransfer(pResolverClazz);
     FileChecksum checksum = writeUnencryptedAndThenRestartEncryptedCluster();
 
     BlockTokenSecretManager btsm = cluster.getNamesystem().getBlockManager()
@@ -321,9 +332,11 @@ public class TestEncryptedTransfer {
     assertEquals(checksum, fs.getFileChecksum(TEST_PATH));
   }
 
-  @Test
-  public void testFileChecksumWithInvalidEncryptionKey()
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testFileChecksumWithInvalidEncryptionKey(String pResolverClazz)
       throws IOException, InterruptedException, TimeoutException {
+    initTestEncryptedTransfer(pResolverClazz);
     if (resolverClazz != null) {
       // TestTrustedChannelResolver does not use encryption keys.
       return;
@@ -365,16 +378,88 @@ public class TestEncryptedTransfer {
     LOG.info("The encryption key is invalid on all nodes now.");
     fs.getFileChecksum(TEST_PATH);
     // verify that InvalidEncryptionKeyException is handled properly
-    Assert.assertTrue(client.getEncryptionKey() == null);
+    assertTrue(client.getEncryptionKey() == null);
     Mockito.verify(spyClient, times(1)).clearDataEncryptionKey();
     // Retry the operation after clearing the encryption key
     FileChecksum verifyChecksum = fs.getFileChecksum(TEST_PATH);
-    Assert.assertEquals(checksum, verifyChecksum);
+    assertEquals(checksum, verifyChecksum);
   }
 
-  @Test
-  public void testLongLivedClientPipelineRecovery()
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testStripedFileChecksumWithInvalidEncryptionKey(
+      String pResolverClazz)
       throws IOException, InterruptedException, TimeoutException {
+    initTestEncryptedTransfer(pResolverClazz);
+    if (resolverClazz != null) {
+      // TestTrustedChannelResolver does not use encryption keys.
+      return;
+    }
+    setEncryptionConfigKeys();
+    // XOR-2-1 requires 3 DNs (2 data + 1 parity).
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster.waitActive();
+
+    DistributedFileSystem dfs =
+        (DistributedFileSystem) getFileSystem(conf);
+    try {
+      // Enable XOR-2-1 EC policy and create an EC directory.
+      ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies.getByID(
+          SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
+      dfs.enableErasureCodingPolicy(ecPolicy.getName());
+      Path ecDir = new Path("/ec");
+      dfs.mkdirs(ecDir);
+      dfs.setErasureCodingPolicy(ecDir, ecPolicy.getName());
+
+      // Write a striped file.
+      Path ecFile = new Path(ecDir, "test-file");
+      int cellSize = ecPolicy.getCellSize();
+      // Write enough data to span at least one full stripe.
+      byte[] data = new byte[cellSize * ecPolicy.getNumDataUnits()];
+      Arrays.fill(data, (byte) 'a');
+      try (FSDataOutputStream out = dfs.create(ecFile)) {
+        out.write(data);
+      }
+
+      // Get baseline checksum with valid keys.
+      FileChecksum checksum = dfs.getFileChecksum(ecFile);
+
+      // Spy on DFSClient to simulate InvalidEncryptionKeyException
+      // on connectToDN until clearDataEncryptionKey is called.
+      DFSClient client = DFSClientAdapter.getDFSClient(dfs);
+      DFSClient spyClient = Mockito.spy(client);
+      DFSClientAdapter.setDFSClient(dfs, spyClient);
+
+      java.util.concurrent.atomic.AtomicBoolean keyCleared =
+          new java.util.concurrent.atomic.AtomicBoolean(false);
+      Mockito.doAnswer(invocation -> {
+        keyCleared.set(true);
+        return invocation.callRealMethod();
+      }).when(spyClient).clearDataEncryptionKey();
+      Mockito.doAnswer(invocation -> {
+        if (!keyCleared.get()) {
+          throw new InvalidEncryptionKeyException("test invalid key");
+        }
+        return invocation.callRealMethod();
+      }).when(spyClient).connectToDN(Mockito.any(DatanodeInfo.class),
+          Mockito.anyInt(), Mockito.any());
+
+      // This should succeed: InvalidEncryptionKeyException should be
+      // caught, the stale key cleared, and the checksum retried.
+      FileChecksum verifyChecksum = dfs.getFileChecksum(ecFile);
+      Mockito.verify(spyClient, Mockito.atLeastOnce())
+          .clearDataEncryptionKey();
+      assertEquals(checksum, verifyChecksum);
+    } finally {
+      dfs.close();
+    }
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testLongLivedClientPipelineRecovery(String pResolverClazz)
+      throws IOException, InterruptedException, TimeoutException {
+    initTestEncryptedTransfer(pResolverClazz);
     if (resolverClazz != null) {
       // TestTrustedChannelResolver does not use encryption keys.
       return;
@@ -428,25 +513,31 @@ public class TestEncryptedTransfer {
       // write data to induce pipeline recovery
       out.write(PLAIN_TEXT.getBytes());
       out.hflush();
-      assertFalse("The first datanode in the pipeline was not replaced.",
-          Arrays.asList(dfstream.getPipeline()).contains(targets[0]));
+      assertFalse(Arrays.asList(dfstream.getPipeline()).contains(targets[0]),
+          "The first datanode in the pipeline was not replaced.");
     }
     // verify that InvalidEncryptionKeyException is handled properly
     Mockito.verify(spyClient, times(1)).clearDataEncryptionKey();
   }
 
-  @Test
-  public void testEncryptedWriteWithOneDn() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testEncryptedWriteWithOneDn(String pResolverClazz) throws IOException {
+    initTestEncryptedTransfer(pResolverClazz);
     testEncryptedWrite(1);
   }
 
-  @Test
-  public void testEncryptedWriteWithTwoDns() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testEncryptedWriteWithTwoDns(String pResolverClazz) throws IOException {
+    initTestEncryptedTransfer(pResolverClazz);
     testEncryptedWrite(2);
   }
 
-  @Test
-  public void testEncryptedWriteWithMultipleDns() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testEncryptedWriteWithMultipleDns(String pResolverClazz) throws IOException {
+    initTestEncryptedTransfer(pResolverClazz);
     testEncryptedWrite(10);
   }
 
@@ -479,8 +570,10 @@ public class TestEncryptedTransfer {
     }
   }
 
-  @Test
-  public void testEncryptedAppend() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testEncryptedAppend(String pResolverClazz) throws IOException {
+    initTestEncryptedTransfer(pResolverClazz);
     setEncryptionConfigKeys();
 
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
@@ -494,8 +587,10 @@ public class TestEncryptedTransfer {
     assertEquals(PLAIN_TEXT + PLAIN_TEXT, DFSTestUtil.readFile(fs, TEST_PATH));
   }
 
-  @Test
-  public void testEncryptedAppendRequiringBlockTransfer() throws IOException {
+  @MethodSource("data")
+  @ParameterizedTest
+  public void testEncryptedAppendRequiringBlockTransfer(String pResolverClazz) throws IOException {
+    initTestEncryptedTransfer(pResolverClazz);
     setEncryptionConfigKeys();
 
     // start up 4 DNs

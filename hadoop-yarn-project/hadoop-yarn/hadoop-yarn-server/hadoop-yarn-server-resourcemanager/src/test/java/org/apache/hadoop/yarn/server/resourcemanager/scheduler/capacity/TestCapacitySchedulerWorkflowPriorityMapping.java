@@ -35,6 +35,9 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.List;
@@ -88,6 +91,24 @@ public class TestCapacitySchedulerWorkflowPriorityMapping {
         new WorkflowPriorityMapping("workflow2", A1.getFullPath(), Priority.newInstance(3)),
         new WorkflowPriorityMapping("Workflow3", A.getFullPath(), Priority.newInstance(4)));
     conf.setWorkflowPriorityMappings(mappings);
+  }
+
+  @Test
+  public void testInvalidWorkflowPriorityMappings() {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    CapacityScheduler cs = mock(CapacityScheduler.class);
+    when(cs.getConfiguration()).thenReturn(conf);
+    WorkflowPriorityMappingsManager manager = new WorkflowPriorityMappingsManager();
+
+    conf.set(CapacitySchedulerConfiguration.WORKFLOW_PRIORITY_MAPPINGS, "bad");
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        () -> manager.initialize(cs));
+    assertEquals("Illegal workflow priority mapping bad", e.getMessage());
+
+    conf.set(CapacitySchedulerConfiguration.WORKFLOW_PRIORITY_MAPPINGS,
+        "workflow1:root.a:high");
+    e = assertThrows(IllegalArgumentException.class, () -> manager.initialize(cs));
+    assertEquals("Illegal workflow priority for mapping workflow1:root.a:high", e.getMessage());
   }
 
   @Test

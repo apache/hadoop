@@ -966,7 +966,7 @@ public class NodeManager extends CompositeService
       ShutdownHookManager.get().addShutdownHook(nodeManagerShutdownHook,
                                                 SHUTDOWN_HOOK_PRIORITY);
       // System exit should be called only when NodeManager is instantiated from
-      // main() funtion
+      // main() function
       this.shouldExitOnShutdownEvent = true;
       this.init(conf);
       this.start();

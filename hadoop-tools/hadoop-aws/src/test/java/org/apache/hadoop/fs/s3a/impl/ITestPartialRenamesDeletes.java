@@ -30,7 +30,9 @@ import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,7 +74,9 @@ import static org.apache.hadoop.test.LambdaTestUtils.eval;
  * Test partial failures of delete and rename operations,.
  *
  * All these test have a unique path for each run, with a roleFS having
- * full RW access to part of it, and R/O access to a restricted subdirectory
+ * full RW access to part of it, and R/O access to a restricted subdirectory.
+ * <p>
+ * Tests are skipped on S3Express buckets or if no assumed role is provided.
  *
  * <ol>
  *   <li>
@@ -90,6 +94,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.eval;
  * </ol>
  *
  */
+@ParameterizedClass(name="bulk-delete-{0}")
+@MethodSource("params")
 @SuppressWarnings("ThrowableNotThrown")
 public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
@@ -164,7 +170,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   private Path noReadDir;
 
   /** delete policy: single or multi? */
-  private boolean multiDelete;
+  private final boolean multiDelete;
 
   /**
    * Configuration for the assume role FS.
@@ -198,12 +204,10 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
   /**
    * Constructor.
-   * @param pMultiDelete single vs multi delete in the role FS?
+   * @param multiDelete single vs multi delete in the role FS?
    */
-  public void initITestPartialRenamesDeletes(final boolean pMultiDelete)
-      throws Exception {
-    this.multiDelete = pMultiDelete;
-    setup();
+  public ITestPartialRenamesDeletes(final boolean multiDelete) {
+    this.multiDelete = multiDelete;
   }
 
   /**
@@ -215,9 +219,11 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * @throws Exception failure
    */
   @Override
+  @BeforeEach
   public void setup() throws Exception {
     super.setup();
     assumeRoleTests();
+    skipIfS3ExpressBucket(getConfiguration());
     basePath = uniquePath();
     readOnlyDir = new Path(basePath, "readonlyDir");
     writableDir = new Path(basePath, "writableDir");
@@ -336,10 +342,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   /**
    * This is here to verify role and path setup.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete={0}")
-  public void testCannotTouchUnderRODir(boolean pMultiDelete) throws Throwable {
-    initITestPartialRenamesDeletes(pMultiDelete);
+  @Test
+  public void testCannotTouchUnderRODir() throws Throwable {
     forbidden("touching the empty child " + readOnlyChild,
         "",
         () -> {
@@ -347,10 +351,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
           return readOnlyChild;
         });
   }
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete={0}")
-  public void testCannotReadUnderNoReadDir(boolean pMultiDelete) throws Throwable {
-    initITestPartialRenamesDeletes(pMultiDelete);
+  @Test
+  public void testCannotReadUnderNoReadDir() throws Throwable {
     Path path = new Path(noReadDir, "unreadable.txt");
     createFile(getFileSystem(), path, true, "readonly".getBytes());
     forbidden("trying to read " + path,
@@ -358,10 +360,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         () -> readUTF8(roleFS, path, -1));
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete={0}")
-  public void testMultiDeleteOptionPropagated(boolean pMultiDelete) throws Throwable {
-    initITestPartialRenamesDeletes(pMultiDelete);
+  @Test
+  public void testMultiDeleteOptionPropagated() throws Throwable {
     describe("Verify the test parameter propagates to the store context");
     StoreContext ctx = roleFS.createStoreContext();
     Assertions.assertThat(ctx.isMultiObjectDeleteEnabled())
@@ -372,10 +372,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   /**
    * Execute a sequence of rename operations with access locked down.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete={0}")
-  public void testRenameParentPathNotWriteable(boolean pMultiDelete) throws Throwable {
-    initITestPartialRenamesDeletes(pMultiDelete);
+  @Test
+  public void testRenameParentPathNotWriteable() throws Throwable {
     describe("rename with parent paths not writeable; multi=%s", multiDelete);
     final Configuration conf = createAssumedRoleConfig();
     bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
@@ -406,10 +404,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     roleFS.delete(writableDir, true);
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete={0}")
-  public void testRenameSingleFileFailsInDelete(boolean pMultiDelete) throws Throwable {
-    initITestPartialRenamesDeletes(pMultiDelete);
+  @Test
+  public void testRenameSingleFileFailsInDelete() throws Throwable {
     describe("rename with source read only; multi=%s", multiDelete);
     Path readOnlyFile = readOnlyChild;
 
@@ -454,10 +450,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    *   it's a filesystem forever.</li>
    * </ol>
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete={0}")
-  public void testRenameDirFailsInDelete(boolean pMultiDelete) throws Throwable {
-    initITestPartialRenamesDeletes(pMultiDelete);
+  @Test
+  public void testRenameDirFailsInDelete() throws Throwable {
     describe("rename with source read only; multi=%s", multiDelete);
 
     // the full FS
@@ -505,10 +499,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     }
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete={0}")
-  public void testRenameFileFailsNoWrite(boolean pMultiDelete) throws Throwable {
-    initITestPartialRenamesDeletes(pMultiDelete);
+  @Test
+  public void testRenameFileFailsNoWrite() throws Throwable {
     describe("Try to rename to a write-only destination fails with src"
         + " & dest unchanged.");
     roleFS.mkdirs(writableDir);
@@ -524,10 +516,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     assertPathDoesNotExist("rename destination", dest);
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete={0}")
-  public void testCopyDirFailsToReadOnlyDir(boolean pMultiDelete) throws Throwable {
-    initITestPartialRenamesDeletes(pMultiDelete);
+  @Test
+  public void testCopyDirFailsToReadOnlyDir() throws Throwable {
     describe("Try to copy to a read-only destination");
     roleFS.mkdirs(writableDir);
     S3AFileSystem fs = getFileSystem();
@@ -542,10 +532,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         writableDir, files.size());
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete={0}")
-  public void testCopyFileFailsOnSourceRead(boolean pMultiDelete) throws Throwable {
-    initITestPartialRenamesDeletes(pMultiDelete);
+  @Test
+  public void testCopyFileFailsOnSourceRead() throws Throwable {
     describe("The source file isn't readable, so the COPY fails");
     Path source = new Path(noReadDir, "source");
     S3AFileSystem fs = getFileSystem();
@@ -557,10 +545,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     assertPathDoesNotExist("rename destination", dest);
   }
 
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete={0}")
-  public void testCopyDirFailsOnSourceRead(boolean pMultiDelete) throws Throwable {
-    initITestPartialRenamesDeletes(pMultiDelete);
+  @Test
+  public void testCopyDirFailsOnSourceRead() throws Throwable {
     describe("The source file isn't readable, so the COPY fails");
     S3AFileSystem fs = getFileSystem();
     List<Path> files = createFiles(fs, noReadDir, dirDepth, fileCount,
@@ -578,10 +564,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * This verifies that failures in the delete fake dir stage.
    * are not visible.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete={0}")
-  public void testPartialEmptyDirDelete(boolean pMultiDelete) throws Throwable {
-    initITestPartialRenamesDeletes(pMultiDelete);
+  @Test
+  public void testPartialEmptyDirDelete() throws Throwable {
     describe("delete an empty directory with parent dir r/o"
         + " multidelete=%s", multiDelete);
 
@@ -602,10 +586,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * Have a directory with full R/W permissions, but then remove
    * write access underneath, and try to delete it.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete={0}")
-  public void testPartialDirDelete(boolean pMultiDelete) throws Throwable {
-    initITestPartialRenamesDeletes(pMultiDelete);
+  @Test
+  public void testPartialDirDelete() throws Throwable {
     describe("delete with part of the child tree read only;"
             + " multidelete=%s", multiDelete);
 
@@ -752,10 +734,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * <p></p>
    * See HADOOP-17621.
    */
-  @MethodSource("params")
-  @ParameterizedTest(name = "bulk-delete={0}")
-  public void testRenamePermissionRequirements(boolean pMultiDelete) throws Throwable {
-    initITestPartialRenamesDeletes(pMultiDelete);
+  @Test
+  public void testRenamePermissionRequirements() throws Throwable {
     describe("Verify rename() only needs s3:DeleteObject permission");
     // close the existing roleFS
     IOUtils.cleanupWithLogger(LOG, roleFS);

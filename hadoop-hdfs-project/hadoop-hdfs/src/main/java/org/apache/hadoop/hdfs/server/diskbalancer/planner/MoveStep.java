@@ -217,7 +217,7 @@ public class MoveStep implements Step {
    *
    * For example : if the ideal amount on each disk was 1 TB and the
    * tolerance was 10%, then getting to 900 GB on the destination disk is
-   * considerd good enough.
+   * considered good enough.
    *
    * @return tolerance percentage.
    */

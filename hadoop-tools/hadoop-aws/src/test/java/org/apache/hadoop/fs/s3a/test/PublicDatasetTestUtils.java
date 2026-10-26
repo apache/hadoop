@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.test;
 
-import org.junit.Assume;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -29,6 +27,7 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_BUCKET_WITH_MANY_OBJECTS;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_REQUESTER_PAYS_FILE;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Provides S3A filesystem URIs for public data sets for specific use cases.
@@ -128,8 +127,9 @@ public final class PublicDatasetTestUtils {
    */
   public static String requireDefaultExternalDataFile(Configuration conf) {
     String filename = getExternalData(conf).toUri().toString();
-    Assume.assumeTrue("External test file is not the default",
-        DEFAULT_EXTERNAL_FILE.equals(filename));
+    assumeThat(filename)
+        .as("External test file is not the default")
+        .isEqualTo(DEFAULT_EXTERNAL_FILE);
     return filename;
   }
 

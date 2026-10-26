@@ -18,68 +18,44 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
-import org.glassfish.jersey.jettison.JettisonJaxbContext;
+import org.eclipse.persistence.jaxb.JAXBContextFactory;
+import org.eclipse.persistence.jaxb.MarshallerProperties;
+
 import javax.inject.Singleton;
 
 import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBContext;
 
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AMAttemptInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AMAttemptsInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AppInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfEntryInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.CounterGroupInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.CounterInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobCounterInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobTaskAttemptState;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobsInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobTaskAttemptCounterInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobTaskCounterInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.MapTaskAttemptInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ReduceTaskAttemptInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptsInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskCounterGroupInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskCounterInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskInfo;
-import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TasksInfo;
-import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
+import org.apache.hadoop.mapreduce.v2.app.webapp.jsonprovider.ClassSerializationConfig;
 
 @Singleton
 @Provider
 public class JAXBContextResolver implements ContextResolver<JAXBContext> {
 
-  private final Map<Class, JAXBContext> typesContextMap;
-
-  // you have to specify all the dao classes here
-  private final Class[] cTypes = {AMAttemptInfo.class, AMAttemptsInfo.class,
-    AppInfo.class, CounterInfo.class, JobTaskAttemptCounterInfo.class,
-    JobTaskCounterInfo.class, TaskCounterGroupInfo.class, ConfInfo.class,
-    JobCounterInfo.class, TaskCounterInfo.class, CounterGroupInfo.class,
-    JobInfo.class, JobsInfo.class, MapTaskAttemptInfo.class, ReduceTaskAttemptInfo.class,
-    TaskInfo.class, TasksInfo.class, TaskAttemptsInfo.class, ConfEntryInfo.class, RemoteExceptionData.class};
-
-  // these dao classes need root unwrapping
-  private final Class[] rootUnwrappedTypes = {JobTaskAttemptState.class};
+  private final Map<Class, JAXBContext> typesContextMap = new HashMap<>();
 
   public JAXBContextResolver() throws Exception {
-    JAXBContext context;
-    JAXBContext unWrappedRootContext;
+    ClassSerializationConfig classSerializationConfig = new ClassSerializationConfig();
+    Set<Class<?>> wrappedClasses = classSerializationConfig.getWrappedClasses();
+    Set<Class<?>> unWrappedClasses = classSerializationConfig.getUnWrappedClasses();
 
-    this.typesContextMap = new HashMap<>();
-    context = new JettisonJaxbContext(cTypes);
-    unWrappedRootContext = new JettisonJaxbContext(rootUnwrappedTypes);
-    for (Class type : cTypes) {
-      typesContextMap.put(type, context);
-    }
-    for (Class type : rootUnwrappedTypes) {
-      typesContextMap.put(type, unWrappedRootContext);
-    }
+    JAXBContext wrappedContext = JAXBContextFactory.createContext(
+        wrappedClasses.toArray(new Class[0]),
+        Collections.singletonMap(MarshallerProperties.JSON_INCLUDE_ROOT, true)
+    );
+    JAXBContext unWrappedContext = JAXBContextFactory.createContext(
+        unWrappedClasses.toArray(new Class[0]),
+        Collections.singletonMap(MarshallerProperties.JSON_INCLUDE_ROOT, false)
+    );
+
+    wrappedClasses.forEach(type -> typesContextMap.put(type, wrappedContext));
+    unWrappedClasses.forEach(type -> typesContextMap.put(type, unWrappedContext));
   }
 
   @Override

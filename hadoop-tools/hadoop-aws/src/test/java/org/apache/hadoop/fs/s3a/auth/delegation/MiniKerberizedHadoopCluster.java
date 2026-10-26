@@ -49,7 +49,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSF
 import static org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig.DEFAULT_MR_HISTORY_PORT;
 import static org.apache.hadoop.security.UserGroupInformation.loginUserFromKeytabAndReturnUGI;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.*;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This is intended to support setting up an mini-secure Hadoop + YARN + MR
@@ -350,8 +350,8 @@ public class MiniKerberizedHadoopCluster extends CompositeService {
    * General assertion that security is turred on for a cluster.
    */
   public static void assertSecurityEnabled() {
-    assertTrue("Security is needed for this test",
-        UserGroupInformation.isSecurityEnabled());
+    assertTrue(UserGroupInformation.isSecurityEnabled(),
+        "Security is needed for this test");
   }
 
 

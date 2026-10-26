@@ -23,6 +23,8 @@ import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.test.tags.IntegrationTest;
+
 import org.junit.jupiter.api.AfterEach;
 
 /**
@@ -30,6 +32,7 @@ import org.junit.jupiter.api.AfterEach;
  * Some of the tests can take too long when the fault injection rate is high,
  * so the test timeout is extended.
  */
+@IntegrationTest
 public class ITestS3AContractGetFileStatus
     extends AbstractContractGetFileStatusTest {
 

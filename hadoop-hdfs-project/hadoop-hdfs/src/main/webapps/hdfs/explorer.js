@@ -84,7 +84,7 @@
     $('#delete-prompt').text("Are you sure you want to delete " + inode_name
       + " ?");
 
-    $('#delete-button').click(function() {
+    $('#delete-button').off().on('click', function() {
       // DELETE /webhdfs/v1/<path>?op=DELETE&recursive=<true|false>
       var url = '/webhdfs/v1' + encode_path(absolute_file_path) +
         '?op=DELETE' + '&recursive=true';

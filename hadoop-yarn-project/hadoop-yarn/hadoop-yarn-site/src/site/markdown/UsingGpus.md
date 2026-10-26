@@ -16,8 +16,8 @@
 # Using GPU On YARN
 # Prerequisites
 
-- As of now, only Nvidia GPUs are supported by YARN
-- YARN node managers have to be pre-installed with Nvidia drivers.
+- As of now, only NVIDIA GPUs are supported by YARN
+- YARN node managers have to be pre-installed with NVIDIA drivers.
 - When Docker is used as container runtime context, nvidia-docker 1.0 needs to be installed (Current supported version in YARN for nvidia-docker).
 
 # Configs
@@ -107,7 +107,7 @@ Following configs can be customized when user needs to run GPU applications insi
 | --- | --- |
 | yarn.nodemanager.resource-plugins.gpu.docker-plugin | nvidia-docker-v1 |
 
-Specify docker command plugin for GPU. By default uses Nvidia docker V1.0, `nvidia-docker-v2` is available for V2.x.
+Specify docker command plugin for GPU. By default uses NVIDIA docker V1.0, `nvidia-docker-v2` is available for V2.x.
 
 | Property | Default value |
 | --- | --- |

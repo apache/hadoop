@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.globalpolicygenerator;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -49,7 +50,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Matchers;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -167,7 +167,7 @@ public class TestGPGPolicyFacade {
   public void testWriteCache() throws YarnException {
     stateStore = mock(MemoryFederationStateStore.class);
     facade.reinitialize(stateStore, conf);
-    when(stateStore.getPolicyConfiguration(Matchers.any(
+    when(stateStore.getPolicyConfiguration(any(
         GetSubClusterPolicyConfigurationRequest.class))).thenReturn(
         GetSubClusterPolicyConfigurationResponse.newInstance(testConf));
     policyFacade = new GPGPolicyFacade(facade, conf);
@@ -176,12 +176,12 @@ public class TestGPGPolicyFacade {
     FederationPolicyManager manager = policyFacade.getPolicyManager(TEST_QUEUE);
     // State store should be contacted once
     verify(stateStore, times(1)).getPolicyConfiguration(
-        Matchers.any(GetSubClusterPolicyConfigurationRequest.class));
+        any(GetSubClusterPolicyConfigurationRequest.class));
 
     // If we set the same policy, the state store should be untouched
     policyFacade.setPolicyManager(manager);
     verify(stateStore, times(0)).setPolicyConfiguration(
-        Matchers.any(SetSubClusterPolicyConfigurationRequest.class));
+        any(SetSubClusterPolicyConfigurationRequest.class));
   }
 
   /**
@@ -192,7 +192,7 @@ public class TestGPGPolicyFacade {
     conf.setBoolean(YarnConfiguration.GPG_POLICY_GENERATOR_READONLY, true);
     stateStore = mock(MemoryFederationStateStore.class);
     facade.reinitialize(stateStore, conf);
-    when(stateStore.getPolicyConfiguration(Matchers.any(
+    when(stateStore.getPolicyConfiguration(any(
         GetSubClusterPolicyConfigurationRequest.class))).thenReturn(
         GetSubClusterPolicyConfigurationResponse.newInstance(testConf));
     policyFacade = new GPGPolicyFacade(facade, conf);
@@ -208,7 +208,7 @@ public class TestGPGPolicyFacade {
         GPGUtils.createUniformWeights(subClusterIds));
     policyFacade.setPolicyManager(manager);
     verify(stateStore, times(0)).setPolicyConfiguration(
-        Matchers.any(SetSubClusterPolicyConfigurationRequest.class));
+        any(SetSubClusterPolicyConfigurationRequest.class));
   }
 
   @Test

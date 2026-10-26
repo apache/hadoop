@@ -37,4 +37,8 @@ public class AbfsHttpHeader {
   public String getValue() {
     return value;
   }
+
+  public String toString() {
+    return name + ": " + value;
+  }
 }

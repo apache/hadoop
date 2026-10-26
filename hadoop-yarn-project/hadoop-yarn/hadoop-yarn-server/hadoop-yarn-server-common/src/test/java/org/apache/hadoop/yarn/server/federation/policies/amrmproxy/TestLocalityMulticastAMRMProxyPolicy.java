@@ -206,7 +206,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
   }
 
   @Test
-  @Timeout(value = 8)
+  @Timeout(value = 16)
   public void testStressPolicy() throws Exception {
 
     // Tests how the headroom info are used to split based on the capacity

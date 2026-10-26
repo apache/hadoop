@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -88,7 +89,6 @@ import static org.mockito.Mockito.when;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toEntity;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.logging.LoggingFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 
@@ -111,7 +111,8 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     config.register(RMWebServices.class);
     config.register(GenericExceptionHandler.class);
     config.register(TestRMWebServicesAppsModification.TestRMCustomAuthFilter.class);
-    config.register(new JettisonFeature()).register(JAXBContextResolver.class);
+    config.register(JsonProviderFeature.class);
+    config.register(JAXBContextResolver.class);
     return config;
   }
 
@@ -747,8 +748,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
           throws IOException, ParserConfigurationException, SAXException,
           JSONException {
     if (response.getMediaType().toString().contains(MediaType.APPLICATION_JSON)) {
-      return getDelegationTokenFromJson(
-          response.readEntity(JSONObject.class).getJSONObject("delegation-token"));
+      return getDelegationTokenFromJson(response.readEntity(JSONObject.class));
     }
     return getDelegationTokenFromXML(response.readEntity(String.class));
   }

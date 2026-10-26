@@ -20,8 +20,8 @@ package org.apache.hadoop.fs.s3a;
 
 import java.util.NoSuchElementException;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -45,10 +45,10 @@ public class TestListing extends AbstractS3AMockTest {
     RemoteIterator<S3AFileStatus> it = Listing.toProvidedFileStatusIterator(
         statuses);
 
-    Assert.assertTrue("hasNext() should return true first time", it.hasNext());
-    Assert.assertEquals("first element from iterator",
-        s3aStatus, it.next());
-    Assert.assertFalse("hasNext() should now be false", it.hasNext());
+    Assertions.assertTrue(it.hasNext(), "hasNext() should return true first time");
+    Assertions.assertEquals(s3aStatus, it.next(),
+        "first element from iterator");
+    Assertions.assertFalse(it.hasNext(), "hasNext() should now be false");
     intercept(NoSuchElementException.class, it::next);
   }
 }

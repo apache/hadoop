@@ -888,6 +888,17 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
+  public static final String KMS_CLIENT_DRAIN_RESPONSE_UNREAD_BYTES_KEY =
+      "hadoop.security.kms.client.drain.response.unread.bytes";
+  /** Default value for KMS_CLIENT_DRAIN_RESPONSE_UNREAD_BYTES_KEY. */
+  public static final boolean KMS_CLIENT_DRAIN_RESPONSE_UNREAD_BYTES_DEFAULT =
+      true;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
   /** Default value is the number of providers specified. */
   public static final String KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY =
       "hadoop.security.kms.client.failover.max.retries";

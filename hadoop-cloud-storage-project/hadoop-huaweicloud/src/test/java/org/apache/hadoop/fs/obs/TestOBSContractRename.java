@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.obs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractRenameTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.junit.Assume;
+import org.junit.jupiter.api.Disabled;
 
 /**
  * Rename test cases on obs file system.
@@ -33,13 +33,13 @@ public class TestOBSContractRename extends AbstractContractRenameTest {
     return new OBSContract(conf);
   }
 
+  @Disabled
   @Override
   public void testRenameFileUnderFileSubdir() {
-    Assume.assumeTrue("unsupport.", false);
   }
 
+  @Disabled
   @Override
   public void testRenameFileUnderFile() {
-    Assume.assumeTrue("unsupport.", false);
   }
 }

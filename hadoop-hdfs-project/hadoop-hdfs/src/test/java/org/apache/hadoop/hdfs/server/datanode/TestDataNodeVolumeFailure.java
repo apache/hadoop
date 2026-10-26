@@ -20,13 +20,12 @@ package org.apache.hadoop.hdfs.server.datanode;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
@@ -83,11 +82,10 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -96,6 +94,7 @@ import java.util.function.Supplier;
 /**
  * Fine-grain testing of block files and locations after volume failure.
  */
+@Timeout(120)
 public class TestDataNodeVolumeFailure {
   private final static Logger LOG = LoggerFactory.getLogger(
       TestDataNodeVolumeFailure.class);
@@ -118,11 +117,7 @@ public class TestDataNodeVolumeFailure {
   // block id to BlockLocs
   final Map<String, BlockLocs> block_map = new HashMap<String, BlockLocs> ();
 
-  // specific the timeout for entire test class
-  @Rule
-  public Timeout timeout = new Timeout(120 * 1000);
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // bring up a cluster of 2
     conf = new HdfsConfiguration();
@@ -138,7 +133,7 @@ public class TestDataNodeVolumeFailure {
     dataDir = new File(cluster.getDataDirectory());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if(data_fail != null) {
       FileUtil.setWritable(data_fail, true);
@@ -159,7 +154,8 @@ public class TestDataNodeVolumeFailure {
    * and that we can replicate to both datanodes even after a single volume
    * failure if the configuration parameter allows this.
    */
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testVolumeFailure() throws Exception {
     System.out.println("Data dir: is " +  dataDir.getPath());
    
@@ -242,7 +238,8 @@ public class TestDataNodeVolumeFailure {
    * NN (HDFS-14333). This is done by using a simulated FsDataset that throws
    * an exception for a failed volume when the block pool is initialized.
    */
-  @Test(timeout=15000)
+  @Test
+  @Timeout(value = 15)
   public void testDnStartsAfterDiskErrorScanningBlockPool() throws Exception {
     // Don't use the cluster configured in the setup() method for this test.
     cluster.shutdown(true);
@@ -282,8 +279,9 @@ public class TestDataNodeVolumeFailure {
    * Test that DataStorage and BlockPoolSliceStorage remove the failed volume
    * after failure.
    */
-  @Test(timeout=150000)
-    public void testFailedVolumeBeingRemovedFromDataNode()
+  @Test
+  @Timeout(value = 150)
+  public void testFailedVolumeBeingRemovedFromDataNode()
       throws Exception {
     // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
     // volume failures which is currently not supported on Windows.
@@ -348,7 +346,8 @@ public class TestDataNodeVolumeFailure {
    * Test DataNode stops when the number of failed volumes exceeds
    * dfs.datanode.failed.volumes.tolerated .
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testDataNodeShutdownAfterNumFailedVolumeExceedsTolerated()
       throws Exception {
     // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
@@ -396,15 +395,15 @@ public class TestDataNodeVolumeFailure {
     String dataDirs = dn0Vol2.getPath();
     assertThat(
         dn0.reconfigurePropertyImpl(
-            DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dataDirs),
-        is(dn0.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY)));
+            DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dataDirs))
+        .isEqualTo(dn0.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY));
 
     // Fix failure volume dn0Vol1 and remount it back.
     DataNodeTestUtils.restoreDataDirFromFailure(dn0Vol1);
     assertThat(
         dn0.reconfigurePropertyImpl(
-            DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, oldDataDirs),
-        is(dn0.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY)));
+            DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, oldDataDirs))
+        .isEqualTo(dn0.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY));
 
     // Fail dn0Vol2. Now since dn0Vol1 has been fixed, DN0 has sufficient
     // resources, thus it should keep running.
@@ -419,7 +418,8 @@ public class TestDataNodeVolumeFailure {
    * {@link BPOfferService#registrationSucceeded(BPServiceActor,
    * DatanodeRegistration)}.
    */
-  @Test(timeout=10000)
+  @Test
+  @Timeout(value = 10)
   public void testRefreshDeadLock() throws Exception {
     CountDownLatch latch = new CountDownLatch(1);
     DataNodeFaultInjector.set(new DataNodeFaultInjector() {
@@ -480,8 +480,8 @@ public class TestDataNodeVolumeFailure {
     assertThat(
         dn0.reconfigurePropertyImpl(
             DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
-            oldDataDirs + "," + dn0VolNew.getAbsolutePath()),
-        is(dn0.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY)));
+            oldDataDirs + "," + dn0VolNew.getAbsolutePath()))
+        .isEqualTo(dn0.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY));
 
     // Fail dn0Vol1 first and hot swap it.
     DataNodeTestUtils.injectDataDirFailure(dn0Vol1);
@@ -546,14 +546,15 @@ public class TestDataNodeVolumeFailure {
    *
    * We fail a volume by setting the parent directory non-writable.
    */
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testDataNodeFailToStartWithVolumeFailure() throws Exception {
     // Method to simulate volume failures is currently not supported on Windows.
     assumeNotWindows();
 
     failedDir = new File(dataDir, "failedDir");
-    assertTrue("Failed to fail a volume by setting it non-writable",
-        failedDir.mkdir() && failedDir.setReadOnly());
+    assertTrue(failedDir.mkdir() && failedDir.setReadOnly(),
+        "Failed to fail a volume by setting it non-writable");
 
     startNewDataNodeWithDiskFailure(new File(failedDir, "newDir1"), false);
   }
@@ -563,14 +564,15 @@ public class TestDataNodeVolumeFailure {
    *
    * We fail a volume by setting the parent directory non-writable.
    */
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testDNStartAndTolerateOneVolumeFailure() throws Exception {
     // Method to simulate volume failures is currently not supported on Windows.
     assumeNotWindows();
 
     failedDir = new File(dataDir, "failedDir");
-    assertTrue("Failed to fail a volume by setting it non-writable",
-        failedDir.mkdir() && failedDir.setReadOnly());
+    assertTrue(failedDir.mkdir() && failedDir.setReadOnly(),
+        "Failed to fail a volume by setting it non-writable");
 
     startNewDataNodeWithDiskFailure(new File(failedDir, "newDir1"), true);
   }
@@ -578,14 +580,15 @@ public class TestDataNodeVolumeFailure {
   /**
    * Test if data directory is not readable/writable, DataNode won't start.
    */
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testDNFailToStartWithDataDirNonWritable() throws Exception {
     // Method to simulate volume failures is currently not supported on Windows.
     assumeNotWindows();
 
     final File readOnlyDir = new File(dataDir, "nonWritable");
-    assertTrue("Set the data dir permission non-writable",
-        readOnlyDir.mkdir() && readOnlyDir.setReadOnly());
+    assertTrue(readOnlyDir.mkdir() && readOnlyDir.setReadOnly(),
+        "Set the data dir permission non-writable");
 
     startNewDataNodeWithDiskFailure(new File(readOnlyDir, "newDir1"), false);
   }
@@ -594,14 +597,15 @@ public class TestDataNodeVolumeFailure {
    * DataNode will start and tolerate one non-writable data directory
    * according to config.
    */
-  @Test (timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testDNStartAndTolerateOneDataDirNonWritable() throws Exception {
     // Method to simulate volume failures is currently not supported on Windows.
     assumeNotWindows();
 
     final File readOnlyDir = new File(dataDir, "nonWritable");
-    assertTrue("Set the data dir permission non-writable",
-        readOnlyDir.mkdir() && readOnlyDir.setReadOnly());
+    assertTrue(readOnlyDir.mkdir() && readOnlyDir.setReadOnly(),
+        "Set the data dir permission non-writable");
     startNewDataNodeWithDiskFailure(new File(readOnlyDir, "newDir1"), true);
   }
 
@@ -624,9 +628,9 @@ public class TestDataNodeVolumeFailure {
 
     try {
       cluster.startDataNodes(newConf, 1, false, null, null);
-      assertTrue("Failed to get expected IOException", tolerated);
+      assertTrue(tolerated, "Failed to get expected IOException");
     } catch (IOException ioe) {
-      assertFalse("Unexpected IOException " + ioe, tolerated);
+      assertFalse(tolerated, "Unexpected IOException " + ioe);
       return;
     }
 
@@ -662,11 +666,9 @@ public class TestDataNodeVolumeFailure {
       // System.out.println(bid + "->" + bl.num_files + "vs." + bl.num_locs);
       // number of physical files (1 or 2) should be same as number of datanodes
       // in the list of the block locations
-      assertEquals("Num files should match num locations",
-          bl.num_files, bl.num_locs);
+      assertEquals(bl.num_files, bl.num_locs, "Num files should match num locations");
     }
-    assertEquals("Num physical blocks should match num stored in the NN",
-        totalReal, totalNN);
+    assertEquals(totalReal, totalNN, "Num physical blocks should match num stored in the NN");
 
     // now check the number of under-replicated blocks
     FSNamesystem fsn = cluster.getNamesystem();
@@ -683,8 +685,7 @@ public class TestDataNodeVolumeFailure {
         (totalReal + totalRepl) + " vs. all files blocks " + blocks_num*2);
 
     // together all the blocks should be equal to all real + all underreplicated
-    assertEquals("Incorrect total block count",
-        totalReal + totalRepl, blocks_num * repl);
+    assertEquals(totalReal + totalRepl, blocks_num * repl, "Incorrect total block count");
   }
   
   /**
@@ -844,7 +845,7 @@ public class TestDataNodeVolumeFailure {
         for(File f: res) {
           String s = f.getName();
           // cut off "blk_-" at the beginning and ".meta" at the end
-          assertNotNull("Block file name should not be null", s);
+          assertNotNull(s, "Block file name should not be null");
           String bid = s.substring(s.indexOf("_")+1, s.lastIndexOf("_"));
           //System.out.println(ii++ + ". block " + s + "; id=" + bid);
           BlockLocs val = map.get(bid);
@@ -927,7 +928,8 @@ public class TestDataNodeVolumeFailure {
   /*
    * Verify the failed volume can be cheched during dn startup
    */
-  @Test(timeout = 120000)
+  @Test
+  @Timeout(value = 120)
   public void testVolumeFailureDuringStartup() throws Exception {
     LOG.debug("Data dir: is " +  dataDir.getPath());
 

@@ -265,6 +265,11 @@ public class OfflineImageViewerPB {
         printUsage();
         return -1;
       }
+      if ((out != null) && out.checkError()) {
+        System.err.println("CRITICAL FAILURE: PrintStream reported a write error " +
+                "(e.g., Disk Full).");
+        return -1;
+      }
       return 0;
     } catch (EOFException e) {
       System.err.println("Input file ended unexpectedly. Exiting");

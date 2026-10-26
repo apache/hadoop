@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.obs;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.junit.internal.AssumptionViolatedException;
+import org.opentest4j.TestAbortedException;
 
 import java.io.IOException;
 import java.net.URI;
@@ -45,7 +45,7 @@ public final class OBSTestUtils {
    * @param conf configuration
    * @return the FS
    * @throws IOException                 IO Problems
-   * @throws AssumptionViolatedException if the FS is not named
+   * @throws TestAbortedException if the FS is not named
    */
   public static OBSFileSystem createTestFileSystem(Configuration conf)
       throws IOException {
@@ -62,7 +62,7 @@ public final class OBSTestUtils {
    * @param purge flag to enable Multipart purging
    * @return the FS
    * @throws IOException                 IO Problems
-   * @throws AssumptionViolatedException if the FS is not named
+   * @throws TestAbortedException if the FS is not named
    */
   @SuppressWarnings("deprecation")
   public static OBSFileSystem createTestFileSystem(Configuration conf,
@@ -80,7 +80,7 @@ public final class OBSTestUtils {
     if (!liveTest) {
       // This doesn't work with our JUnit 3 style test cases, so instead we'll
       // make this whole class not run by default
-      throw new AssumptionViolatedException(
+      throw new TestAbortedException(
           "No test filesystem in " + TEST_FS_OBS_NAME);
     }
     OBSFileSystem fs1 = new OBSFileSystem();

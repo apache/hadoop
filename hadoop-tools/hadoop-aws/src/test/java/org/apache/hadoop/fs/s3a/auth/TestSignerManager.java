@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.assertj.core.api.Assertions;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.signer.Signer;
 import software.amazon.awssdk.http.SdkHttpFullRequest;
@@ -33,7 +34,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.auth.TestSignerManager.SignerInitializerForTest.StoreValue;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
@@ -93,7 +96,7 @@ public class TestSignerManager extends AbstractHadoopTestBase {
     signerManager.initCustomSigners();
     // Simulate a call from the AWS SDK to create the signer.
     intercept(InstantiationIOException.class,
-        () -> SignerFactory.createSigner("testsignerUnregistered", null));
+        () -> SignerFactory.createSigner("testsignerUnregistered", config, null));
   }
 
   @Test
@@ -103,7 +106,11 @@ public class TestSignerManager extends AbstractHadoopTestBase {
     SignerManager signerManager = new SignerManager("dontcare", null, config,
         UserGroupInformation.getCurrentUser());
     signerManager.initCustomSigners();
-    Signer s1 = SignerFactory.createSigner("testsigner1", null);
+    Signer s1 = SignerFactory.createSigner("testsigner1", config, null);
+    Configurable cs1 = (Configurable) s1;
+    Assertions.assertThat(cs1.getConf())
+        .describedAs("Configuration of %s", s1)
+        .isSameAs(config);
     s1.sign(null, null);
     assertThat(SignerForTest1.initialized)
         .as(SignerForTest1.class.getName() + " not initialized")
@@ -119,13 +126,13 @@ public class TestSignerManager extends AbstractHadoopTestBase {
     SignerManager signerManager = new SignerManager("dontcare", null, config,
         UserGroupInformation.getCurrentUser());
     signerManager.initCustomSigners();
-    Signer s1 = SignerFactory.createSigner("testsigner1", null);
+    Signer s1 = SignerFactory.createSigner("testsigner1", config, null);
     s1.sign(null, null);
     assertThat(SignerForTest1.initialized)
         .as(SignerForTest1.class.getName() + " not initialized")
         .isEqualTo(true);
 
-    Signer s2 = SignerFactory.createSigner("testsigner2", null);
+    Signer s2 = SignerFactory.createSigner("testsigner2", config, null);
     s2.sign(null, null);
     assertThat(SignerForTest2.initialized)
         .as(SignerForTest2.class.getName() + " not initialized")
@@ -321,7 +328,7 @@ public class TestSignerManager extends AbstractHadoopTestBase {
    * SignerForTest1.
    */
   @Private
-  public static class SignerForTest1 implements Signer {
+  public static final class SignerForTest1 extends Configured implements Signer {
 
     private static boolean initialized = false;
 
@@ -586,13 +593,13 @@ public class TestSignerManager extends AbstractHadoopTestBase {
   @Test
   public void testV2SignerRejected() throws Throwable {
     intercept(InstantiationIOException.class, "no longer supported",
-        () -> SignerFactory.createSigner(S3_V2_SIGNER, "key"));
+        () -> SignerFactory.createSigner(S3_V2_SIGNER, new Configuration(), "key"));
   }
 
   @Test
   public void testUnknownSignerRejected() throws Throwable {
     intercept(InstantiationIOException.class, "unknownSigner",
-        () -> SignerFactory.createSigner("unknownSigner", "key"));
+        () -> SignerFactory.createSigner("unknownSigner", new Configuration(), "key"));
   }
 
 }
