@@ -91,9 +91,9 @@ public abstract class AbstractContractDistCpTest
 
   private static final long CHUNK_COPY_TIME = 1600000000000L;
 
-  // Keep reads and checksum verification from advancing the source atime.
-  private static final long CHUNK_COPY_ACCESS_TIME =
-      (System.currentTimeMillis() / 1000 + 86400) * 1000;
+  // Contract fixtures must keep source atime stable during reads. The HDFS
+  // test cluster disables automatic access-time updates.
+  private static final long CHUNK_COPY_ACCESS_TIME = CHUNK_COPY_TIME - 100000;
 
   public static final String SCALE_TEST_DISTCP_FILE_SIZE_KB
       = "scale.test.distcp.file.size.kb";
@@ -462,10 +462,13 @@ public abstract class AbstractContractDistCpTest
   private FileStatus setChunkCopyTimes(Path path, int offset)
       throws IOException {
     long mtime = CHUNK_COPY_TIME + offset * MODIFICATION_TIME_OFFSET;
-    remoteFS.setTimes(path, mtime,
-        CHUNK_COPY_ACCESS_TIME + offset * MODIFICATION_TIME_OFFSET);
+    long atime = CHUNK_COPY_ACCESS_TIME + offset * MODIFICATION_TIME_OFFSET;
+    remoteFS.setTimes(path, mtime, atime);
     FileStatus status = remoteFS.getFileStatus(path);
     assertEquals(mtime, status.getModificationTime(), "source fixture mtime");
+    if (status.getAccessTime() > 0) {
+      assertEquals(atime, status.getAccessTime(), "source fixture atime");
+    }
     return status;
   }
 

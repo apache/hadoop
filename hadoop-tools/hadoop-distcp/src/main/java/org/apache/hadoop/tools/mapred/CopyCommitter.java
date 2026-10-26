@@ -232,6 +232,8 @@ public class CopyCommitter extends FileOutputCommitter {
     if (spath == null || spath.isEmpty()) {
       return;
     }
+    final boolean preserveTimes = DistCpUtils.unpackAttributes(
+        conf.get(CONF_LABEL_PRESERVE_STATUS)).contains(FileAttribute.TIMES);
     Path sourceListing = new Path(spath);
     SequenceFile.Reader sourceReader = new SequenceFile.Reader(conf,
                                       SequenceFile.Reader.file(sourceListing));
@@ -261,7 +263,7 @@ public class CopyCommitter extends FileOutputCommitter {
           // This is the last chunk of the splits, consolidate allChunkPaths
           try {
             concatFileChunks(conf, srcFileStatus.getPath(), targetFile,
-                allChunkPaths, srcFileStatus);
+                allChunkPaths, srcFileStatus, preserveTimes);
           } catch (IOException e) {
             // If the concat failed because a chunk file doesn't exist,
             // then we assume that the CopyMapper has skipped copying this
@@ -623,7 +625,8 @@ public class CopyCommitter extends FileOutputCommitter {
    */
   private void concatFileChunks(Configuration conf, Path sourceFile,
                                 Path targetFile, LinkedList<Path> allChunkPaths,
-                                CopyListingFileStatus srcFileStatus)
+                                CopyListingFileStatus srcFileStatus,
+                                boolean preserveTimes)
       throws IOException {
     if (allChunkPaths.size() == 1) {
       return;
@@ -656,8 +659,7 @@ public class CopyCommitter extends FileOutputCommitter {
             targetFile, skipCrc, srcFileStatus.getLen());
     // Concat changes the modification time preserved on the first chunk.
     // Restore times after validation, which may also update the access time.
-    if (DistCpUtils.unpackAttributes(conf.get(CONF_LABEL_PRESERVE_STATUS))
-        .contains(FileAttribute.TIMES)) {
+    if (preserveTimes) {
       dstfs.setTimes(targetFile, srcFileStatus.getModificationTime(),
           srcFileStatus.getAccessTime());
     }
