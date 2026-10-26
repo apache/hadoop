@@ -160,15 +160,22 @@ public final class DataTransferSaslUtil {
    * Returns InetAddress from peer.  The getRemoteAddressString has the form
    * [host][/ip-address]:port.  The host may be missing.  The IP address (and
    * preceding '/') may be missing.  The port preceded by ':' is always present.
+   * An IPv6 address may be enclosed in brackets.
    *
    * @return InetAddress from peer
    */
   public static InetAddress getPeerAddress(Peer peer) {
-    String remoteAddr = peer.getRemoteAddressString().split(":")[0];
-    int slashIdx = remoteAddr.indexOf('/');
-    return InetAddresses.forString(slashIdx != -1 ?
-        remoteAddr.substring(slashIdx + 1, remoteAddr.length()) :
-        remoteAddr);
+    String remoteAddr = peer.getRemoteAddressString();
+    // The port follows the last ':', IPv6 addresses contain ':' themselves.
+    int colonIdx = remoteAddr.lastIndexOf(':');
+    if (colonIdx != -1) {
+      remoteAddr = remoteAddr.substring(0, colonIdx);
+    }
+    remoteAddr = remoteAddr.substring(remoteAddr.indexOf('/') + 1);
+    if (remoteAddr.startsWith("[") && remoteAddr.endsWith("]")) {
+      remoteAddr = remoteAddr.substring(1, remoteAddr.length() - 1);
+    }
+    return InetAddresses.forString(remoteAddr);
   }
 
   /**
