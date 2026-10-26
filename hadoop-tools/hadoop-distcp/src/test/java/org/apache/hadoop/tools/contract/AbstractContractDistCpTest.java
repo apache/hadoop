@@ -411,7 +411,20 @@ public abstract class AbstractContractDistCpTest
     verifyChunkCopyTree(target, sourceStatuses, preserveTimes, true);
   }
 
+  /**
+   * Whether this fixture can create files with {@link #TEST_FILE_LEN}-byte
+   * blocks and keep source access times stable during reads. Filesystem
+   * concat support alone does not imply configurable small block sizes.
+   * @return true when the fixture supports the chunk-copy tests
+   */
+  protected boolean supportsChunkCopyFixtures() {
+    return false;
+  }
+
   private void requireChunkCopySupport() throws IOException {
+    if (!supportsChunkCopyFixtures()) {
+      skip("Chunk-copy fixtures require small blocks and stable access times");
+    }
     skipIfUnsupported(SUPPORTS_CONCAT);
     skipIfUnsupported(SUPPORTS_SETTIMES);
     skipIfUnsupported(SUPPORTS_BLOCK_LOCALITY);

@@ -51,6 +51,11 @@ public class TestHDFSContractDistCp extends AbstractContractDistCpTest {
   }
 
   @Override
+  protected boolean supportsChunkCopyFixtures() {
+    return true;
+  }
+
+  @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new HDFSContract(conf);
   }
