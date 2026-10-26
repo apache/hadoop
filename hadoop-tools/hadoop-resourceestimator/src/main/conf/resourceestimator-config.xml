@@ -27,7 +27,7 @@
         <name>resourceestimator.solver.lp.beta</name>
         <value>0.1</value>
         <description>
-            This parameter controls the generalization of the Linear Programming model. This parameter varies from 0 to 1. Deafult value is 0.1.
+            This parameter controls the generalization of the Linear Programming model. This parameter varies from 0 to 1. Default value is 0.1.
         </description>
     </property>
     <property>
