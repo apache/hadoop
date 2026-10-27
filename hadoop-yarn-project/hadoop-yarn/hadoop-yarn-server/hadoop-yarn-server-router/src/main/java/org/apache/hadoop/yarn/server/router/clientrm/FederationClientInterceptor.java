@@ -288,6 +288,12 @@ public class FederationClientInterceptor
     }
   }
 
+  /**
+   * Replace the client of the SubClusters' history servers, closing the
+   * previous one.
+   *
+   * @param applicationHistory the client to use.
+   */
   @VisibleForTesting
   protected void setApplicationHistory(FederationApplicationHistory applicationHistory) {
     if (this.applicationHistory != null) {

@@ -209,6 +209,8 @@ public abstract class AppReportFetcher {
     }
 
     /**
+     * Get the application page of the history server that has the report.
+     *
      * @param configuredAhsAppPageUrlBase the application page of the
      *          configured history server.
      * @return the application page of the history server the report was
