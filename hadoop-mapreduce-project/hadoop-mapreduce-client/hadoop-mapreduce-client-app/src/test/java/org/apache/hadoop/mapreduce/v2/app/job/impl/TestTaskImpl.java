@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -39,6 +40,7 @@ import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.Avataar;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
@@ -48,6 +50,9 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskStateInternal;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskAttemptCompletedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
@@ -150,6 +155,7 @@ public class TestTaskImpl {
     boolean containerAssigned = false;
     private TaskType taskType;
     private Counters attemptCounters = TaskAttemptImpl.EMPTY_COUNTERS;
+    private String nodeHttpAddress;
 
     public MockTaskAttemptImpl(TaskId taskId, int id, EventHandler eventHandler,
         TaskAttemptListener taskAttemptListener, Path jobFile, int partition,
@@ -211,6 +217,16 @@ public class TestTaskImpl {
 
     public void setCounters(Counters counters) {
       attemptCounters = counters;
+    }
+
+    @Override
+    public String getNodeHttpAddress() {
+      return nodeHttpAddress;
+    }
+
+    @Override
+    public int getShufflePort() {
+      return 13562;
     }
   }
   
@@ -471,6 +487,36 @@ public class TestTaskImpl {
     killRunningTaskAttempt(getLastAttempt().getAttemptId(), true);
     assertEquals(TaskAttemptEventType.TA_RESCHEDULE,
         taskAttemptEventHandler.lastTaskAttemptEvent.getType());
+  }
+
+  @Test
+  public void testMapOutputServerAddress() {
+    List<TaskAttemptCompletionEvent> completionEvents = new ArrayList<>();
+    dispatcher.register(JobEventType.class, (EventHandler<JobEvent>) event -> {
+      if (event instanceof JobTaskAttemptCompletedEvent) {
+        completionEvents.add(((JobTaskAttemptCompletedEvent) event).getCompletionEvent());
+      }
+    });
+    assertThat(succeedMapWithNodeHttpAddress("host1:8042", completionEvents))
+        .isEqualTo("http://host1:13562");
+    assertThat(succeedMapWithNodeHttpAddress("[2001:db8::21]:8042", completionEvents))
+        .isEqualTo("http://[2001:db8::21]:13562");
+  }
+
+  private String succeedMapWithNodeHttpAddress(String nodeHttpAddress,
+      List<TaskAttemptCompletionEvent> completionEvents) {
+    completionEvents.clear();
+    mockTask = createMockTask(TaskType.MAP);
+    TaskId taskId = getNewTaskID();
+    scheduleTaskAttempt(taskId);
+    launchTaskAttempt(getLastAttempt().getAttemptId());
+    getLastAttempt().nodeHttpAddress = nodeHttpAddress;
+    commitTaskAttempt(getLastAttempt().getAttemptId());
+    mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(),
+        TaskEventType.T_ATTEMPT_SUCCEEDED));
+    assertTaskSucceededState();
+    assertThat(completionEvents).hasSize(1);
+    return completionEvents.get(0).getMapOutputServerAddress();
   }
 
   @Test
