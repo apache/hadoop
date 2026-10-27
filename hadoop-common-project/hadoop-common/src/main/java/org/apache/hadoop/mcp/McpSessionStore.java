@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -50,16 +51,21 @@ final class McpSessionStore implements Closeable {
   private final Cache<String, McpSession> sessions;
 
   /**
+   * @param sessionTimeoutMs idle time after which a session expires; must be positive
+   * @param maxSessions maximum number of concurrent sessions; must be positive
    * @param toolCallLimit tool calls allowed per session within one window; 0 or less
    *     disables the limit
    * @param toolCallWindowMs length of the tool-call rate-limit window
-   * @param toolCallLimit maximum number of MCP tool calls per session within a rate-limit window
-   * @param toolCallWindowMs length of the MCP tool-call rate-limit window
    * @param maxRequestIds request ids each session may use; 0 or less is unlimited
    */
   McpSessionStore(long sessionTimeoutMs, int maxSessions, int toolCallLimit,
       long toolCallWindowMs, int maxRequestIds) {
-    validateArguments(sessionTimeoutMs, maxSessions, toolCallLimit, toolCallWindowMs);
+    Preconditions.checkArgument(sessionTimeoutMs > 0,
+        "sessionTimeoutMs must be positive: %s", sessionTimeoutMs);
+    Preconditions.checkArgument(maxSessions > 0,
+        "maxSessions must be positive: %s", maxSessions);
+    Preconditions.checkArgument(toolCallLimit <= 0 || toolCallWindowMs > 0,
+        "toolCallWindowMs must be positive: %s", toolCallWindowMs);
     this.maxSessions = maxSessions;
     this.toolCallLimit = toolCallLimit;
     this.toolCallWindowMs = toolCallWindowMs;
@@ -67,20 +73,6 @@ final class McpSessionStore implements Closeable {
     this.sessions = CacheBuilder.newBuilder()
         .expireAfterAccess(sessionTimeoutMs, TimeUnit.MILLISECONDS)
         .build();
-  }
-
-  private void validateArguments(long sessionTimeoutMs, int maxSessions, int toolCallLimit,
-      long toolCallWindowMs) {
-    if (sessionTimeoutMs <= 0) {
-      throw new IllegalArgumentException("sessionTimeoutMs must be positive: " + sessionTimeoutMs);
-    }
-    if (maxSessions <= 0) {
-      throw new IllegalArgumentException("maxSessions must be positive: " + maxSessions);
-    }
-    if (toolCallLimit > 0 && toolCallWindowMs <= 0) {
-      throw new IllegalArgumentException("toolCallWindowMs must be positive: "
-          + toolCallWindowMs);
-    }
   }
 
   /**

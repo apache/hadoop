@@ -62,7 +62,8 @@ public class TestMcpHttpServlet {
 
   private static McpHttpResponse sendRequest(McpServer server, String json, String sessionId)
       throws Exception {
-    return server.getRequestHandler().handle(OBJECT_MAPPER.readTree(json), createContext(sessionId));
+    return server.getRequestHandler().handle(OBJECT_MAPPER.readTree(json),
+        createContext(sessionId));
   }
 
   /** Sends {@code initialize} and returns the new session id. */
@@ -441,7 +442,8 @@ public class TestMcpHttpServlet {
     McpServer server = buildServer();
     String sessionId = handshake(server);
 
-    McpHttpResponse response = sendRequest(server, "{\"id\":1,\"method\":\"tools/list\"}", sessionId);
+    McpHttpResponse response = sendRequest(server, "{\"id\":1,\"method\":\"tools/list\"}",
+        sessionId);
 
     JsonNode body = response.body();
     assertEquals(McpJsonRpc.INVALID_REQUEST, body.get("error").get("code").asInt());

@@ -20,6 +20,7 @@ package org.apache.hadoop.mcp;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -36,9 +37,8 @@ final class McpRateLimiter {
   private int count;
 
   McpRateLimiter(int limit, long windowMs) {
-    if (limit > 0 && windowMs <= 0) {
-      throw new IllegalArgumentException("windowMs must be positive: " + windowMs);
-    }
+    Preconditions.checkArgument(limit <= 0 || windowMs > 0,
+      "windowMs must be positive: %s", windowMs);
     this.limit = limit;
     this.windowMs = windowMs;
     this.windowStartMs = Time.monotonicNow();

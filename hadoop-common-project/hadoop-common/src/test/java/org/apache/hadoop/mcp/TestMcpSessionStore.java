@@ -19,7 +19,6 @@
 package org.apache.hadoop.mcp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -37,7 +36,7 @@ import org.junit.jupiter.api.Test;
 public class TestMcpSessionStore {
 
   private static final long DEFAULT_TIMEOUT_MS = 60_000;
-  /** Short idle timeout for the expiry tests */
+  /** Short idle timeout for the expiry tests. */
   private static final long SHORT_TIMEOUT_MS = 200;
 
   private McpSessionStore store;
