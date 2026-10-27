@@ -32,7 +32,9 @@ import org.apache.hadoop.classification.InterfaceStability;
  * <p>Supports a subset of JSON Schema: {@code type}, {@code properties}, {@code items} and
  * {@code required}. Other keywords, unknown types, and parts of the schema this validator
  * cannot interpret (for example {@code "type": ["string", "null"]} or a boolean schema) are
- * not enforced. Arguments that {@code properties} doesn't describe are allowed.
+ * not enforced.
+ *
+ * <p>Arguments that {@code properties} doesn't describe are not allowed.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -59,6 +61,7 @@ final class McpInputSchemaValidator {
     validateType(schema.get("type"), inputValue, path);
     if (inputValue instanceof Map) {
       validateRequiredFields(schema.get("required"), (Map<?, ?>) inputValue, path);
+      rejectUnknownProperties(schema.get("properties"), (Map<?, ?>) inputValue, path);
       validateProperties(schema.get("properties"), (Map<?, ?>) inputValue, path);
     } else if (inputValue instanceof List) {
       validateItems(schema.get("items"), (List<?>) inputValue, path);
@@ -80,6 +83,18 @@ final class McpInputSchemaValidator {
     for (Object name : (List<?>) required) {
       if (name instanceof String && !inputObject.containsKey(name)) {
         throw new InvalidToolArgumentsException(path + "." + name + " is required");
+      }
+    }
+  }
+
+  private static void rejectUnknownProperties(Object properties, Map<?, ?> inputObject,
+      String path) throws InvalidToolArgumentsException {
+    if (!(properties instanceof Map)) {
+      return;
+    }
+    for (Object key : inputObject.keySet()) {
+      if (!((Map<?, ?>) properties).containsKey(key)) {
+        throw new InvalidToolArgumentsException(path + " contains an unknown property");
       }
     }
   }

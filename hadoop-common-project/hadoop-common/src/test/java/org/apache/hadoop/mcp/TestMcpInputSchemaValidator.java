@@ -80,11 +80,11 @@ public class TestMcpInputSchemaValidator {
   }
 
   @Test
-  public void testUnknownArgumentsAllowed() {
+  public void testUnknownArgumentRejected() {
     Map<String, Object> arguments = new HashMap<>();
     arguments.put("user", "alice");
     arguments.put("extra", 1);
 
-    assertDoesNotThrow(() -> McpInputSchemaValidator.validateArguments(SCHEMA, arguments));
+    assertEquals("arguments contains an unknown property", getExceptionMessage(arguments));
   }
 }
