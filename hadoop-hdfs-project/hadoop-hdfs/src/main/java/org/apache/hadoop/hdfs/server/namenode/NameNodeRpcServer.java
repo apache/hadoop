@@ -36,7 +36,9 @@ import static org.apache.hadoop.util.Time.now;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
@@ -352,7 +354,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     if (serviceRpcAddr != null) {
       String bindHost = nn.getServiceRpcServerBindHost(conf);
       if (bindHost == null) {
-        bindHost = serviceRpcAddr.getHostName();
+        bindHost = serviceRpcAddr.getHostString();
       }
       LOG.info("Service RPC server is binding to " + bindHost + ":" +
           serviceRpcAddr.getPort());
@@ -394,8 +396,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
       // Update the address with the correct port
       InetSocketAddress listenAddr = serviceRpcServer.getListenerAddress();
-      serviceRPCAddress = new InetSocketAddress(
-            serviceRpcAddr.getHostName(), listenAddr.getPort());
+      serviceRPCAddress = getAdvertisedAddress(serviceRpcAddr, listenAddr.getPort());
       nn.setRpcServiceServerAddress(conf, serviceRPCAddress);
     } else {
       serviceRpcServer = null;
@@ -408,7 +409,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
           ProtobufRpcEngine2.class);
       String bindHost = nn.getLifelineRpcServerBindHost(conf);
       if (bindHost == null) {
-        bindHost = lifelineRpcAddr.getHostName();
+        bindHost = lifelineRpcAddr.getHostString();
       }
       LOG.info("Lifeline RPC server is binding to {}:{}", bindHost,
           lifelineRpcAddr.getPort());
@@ -437,8 +438,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
       // Update the address with the correct port
       InetSocketAddress listenAddr = lifelineRpcServer.getListenerAddress();
-      lifelineRPCAddress = new InetSocketAddress(lifelineRpcAddr.getHostName(),
-          listenAddr.getPort());
+      lifelineRPCAddress = getAdvertisedAddress(lifelineRpcAddr, listenAddr.getPort());
       nn.setRpcLifelineServerAddress(conf, lifelineRPCAddress);
     } else {
       lifelineRpcServer = null;
@@ -448,7 +448,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     InetSocketAddress rpcAddr = nn.getRpcServerAddress(conf);
     String bindHost = nn.getRpcServerBindHost(conf);
     if (bindHost == null) {
-      bindHost = rpcAddr.getHostName();
+      bindHost = rpcAddr.getHostString();
     }
     LOG.info("RPC server is binding to " + bindHost + ":" + rpcAddr.getPort());
 
@@ -509,8 +509,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
     // The rpc-server port can be ephemeral... ensure we have the correct info
     InetSocketAddress listenAddr = clientRpcServer.getListenerAddress();
-    clientRpcAddress = new InetSocketAddress(
-        rpcAddr.getHostName(), listenAddr.getPort());
+    clientRpcAddress = getAdvertisedAddress(rpcAddr, listenAddr.getPort());
     nn.setRpcServerAddress(conf, clientRpcAddress);
     
     minimumDataNodeVersion = conf.get(
@@ -562,6 +561,32 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         this.clientRpcServer.addAuxiliaryListener(auxiliaryPort);
       }
     }
+  }
+
+  /**
+   * Address to advertise for a configured RPC address. The reverse DNS name of
+   * an IP literal is used only if it resolves back to that address, so that
+   * connections by name reach the address the server listens on. Otherwise the
+   * literal is kept as the host name of the returned address.
+   */
+  private static InetSocketAddress getAdvertisedAddress(InetSocketAddress addr, int port)
+      throws UnknownHostException {
+    // getHostName() caches the reverse lookup, so read the configured host first.
+    String host = addr.getHostString();
+    String name = addr.getHostName();
+    InetAddress ip = addr.getAddress();
+    if (ip == null || name.equals(host)) {
+      return new InetSocketAddress(name, port);
+    }
+    String advertised = host;
+    try {
+      if (SecurityUtil.getByName(name).equals(ip)) {
+        advertised = name;
+      }
+    } catch (UnknownHostException e) {
+      // advertise the literal
+    }
+    return new InetSocketAddress(InetAddress.getByAddress(advertised, ip.getAddress()), port);
   }
 
   /** Allow access to the lifeline RPC server for testing */
