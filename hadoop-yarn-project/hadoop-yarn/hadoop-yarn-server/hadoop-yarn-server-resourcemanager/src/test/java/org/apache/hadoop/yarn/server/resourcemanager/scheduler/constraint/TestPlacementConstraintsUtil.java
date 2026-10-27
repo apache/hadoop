@@ -73,6 +73,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.DiagnosticsCollector;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.GenericDiagnosticsCollector;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -85,6 +86,7 @@ public class TestPlacementConstraintsUtil {
 
   private List<RMNode> rmNodes;
   private RMContext rmContext;
+  private MockRM rm;
   private static final int GB = 1024;
   private ApplicationId appId1;
   private PlacementConstraint c1, c2, c3, c4, c5, c6, c7;
@@ -95,7 +97,7 @@ public class TestPlacementConstraintsUtil {
 
   @BeforeEach
   public void setup() {
-    MockRM rm = new MockRM();
+    rm = new MockRM();
     rm.start();
     MockNodes.resetHostIds();
     rmNodes = MockNodes.newNodes(2, 2, Resource.newInstance(4096, 4));
@@ -147,6 +149,14 @@ public class TestPlacementConstraintsUtil {
             new AbstractMap.SimpleEntry<>(sourceTag2, c7))
         .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey,
             AbstractMap.SimpleEntry::getValue));
+  }
+
+  @AfterEach
+  public void tearDown() {
+    if (rm != null) {
+      rm.stop();
+      rm = null;
+    }
   }
 
   private SchedulingRequest createSchedulingRequest(Set<String> allocationTags,
