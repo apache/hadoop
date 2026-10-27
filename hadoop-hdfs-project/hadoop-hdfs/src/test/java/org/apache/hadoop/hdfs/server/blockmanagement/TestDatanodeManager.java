@@ -69,6 +69,7 @@ import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.test.Whitebox;
+import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
 import org.junit.Assert;
 import org.junit.Test;
 import org.assertj.core.api.Assertions;
@@ -173,6 +174,47 @@ public class TestDatanodeManager {
 
     assertNull("should be no node with old ip", dm.getDatanodeByHost(ipOld));
     assertNotNull("should be a node with new ip", dm.getDatanodeByHost(ipNew));
+  }
+
+  /**
+   * Check that getDatanodeDescriptor, which resolves favored nodes, finds
+   * IPv4 and IPv6 DataNodes from their address with and without a port.
+   */
+  @Test
+  public void testGetDatanodeDescriptorForIpv4AndIpv6() throws IOException {
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    DatanodeManager dm = mockDatanodeManager(fsn, new Configuration());
+
+    int port = DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT;
+    String ipv4 = "10.0.0.1";
+    // The form InetAddress#getHostAddress returns, as DataNodes register with
+    String ipv6 = "2001:db8:0:0:0:0:0:1";
+    String otherIpv6 = "2001:db8:0:0:0:0:0:2";
+    for (String ip : new String[] {ipv4, ipv6, otherIpv6}) {
+      dm.registerDatanode(new DatanodeRegistration(
+          new DatanodeID(ip, "", "uuid-" + ip, port, 0, 0, 0), null, null, "version"));
+    }
+    DatanodeDescriptor ipv4Node = dm.getDatanodeByXferAddr(ipv4, port);
+    DatanodeDescriptor ipv6Node = dm.getDatanodeByXferAddr(ipv6, port);
+
+    Assertions.assertThat(dm.getDatanodeDescriptor(ipv4 + ":" + port)).isSameAs(ipv4Node);
+    Assertions.assertThat(dm.getDatanodeDescriptor(ipv4)).isSameAs(ipv4Node);
+    Assertions.assertThat(dm.getDatanodeDescriptor(ipv6 + ":" + port)).isSameAs(ipv6Node);
+    Assertions.assertThat(dm.getDatanodeDescriptor("[" + ipv6 + "]:" + port)).isSameAs(ipv6Node);
+    Assertions.assertThat(dm.getDatanodeDescriptor("[" + ipv6 + "]")).isSameAs(ipv6Node);
+    Assertions.assertThat(dm.getDatanodeDescriptor(ipv6)).isSameAs(ipv6Node);
+    // Asserted on the parser, since a lookup miss falls back to a random node
+    Assertions.assertThat(DatanodeManager.parseIpv6Address("[2001:db8::1]:" + port))
+        .isEqualTo(HostAndPort.fromParts(ipv6, port));
+    Assertions.assertThat(DatanodeManager.parseIpv6Address("::ffff:" + ipv4))
+        .isEqualTo(HostAndPort.fromHost(ipv4));
+    // A valid IPv6 literal is never split, even when its last group could be a port
+    Assertions.assertThat(DatanodeManager.parseIpv6Address("2001:db8::1:2"))
+        .isEqualTo(HostAndPort.fromHost("2001:db8:0:0:0:0:1:2"));
+    // A malformed IPv6 address is rejected, as a malformed IPv4 one is
+    Assertions.assertThatThrownBy(() -> dm.getDatanodeDescriptor("[2001:db8::zz]:" + port))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   /**
