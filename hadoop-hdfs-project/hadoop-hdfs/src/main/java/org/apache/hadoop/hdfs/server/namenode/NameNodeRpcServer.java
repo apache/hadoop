@@ -36,6 +36,7 @@ import static org.apache.hadoop.util.Time.now;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -231,6 +232,7 @@ import org.apache.hadoop.util.VersionUtil;
 import org.slf4j.Logger;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
 
@@ -569,24 +571,29 @@ public class NameNodeRpcServer implements NamenodeProtocols {
    * connections by name reach the address the server listens on. Otherwise the
    * literal is kept as the host name of the returned address.
    */
-  private static InetSocketAddress getAdvertisedAddress(InetSocketAddress addr, int port)
+  @VisibleForTesting
+  static InetSocketAddress getAdvertisedAddress(InetSocketAddress addr, int port)
       throws UnknownHostException {
-    // getHostName() caches the reverse lookup, so read the configured host first.
     String host = addr.getHostString();
-    String name = addr.getHostName();
     InetAddress ip = addr.getAddress();
-    if (ip == null || name.equals(host)) {
-      return new InetSocketAddress(name, port);
+    if (ip == null || !InetAddresses.isInetAddress(host)) {
+      return new InetSocketAddress(host, port);
     }
-    String advertised = host;
+    // getCanonicalHostName() does the reverse lookup even if the resolver kept the literal
+    // as the host name (hadoop.security.token.service.use_ip=false).
+    String name = ip.getCanonicalHostName();
     try {
-      if (SecurityUtil.getByName(name).equals(ip)) {
-        advertised = name;
+      if (!SecurityUtil.getByName(name).equals(ip)) {
+        name = host;
       }
     } catch (UnknownHostException e) {
-      // advertise the literal
+      name = host;
     }
-    return new InetSocketAddress(InetAddress.getByAddress(advertised, ip.getAddress()), port);
+    int scopeId = ip instanceof Inet6Address ? ((Inet6Address) ip).getScopeId() : 0;
+    InetAddress advertised = scopeId != 0
+        ? Inet6Address.getByAddress(name, ip.getAddress(), scopeId)
+        : InetAddress.getByAddress(name, ip.getAddress());
+    return new InetSocketAddress(advertised, port);
   }
 
   /** Allow access to the lifeline RPC server for testing */

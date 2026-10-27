@@ -32,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
@@ -52,6 +54,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -81,6 +85,32 @@ public class TestNameNodeRpcServer {
       }
       // Reset the config
       conf.unset(DFS_NAMENODE_RPC_BIND_HOST_KEY);
+    }
+  }
+
+  @Test
+  public void testAdvertisedAddress() throws IOException {
+    for (boolean useIp : new boolean[] {true, false}) {
+      SecurityUtil.setTokenServiceUseIp(useIp);
+      try {
+        // The reverse name of a literal is advertised only if it resolves back to it.
+        for (String literal : new String[] {"127.0.0.1", "[::1]"}) {
+          InetSocketAddress configured = NetUtils.createSocketAddr(literal + ":0");
+          InetSocketAddress advertised =
+              NameNodeRpcServer.getAdvertisedAddress(configured, 8020);
+          assertEquals(8020, advertised.getPort());
+          assertEquals(configured.getAddress(), advertised.getAddress());
+          assertEquals(configured.getAddress(),
+              InetAddress.getByName(advertised.getHostName()));
+        }
+        assertEquals("localhost", NameNodeRpcServer.getAdvertisedAddress(
+            NetUtils.createSocketAddr("127.0.0.1:0"), 8020).getHostName());
+        assertEquals(InetSocketAddress.createUnresolved("nn.invalid", 8020),
+            NameNodeRpcServer.getAdvertisedAddress(
+                InetSocketAddress.createUnresolved("nn.invalid", 0), 8020));
+      } finally {
+        SecurityUtil.setTokenServiceUseIp(true);
+      }
     }
   }
 
