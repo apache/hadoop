@@ -351,7 +351,7 @@ public class TestQueueConfigResolverParity {
     String expected = rootCause.getClass().getName() + ": "
         + rootCause.getMessage();
     if (CHECK_REJECTIONS.contains(name)) {
-      assertTrue(!failures.contains(expected), name);
+      assertFalse(failures.contains(expected), name);
     } else {
       assertTrue(failures.contains(expected),
           name + ": " + expected + " not among " + failures);

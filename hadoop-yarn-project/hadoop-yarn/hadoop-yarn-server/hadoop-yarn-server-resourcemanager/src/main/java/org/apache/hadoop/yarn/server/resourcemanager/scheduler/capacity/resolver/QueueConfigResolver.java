@@ -51,6 +51,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePre
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperty.Kind;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolutionInputs.DynamicQueue;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
@@ -85,6 +87,9 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.r
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class QueueConfigResolver {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(QueueConfigResolver.class);
+
   static final QueuePath ROOT =
       new QueuePath(CapacitySchedulerConfiguration.ROOT);
 
@@ -243,12 +248,11 @@ public final class QueueConfigResolver {
         String labelName = key.substring(labelStartIdx, labelEndIndx);
         String queuePath =
             key.substring(0, key.indexOf(LABELS_PREFIX) - 1);
-        Set<String> labels = labelsByQueue.get(queuePath);
-        if (labels == null) {
-          labels = new HashSet<>();
-          labels.add(RMNodeLabelsManager.NO_LABEL);
-          labelsByQueue.put(queuePath, labels);
-        }
+        Set<String> labels = labelsByQueue.computeIfAbsent(queuePath, k -> {
+          Set<String> newLabels = new HashSet<>();
+          newLabels.add(RMNodeLabelsManager.NO_LABEL);
+          return newLabels;
+        });
         labels.add(labelName);
       }
     }
@@ -273,6 +277,7 @@ public final class QueueConfigResolver {
       reservable = RESERVABLE.read(conf, path);
     } catch (RuntimeException e) {
       // Recorded when the queue's properties are read
+      LOG.trace("Failed to read the queue kind of {}", path, e);
     }
     Kind kind;
     if (path.isRoot()) {
@@ -283,10 +288,15 @@ public final class QueueConfigResolver {
       kind = Kind.PARENT;
     }
 
-    Resolved<Set<String>> labels = labelFailure != null
-        ? Resolved.<Set<String>>failed(labelFailure, ValueSource.DERIVED, null)
-        : labels(path.isRoot() ? allLabels(tree.getConfiguredNodeLabels())
-            : labelsOf(tree.getConfiguredNodeLabels(), path.getFullPath()));
+    Resolved<Set<String>> labels;
+    if (labelFailure != null) {
+      labels = Resolved.failed(labelFailure, ValueSource.DERIVED, null);
+    } else {
+      Map<String, Set<String>> configuredLabels =
+          tree.getConfiguredNodeLabels();
+      labels = labels(path.isRoot() ? allLabels(configuredLabels)
+          : labelsOf(configuredLabels, path.getFullPath()));
+    }
     ResolvedQueueConfig queue =
         resolveQueue(tree, parent, path, kind, false, labels, null);
     tree.add(queue);
@@ -348,7 +358,9 @@ public final class QueueConfigResolver {
     }
     expandOverlay(snapshot, overlay);
 
-    // Labels are registered only from the exact template pseudo-queue
+    // Labels are registered only from the exact template pseudo-queue. Like
+    // AbstractCSQueue and AutoCreatedLeafQueue, a template whose only label
+    // is the empty label does not count.
     Resolved<Set<String>> labels;
     if (labelFailure != null) {
       labels = Resolved.failed(labelFailure, ValueSource.DERIVED, null);
@@ -761,6 +773,7 @@ public final class QueueConfigResolver {
             value = Resolved.of(text, ValueSource.TEMPLATE_V1, key);
           }
         } catch (RuntimeException e) {
+          LOG.trace("Failed to read {} for {}", key, queue.getQueuePath(), e);
           value = Resolved.failed(e, ValueSource.TEMPLATE_V1, key);
         }
       } else {
@@ -838,10 +851,16 @@ public final class QueueConfigResolver {
       if (queue.getKind() == Kind.RESERVATION) {
         // The default reservation queue's entitlement is the whole plan
         Resolved<Float> plan = parent.get(ABSOLUTE_CAPACITY, label);
-        queue.put(ABSOLUTE_CAPACITY, label, plan == null || plan.isFailed()
-            ? (plan == null ? Resolved.of(0f, ValueSource.DERIVED, null) : plan)
-            : Resolved.of(plan.getValue(), ValueSource.DERIVED,
-                "plan absolute capacity x entitlement 1.0"));
+        Resolved<Float> capacity;
+        if (plan == null) {
+          capacity = Resolved.of(0f, ValueSource.DERIVED, null);
+        } else if (plan.isFailed()) {
+          capacity = plan;
+        } else {
+          capacity = Resolved.of(plan.getValue(), ValueSource.DERIVED,
+              "plan absolute capacity x entitlement 1.0");
+        }
+        queue.put(ABSOLUTE_CAPACITY, label, capacity);
         continue;
       }
       queue.put(ABSOLUTE_CAPACITY, label, deriveAbsoluteCapacity(queue,
@@ -868,6 +887,8 @@ public final class QueueConfigResolver {
           PREFIX + "legacy-queue-mode.enabled",
           CapacitySchedulerConfiguration.DEFAULT_LEGACY_QUEUE_MODE);
     } catch (RuntimeException e) {
+      LOG.trace("Failed to read the legacy queue mode flag, using {}",
+          CapacitySchedulerConfiguration.DEFAULT_LEGACY_QUEUE_MODE, e);
       return CapacitySchedulerConfiguration.DEFAULT_LEGACY_QUEUE_MODE;
     }
   }
@@ -1005,6 +1026,8 @@ public final class QueueConfigResolver {
       return Resolved.of(maxApps, ValueSource.DERIVED,
           "maximum applications x absolute capacity");
     } catch (RuntimeException e) {
+      LOG.trace("Failed to derive the maximum applications of {}",
+          queue.getQueuePath(), e);
       return Resolved.failed(e, ValueSource.GLOBAL, null);
     }
   }
@@ -1057,6 +1080,8 @@ public final class QueueConfigResolver {
           argument);
       return Resolved.of(value, lookup.source(), lookup.sourceDetail());
     } catch (RuntimeException e) {
+      LOG.trace("Failed to read {} of {} for label '{}'", property.getName(),
+          path, label, e);
       return Resolved.failed(e, lookup.source(), lookup.sourceDetail());
     }
   }
