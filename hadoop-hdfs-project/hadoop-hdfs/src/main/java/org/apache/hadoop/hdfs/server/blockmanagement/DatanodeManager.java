@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
 import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 
 import org.apache.hadoop.fs.StorageType;
@@ -1599,6 +1600,39 @@ public class DatanodeManager {
   }
 
   /**
+   * Parse an IPv6 DataNode address given as "[addr]:port", "[addr]",
+   * "addr:port" or "addr". Without brackets, a string that is a valid IP
+   * literal is an address with no port, so "2001:db8::1:2" is never split.
+   * Otherwise the last ':' separates the port if what follows it is a number
+   * and what precedes it is an IP literal, as in the expanded
+   * "2001:db8:0:0:0:0:0:1:9866" that DFSClient sends for favored nodes. A
+   * compressed address with a port must be bracketed. The address is
+   * normalized to the form DataNodes register with, see
+   * {@link InetAddress#getHostAddress()}.
+   *
+   * @param addr a DataNode address.
+   * @return the address and optional port, or null if {@code addr} has at
+   *     most one ':', that is, it is an IPv4 address or host name.
+   * @throws IllegalArgumentException if {@code addr} is not a valid IPv6
+   *     address.
+   */
+  public static HostAndPort parseIpv6Address(String addr) {
+    int idx = addr.lastIndexOf(':');
+    if (addr.indexOf(':') == idx) {
+      return null;
+    }
+    String host = addr.substring(0, idx);
+    String port = addr.substring(idx + 1);
+    HostAndPort hostPort = !addr.startsWith("[") && !InetAddresses.isInetAddress(addr)
+        && StringUtils.isNumeric(port) && InetAddresses.isInetAddress(host)
+        ? HostAndPort.fromParts(host, Integer.parseInt(port))
+        : HostAndPort.fromString(addr);
+    String ip = InetAddresses.forString(hostPort.getHost()).getHostAddress();
+    return hostPort.hasPort() ? HostAndPort.fromParts(ip, hostPort.getPort())
+        : HostAndPort.fromHost(ip);
+  }
+
+  /**
    * Parse a DatanodeID from a hosts file entry
    * @param hostLine of form [hostname|ip][:port]?
    * @return DatanodeID constructed from the given string
@@ -1608,8 +1642,12 @@ public class DatanodeManager {
     String hostStr;
     int port;
     int idx = hostLine.indexOf(':');
+    HostAndPort ipv6 = parseIpv6Address(hostLine);
 
-    if (-1 == idx) {
+    if (ipv6 != null) {
+      hostStr = ipv6.getHost();
+      port = ipv6.getPortOrDefault(DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT);
+    } else if (-1 == idx) {
       hostStr = hostLine;
       port = DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT;
     } else {
