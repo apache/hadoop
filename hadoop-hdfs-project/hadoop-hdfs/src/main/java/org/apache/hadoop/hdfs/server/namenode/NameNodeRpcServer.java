@@ -579,17 +579,21 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     if (ip == null || !InetAddresses.isInetAddress(host)) {
       return new InetSocketAddress(host, port);
     }
-    // getCanonicalHostName() does the reverse lookup even if the resolver kept the literal
-    // as the host name (hadoop.security.token.service.use_ip=false).
-    String name = ip.getCanonicalHostName();
-    try {
-      if (!SecurityUtil.getByName(name).equals(ip)) {
-        name = host;
-      }
-    } catch (UnknownHostException e) {
-      name = host;
-    }
     int scopeId = ip instanceof Inet6Address ? ((Inet6Address) ip).getScopeId() : 0;
+    String name = host;
+    // A scoped literal is kept, since a name loses the scope and InetAddress.equals() ignores it.
+    if (scopeId == 0) {
+      // getCanonicalHostName() does the reverse lookup even if the resolver kept the literal
+      // as the host name (hadoop.security.token.service.use_ip=false).
+      String reverse = ip.getCanonicalHostName();
+      try {
+        if (SecurityUtil.getByName(reverse).equals(ip)) {
+          name = reverse;
+        }
+      } catch (UnknownHostException e) {
+        // keep the literal
+      }
+    }
     InetAddress advertised = scopeId != 0
         ? Inet6Address.getByAddress(name, ip.getAddress(), scopeId)
         : InetAddress.getByAddress(name, ip.getAddress());

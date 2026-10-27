@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -45,6 +46,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -112,6 +114,13 @@ public class TestNameNodeRpcServer {
         SecurityUtil.setTokenServiceUseIp(true);
       }
     }
+    // A scoped literal is kept, so that the scope survives fs.defaultFS. Only checked with
+    // use_ip=true, since the use_ip=false resolver already drops the scope of a literal.
+    InetSocketAddress scoped = NameNodeRpcServer.getAdvertisedAddress(
+        NetUtils.createSocketAddr("[fe80::1%1]:0"), 8020);
+    InetSocketAddress resolved = DFSUtilClient.getNNAddress(DFSUtilClient.getNNUri(scoped));
+    assertEquals(scoped, resolved);
+    assertEquals(1, ((Inet6Address) resolved.getAddress()).getScopeId());
   }
 
   /**
