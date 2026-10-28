@@ -939,6 +939,11 @@
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-webapp</artifactId>
           </exclusion>
+          <!-- jakarta.annotation-api already provides the javax.annotation classes -->
+          <exclusion>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
