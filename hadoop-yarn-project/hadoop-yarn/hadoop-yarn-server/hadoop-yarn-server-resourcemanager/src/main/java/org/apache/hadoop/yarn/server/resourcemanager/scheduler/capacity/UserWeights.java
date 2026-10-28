@@ -21,6 +21,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ConfigSnapshot;
+
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_SETTINGS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_WEIGHT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_WEIGHT_PATTERN;
@@ -42,11 +44,11 @@ public final class UserWeights {
 
   public static UserWeights createByConfig(
       CapacitySchedulerConfiguration conf,
-      ConfigurationProperties configurationProperties,
+      ConfigSnapshot snapshot,
       QueuePath queuePath) {
     String queuePathPlusPrefix = getQueuePrefix(queuePath) + USER_SETTINGS;
-    Map<String, String> props = configurationProperties
-        .getPropertiesWithPrefix(queuePathPlusPrefix);
+    Map<String, String> props = snapshot
+        .getRawPropertiesWithPrefix(queuePathPlusPrefix, false);
 
     UserWeights userWeights = new UserWeights();
     for (Map.Entry<String, String> item: props.entrySet()) {
@@ -71,15 +73,10 @@ public final class UserWeights {
   }
 
   public void validateForLeafQueue(float queueUserLimit, String queuePath) throws IOException {
-    for (Map.Entry<String, Float> e : data.entrySet()) {
-      String userName = e.getKey();
-      float weight = e.getValue();
-      if (weight < 0.0F || weight > (100.0F / queueUserLimit)) {
-        throw new IOException("Weight (" + weight + ") for user \"" + userName
-            + "\" must be between 0 and" + " 100 / " + queueUserLimit + " (= " +
-            100.0f / queueUserLimit + ", the number of concurrent active users in "
-            + queuePath + ")");
-      }
+    String error =
+        QueueLimitChecks.checkUserWeights(queuePath, queueUserLimit, data);
+    if (error != null) {
+      throw new IOException(error);
     }
   }
 

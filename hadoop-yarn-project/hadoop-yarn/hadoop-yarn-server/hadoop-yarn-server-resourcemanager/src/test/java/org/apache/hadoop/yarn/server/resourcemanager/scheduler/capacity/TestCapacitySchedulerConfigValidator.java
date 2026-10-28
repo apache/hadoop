@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -229,7 +230,7 @@ public class TestCapacitySchedulerConfigValidator {
               .validateCSConfiguration(oldConfig, newConfig, rmContext);
       fail("Invalid capacity");
     } catch (IOException e) {
-      assertTrue(e.getCause().getMessage().startsWith("Illegal capacity"));
+      assertEquals("Illegal capacity of 500.0 for queue root.test1", e.getCause().getMessage());
     }
   }
 
@@ -414,8 +415,8 @@ public class TestCapacitySchedulerConfigValidator {
         fail("Invalid capacity for children of queue root");
       }
     } catch (IOException e) {
-      assertTrue(e.getCause().getMessage()
-              .startsWith("Illegal capacity"));
+      assertEquals("Illegal capacity sum of 1.3 for children of queue root for label=."
+          + " It should be either 0 or 1.0", e.getCause().getMessage());
     }
   }
 
@@ -558,6 +559,32 @@ public class TestCapacitySchedulerConfigValidator {
       assertTrue(e.getCause().getMessage()
               .contains("the queue is not yet in stopped state"));
     }
+  }
+
+  @Test
+  public void testValidateCSConfigDeletionReadsStateCaseSensitively() {
+    Configuration oldConfig = CapacitySchedulerConfigGeneratorForTest
+            .createBasicCSConfiguration();
+    Configuration newConfig = new Configuration(oldConfig);
+    newConfig.set("yarn.scheduler.capacity.root.queues", "test1");
+    newConfig.set("yarn.scheduler.capacity.root.test1.capacity", "100");
+    // Queue parsing accepts a lowercase state, the deletion check does not.
+    newConfig.set("yarn.scheduler.capacity.root.test2.state", "stopped");
+    newConfig.set("yarn.scheduler.capacity.queue-mappings", "u:test1:test1");
+    RMContext rmContext = prepareRMContext();
+    IOException e = assertThrows(IOException.class, () -> CapacitySchedulerConfigValidator
+        .validateCSConfiguration(oldConfig, newConfig, rmContext));
+    assertEquals("root.test2 cannot be deleted from the capacity scheduler configuration,"
+        + " as the queue is not yet in stopped state. Current State : RUNNING",
+        e.getCause().getMessage());
+  }
+
+  @Test
+  public void testValidatePlacementRulesRejectsDuplicates() {
+    IOException e = assertThrows(IOException.class, () -> CapacitySchedulerConfigValidator
+        .validatePlacementRules(Arrays.asList("user-group", "user-group")));
+    assertEquals("Invalid PlacementRule inputs which contains duplicate rule strings",
+        e.getMessage());
   }
 
   /**

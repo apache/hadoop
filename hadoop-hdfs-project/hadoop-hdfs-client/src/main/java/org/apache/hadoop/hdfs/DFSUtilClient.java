@@ -918,12 +918,11 @@ public class DFSUtilClient {
   }
 
   public static URI getNNUri(InetSocketAddress namenode) {
-    int port = namenode.getPort();
-    String portString =
-        (port == HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT) ?
-        "" : (":" + port);
-    return URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
-        + namenode.getHostName() + portString);
+    String authority = NetUtils.getHostPortString(namenode);
+    if (namenode.getPort() == HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT) {
+      authority = authority.substring(0, authority.lastIndexOf(':'));
+    }
+    return URI.create(HdfsConstants.HDFS_URI_SCHEME + "://" + authority);
   }
 
   public static InterruptedIOException toInterruptedIOException(String message,

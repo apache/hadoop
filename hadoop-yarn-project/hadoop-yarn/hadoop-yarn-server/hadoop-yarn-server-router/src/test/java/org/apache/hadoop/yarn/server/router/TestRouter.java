@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.router;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
@@ -52,6 +53,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 /**
  * Tests {@link Router}.
@@ -97,6 +99,29 @@ public class TestRouter {
 
     router.stop();
 
+  }
+
+  /**
+   * Stopping the Router shuts down the executor that runs the
+   * SubClusterCleaner, so the cleaner does not outlive the Router.
+   */
+  @Test
+  public void testServiceStopShutsDownScheduledExecutor() {
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.ROUTER_DEREGISTER_SUBCLUSTER_ENABLED, true);
+    Router router = new Router();
+    try {
+      router.init(conf);
+      router.start();
+      ScheduledThreadPoolExecutor executor = router.getScheduledExecutorService();
+      assertFalse(executor.isShutdown());
+
+      router.stop();
+
+      assertTrue(executor.isTerminated());
+    } finally {
+      router.stop();
+    }
   }
 
   private void verifyServiceACLsRefresh(ServiceAuthorizationManager manager,

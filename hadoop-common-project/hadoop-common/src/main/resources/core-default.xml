@@ -3965,6 +3965,21 @@ are idle beyond the keepalive window.
     to KMS servers.
   </description>
 </property>
+<property>
+  <name>hadoop.security.kms.client.drain.response.unread.bytes</name>
+  <value>true</value>
+  <description>
+    When true, the KMS client fully reads chunked HTTP response bodies before
+    closing them so the JDK can return connections to the keep-alive pool.
+    Jackson stops at the end of the JSON value and does not consume chunk
+    framing; without draining, clients on JDK 17+ often open a new connection
+    and TLS handshake on every KMS call. Draining applies only when the
+    response uses Transfer-Encoding: chunked. Reads block until the remaining
+    bytes arrive or the KMS read timeout (hadoop.security.kms.client.timeout)
+    is hit; set to false if a server stops sending after the payload and calls
+    would otherwise hang until timeout.
+  </description>
+</property>
 
 <property>
   <name>hadoop.security.kms.client.failover.sleep.base.millis</name>

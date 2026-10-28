@@ -53,6 +53,7 @@ import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
@@ -95,6 +96,31 @@ public class TestZKDelegationTokenSecretManager {
   public void tearDown() throws Exception {
     if (zkServer != null) {
       zkServer.close();
+    }
+  }
+
+  /**
+   * A token manager leaked past tearDown() would otherwise kill the JVM
+   * when its remover thread loses the ZooKeeper connection;
+   * checkNoTermination() turns the recorded termination into a test
+   * failure instead.
+   */
+  @BeforeEach
+  public void disableSystemExit() {
+    ExitUtil.disableSystemExit();
+  }
+
+  /**
+   * Runs as its own lifecycle method so that the ExitUtil state is checked
+   * and reset even when tearDown() fails. A leaked remover thread that
+   * terminates after this point is reported by the next test.
+   */
+  @AfterEach
+  public void checkNoTermination() {
+    ExitUtil.ExitException ee = ExitUtil.getFirstExitException();
+    ExitUtil.resetFirstExitException();
+    if (ee != null) {
+      fail("ExitUtil.terminate was called", ee);
     }
   }
 
@@ -473,69 +499,77 @@ public class TestZKDelegationTokenSecretManager {
 
     DelegationTokenManager tm =
         new DelegationTokenManager(conf, new Text("bla"));
-    tm.init();
-    Token<DelegationTokenIdentifier> token =
-        (Token<DelegationTokenIdentifier>) tm
-            .createToken(UserGroupInformation.getCurrentUser(), "good");
-    assertNotNull(token);
-    Token<DelegationTokenIdentifier> cancelled =
-        (Token<DelegationTokenIdentifier>) tm
-            .createToken(UserGroupInformation.getCurrentUser(), "cancelled");
-    assertNotNull(cancelled);
-    tm.verifyToken(token);
-    tm.verifyToken(cancelled);
+    final Token<DelegationTokenIdentifier> token;
+    final Token<DelegationTokenIdentifier> cancelled;
+    try {
+      tm.init();
+      token = (Token<DelegationTokenIdentifier>) tm
+          .createToken(UserGroupInformation.getCurrentUser(), "good");
+      assertNotNull(token);
+      cancelled = (Token<DelegationTokenIdentifier>) tm
+          .createToken(UserGroupInformation.getCurrentUser(), "cancelled");
+      assertNotNull(cancelled);
+      tm.verifyToken(token);
+      tm.verifyToken(cancelled);
 
-    // Cancel one token, verify it's gone
-    tm.cancelToken(cancelled, "cancelled");
-    final AbstractDelegationTokenSecretManager sm =
-        tm.getDelegationTokenSecretManager();
-    final ZKDelegationTokenSecretManager zksm =
-        (ZKDelegationTokenSecretManager) sm;
-    final AbstractDelegationTokenIdentifier idCancelled =
-        sm.decodeTokenIdentifier(cancelled);
-    LOG.info("Waiting for the cancelled token to be removed");
+      // Cancel one token, verify it's gone
+      tm.cancelToken(cancelled, "cancelled");
+      final AbstractDelegationTokenSecretManager sm =
+          tm.getDelegationTokenSecretManager();
+      final ZKDelegationTokenSecretManager zksm =
+          (ZKDelegationTokenSecretManager) sm;
+      final AbstractDelegationTokenIdentifier idCancelled =
+          sm.decodeTokenIdentifier(cancelled);
+      LOG.info("Waiting for the cancelled token to be removed");
 
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        AbstractDelegationTokenSecretManager.DelegationTokenInformation dtinfo =
-            zksm.getTokenInfo(idCancelled);
-        return dtinfo == null;
-      }
-    }, 100, 5000);
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          AbstractDelegationTokenSecretManager.DelegationTokenInformation dtinfo =
+              zksm.getTokenInfo(idCancelled);
+          return dtinfo == null;
+        }
+      }, 100, 5000);
+    } finally {
+      tm.destroy();
+    }
 
     // Fake a restart which launches a new tm
-    tm.destroy();
-    tm = new DelegationTokenManager(conf, new Text("bla"));
-    tm.init();
-    final AbstractDelegationTokenSecretManager smNew =
-        tm.getDelegationTokenSecretManager();
-    final ZKDelegationTokenSecretManager zksmNew =
-        (ZKDelegationTokenSecretManager) smNew;
+    DelegationTokenManager restartedManager =
+        new DelegationTokenManager(conf, new Text("bla"));
+    try {
+      restartedManager.init();
+      final AbstractDelegationTokenSecretManager smNew =
+          restartedManager.getDelegationTokenSecretManager();
+      final ZKDelegationTokenSecretManager zksmNew =
+          (ZKDelegationTokenSecretManager) smNew;
 
-    // The cancelled token should be gone, and not loaded.
-    AbstractDelegationTokenIdentifier id =
-        smNew.decodeTokenIdentifier(cancelled);
-    AbstractDelegationTokenSecretManager.DelegationTokenInformation dtinfo =
-        zksmNew.getTokenInfo(id);
-    assertNull(dtinfo, "canceled dt should be gone!");
+      // The cancelled token should be gone, and not loaded.
+      AbstractDelegationTokenIdentifier id =
+          smNew.decodeTokenIdentifier(cancelled);
+      AbstractDelegationTokenSecretManager.DelegationTokenInformation dtinfo =
+          zksmNew.getTokenInfo(id);
+      assertNull(dtinfo, "canceled dt should be gone!");
 
-    // The good token should be loaded on startup, and removed after expiry.
-    id = smNew.decodeTokenIdentifier(token);
-    dtinfo = zksmNew.getTokenInfoFromMemory(id);
-    assertNotNull(dtinfo, "good dt should be in memory!");
+      // The good token should be loaded on startup, and removed after expiry.
+      id = smNew.decodeTokenIdentifier(token);
+      dtinfo = zksmNew.getTokenInfoFromMemory(id);
+      assertNotNull(dtinfo, "good dt should be in memory!");
 
-    // Wait for the good token to expire.
-    Thread.sleep(5000);
-    final ZKDelegationTokenSecretManager zksm1 = zksmNew;
-    final AbstractDelegationTokenIdentifier id1 = id;
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        LOG.info("Waiting for the expired token to be removed...");
-        return zksm1.getTokenInfo(id1) == null;
-      }
-    }, 1000, 5000);
+      // Wait for the good token to expire.
+      Thread.sleep(5000);
+      final ZKDelegationTokenSecretManager zksm1 = zksmNew;
+      final AbstractDelegationTokenIdentifier id1 = id;
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          LOG.info("Waiting for the expired token to be removed...");
+          return zksm1.getTokenInfo(id1) == null;
+        }
+      }, 1000, 5000);
+    } finally {
+      restartedManager.destroy();
+    }
   }
 
   @Test

@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -199,8 +200,28 @@ public class BaiduBosFileSystem extends FileSystem {
       }
     }
 
+    if (store.isHierarchy()) {
+      checkNoAncestorIsFile(absolutePath);
+    }
+
     return new FSDataOutputStream(
         store.createFile(key, getConf()), statistics);
+  }
+
+  private void checkNoAncestorIsFile(Path path) throws IOException {
+    Path ancestor = path.getParent();
+    while (ancestor != null && !ancestor.isRoot()) {
+      try {
+        if (!getFileStatus(ancestor).isDirectory()) {
+          throw new ParentNotDirectoryException(String.format(
+              "Cannot create %s: ancestor %s is a file",
+              path, ancestor));
+        }
+        return;
+      } catch (FileNotFoundException e) {
+        ancestor = ancestor.getParent();
+      }
+    }
   }
 
   /**
@@ -743,16 +764,34 @@ public class BaiduBosFileSystem extends FileSystem {
     }
 
     if (store.isHierarchy()) {
+      if (isDescendant(srcPath, dstPath)) {
+        return false;
+      }
+      FileStatus dstStatus;
+      try {
+        dstStatus = getFileStatus(dstPath);
+      } catch (FileNotFoundException fnde) {
+        dstStatus = null;
+      }
+      if (dstStatus != null && dstStatus.isDirectory()) {
+        dstPath = new Path(dstPath, srcPath.getName());
+        try {
+          if (getFileStatus(dstPath).isDirectory()) {
+            throw new FileAlreadyExistsException(
+                String.format("Failed to rename %s to %s, "
+                    + "file already exists or not empty!",
+                    srcPath, dstPath));
+          }
+        } catch (FileNotFoundException fnde) {
+          // target does not exist yet, ok
+        }
+      }
       store.rename(pathToKey(srcPath),
-          pathToKey(dstPath), true);
+          pathToKey(dstPath), srcStatus.isFile());
       return true;
     }
 
-    Path parent = dstPath.getParent();
-    while (parent != null && !srcPath.equals(parent)) {
-      parent = parent.getParent();
-    }
-    if (parent != null) {
+    if (isDescendant(srcPath, dstPath)) {
       return false;
     }
 
@@ -818,6 +857,14 @@ public class BaiduBosFileSystem extends FileSystem {
     store.rename(pathToKey(srcPath), pathToKey(dstPath),
         srcStatus.isFile());
     return true;
+  }
+
+  private static boolean isDescendant(Path ancestor, Path path) {
+    Path parent = path.getParent();
+    while (parent != null && !ancestor.equals(parent)) {
+      parent = parent.getParent();
+    }
+    return parent != null;
   }
 
   @Override

@@ -35,7 +35,7 @@
 
   <properties>
     <file.encoding>UTF-8</file.encoding>
-    <bce-java-sdk.version>0.10.330</bce-java-sdk.version>
+    <bce-java-sdk.version>0.10.332</bce-java-sdk.version>
   </properties>
 
   <dependencies>
@@ -129,6 +129,24 @@
     </dependency>
 
     <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpcore-nio</artifactId>
+      <version>${httpcore.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpasyncclient</artifactId>
+      <version>4.1.5</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.httpcomponents</groupId>
+          <artifactId>httpcore-nio</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-core</artifactId>
       <scope>provided</scope>
@@ -162,6 +180,12 @@
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -311,20 +335,8 @@
                   </filters>
                   <relocations>
                     <relocation>
-                      <pattern>org.apache.http</pattern>
-                      <shadedPattern>org.apache.hadoop.fs.bos.shaded.org.apache.http</shadedPattern>
-                    </relocation>
-                    <relocation>
-                      <pattern>org.apache.commons.codec</pattern>
-                      <shadedPattern>org.apache.hadoop.fs.bos.shaded.org.apache.commons.codec</shadedPattern>
-                    </relocation>
-                    <relocation>
                       <pattern>org.joda</pattern>
                       <shadedPattern>org.apache.hadoop.fs.bos.shaded.org.joda</shadedPattern>
-                    </relocation>
-                    <relocation>
-                      <pattern>com.google</pattern>
-                      <shadedPattern>org.apache.hadoop.fs.bos.shaded.com.google</shadedPattern>
                     </relocation>
                     <relocation>
                       <pattern>com.baidubce</pattern>
@@ -335,11 +347,8 @@
                     <includes>
                       <include>joda-time:joda-time</include>
                       <include>com.baidubce:bce-java-sdk</include>
-                      <include>org.apache.httpcomponents:httpclient</include>
-                      <include>org.apache.httpcomponents:httpcore</include>
-                      <include>com.google.guava:guava</include>
-                      <include>com.google.guava:failureaccess</include>
-                      <include>commons-codec:commons-codec</include>
+                      <include>org.apache.httpcomponents:httpcore-nio</include>
+                      <include>org.apache.httpcomponents:httpasyncclient</include>
                     </includes>
                   </artifactSet>
                   <shadeSourcesContent>false</shadeSourcesContent>

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.util.XMLUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueueManager;
@@ -37,8 +38,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory.getPlacementRule;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
@@ -110,6 +113,15 @@ public class TestPlacementRuleFS {
       ruleCreateElement(ruleClass);
       ruleInit(ruleClass);
     }
+  }
+
+  @Test
+  public void testRuleInitializeFailsForCapacityScheduler() {
+    PlacementRule rule = getPlacementRule(DefaultPlacementRule.class, null);
+    IOException e = assertThrows(IOException.class,
+        () -> rule.initialize(mock(CapacityScheduler.class)));
+    assertEquals(DefaultPlacementRule.class.getName()
+        + " rule can only be configured for the FairScheduler", e.getMessage());
   }
 
   /**

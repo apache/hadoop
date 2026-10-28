@@ -27,6 +27,7 @@ import static org.mockito.Mockito.*;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -42,8 +43,12 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
@@ -255,6 +260,39 @@ public class TestWebHdfsDataLocality {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testExcludeIpv6DataNodes() throws Exception {
+    NameNode nn = mock(NameNode.class);
+    FSNamesystem fsn = mock(FSNamesystem.class);
+    BlockManager bm = mock(BlockManager.class);
+    DatanodeManager dm = mock(DatanodeManager.class);
+    when(nn.getNamesystem()).thenReturn(fsn);
+    when(fsn.getBlockManager()).thenReturn(bm);
+    when(bm.getDatanodeManager()).thenReturn(dm);
+    DatanodeStorageInfo storage = mock(DatanodeStorageInfo.class);
+    when(storage.getDatanodeDescriptor()).thenReturn(mock(DatanodeDescriptor.class));
+    when(bm.chooseTarget4WebHDFS(any(), any(), any(), anyLong()))
+        .thenReturn(new DatanodeStorageInfo[] {storage});
+
+    // DataNodes register with the expanded form of their IPv6 address
+    DatanodeDescriptor bracketed = mock(DatanodeDescriptor.class);
+    DatanodeDescriptor plain = mock(DatanodeDescriptor.class);
+    DatanodeDescriptor noPort = mock(DatanodeDescriptor.class);
+    DatanodeDescriptor ipv4 = mock(DatanodeDescriptor.class);
+    when(dm.getDatanodeByXferAddr("2001:db8:0:0:0:0:0:1", 9866)).thenReturn(bracketed);
+    when(dm.getDatanodeByXferAddr("2001:db8:0:0:0:0:0:2", 9866)).thenReturn(plain);
+    when(dm.getDatanodeByHost("2001:db8:0:0:0:0:0:3")).thenReturn(noPort);
+    when(dm.getDatanodeByXferAddr("10.0.0.1", 9866)).thenReturn(ipv4);
+
+    NamenodeWebHdfsMethods.chooseDatanode(nn, "/path", PutOpParam.Op.CREATE, 0,
+        DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT,
+        "[2001:db8::1]:9866,2001:db8:0:0:0:0:0:2:9866,[2001:db8::3],10.0.0.1:9866",
+        LOCALHOST, null);
+
+    verify(bm).chooseTarget4WebHDFS(eq("/path"), any(),
+        eq(new HashSet<>(Arrays.asList(bracketed, plain, noPort, ipv4))), anyLong());
   }
 
   @Test
