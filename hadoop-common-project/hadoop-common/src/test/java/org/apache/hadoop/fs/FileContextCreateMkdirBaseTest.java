@@ -21,7 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
+import java.util.EnumSet;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -222,6 +224,17 @@ public abstract class FileContextCreateMkdirBaseTest {
     Path f = getTestRootPath(fc,"NonExisting/foo");
     createFile(fc, f);
     assertTrue(isFile(fc, f));
+  }
+
+  @Test
+  public void testCreateBlockSizeNotMultipleOfChecksumSize() throws Exception {
+    Path f = getTestRootPath(fc, "foo");
+    intercept(HadoopIllegalArgumentException.class,
+        "blockSize should be a multiple of checksumsize",
+        "Create with a blockSize that is not a multiple of the" +
+            " checksum size should have failed",
+        () -> fc.create(f, EnumSet.of(CreateFlag.CREATE),
+            Options.CreateOpts.blockSize(1000)));
   }
 
   private Path getTestRootPath(FileContext fc) {
