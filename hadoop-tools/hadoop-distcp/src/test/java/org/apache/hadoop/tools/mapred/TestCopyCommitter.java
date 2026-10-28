@@ -589,6 +589,50 @@ public class TestCopyCommitter {
   }
 
   @Test
+  public void testPreserveZeroAccessTimeAfterConcat() throws IOException {
+    TaskAttemptContext taskContext = getTaskAttemptContext(config);
+    JobContext jobContext = new JobContextImpl(taskContext.getConfiguration(),
+        taskContext.getTaskAttemptID().getJobID());
+    Configuration conf = jobContext.getConfiguration();
+    FileSystem fs = FileSystem.get(conf);
+    String sourceBase = "/tmp1/zero-atime-source";
+    String targetBase = "/tmp1/zero-atime-target";
+    String filename = "/file";
+    long mtime = 1600000000000L;
+    try {
+      // Deliberately leave chunk atimes different from the source. This
+      // exercises restoration by the committer, independently of the mapper.
+      createSrcAndWorkFilesWithDifferentChecksum(fs, targetBase, sourceBase,
+          filename, 1);
+      Path source = new Path(sourceBase + filename);
+      fs.setTimes(source, mtime, 0);
+      DistCpOptions options = new DistCpOptions.Builder(
+          Collections.singletonList(new Path(sourceBase)), new Path(targetBase))
+          .withBlocksPerChunk(1).withSkipCRC(true)
+          .preserve(FileAttribute.TIMES).build();
+      options.appendToConf(conf);
+      conf.setBoolean(
+          DistCpConstants.CONF_LABEL_SIMPLE_LISTING_RANDOMIZE_FILES, false);
+      DistCpContext context = new DistCpContext(options);
+      context.setTargetPathExists(false);
+      new GlobbedCopyListing(conf, CREDENTIALS).buildListing(
+          new Path("/tmp1/zero-atime-listing"), context);
+      conf.set(CONF_LABEL_TARGET_WORK_PATH, targetBase);
+      conf.set(CONF_LABEL_TARGET_FINAL_PATH, targetBase);
+
+      new CopyCommitter(null, taskContext).commitJob(jobContext);
+
+      FileStatus result = fs.getFileStatus(new Path(targetBase + filename));
+      assertEquals(mtime, result.getModificationTime(), "mtime after concat");
+      assertEquals(0, result.getAccessTime(),
+          "Zero is a valid atime, not the -1 sentinel");
+    } finally {
+      TestDistCpUtils.delete(fs, "/tmp1");
+      TestDistCpUtils.delete(fs, "/meta");
+    }
+  }
+
+  @Test
   public void testCommitWithCleanupTempFiles() throws IOException {
     testCommitWithCleanup(true);
     testCommitWithCleanup(false);
