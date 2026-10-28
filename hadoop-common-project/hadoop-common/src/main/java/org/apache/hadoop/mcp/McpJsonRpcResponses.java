@@ -82,24 +82,15 @@ final class McpJsonRpcResponses {
   }
 
   /**
-   * Builds a JSON-RPC error response without an id, sent with an HTTP error status. Used
-   * to reject a notification or a JSON-RPC response from the client, which the transport
-   * specification says must not get HTTP 200.
-   */
-  McpHttpResponse errorWithStatus(int httpStatus, int code, String message) {
-    McpHttpResponse error = error(null, code, message);
-    return McpHttpResponse.status(httpStatus, error.body(), Collections.emptyMap());
-  }
-
-  /**
-   * Builds an HTTP-level rejection for a request that never became a valid JSON-RPC call
-   * against a valid session. The body is a plain {@code {"message": ...}} object, not a
-   * JSON-RPC envelope, since there is no request id to echo.
+   * Builds an HTTP-level rejection with a plain {@code {"message": ...}} body, not a
+   * JSON-RPC envelope. Used when there is no request to answer: a request rejected before
+   * it reached a valid session, a notification the server cannot accept, or a JSON-RPC
+   * response from the client.
    */
   McpHttpResponse transportError(int httpStatus, String message) {
     ObjectNode body = objectMapper.createObjectNode();
     body.put("message", message);
-    return McpHttpResponse.status(httpStatus, body, Collections.emptyMap());
+    return McpHttpResponse.createResponse(httpStatus, body, Collections.emptyMap());
   }
 
   private void setErrorResponseId(ObjectNode response, JsonNode idNode) {

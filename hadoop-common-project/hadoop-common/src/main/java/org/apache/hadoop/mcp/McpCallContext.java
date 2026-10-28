@@ -35,10 +35,9 @@ public final class McpCallContext {
   private final String protocolVersionHeader;
 
   /**
-   * @param request the HTTP request, or {@code null} outside a servlet
-   * @param sessionIdHeader value of the {@code Mcp-Session-Id} header, or {@code null}
-   * @param protocolVersionHeader value of the {@code MCP-Protocol-Version} header, or
-   *     {@code null}
+   * @param request the HTTP request
+   * @param sessionIdHeader value of the {@code Mcp-Session-Id} header
+   * @param protocolVersionHeader value of the {@code MCP-Protocol-Version} header
    */
   public McpCallContext(HttpServletRequest request, String sessionIdHeader,
       String protocolVersionHeader) {

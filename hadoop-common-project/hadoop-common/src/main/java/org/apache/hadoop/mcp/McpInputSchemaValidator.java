@@ -112,7 +112,6 @@ final class McpInputSchemaValidator {
     }
   }
 
-  /** Validates each element; validateValue skips {@code items} that aren't a schema map. */
   private static void validateItems(Object items, List<?> list, String path)
       throws InvalidToolArgumentsException {
     for (int i = 0; i < list.size(); i++) {

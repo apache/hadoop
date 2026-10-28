@@ -88,11 +88,6 @@ public final class McpRequestHandler {
     this.outputSanitizer = outputSanitizer;
   }
 
-  public McpHttpResponse originNotAllowedResponse() {
-    return jsonRpcResponses.transportError(HttpServletResponse.SC_FORBIDDEN,
-        McpJsonRpc.ORIGIN_NOT_ALLOWED_MESSAGE);
-  }
-
   public McpHttpResponse parseErrorResponse() {
     return jsonRpcResponses.error(null, McpJsonRpc.PARSE_ERROR, McpJsonRpc.PARSE_ERROR_MESSAGE);
   }
@@ -100,6 +95,26 @@ public final class McpRequestHandler {
   public McpHttpResponse requestBodyTooLargeResponse() {
     return jsonRpcResponses.transportError(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE,
         McpJsonRpc.REQUEST_BODY_TOO_LARGE_MESSAGE);
+  }
+
+  private McpHttpResponse invalidParamsResponse(JsonNode idNode) {
+    return jsonRpcResponses.error(idNode, McpJsonRpc.INVALID_PARAMS,
+        "params must be a JSON object");
+  }
+
+  private McpHttpResponse sessionNotReadyResponse(JsonNode idNode) {
+    return jsonRpcResponses.error(idNode, McpJsonRpc.SERVER_ERROR_SESSION_NOT_READY,
+        McpJsonRpc.SESSION_NOT_READY_MESSAGE);
+  }
+
+  private McpHttpResponse sessionNotFoundResponse() {
+    return jsonRpcResponses.transportError(HttpServletResponse.SC_NOT_FOUND,
+        McpJsonRpc.SESSION_NOT_FOUND_MESSAGE);
+  }
+
+  public McpHttpResponse originNotAllowedResponse() {
+    return jsonRpcResponses.transportError(HttpServletResponse.SC_FORBIDDEN,
+        McpJsonRpc.ORIGIN_NOT_ALLOWED_MESSAGE);
   }
 
   public McpHttpResponse handle(JsonNode requestNode, McpCallContext context) {
@@ -190,7 +205,8 @@ public final class McpRequestHandler {
       if (sessionStore.remove(resolveSessionId(context)) == null) {
         return sessionNotFoundResponse();
       }
-      return McpHttpResponse.status(HttpServletResponse.SC_NO_CONTENT, Collections.emptyMap());
+      return McpHttpResponse.createResponse(HttpServletResponse.SC_NO_CONTENT,
+          Collections.emptyMap());
     } catch (RequestRejectedException e) {
       return jsonRpcResponses.transportError(e.getHttpStatus(), e.getErrorMessage());
     }
@@ -290,21 +306,6 @@ public final class McpRequestHandler {
   @SuppressWarnings("unchecked")
   private static Map<String, Object> asMap(Object value) {
     return value instanceof Map ? (Map<String, Object>) value : Collections.emptyMap();
-  }
-
-  private McpHttpResponse invalidParamsResponse(JsonNode idNode) {
-    return jsonRpcResponses.error(idNode, McpJsonRpc.INVALID_PARAMS,
-        "params must be a JSON object");
-  }
-
-  private McpHttpResponse sessionNotReadyResponse(JsonNode idNode) {
-    return jsonRpcResponses.error(idNode, McpJsonRpc.SERVER_ERROR_SESSION_NOT_READY,
-        McpJsonRpc.SESSION_NOT_READY_MESSAGE);
-  }
-
-  private McpHttpResponse sessionNotFoundResponse() {
-    return jsonRpcResponses.transportError(HttpServletResponse.SC_NOT_FOUND,
-        McpJsonRpc.SESSION_NOT_FOUND_MESSAGE);
   }
 
   private Map<String, Object> buildToolsListResult() {

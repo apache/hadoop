@@ -47,23 +47,24 @@ public final class McpHttpResponse {
   }
 
   public static McpHttpResponse notification() {
-    return status(STATUS_ACCEPTED, Collections.emptyMap());
+    return createResponse(STATUS_ACCEPTED, Collections.emptyMap());
   }
 
   public static McpHttpResponse ok(JsonNode body, Map<String, String> headers) {
-    return status(STATUS_OK, body, headers);
+    return createResponse(STATUS_OK, body, headers);
   }
 
   /**
    * @param body response body, or {@code null} for an empty body
    */
-  public static McpHttpResponse status(int status, JsonNode body, Map<String, String> headers) {
+  public static McpHttpResponse createResponse(int status, JsonNode body, Map<String,
+      String> headers) {
     return new McpHttpResponse(status, headers, body);
   }
 
   /** Response with the given status and an empty body. */
-  public static McpHttpResponse status(int status, Map<String, String> headers) {
-    return status(status, null, headers);
+  public static McpHttpResponse createResponse(int status, Map<String, String> headers) {
+    return createResponse(status, null, headers);
   }
 
   public int status() {

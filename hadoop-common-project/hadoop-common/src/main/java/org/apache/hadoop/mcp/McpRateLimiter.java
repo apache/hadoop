@@ -38,7 +38,7 @@ final class McpRateLimiter {
 
   McpRateLimiter(int limit, long windowMs) {
     Preconditions.checkArgument(limit <= 0 || windowMs > 0,
-      "windowMs must be positive: %s", windowMs);
+        "windowMs must be positive: %s", windowMs);
     this.limit = limit;
     this.windowMs = windowMs;
     this.windowStartMs = Time.monotonicNow();

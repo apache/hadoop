@@ -59,7 +59,7 @@ public class TestMcpInputSchemaValidator {
   }
 
   @Test
-  public void testMissingRequiredRejected() {
+  public void testMissingRequiredFieldsRejected() {
     Map<String, Object> schema = McpToolSchema.object()
         .string("user", "User filter")
         .required("user")
