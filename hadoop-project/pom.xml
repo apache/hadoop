@@ -76,7 +76,7 @@
     <jaxb.version>2.3.9</jaxb.version>
 
     <!-- jackson versions -->
-    <jackson2.version>2.18.10</jackson2.version>
+    <jackson2.version>2.18.12</jackson2.version>
     <jackson2.databind.version>${jackson2.version}</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
@@ -154,7 +154,7 @@
     <metrics.version>3.2.4</metrics.version>
     <netty4.version>4.1.137.Final</netty4.version>
     <snappy-java.version>1.1.10.4</snappy-java.version>
-    <lz4-java.version>1.11.2</lz4-java.version>
+    <lz4-java.version>1.12.0</lz4-java.version>
     <zstd-jni.version>1.5.7-8</zstd-jni.version>
     <byte-buddy.version>1.17.6</byte-buddy.version>
 
@@ -231,7 +231,7 @@
     <junit.jupiter.version>5.13.3</junit.jupiter.version>
     <junit.platform.version>1.13.3</junit.platform.version>
     <assertj.version>3.12.2</assertj.version>
-    <jline.version>3.9.0</jline.version>
+    <jline.version>3.30.14</jline.version>
     <mockito.version>4.11.0</mockito.version>
     <solr.version>8.11.2</solr.version>
     <openssl-wildfly.version>2.2.5.Final</openssl-wildfly.version>

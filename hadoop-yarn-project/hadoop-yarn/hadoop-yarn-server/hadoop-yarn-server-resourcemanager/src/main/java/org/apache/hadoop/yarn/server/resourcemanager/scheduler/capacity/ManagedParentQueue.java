@@ -208,10 +208,10 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
           nodeLabel, templateQueuePath, resourceTypes);
       queueResourceQuotas.setConfiguredMinResource(nodeLabel, templateMinResource);
 
-      if (this.capacityConfigType.equals(CapacityConfigType.PERCENTAGE)
-          && !templateMinResource.equals(Resources.none())) {
-        throw new IOException("Managed Parent Queue " + this.getQueuePath()
-            + " config type is different from leaf queue template config type");
+      String templateConfigTypeError = QueueStructureChecks.checkLeafQueueTemplateConfigType(
+          this.getQueuePath(), this.capacityConfigType, templateMinResource);
+      if (templateConfigTypeError != null) {
+        throw new IOException(templateConfigTypeError);
       }
     }
   }

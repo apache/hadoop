@@ -1925,7 +1925,6 @@ public class TestLeafQueue {
     csConf.setUserLimit(a.getQueuePathObject(), 50);
     csConf.setFloat("yarn.scheduler.capacity." + a.getQueuePath()
         + ".user-settings.alice." + CapacitySchedulerConfiguration.USER_WEIGHT, 3f);
-    csConf.reinitializeConfigurationProperties();
     queueContext.reinitialize();
     when(csContext.getClusterResource())
         .thenReturn(Resources.createResource(16 * GB, 32));
@@ -1954,7 +1953,6 @@ public class TestLeafQueue {
         + ".user-settings.firstname.lastname."
         + CapacitySchedulerConfiguration.USER_WEIGHT,
         0.7f);
-    csConf.reinitializeConfigurationProperties();
     queueContext.reinitialize();
 
     when(csContext.getClusterResource())

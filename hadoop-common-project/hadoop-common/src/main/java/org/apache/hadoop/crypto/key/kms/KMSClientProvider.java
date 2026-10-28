@@ -79,6 +79,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
@@ -113,6 +114,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   private static final String UTF8 = "UTF-8";
 
   private static final String CONTENT_TYPE = "Content-Type";
+  private static final String TRANSFER_ENCODING = "Transfer-Encoding";
   private static final String APPLICATION_JSON_MIME = "application/json";
 
   private static final String HTTP_GET = "GET";
@@ -129,6 +131,23 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   public static final String AUTH_RETRY = CONFIG_PREFIX
       + "authentication.retry-count";
   public static final int DEFAULT_AUTH_RETRY = 1;
+
+  /* Whether to fully consume a response body before closing it, so that the
+   * JDK can return the connection to its keep-alive cache. For a chunked
+   * response the terminating chunk is framing that the JSON parser never
+   * reads, and the JDK's non-blocking fallback cannot always recover it, so
+   * the socket is otherwise torn down and the next call pays for a fresh
+   * connection and TLS handshake.
+   * <p/>
+   * On by default: the drain blocks until the remaining bytes arrive (bounded
+   * by the read timeout), so a server that stops writing after the payload
+   * would make a call wait where it previously returned at once. Set to false
+   * to disable draining.
+   */
+  public static final String DRAIN_RESPONSE_UNREAD_BYTES =
+      CommonConfigurationKeysPublic.KMS_CLIENT_DRAIN_RESPONSE_UNREAD_BYTES_KEY;
+  public static final boolean DEFAULT_DRAIN_RESPONSE_UNREAD_BYTES =
+      CommonConfigurationKeysPublic.KMS_CLIENT_DRAIN_RESPONSE_UNREAD_BYTES_DEFAULT;
 
   private final ValueQueue<EncryptedKeyVersion> encKeyVersionQueue;
 
@@ -273,6 +292,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
      * - HOSTNAME = string
      * - PORT = integer
      *
+     * An IPv6 literal HOSTNAME must be enclosed in square brackets, as in
+     * {@literal kms://https@[2001:db8::1]:9600/kms}. {@link URI} accepts literal brackets around
+     * a single host only, so the brackets must be percent-encoded when HOSTS has more than one
+     * host, as in {@literal kms://https@%5B2001:db8::1%5D;%5B2001:db8::2%5D:9600/kms}.
+     *
      * This will always create a {@link LoadBalancingKMSClientProvider}
      * if the uri is correct.
      */
@@ -280,6 +304,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     public KeyProvider createProvider(URI providerUri, Configuration conf)
         throws IOException {
       if (SCHEME_NAME.equals(providerUri.getScheme())) {
+        String kmsAuthority = providerUri.getAuthority();
+        if (kmsAuthority != null && kmsAuthority.contains("[")) {
+          return new LoadBalancingKMSClientProvider(providerUri,
+              createBracketedProviders(conf, providerUri, kmsAuthority), conf);
+        }
         URL origUrl = new URL(extractKMSPath(providerUri).toString());
         String authority = origUrl.getAuthority();
         // check for ';' which delimits the backup hosts
@@ -302,22 +331,52 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
           hostsPart = t[0];
         }
         KMSClientProvider[] providers =
-            createProviders(conf, origUrl, port, hostsPart);
+            createProviders(conf, origUrl.getProtocol(), origUrl.getPath(), port, hostsPart);
         return new LoadBalancingKMSClientProvider(providerUri, providers, conf);
       }
       return null;
     }
 
-    private KMSClientProvider[] createProviders(Configuration conf,
-        URL origUrl, int port, String hostsPart) throws IOException {
+    /**
+     * Handles an authority that has a bracketed IPv6 literal, which the colon split above cannot
+     * parse and, for more than one host, neither {@link Path} nor {@link URL} can hold.
+     */
+    private KMSClientProvider[] createBracketedProviders(Configuration conf, URI providerUri,
+        String kmsAuthority) throws IOException {
+      String[] parts = kmsAuthority.split("@", 2);
+      if (parts.length != 2) {
+        throw new IOException("No valid authority in kms uri [" + providerUri + "]");
+      }
+      int port = -1;
+      String hostsPart = parts[1];
+      // A colon after the last closing bracket delimits the port, others belong to a literal
+      int portIdx = hostsPart.lastIndexOf(':');
+      if (portIdx > hostsPart.lastIndexOf(']')) {
+        try {
+          port = Integer.parseInt(hostsPart.substring(portIdx + 1));
+        } catch (NumberFormatException e) {
+          throw new IOException("Could not parse port in kms uri [" + providerUri + "]");
+        }
+        hostsPart = hostsPart.substring(0, portIdx);
+      }
+      return createProviders(conf, parts[0], providerUri.getPath(), port, hostsPart);
+    }
+
+    private KMSClientProvider[] createProviders(Configuration conf, String protocol, String path,
+        int port, String hostsPart) throws IOException {
       String[] hosts = hostsPart.split(";");
       KMSClientProvider[] providers = new KMSClientProvider[hosts.length];
       for (int i = 0; i < hosts.length; i++) {
+        // URI would add missing brackets itself, which leaves the end of the address ambiguous,
+        // and would take what follows a closing bracket as a port of this host
+        if (hosts[i].contains(":") && !(hosts[i].startsWith("[") && hosts[i].endsWith("]"))) {
+          throw new IOException("Could not parse host [" + hosts[i] + "] in kms uri. An IPv6"
+              + " literal must be enclosed in brackets and the port follows the last host.");
+        }
         try {
           providers[i] =
               new KMSClientProvider(
-                  new URI("kms", origUrl.getProtocol(), hosts[i], port,
-                      origUrl.getPath(), null, null), conf);
+                  new URI("kms", protocol, hosts[i], port, path, null, null), conf);
         } catch (URISyntaxException e) {
           throw new IOException("Could not instantiate KMSProvider.", e);
         }
@@ -331,6 +390,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   private ConnectionConfigurator configurator;
   private DelegationTokenAuthenticatedURL.Token authToken;
   private final int authRetry;
+  private final boolean drainUnreadResponseBody;
 
   @Override
   public String toString() {
@@ -398,6 +458,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
             CommonConfigurationKeysPublic.KMS_CLIENT_TIMEOUT_SECONDS,
             CommonConfigurationKeysPublic.KMS_CLIENT_TIMEOUT_DEFAULT);
     authRetry = conf.getInt(AUTH_RETRY, DEFAULT_AUTH_RETRY);
+    drainUnreadResponseBody =
+            conf.getBoolean(DRAIN_RESPONSE_UNREAD_BYTES, DEFAULT_DRAIN_RESPONSE_UNREAD_BYTES);
     configurator = new TimeoutConnConfigurator(timeout, sslFactory);
     encKeyVersionQueue =
         new ValueQueue<KeyProviderCryptoExtension.EncryptedKeyVersion>(
@@ -432,8 +494,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     // remove fragment for forward compatibility with logical naming.
     final String fragment = uri.getFragment();
     if (fragment != null) {
-      service = new Text(
-          uri.getScheme() + ":" + uri.getSchemeSpecificPart());
+      // the decoded form of percent-encoded brackets around IPv6 literals may not parse again
+      final String authority = uri.getAuthority();
+      final boolean bracketed = authority != null && authority.contains("[");
+      service = new Text(uri.getScheme() + ":"
+          + (bracketed ? uri.getRawSchemeSpecificPart() : uri.getSchemeSpecificPart()));
     } else {
       service = new Text(uri.toString());
     }
@@ -536,6 +601,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     return conn;
   }
 
+  @VisibleForTesting
+  static boolean isChunkedHttpResponse(HttpURLConnection conn) {
+    return "chunked".equalsIgnoreCase(conn.getHeaderField(TRANSFER_ENCODING));
+  }
+
   private <T> T call(HttpURLConnection conn, Object jsonOutput,
       int expectedResponse, Class<T> klass) throws IOException {
     return call(conn, jsonOutput, expectedResponse, klass, authRetry);
@@ -582,6 +652,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         String contentType = conn.getRequestProperty(CONTENT_TYPE);
         String requestMethod = conn.getRequestMethod();
         URL url = conn.getURL();
+        // Discard the body of the rejected response so that this connection
+        // can be reused for the retry below.
+        if (drainUnreadResponseBody && isChunkedHttpResponse(conn)) {
+          IOUtils.drainAndClose(conn);
+        }
         conn = createConnection(url, requestMethod);
         if (contentType != null && !contentType.isEmpty()) {
           conn.setRequestProperty(CONTENT_TYPE, contentType);
@@ -595,13 +670,24 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         && conn.getContentType().trim().toLowerCase()
             .startsWith(APPLICATION_JSON_MIME)
         && klass != null) {
-      ObjectMapper mapper = new ObjectMapper();
+      ObjectMapper mapper =
+          new ObjectMapper().disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
       InputStream is = null;
       try {
         is = conn.getInputStream();
         ret = mapper.readValue(is, klass);
       } finally {
-        IOUtils.closeStream(is);
+        // Jackson stops reading at the end of the JSON value, so drain whatever
+        // is left before closing to keep the connection reusable.
+        if (drainUnreadResponseBody && isChunkedHttpResponse(conn)) {
+          IOUtils.drainAndClose(is);
+        } else {
+          IOUtils.closeStream(is);
+        }
+      }
+    } else {
+      if (drainUnreadResponseBody && isChunkedHttpResponse(conn)) {
+        IOUtils.drainAndClose(conn);
       }
     }
     return ret;
