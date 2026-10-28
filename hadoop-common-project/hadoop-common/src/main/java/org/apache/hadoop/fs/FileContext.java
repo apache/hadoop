@@ -31,6 +31,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
@@ -2298,17 +2299,19 @@ public class FileContext implements PathCapabilities {
   }
   
   /**
-   * Are qualSrc and qualDst of the same file system?
+   * Are qualPath1 and qualPath2 on the same file system? Two paths are on
+   * the same file system when their schemes match and their authorities are
+   * equal; two null authorities (e.g. the local file system
+   * <code>file:///</code>) are considered equal.
    * @param qualPath1 - fully qualified path
    * @param qualPath2 - fully qualified path
-   * @return is same fs true,not false.
+   * @return true if the two paths are on the same file system, else false.
    */
   private static boolean isSameFS(Path qualPath1, Path qualPath2) {
     URI srcUri = qualPath1.toUri();
     URI dstUri = qualPath2.toUri();
-    return (srcUri.getScheme().equals(dstUri.getScheme()) && 
-        !(srcUri.getAuthority() != null && dstUri.getAuthority() != null && srcUri
-        .getAuthority().equals(dstUri.getAuthority())));
+    return srcUri.getScheme().equals(dstUri.getScheme())
+        && Objects.equals(srcUri.getAuthority(), dstUri.getAuthority());
   }
 
   /**
