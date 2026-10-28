@@ -60,9 +60,10 @@ final class McpInputSchemaValidator {
     Map<?, ?> schema = (Map<?, ?>) schemaObject;
     validateType(schema.get("type"), inputValue, path);
     if (inputValue instanceof Map) {
-      validateRequiredFields(schema.get("required"), (Map<?, ?>) inputValue, path);
-      rejectUnknownProperties(schema.get("properties"), (Map<?, ?>) inputValue, path);
-      validateProperties(schema.get("properties"), (Map<?, ?>) inputValue, path);
+      Map<?, ?> inputMap = (Map<?, ?>) inputValue;
+      validateRequiredFields(schema.get("required"), inputMap, path);
+      rejectUnknownProperties(schema.get("properties"), inputMap, path);
+      validateProperties(schema.get("properties"), inputMap, path);
     } else if (inputValue instanceof List) {
       validateItems(schema.get("items"), (List<?>) inputValue, path);
     }
@@ -75,47 +76,48 @@ final class McpInputSchemaValidator {
     }
   }
 
-  private static void validateRequiredFields(Object required, Map<?, ?> inputObject, String path)
+  private static void validateRequiredFields(Object required, Map<?, ?> inputMap, String path)
       throws InvalidToolArgumentsException {
     if (!(required instanceof List)) {
       return;
     }
     for (Object name : (List<?>) required) {
-      if (name instanceof String && !inputObject.containsKey(name)) {
+      if (name instanceof String && !inputMap.containsKey(name)) {
         throw new InvalidToolArgumentsException(path + "." + name + " is required");
       }
     }
   }
 
-  private static void rejectUnknownProperties(Object properties, Map<?, ?> inputObject,
+  private static void rejectUnknownProperties(Object properties, Map<?, ?> inputMap,
       String path) throws InvalidToolArgumentsException {
     if (!(properties instanceof Map)) {
       return;
     }
-    for (Object key : inputObject.keySet()) {
-      if (!((Map<?, ?>) properties).containsKey(key)) {
+    Map<?, ?> knownProperties = (Map<?, ?>) properties;
+    for (Object key : inputMap.keySet()) {
+      if (!knownProperties.containsKey(key)) {
         throw new InvalidToolArgumentsException(path + " contains an unknown property");
       }
     }
   }
 
-  private static void validateProperties(Object properties, Map<?, ?> inputObject,
+  private static void validateProperties(Object properties, Map<?, ?> inputMap,
       String path) throws InvalidToolArgumentsException {
     if (!(properties instanceof Map)) {
       return;
     }
     for (Map.Entry<?, ?> property : ((Map<?, ?>) properties).entrySet()) {
-      if (inputObject.containsKey(property.getKey())) {
-        validateValue(property.getValue(), inputObject.get(property.getKey()),
+      if (inputMap.containsKey(property.getKey())) {
+        validateValue(property.getValue(), inputMap.get(property.getKey()),
             path + "." + property.getKey());
       }
     }
   }
 
-  private static void validateItems(Object items, List<?> list, String path)
+  private static void validateItems(Object items, List<?> inputList, String path)
       throws InvalidToolArgumentsException {
-    for (int i = 0; i < list.size(); i++) {
-      validateValue(items, list.get(i), path + "[" + i + "]");
+    for (int i = 0; i < inputList.size(); i++) {
+      validateValue(items, inputList.get(i), path + "[" + i + "]");
     }
   }
 
