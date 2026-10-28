@@ -148,7 +148,7 @@ public class RawLocalFileSystem extends FileSystem {
     private FileInputStream fis;
     private final File name;
     private long position;
-    private AsynchronousFileChannel asyncChannel = null;
+    private volatile AsynchronousFileChannel asyncChannel = null;
 
     /**
      * Minimal set of counters.
@@ -213,8 +213,10 @@ public class RawLocalFileSystem extends FileSystem {
     public void close() throws IOException {
       try {
         fis.close();
-        if (asyncChannel != null) {
-          asyncChannel.close();
+        synchronized (this) {
+          if (asyncChannel != null) {
+            asyncChannel.close();
+          }
         }
       } finally {
         ioStatisticsAggregator.aggregate(ioStatistics);
@@ -321,8 +323,10 @@ public class RawLocalFileSystem extends FileSystem {
     AsynchronousFileChannel getAsyncChannel() throws IOException {
       if (asyncChannel == null) {
         synchronized (this) {
-          asyncChannel = AsynchronousFileChannel.open(name.toPath(),
-                  StandardOpenOption.READ);
+          if (asyncChannel == null) {
+            asyncChannel = AsynchronousFileChannel.open(name.toPath(),
+                    StandardOpenOption.READ);
+          }
         }
       }
       return asyncChannel;
