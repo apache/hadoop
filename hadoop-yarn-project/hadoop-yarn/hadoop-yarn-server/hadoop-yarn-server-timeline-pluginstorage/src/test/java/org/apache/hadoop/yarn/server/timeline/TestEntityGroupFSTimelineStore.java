@@ -633,6 +633,22 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     }
   }
 
+  // Cache store that records serviceStop() so a test can observe that an
+  // evicted cache item is released by the async drain thread.
+  static class CloseRecordingStore extends MemoryTimelineStore {
+    static final AtomicInteger STOP_COUNT = new AtomicInteger(0);
+
+    @Override
+    protected void serviceStop() {
+      STOP_COUNT.incrementAndGet();
+      super.serviceStop();
+    }
+
+    static int getStopCount() {
+      return STOP_COUNT.get();
+    }
+  }
+
   @Test
   void testIfAnyDuplicateEntities() throws Exception {
     // Create an application with some entities
@@ -713,6 +729,78 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
         newStore.stop();
       }
       fs.delete(userAppRoot, true);
+    }
+  }
+
+  @Test
+  void testAsyncEvictionReleasesStore() throws Exception {
+    // Two apps with a cache size of 1: reading the second evicts the first,
+    // whose store must be released by the async drain thread rather than
+    // synchronously while the global map lock is held.
+    ApplicationId appId1 =
+        ApplicationId.fromString("application_1501509265053_0301");
+    ApplicationId appId2 =
+        ApplicationId.fromString("application_1501509265053_0302");
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
+    Path activeDir = getTestRootPath("active-async");
+    Path doneDir = getTestRootPath("done-async");
+    Path userBase = new Path(activeDir, user);
+    Path attemptDir1 = new Path(new Path(userBase, appId1.toString()),
+        getAttemptDirName(appId1));
+    Path attemptDir2 = new Path(new Path(userBase, appId2.toString()),
+        getAttemptDirName(appId2));
+    String logFileName1 = EntityGroupFSTimelineStore.ENTITY_LOG_PREFIX
+        + EntityGroupPlugInForTest.getStandardTimelineGroupId(appId1);
+    String logFileName2 = EntityGroupFSTimelineStore.ENTITY_LOG_PREFIX
+        + EntityGroupPlugInForTest.getStandardTimelineGroupId(appId2);
+    createTestFiles(appId1, attemptDir1, logFileName1);
+    TimelineEntity entity1 = entityNew;
+    createTestFiles(appId2, attemptDir2, logFileName2);
+    TimelineEntity entity2 = entityNew;
+
+    EntityGroupFSTimelineStore newStore = null;
+    try {
+      Configuration c = new YarnConfiguration(config);
+      c.setInt(
+          YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_APP_CACHE_SIZE,
+          1);
+      c.set(YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_CACHE_STORE,
+          CloseRecordingStore.class.getName());
+      c.set(YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_DONE_DIR,
+          doneDir.toString());
+      c.set(YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_ACTIVE_DIR,
+          activeDir.toString());
+
+      newStore = new EntityGroupFSTimelineStore() {
+        @Override
+        protected AppState getAppState(ApplicationId appId) throws IOException {
+          return AppState.COMPLETED;
+        }
+      };
+      newStore.init(c);
+      newStore.setFs(fs);
+      newStore.start();
+      newStore.scanActiveLogs();
+
+      // Fill the cache (size 1) with the first app, then evict it by reading
+      // the second app.
+      assertNotNull(newStore.getEntity(entity1.getEntityId(),
+          entity1.getEntityType(), EnumSet.allOf(Field.class)));
+      assertNotNull(newStore.getEntity(entity2.getEntityId(),
+          entity2.getEntityType(), EnumSet.allOf(Field.class)));
+
+      // The evicted item's store is closed by the async drain thread.
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return CloseRecordingStore.getStopCount() >= 1;
+        }
+      }, 100, 10000);
+    } finally {
+      if (newStore != null) {
+        newStore.stop();
+      }
+      fs.delete(userBase, true);
     }
   }
 
