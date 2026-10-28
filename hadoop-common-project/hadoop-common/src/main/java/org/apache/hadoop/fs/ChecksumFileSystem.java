@@ -515,7 +515,13 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
         // Without this, buffers allocated through the caller's allocator for checksum
         // data are never released, since the caller has no reference to them.
         CompletableFuture.allOf(verifications.toArray(new CompletableFuture[0]))
-            .thenRun(() -> release.accept(checksumRange.getData().join()));
+            .whenComplete((unused, ex) -> {
+              // A failed checksum read already releases its buffer in the inner stream.
+              // Otherwise release it even if verification or a data read failed.
+              if (!checksumRange.getData().isCompletedExceptionally()) {
+                release.accept(checksumRange.getData().join());
+              }
+            });
       }
     }
 

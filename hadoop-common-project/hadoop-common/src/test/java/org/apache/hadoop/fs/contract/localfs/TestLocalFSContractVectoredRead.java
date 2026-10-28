@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.fs.contract.localfs;
 
+import java.io.EOFException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntFunction;
@@ -44,8 +46,10 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.io.ElasticByteBufferPool;
-import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
 
+import static java.util.Collections.singletonList;
+
+import static org.apache.hadoop.fs.contract.ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
@@ -59,8 +63,11 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
 
   private long initialBytesRead;
 
+  private final boolean isDirect;
+
   public TestLocalFSContractVectoredRead(final String bufferType) {
     super(bufferType);
+    isDirect = !"array".equals(bufferType);
   }
 
   @Override
@@ -203,17 +210,8 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
 
   /**
    * HADOOP-19901: Verify that checksum buffers allocated during vectored read
-   * are released back to the caller's pool after verification completes.
-   * <p>
-   * Before the fix, ChecksumFileSystem would allocate buffers for reading
-   * checksum data but never release them, causing a buffer leak when callers
-   * use a tracking/pooled allocator.
-   * <p>
-   * This test counts the number of times the release consumer is called by the
-   * system (not by the caller) during a vectored read through ChecksumFileSystem.
-   * With the fix, the system must release checksum buffers after verification,
-   * so the release count must be greater than zero before the caller releases
-   * its own data buffers.
+   * are released exactly once after verification and can be reused for a smaller
+   * checksum read at EOF.
    */
   @Test
   public void testChecksumBuffersReleasedAfterVectoredRead() throws Exception {
@@ -225,14 +223,15 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
       out.write(dataset);
     }
 
-    // Count allocations and system-initiated releases
+    // Keep data buffers out of the pool so the tail read reuses a checksum buffer.
     AtomicLong allocations = new AtomicLong();
     AtomicLong systemReleases = new AtomicLong();
-    ElasticByteBufferPool innerPool = new WeakReferencedElasticByteBufferPool();
+    ElasticByteBufferPool innerPool = new ElasticByteBufferPool();
     IntFunction<ByteBuffer> allocate = size -> {
       allocations.incrementAndGet();
-      return innerPool.getBuffer(false, size);
+      return innerPool.getBuffer(isDirect, size);
     };
+    CountDownLatch checksumReleases = new CountDownLatch(2);
 
     List<FileRange> ranges = new ArrayList<>();
     ranges.add(FileRange.createFileRange(0, 1024));
@@ -241,27 +240,126 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     CompletableFuture<FSDataInputStream> fis = localFs.openFile(testPath).build();
     try (FSDataInputStream in = fis.get()) {
       in.readVectored(ranges, allocate, buffer -> {
-        systemReleases.incrementAndGet();
         innerPool.putBuffer(buffer);
+        systemReleases.incrementAndGet();
+        checksumReleases.countDown();
       });
-      // Wait for all data to arrive
       for (FileRange range : ranges) {
-        range.getData().get(5, TimeUnit.SECONDS);
+        range.getData().get(VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
       }
-      // Validate the data is correct
       validateVectoredReadResult(ranges, dataset, 0);
-    }
-    // Allow async thenRun release to complete
-    Thread.sleep(200);
+      assertThat(checksumReleases.await(5, TimeUnit.SECONDS))
+          .describedAs("Both checksum buffers released after verification")
+          .isTrue();
+      assertThat(allocations.get())
+          .describedAs("Two data buffers and two checksum buffers allocated")
+          .isEqualTo(4);
+      assertThat(systemReleases.get())
+          .describedAs("Only the two checksum buffers released by the system")
+          .isEqualTo(2);
 
-    // The system must have allocated buffers for both data and checksums.
-    // With our fix, the checksum buffers are released by the system after
-    // verification. Before the fix, systemReleases would be 0.
-    assertThat(allocations.get())
-        .describedAs("Total allocations (data + checksum buffers)")
-        .isGreaterThan(ranges.size());
-    assertThat(systemReleases.get())
-        .describedAs("System-initiated releases (should include checksum buffers)")
-        .isGreaterThan(0);
+      List<FileRange> tailRanges = new ArrayList<>();
+      tailRanges.add(FileRange.createFileRange(7680, 512));
+      CountDownLatch tailChecksumRelease = new CountDownLatch(1);
+      in.readVectored(tailRanges, size -> {
+        ByteBuffer buffer = allocate.apply(size);
+        if (size == 4) {
+          assertThat(buffer.capacity())
+              .describedAs("Reused checksum buffer is larger than the requested range")
+              .isEqualTo(8);
+        }
+        return buffer;
+      }, buffer -> {
+        innerPool.putBuffer(buffer);
+        systemReleases.incrementAndGet();
+        tailChecksumRelease.countDown();
+      });
+      tailRanges.get(0).getData().get(
+          VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+      validateVectoredReadResult(tailRanges, dataset, 0);
+      assertThat(tailChecksumRelease.await(5, TimeUnit.SECONDS))
+          .describedAs("Tail checksum buffer released after verification")
+          .isTrue();
+      assertThat(systemReleases.get()).isEqualTo(3);
+    }
+  }
+
+  @Test
+  public void testChecksumBuffersReleasedOnChecksumFailure() throws Exception {
+    Path testPath = path("checksum_buffer_release_failure_test");
+    LocalFileSystem localFs = (LocalFileSystem) getFileSystem();
+    final int length = 8192;
+    try (FSDataOutputStream out = localFs.create(testPath, true)) {
+      out.write(ContractTestUtils.dataset(length, 'a', 32));
+    }
+    // Change the data without updating the checksum file.
+    final byte[] corrupted = ContractTestUtils.dataset(length, 'a', 64);
+    try (FSDataOutputStream out = localFs.getRaw().create(testPath, true)) {
+      out.write(corrupted);
+    }
+
+    List<FileRange> ranges = new ArrayList<>();
+    ranges.add(FileRange.createFileRange(0, 1024));
+    ranges.add(FileRange.createFileRange(4096, 1024));
+    AtomicLong systemReleases = new AtomicLong();
+    CountDownLatch checksumReleases = new CountDownLatch(2);
+    try (FSDataInputStream in = localFs.open(testPath)) {
+      in.readVectored(ranges, getAllocate(), buffer -> {
+        getPool().putBuffer(buffer);
+        systemReleases.incrementAndGet();
+        checksumReleases.countDown();
+      });
+      for (FileRange range : ranges) {
+        intercept(ChecksumException.class, () -> validateVectoredReadResult(
+            singletonList(range), corrupted, 0));
+      }
+      assertThat(checksumReleases.await(5, TimeUnit.SECONDS))
+          .describedAs("Both checksum buffers released despite failed verification")
+          .isTrue();
+      assertThat(systemReleases.get()).isEqualTo(2);
+    }
+  }
+
+  @Test
+  public void testChecksumBuffersReleasedOnDataReadFailure() throws Exception {
+    Path testPath = path("checksum_buffer_release_data_failure_test");
+    LocalFileSystem localFs = (LocalFileSystem) getFileSystem();
+    final byte[] dataset = ContractTestUtils.dataset(8192, 'a', 32);
+    try (FSDataOutputStream out = localFs.create(testPath, true)) {
+      out.write(dataset);
+    }
+
+    try (FSDataInputStream in = localFs.open(testPath)) {
+      // Cache the file length before truncating only the data file, so validation
+      // succeeds and the asynchronous data reads fail while checksum reads succeed.
+      List<FileRange> initialRange = singletonList(FileRange.createFileRange(0, 512));
+      in.readVectored(initialRange, getAllocate());
+      validateVectoredReadResult(initialRange, dataset, 0);
+      localFs.getRaw().create(testPath, true).close();
+
+      List<FileRange> ranges = new ArrayList<>();
+      ranges.add(FileRange.createFileRange(0, 1024));
+      ranges.add(FileRange.createFileRange(4096, 1024));
+      AtomicLong systemReleases = new AtomicLong();
+      AtomicLong checksumBufferReleases = new AtomicLong();
+      CountDownLatch bufferReleases = new CountDownLatch(4);
+      in.readVectored(ranges, getAllocate(), buffer -> {
+        if (buffer.capacity() == 8) {
+          checksumBufferReleases.incrementAndGet();
+        }
+        getPool().putBuffer(buffer);
+        systemReleases.incrementAndGet();
+        bufferReleases.countDown();
+      });
+      for (FileRange range : ranges) {
+        intercept(EOFException.class, () -> validateVectoredReadResult(
+            singletonList(range), dataset, 0));
+      }
+      assertThat(bufferReleases.await(5, TimeUnit.SECONDS))
+          .describedAs("Data and checksum buffers released despite failed data reads")
+          .isTrue();
+      assertThat(systemReleases.get()).isEqualTo(4);
+      assertThat(checksumBufferReleases.get()).isEqualTo(2);
+    }
   }
 }

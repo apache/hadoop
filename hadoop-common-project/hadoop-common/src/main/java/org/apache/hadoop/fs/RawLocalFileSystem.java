@@ -416,6 +416,8 @@ public class RawLocalFileSystem extends FileSystem {
         FileRange range = ranges.get(i);
         buffers[i] = allocateRelease.getBuffer(false, range.getLength());
         final ByteBuffer buffer = buffers[i];
+        // Pooled buffers may be larger than the requested range.
+        buffer.limit(range.getLength());
         LOG.debug("Reading file range {} into buffer {}", range, System.identityHashCode(buffer));
         channel.read(buffer, range.getOffset(), i, this);
       }
