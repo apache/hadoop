@@ -29,12 +29,14 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -944,6 +946,52 @@ public class TestFileUtil {
     }
     Verify.notExists(partitioned); // should be deleted
   }  
+
+  @Test
+  @Timeout(value = 30)
+  /*
+   * Test method copy(FileSystem srcFS, Path src, FileSystem dstFS, Path dst,
+   * boolean deleteSource, boolean overwrite, Configuration conf) when
+   * mkdirs of a child directory of the source fails at the destination:
+   * the copy must return false and, when deleteSource is set, must not
+   * delete the source tree.
+   */
+  public void testCopyChildMkdirsFailure() throws IOException {
+    Configuration conf = new Configuration();
+    LocalFileSystem srcFS = FileSystem.getLocal(conf);
+
+    // source tree: srcDir/child/file1
+    File srcDir = new File(tmp, "srcDir");
+    File childDir = new File(srcDir, "child");
+    assertTrue(childDir.mkdirs());
+    createFile(childDir, FILE_1_NAME, "some-content");
+
+    Path srcPath = new Path(srcDir.toURI());
+    assertEquals(1, srcFS.listStatus(srcPath).length);
+
+    // destination FS: creating the top-level destination succeeds,
+    // but mkdirs of the child directory fails.
+    FileSystem dstFS = mock(FileSystem.class);
+    when(dstFS.getFileStatus(any(Path.class)))
+        .thenThrow(new FileNotFoundException("no such destination"));
+    when(dstFS.mkdirs(any(Path.class))).thenAnswer(invocation -> {
+      Path path = invocation.getArgument(0, Path.class);
+      return !"child".equals(path.getName());
+    });
+
+    // deleteSource = true: copy fails and the source tree is preserved
+    assertFalse(FileUtil.copy(srcFS, srcPath, dstFS,
+        new Path("/dst"), true, false, conf));
+    assertThat(srcFS.listStatus(srcPath)).hasSize(1);
+    assertThat(srcFS.listStatus(new Path(childDir.toURI()))).hasSize(1);
+    assertTrue(new File(childDir, FILE_1_NAME).isFile());
+
+    // deleteSource = false: copy still fails, again without data loss
+    assertFalse(FileUtil.copy(srcFS, srcPath, dstFS,
+        new Path("/dst"), false, false, conf));
+    assertThat(srcFS.listStatus(srcPath)).hasSize(1);
+    assertTrue(new File(childDir, FILE_1_NAME).isFile());
+  }
 
   @Test
   @Timeout(value = 30)

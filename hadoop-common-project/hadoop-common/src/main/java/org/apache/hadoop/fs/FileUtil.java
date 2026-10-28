@@ -474,9 +474,11 @@ public class FileUtil {
       RemoteIterator<FileStatus> contents = srcFS.listStatusIterator(src);
       while (contents.hasNext()) {
         FileStatus next = contents.next();
-        copy(srcFS, next, dstFS,
+        if (!copy(srcFS, next, dstFS,
             new Path(dst, next.getPath().getName()),
-            deleteSource, overwrite, conf);
+            deleteSource, overwrite, conf)) {
+          return false;
+        }
       }
     } else {
       InputStream in = null;
