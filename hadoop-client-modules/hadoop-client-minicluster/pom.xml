@@ -422,6 +422,7 @@
     <!-- skip jakarta.servlet:jakarta.servlet-api because it's in client -->
     <!-- skip jakarta.ws.rs-api:jakarta.ws.rs because it's in client -->
     <!-- Skip commons-logging:commons-logging-api because it looks like nothing actually included it -->
+    <!-- jetty-util is not in client; it is declared directly further down -->
     <dependency>
       <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-common</artifactId>
@@ -644,8 +645,8 @@
       </exclusions>
       <optional>true</optional>
     </dependency>
-    <!-- hadoop-client-runtime does not shade jetty-util, so declare it directly to keep it in
-         this jar. -->
+    <!-- jetty-util is excluded above as "in client", but hadoop-client-runtime does not shade
+         it, so declare it directly to keep it in this jar. -->
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-util</artifactId>
