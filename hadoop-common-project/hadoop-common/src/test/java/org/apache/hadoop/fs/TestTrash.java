@@ -43,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.TrashPolicyDefault.Emptier;
@@ -664,6 +665,76 @@ public class TestTrash {
     conf.setLong(FS_TRASH_INTERVAL_KEY, 1); // 1 min
     FileSystem fs = FileSystem.get(conf);
     verifyMoveEmptyDirToTrash(fs, conf);
+  }
+
+  /**
+   * Verify the containment checks in {@link TrashPolicyDefault#moveToTrash}
+   * respect path component boundaries, i.e. a path merely sharing a string
+   * prefix with the trash root (e.g. {@code .Trashbackups} next to
+   * {@code .Trash}) or with the trash root's parent (e.g. {@code /users/al}
+   * next to {@code /users/alice}) is not mistaken for containing, or living
+   * inside, the trash.
+   */
+  @Test
+  public void testMoveToTrashPathBoundary() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 10); // 10 min
+    Path base = new Path(GenericTestUtils.getTempPath("testTrashBoundary"));
+    final Path home = new Path(base, "users/alice");
+    // a local FileSystem whose home (and thus trash root) is inside the
+    // test directory, so the trash root and its siblings are controllable
+    try (FileSystem fs = new RawLocalFileSystem() {
+      @Override
+      public Path getHomeDirectory() {
+        return makeQualified(home);
+      }
+    }) {
+      fs.initialize(URI.create("file:///"), conf);
+      TrashPolicyDefault trash =
+          (TrashPolicyDefault) TrashPolicy.getInstance(conf, fs, home);
+      try {
+        Path trashRoot = fs.getTrashRoot(home);
+        Path trashCurrent = new Path(trashRoot, "Current");
+
+        // sibling sharing the trash root's string prefix must be trashed
+        Path prefixSibling = new Path(home, ".Trashbackups");
+        fs.mkdirs(prefixSibling);
+        assertTrue(trash.moveToTrash(prefixSibling),
+            ".Trashbackups must be moved to trash, not skipped as "
+                + "already being in trash");
+        assertFalse(fs.exists(prefixSibling),
+            ".Trashbackups was not moved to trash");
+        checkTrash(fs, trashCurrent, fs.makeQualified(prefixSibling));
+
+        // a path genuinely inside the trash is reported as already there
+        Path inTrash = new Path(trashCurrent, "fileInTrash");
+        writeFile(fs, inTrash, 10);
+        assertFalse(trash.moveToTrash(inTrash),
+            "a path inside the trash must not be moved to trash again");
+
+        // deleting the home directory itself still contains the trash
+        IOException e = assertThrows(IOException.class,
+            () -> trash.moveToTrash(home));
+        assertTrue(e.getMessage().contains("contains the trash"),
+            "unexpected exception message: " + e.getMessage());
+
+        // a strict string-prefix sibling of home (users/al for home
+        // users/alice) does not contain the trash and must be trashed
+        Path prefixOfHome = new Path(base, "users/al");
+        fs.mkdirs(prefixOfHome);
+        assertTrue(trash.moveToTrash(prefixOfHome),
+            "deleting users/al must not fail as containing users/alice's "
+                + "trash");
+
+        // an unrelated sibling is unaffected
+        Path otherUser = new Path(base, "users/bob");
+        fs.mkdirs(otherUser);
+        assertTrue(trash.moveToTrash(otherUser),
+            "deleting a sibling user directory must be moved to trash");
+      } finally {
+        fs.delete(base, true);
+      }
+    }
   }
 
   /**
