@@ -125,6 +125,45 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     }
   }
 
+  /**
+   * When the checksum file exists but its header is corrupt, sequential
+   * reads degrade to non-checksum reads. Vectored reads must degrade the
+   * same way instead of failing against the unusable checksum sidecar.
+   */
+  @Test
+  public void testVectoredReadWithCorruptChecksumHeader() throws Exception {
+    Path testPath = path("corrupt_crc_header_file");
+    final int length = 1024;
+    LocalFileSystem localFs = (LocalFileSystem) getFileSystem();
+    final byte[] dataset = ContractTestUtils.dataset(length, 'a', 32);
+    try (FSDataOutputStream out = localFs.create(testPath, true)) {
+      out.write(dataset);
+    }
+    Path checksumPath = localFs.getChecksumFile(testPath);
+    Assertions.assertThat(localFs.exists(checksumPath))
+        .describedAs("Checksum file should be present")
+        .isTrue();
+    // overwrite the checksum file with garbage so its header is invalid
+    try (FSDataOutputStream out = localFs.getRaw().create(checksumPath, true)) {
+      out.write(new byte[]{0x0, 0x1, 0x2, 0x3});
+    }
+    // 1. plain sequential read still succeeds and returns correct data
+    try (FSDataInputStream in = localFs.openFile(testPath).build().get()) {
+      byte[] buffer = new byte[length];
+      in.readFully(0, buffer, 0, length);
+      assertThat(buffer).describedAs("sequential read data").isEqualTo(dataset);
+    }
+    // 2. readVectored returns the correct data instead of throwing
+    List<FileRange> ranges = new ArrayList<>();
+    ranges.add(FileRange.createFileRange(10, 100));
+    ranges.add(FileRange.createFileRange(200, 150));
+    CompletableFuture<FSDataInputStream> fis = localFs.openFile(testPath).build();
+    try (FSDataInputStream in = fis.get()) {
+      in.readVectored(ranges, getAllocate());
+      validateVectoredReadResult(ranges, dataset, 0);
+    }
+  }
+
   @Test
   public void tesChecksumVectoredReadBoundaries() throws Exception {
     Path testPath = path("boundary_range_checksum_file");
