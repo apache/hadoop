@@ -61,22 +61,12 @@ final class McpJsonRpcResponses {
   }
 
   McpHttpResponse error(JsonNode idNode, int code, String message) {
-    return error(idNode, code, message, null);
-  }
-
-  /**
-   * @param data value of the JSON-RPC {@code error.data} field, or {@code null} to omit it
-   */
-  McpHttpResponse error(JsonNode idNode, int code, String message, Object data) {
     ObjectNode response = objectMapper.createObjectNode();
     response.put("jsonrpc", McpJsonRpc.VERSION);
     setErrorResponseId(response, idNode);
     ObjectNode error = objectMapper.createObjectNode();
     error.put("code", code);
     error.put("message", message);
-    if (data != null) {
-      error.set("data", objectMapper.valueToTree(data));
-    }
     response.set("error", error);
     return McpHttpResponse.ok(response, Collections.emptyMap());
   }
