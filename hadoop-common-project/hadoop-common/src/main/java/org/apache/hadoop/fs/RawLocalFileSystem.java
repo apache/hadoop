@@ -1330,7 +1330,7 @@ public class RawLocalFileSystem extends FileSystem {
   @Deprecated
   private FileStatus deprecatedGetFileLinkStatusInternal(final Path f)
       throws IOException {
-    String target = FileUtil.readLink(new File(f.toString()));
+    String target = FileUtil.readLink(pathToFile(f));
 
     try {
       FileStatus fs = getFileStatus(f);
