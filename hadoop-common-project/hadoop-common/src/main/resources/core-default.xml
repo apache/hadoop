@@ -82,9 +82,9 @@
   <name>hadoop.mcp.session.timeout.ms</name>
   <value>1800000</value>
   <description>
-    Idle timeout, in milliseconds, after which an MCP session with no
-    activity is evicted. Requests carrying an expired session id receive
-    HTTP 404. Time unit suffixes such as 30m are also accepted.
+    Idle timeout after which an MCP session with no activity
+    is evicted (in milliseconds). Requests carrying an expired session id
+    receive HTTP 404. Time unit suffixes such as 30m are also accepted.
   </description>
 </property>
 
@@ -114,8 +114,8 @@
   <name>hadoop.mcp.session.tool-call.window.ms</name>
   <value>60000</value>
   <description>
-    Length, in milliseconds, of the window over which
-    hadoop.mcp.session.tool-call.limit is counted. A window starts with the
+    Length of the window over which hadoop.mcp.session.tool-call.limit
+    is counted (in milliseconds). A window starts with the
     first tool call after the previous window ended. Time unit suffixes such
     as 1m are also accepted.
   </description>
@@ -137,9 +137,9 @@
   <description>
     Maximum number of requests an MCP session may make. The MCP specification
     forbids reusing a request id within a session, so the server remembers
-    every id a session has used. Once a session reaches this limit it is over:
-    further requests get HTTP 404 and the client must start a new session. 0 or
-    less removes the limit, so memory grows with the number of requests per
+    every id a session has used. Once a session reaches this limit it can not
+    receive further requests: they get HTTP 404 and the client must start a new session.
+    0 or less removes the limit, so memory grows with the number of requests per
     session.
   </description>
 </property>
