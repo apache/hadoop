@@ -21,6 +21,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -267,7 +268,8 @@ public class ContentSummary extends QuotaUsage implements Writable{
           getSnapshotFileCount() == right.getSnapshotFileCount() &&
           getSnapshotDirectoryCount() == right.getSnapshotDirectoryCount() &&
           getSnapshotSpaceConsumed() == right.getSnapshotSpaceConsumed() &&
-          getErasureCodingPolicy().equals(right.getErasureCodingPolicy()) &&
+          Objects.equals(getErasureCodingPolicy(),
+              right.getErasureCodingPolicy()) &&
           super.equals(to);
     } else {
       return super.equals(to);
@@ -279,7 +281,7 @@ public class ContentSummary extends QuotaUsage implements Writable{
     long result = getLength() ^ getFileCount() ^ getDirectoryCount()
         ^ getSnapshotLength() ^ getSnapshotFileCount()
         ^ getSnapshotDirectoryCount() ^ getSnapshotSpaceConsumed()
-        ^ getErasureCodingPolicy().hashCode();
+        ^ Objects.hashCode(getErasureCodingPolicy());
     return ((int) result) ^ super.hashCode();
   }
 
@@ -481,9 +483,14 @@ public class ContentSummary extends QuotaUsage implements Writable{
   }
 
   /**
-   * @return Constant-width String representation of Erasure Coding Policy
+   * @return Constant-width String representation of Erasure Coding Policy.
+   * A null policy (e.g. from file systems without EC support) is rendered
+   * as a blank column.
    */
   public String toErasureCodingPolicy() {
+    if (erasureCodingPolicy == null) {
+      return String.format(ERASURECODING_POLICY_FORMAT, "");
+    }
     return String.format(ERASURECODING_POLICY_FORMAT,
         erasureCodingPolicy.equals("Replicated")
             ? erasureCodingPolicy : "EC:" + erasureCodingPolicy);

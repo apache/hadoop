@@ -18,12 +18,17 @@
 package org.apache.hadoop.fs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.junit.jupiter.api.Test;
@@ -287,5 +292,65 @@ public class TestContentSummary {
         "              1111                     2222                     3333 "
             + "                        4444 ";
     assertEquals(expected, contentSummary.toSnapshot(false));
+  }
+
+  // check equals and hashCode on instances built without an EC policy
+  @Test
+  public void testEqualsAndHashCodeWithoutECPolicy() {
+    ContentSummary contentSummary = new ContentSummary.Builder().length(11111).
+        fileCount(22222).directoryCount(33333).build();
+    ContentSummary otherSummary = new ContentSummary.Builder().length(11111).
+        fileCount(22222).directoryCount(33333).build();
+    assertEquals(contentSummary, otherSummary, "equals without EC policy");
+    assertEquals(contentSummary.hashCode(), otherSummary.hashCode(),
+        "hashCode without EC policy");
+  }
+
+  // check equals is false, not a NPE, when only one side has an EC policy
+  @Test
+  public void testEqualsWithAndWithoutECPolicy() {
+    ContentSummary withPolicy = new ContentSummary.Builder()
+        .erasureCodingPolicy("RS-3-2-64k").build();
+    ContentSummary withoutPolicy = new ContentSummary.Builder().build();
+    assertFalse(withPolicy.equals(withoutPolicy),
+        "equals with EC policy vs without");
+    assertFalse(withoutPolicy.equals(withPolicy),
+        "equals without EC policy vs with");
+  }
+
+  // check toErasureCodingPolicy does not throw when no EC policy is set
+  @Test
+  public void testToErasureCodingPolicyWithoutECPolicy() {
+    ContentSummary contentSummary = new ContentSummary.Builder().build();
+    String policy = contentSummary.toErasureCodingPolicy();
+    assertEquals("", policy.trim(), "toErasureCodingPolicy without EC policy");
+  }
+
+  // check equals/hashCode do not throw after a Writable round trip of an
+  // instance without an EC policy
+  @Test
+  public void testWritableRoundTripWithoutECPolicy() throws IOException {
+    long length = 11111;
+    long fileCount = 22222;
+    long directoryCount = 33333;
+    long quota = 44444;
+    long spaceConsumed = 55555;
+    long spaceQuota = 66666;
+
+    ContentSummary contentSummary = new ContentSummary.Builder().length(length).
+        fileCount(fileCount).directoryCount(directoryCount).quota(quota).
+        spaceConsumed(spaceConsumed).spaceQuota(spaceQuota).build();
+
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    contentSummary.write(new DataOutputStream(bytes));
+
+    ContentSummary otherSummary = new ContentSummary.Builder().length(length).
+        fileCount(fileCount).directoryCount(directoryCount).build();
+    otherSummary.readFields(new DataInputStream(
+        new ByteArrayInputStream(bytes.toByteArray())));
+
+    assertEquals(contentSummary, otherSummary, "equals after round trip");
+    assertEquals(contentSummary.hashCode(), otherSummary.hashCode(),
+        "hashCode after round trip");
   }
 }
