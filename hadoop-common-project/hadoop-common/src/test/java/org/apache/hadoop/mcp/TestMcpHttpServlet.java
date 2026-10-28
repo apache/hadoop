@@ -57,7 +57,15 @@ public class TestMcpHttpServlet {
       "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}}";
 
   private static McpCallContext createContext(String sessionId) {
-    return new McpCallContext(null, sessionId, McpJsonRpc.PROTOCOL_VERSION);
+    return createContext(sessionId, McpJsonRpc.PROTOCOL_VERSION);
+  }
+
+  /** A context whose request carries the given session id and protocol version headers. */
+  private static McpCallContext createContext(String sessionId, String protocolVersion) {
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getHeader(McpRequestHandler.SESSION_HEADER)).thenReturn(sessionId);
+    when(request.getHeader(McpJsonRpc.PROTOCOL_VERSION_HEADER)).thenReturn(protocolVersion);
+    return new McpCallContext(request);
   }
 
   private static McpHttpResponse sendRequest(McpServer server, String json, String sessionId)
@@ -682,7 +690,7 @@ public class TestMcpHttpServlet {
     String sessionId = handshake(server);
 
     McpHttpResponse response = server.getRequestHandler().handle(
-        OBJECT_MAPPER.readTree(TOOLS_LIST_REQUEST), new McpCallContext(null, sessionId, null));
+        OBJECT_MAPPER.readTree(TOOLS_LIST_REQUEST), createContext(sessionId, null));
 
     assertEquals(400, response.status());
     assertEquals(McpJsonRpc.PROTOCOL_VERSION_REQUIRED_MESSAGE,
@@ -696,7 +704,7 @@ public class TestMcpHttpServlet {
 
     McpHttpResponse response = server.getRequestHandler().handle(
         OBJECT_MAPPER.readTree(INITIALIZED_NOTIFICATION),
-        new McpCallContext(null, sessionId, null));
+        createContext(sessionId, null));
 
     assertEquals(400, response.status());
     // The rejected notification must not have changed the session state.
@@ -709,7 +717,7 @@ public class TestMcpHttpServlet {
     String sessionId = handshake(server);
 
     McpHttpResponse response = server.getRequestHandler().handle(
-        OBJECT_MAPPER.readTree(TOOLS_LIST_REQUEST), new McpCallContext(null, sessionId, ""));
+        OBJECT_MAPPER.readTree(TOOLS_LIST_REQUEST), createContext(sessionId, ""));
 
     assertEquals(400, response.status());
     assertEquals(McpJsonRpc.UNSUPPORTED_PROTOCOL_VERSION_MESSAGE,
@@ -723,7 +731,7 @@ public class TestMcpHttpServlet {
 
     McpHttpResponse response = server.getRequestHandler().handle(
         OBJECT_MAPPER.readTree(TOOLS_LIST_REQUEST),
-        new McpCallContext(null, sessionId, "1999-01-01"));
+        createContext(sessionId, "1999-01-01"));
 
     assertEquals(400, response.status());
     assertEquals(McpJsonRpc.UNSUPPORTED_PROTOCOL_VERSION_MESSAGE,

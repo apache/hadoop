@@ -72,7 +72,7 @@ public final class McpHttpServlet extends HttpServlet {
       writeResponse(objectMapper, resp, requestHandler.originNotAllowedResponse());
       return;
     }
-    writeResponse(objectMapper, resp, requestHandler.handleDelete(createContext(req)));
+    writeResponse(objectMapper, resp, requestHandler.handleDelete(new McpCallContext(req)));
   }
 
   @Override
@@ -102,16 +102,12 @@ public final class McpHttpServlet extends HttpServlet {
       return;
     }
 
-    writeResponse(objectMapper, resp, requestHandler.handle(requestNode, createContext(req)));
+    writeResponse(objectMapper, resp,
+        requestHandler.handle(requestNode, new McpCallContext(req)));
   }
 
   private static boolean hasOrigin(HttpServletRequest req) {
     return req.getHeader(McpJsonRpc.ORIGIN_HEADER) != null;
-  }
-
-  private static McpCallContext createContext(HttpServletRequest req) {
-    return new McpCallContext(req, req.getHeader(McpRequestHandler.SESSION_HEADER),
-        req.getHeader(McpJsonRpc.PROTOCOL_VERSION_HEADER));
   }
 
   private byte[] readRequestBody(HttpServletRequest req) throws IOException {

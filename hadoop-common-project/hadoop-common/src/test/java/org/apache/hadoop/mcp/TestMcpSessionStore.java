@@ -52,7 +52,7 @@ public class TestMcpSessionStore {
   }
 
   private static McpSession createSession(McpSessionStore sessionStore) {
-    return sessionStore.create(McpJsonRpc.PROTOCOL_VERSION, Collections.emptyMap(),
+    return sessionStore.createSession(McpJsonRpc.PROTOCOL_VERSION, Collections.emptyMap(),
         Collections.emptyMap());
   }
 
@@ -63,7 +63,7 @@ public class TestMcpSessionStore {
     Map<String, Object> capabilities = new HashMap<>();
     capabilities.put("roots", Collections.emptyMap());
 
-    McpSession session = store.create(McpJsonRpc.PROTOCOL_VERSION, clientInfo, capabilities);
+    McpSession session = store.createSession(McpJsonRpc.PROTOCOL_VERSION, clientInfo, capabilities);
 
     assertNotNull(session);
     assertEquals(McpSessionState.INITIALIZING, session.getState());
@@ -109,11 +109,11 @@ public class TestMcpSessionStore {
   @Test
   public void testCreateRejectedAtMaxCapacity() {
     McpSessionStore sessionStore = createStore(1, DEFAULT_TIMEOUT_MS);
-    McpSession firstSession = sessionStore.create(McpJsonRpc.PROTOCOL_VERSION,
+    McpSession firstSession = sessionStore.createSession(McpJsonRpc.PROTOCOL_VERSION,
         Collections.emptyMap(), Collections.emptyMap());
 
     assertNotNull(firstSession);
-    assertNull(sessionStore.create(McpJsonRpc.PROTOCOL_VERSION,
+    assertNull(sessionStore.createSession(McpJsonRpc.PROTOCOL_VERSION,
         Collections.emptyMap(), Collections.emptyMap()));
     // The existing session must survive the rejected attempt.
     assertSame(firstSession, sessionStore.get(firstSession.getId()));
@@ -122,11 +122,11 @@ public class TestMcpSessionStore {
   @Test
   public void testRemoveFreesCapacity() {
     McpSessionStore sessionStore = createStore(1, DEFAULT_TIMEOUT_MS);
-    McpSession firstSession = sessionStore.create(McpJsonRpc.PROTOCOL_VERSION,
+    McpSession firstSession = sessionStore.createSession(McpJsonRpc.PROTOCOL_VERSION,
         Collections.emptyMap(), Collections.emptyMap());
 
     assertSame(firstSession, sessionStore.remove(firstSession.getId()));
-    assertNotNull(sessionStore.create(McpJsonRpc.PROTOCOL_VERSION,
+    assertNotNull(sessionStore.createSession(McpJsonRpc.PROTOCOL_VERSION,
         Collections.emptyMap(), Collections.emptyMap()));
   }
 

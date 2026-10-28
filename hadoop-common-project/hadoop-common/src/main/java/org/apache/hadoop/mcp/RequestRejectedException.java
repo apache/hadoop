@@ -18,11 +18,17 @@
 
 package org.apache.hadoop.mcp;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Signals that a request was rejected before dispatch, and carries the HTTP status
  * and error message to send.
  * It is part of normal control flow, so no stack trace is captured.
  */
+
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class RequestRejectedException extends Exception {
   private static final long serialVersionUID = 1L;
   private final int httpStatus;

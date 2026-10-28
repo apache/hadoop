@@ -31,19 +31,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class McpCallContext {
 
   private final HttpServletRequest request;
-  private final String sessionIdHeader;
-  private final String protocolVersionHeader;
 
-  /**
-   * @param request the HTTP request
-   * @param sessionIdHeader value of the {@code Mcp-Session-Id} header
-   * @param protocolVersionHeader value of the {@code MCP-Protocol-Version} header
-   */
-  public McpCallContext(HttpServletRequest request, String sessionIdHeader,
-      String protocolVersionHeader) {
+  public McpCallContext(HttpServletRequest request) {
     this.request = request;
-    this.sessionIdHeader = sessionIdHeader;
-    this.protocolVersionHeader = protocolVersionHeader;
   }
 
   public HttpServletRequest getRequest() {
@@ -51,10 +41,10 @@ public final class McpCallContext {
   }
 
   String getSessionIdHeader() {
-    return sessionIdHeader;
+    return request.getHeader(McpRequestHandler.SESSION_HEADER);
   }
 
   String getProtocolVersionHeader() {
-    return protocolVersionHeader;
+    return request.getHeader(McpJsonRpc.PROTOCOL_VERSION_HEADER);
   }
 }

@@ -45,8 +45,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *
  * <p>Owns the session lifecycle: {@code initialize} creates a session,
  * {@code notifications/initialized} makes it ready, and every other request must name a
- * live session in the {@code Mcp-Session-Id} header. Header values arrive through
- * {@link McpCallContext}; this class never reads the HTTP request itself.
+ * live session in the {@code Mcp-Session-Id} header. Header values are read from
+ * {@link McpCallContext}.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -155,7 +155,7 @@ public final class McpRequestHandler {
     }
   }
 
-  /** Dispatches a request or notification that belongs to a live session. */
+  /** Dispatches a request or notification that belongs to a session. */
   private McpHttpResponse dispatch(String method, boolean notification, JsonNode idNode,
       JsonNode paramsNode, McpCallContext context, McpSession session) {
     if (notification) {
@@ -273,7 +273,7 @@ public final class McpRequestHandler {
    * @return the new session, or null if the store is at capacity
    */
   private McpSession createSession(Map<String, Object> params) {
-    return sessionStore.create(McpJsonRpc.PROTOCOL_VERSION,
+    return sessionStore.createSession(McpJsonRpc.PROTOCOL_VERSION,
         asMap(params.get("clientInfo")), asMap(params.get("capabilities")));
   }
 

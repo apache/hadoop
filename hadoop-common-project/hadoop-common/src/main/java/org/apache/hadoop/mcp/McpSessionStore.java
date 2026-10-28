@@ -80,7 +80,7 @@ final class McpSessionStore implements Closeable {
    *
    * @return the new session, or null if the store is at capacity
    */
-  McpSession create(String negotiatedProtocolVersion, Map<String, Object> clientInfo,
+  McpSession createSession(String negotiatedProtocolVersion, Map<String, Object> clientInfo,
       Map<String, Object> clientCapabilities) {
     McpSession session = new McpSession(UUID.randomUUID().toString(),
         negotiatedProtocolVersion, clientInfo, clientCapabilities, Time.now(),
