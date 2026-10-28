@@ -426,6 +426,7 @@ class BlockReceiver implements Closeable {
    */
   void flushOrSync(boolean isSync, long seqno) throws IOException {
     long flushTotalNanos = 0;
+    long syncTotalNanos = 0;
     long begin = Time.monotonicNow();
     DataNodeFaultInjector.get().delay();
     if (checksumOut != null) {
@@ -433,8 +434,11 @@ class BlockReceiver implements Closeable {
       checksumOut.flush();
       long flushEndNanos = System.nanoTime();
       if (isSync) {
+        long syncStartNanos = flushEndNanos;
         streams.syncChecksumOut();
-        datanode.metrics.addFsyncNanos(System.nanoTime() - flushEndNanos);
+        long syncEndNanos = System.nanoTime();
+        syncTotalNanos += syncEndNanos - syncStartNanos;
+        datanode.metrics.addFsyncNanos(syncEndNanos - syncStartNanos);
       }
       flushTotalNanos += flushEndNanos - flushStartNanos;
     }
@@ -445,7 +449,9 @@ class BlockReceiver implements Closeable {
       if (isSync) {
         long fsyncStartNanos = flushEndNanos;
         streams.syncDataOut();
-        datanode.metrics.addFsyncNanos(System.nanoTime() - fsyncStartNanos);
+        long fsyncEndNanos = System.nanoTime();
+        syncTotalNanos += fsyncEndNanos - fsyncStartNanos;
+        datanode.metrics.addFsyncNanos(fsyncEndNanos - fsyncStartNanos);
       }
       flushTotalNanos += flushEndNanos - flushStartNanos;
     }
@@ -463,8 +469,10 @@ class BlockReceiver implements Closeable {
     if (duration > datanodeSlowLogThresholdMs && LOG.isWarnEnabled()) {
       datanode.metrics.incrSlowFlushOrSyncCount();
       LOG.warn("Slow flushOrSync took " + duration + "ms (threshold="
-          + datanodeSlowLogThresholdMs + "ms), isSync:" + isSync + ", flushTotalNanos="
-          + flushTotalNanos + "ns, volume=" + getVolumeBaseUri()
+          + datanodeSlowLogThresholdMs + "ms), isSync:" + isSync
+          + ", flushNanos=" + flushTotalNanos + "ns"
+          + ", syncNanos=" + syncTotalNanos + "ns"
+          + ", volume=" + getVolumeBaseUri()
           + ", blockId=" + replicaInfo.getBlockId()
           + ", seqno=" + seqno);
     }
