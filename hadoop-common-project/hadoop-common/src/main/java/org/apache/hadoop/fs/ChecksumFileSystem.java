@@ -471,7 +471,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       // If the stream doesn't have checksums, just delegate.
       if (dataStreamToHandleVectorIO()) {
         LOG.debug("No checksums for vectored read, delegating to inner stream");
-        datas.readVectored(ranges, allocate);
+        datas.readVectored(ranges, allocate, release);
         return;
       }
       LOG.debug("Checksum vectored read for {} ranges", ranges.size());
@@ -493,8 +493,16 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       }
       List<CombinedFileRange> checksumRanges = findChecksumRanges(dataRanges,
           bytesPerSum, minSeek, maxSize);
-      sums.readVectored(checksumRanges, allocate, release);
-      datas.readVectored(dataRanges, allocate, release);
+      try {
+        sums.readVectored(checksumRanges, allocate, release);
+        datas.readVectored(dataRanges, allocate, release);
+      } catch (IOException | RuntimeException e) {
+        // No buffers have been exposed to the caller yet. Reads already started
+        // may still be in flight, so release their buffers only after success.
+        releaseReadBuffers(checksumRanges, release);
+        releaseReadBuffers(dataRanges, release);
+        throw e;
+      }
       for(CombinedFileRange checksumRange: checksumRanges) {
         List<CompletableFuture<ByteBuffer>> verifications = new ArrayList<>();
         for(FileRange dataRange: checksumRange.getUnderlying()) {
@@ -503,7 +511,14 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
               checksumRange.getData().thenCombineAsync(dataRange.getData(),
                   (sumBuffer, dataBuffer) ->
                       checkBytes(sumBuffer, checksumRange.getOffset(),
-                          dataBuffer, dataRange.getOffset(), bytesPerSum, file));
+                          dataBuffer, dataRange.getOffset(), bytesPerSum, file))
+                  .whenComplete((buffer, ex) -> {
+                    // Failed reads release their own buffers. A successful data
+                    // read whose verification failed is never returned to the caller.
+                    if (ex != null && !dataRange.getData().isCompletedExceptionally()) {
+                      release.accept(dataRange.getData().join());
+                    }
+                  });
           verifications.add(result);
           // Now, slice the read data range to the user's ranges
           for(FileRange original: ((CombinedFileRange) dataRange).getUnderlying()) {
@@ -522,6 +537,23 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
                 release.accept(checksumRange.getData().join());
               }
             });
+      }
+    }
+
+    /**
+     * Release successful internal reads after synchronous setup fails. Ranges
+     * without a future have not been submitted, and failed reads are responsible
+     * for releasing their own buffers.
+     * @param ranges internal ranges, none of which have been exposed to the caller
+     * @param release buffer release operation
+     */
+    private static void releaseReadBuffers(List<? extends FileRange> ranges,
+        Consumer<ByteBuffer> release) {
+      for (FileRange range : ranges) {
+        CompletableFuture<ByteBuffer> data = range.getData();
+        if (data != null) {
+          data.thenAccept(release);
+        }
       }
     }
 
