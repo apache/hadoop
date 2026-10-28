@@ -131,6 +131,17 @@
       <artifactId>jetty-server</artifactId>
       <scope>compile</scope>
     </dependency>
+    <!--
+      HttpServer2 and the filters around it are written against javax.servlet.
+      The API used to arrive only as javax.servlet-api 3.1.0 through jetty-server;
+      declare the managed one so this module, and the modules that get the API
+      through it, state which servlet API they compile and run against.
+    -->
+    <dependency>
+      <groupId>org.eclipse.jetty.toolchain</groupId>
+      <artifactId>jetty-servlet-api</artifactId>
+      <scope>compile</scope>
+    </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-util</artifactId>

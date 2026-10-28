@@ -54,7 +54,7 @@
       <scope>provided</scope>
       <exclusions>
         <exclusion>
-          <groupId>org.eclipse.jetty</groupId>
+          <groupId>javax.servlet</groupId>
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
       </exclusions>

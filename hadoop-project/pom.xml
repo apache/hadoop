@@ -37,6 +37,12 @@
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     <jetty.version>9.4.58.v20250814</jetty.version>
+    <!--
+      Jetty's own build of the Servlet 4.0 API, and the one Jetty 12's ee8
+      environment depends on. It tracks the servlet spec rather than the Jetty
+      release, so it has its own version.
+    -->
+    <jetty-servlet-api.version>4.0.9</jetty-servlet-api.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -905,8 +911,13 @@
         <artifactId>jetty-server</artifactId>
         <version>${jetty.version}</version>
         <exclusions>
+          <!--
+            javax.servlet-api 3.1.0 publishes the same javax.servlet packages as
+            the managed jetty-servlet-api; with both on a classpath, the jar
+            order decides which one a module uses.
+          -->
           <exclusion>
-            <groupId>org.eclipse.jetty</groupId>
+            <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
           </exclusion>
         </exclusions>
@@ -936,6 +947,11 @@
         <artifactId>javax-websocket-server-impl</artifactId>
         <version>${jetty.version}</version>
         <exclusions>
+          <!-- Brings javax.servlet-api 3.1.0 again, through websocket-servlet. -->
+          <exclusion>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+          </exclusion>
           <exclusion>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm</artifactId>
@@ -961,10 +977,18 @@
         <artifactId>jakarta.servlet.jsp-api</artifactId>
         <version>2.3.6</version>
       </dependency>
+      <!--
+        The one servlet API (javax.servlet 4.0). It is the artifact and version
+        Jetty 12's ee8 environment manages, so the move to Jetty 12 does not
+        change the coordinate again. Downstream projects that also declare
+        javax.servlet:javax.servlet-api or jakarta.servlet:jakarta.servlet-api
+        4.x get two jars with the same javax.servlet classes, as Maven cannot
+        mediate between different coordinates: they should exclude one of them.
+      -->
       <dependency>
-        <groupId>jakarta.servlet</groupId>
-        <artifactId>jakarta.servlet-api</artifactId>
-        <version>4.0.4</version>
+        <groupId>org.eclipse.jetty.toolchain</groupId>
+        <artifactId>jetty-servlet-api</artifactId>
+        <version>${jetty-servlet-api.version}</version>
       </dependency>
 
       <dependency>
@@ -2184,6 +2208,20 @@
         <groupId>org.glassfish.jersey.test-framework</groupId>
         <artifactId>jersey-test-framework-core</artifactId>
         <version>${jersey2.version}</version>
+        <exclusions>
+          <!--
+            It declares the servlet API under the jakarta.servlet coordinate.
+            Those are the same javax.servlet classes jetty-servlet-api carries,
+            so letting it through puts two of them on the test classpath.
+            Managed exclusions also apply where it arrives transitively (the
+            Jersey test provider) or is declared with exclusions of its own
+            (hadoop-client-minicluster), so it is excluded only here.
+          -->
+          <exclusion>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.glassfish.jersey.test-framework.providers</groupId>
