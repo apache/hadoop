@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 
@@ -47,6 +48,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
@@ -60,6 +62,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockECReconstructionCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
@@ -136,6 +139,26 @@ public class TestPBHelper {
   @Test
   public void testGetByteString() {
     assertSame(ByteString.EMPTY, PBHelperClient.getByteString(new byte[0]));
+  }
+
+  @Test
+  public void testConvertAddBlockFlags() {
+    EnumSet<AddBlockFlag> flags =
+        EnumSet.of(AddBlockFlag.NO_LOCAL_WRITE, AddBlockFlag.NO_LOCAL_RACK,
+            AddBlockFlag.IGNORE_CLIENT_LOCALITY);
+    // client -> NN direction: all flags, incl. NO_LOCAL_RACK, must be kept.
+    List<AddBlockFlagProto> flagProtos =
+        PBHelperClient.convertAddBlockFlags(flags);
+    assertEquals(3, flagProtos.size());
+    assertTrue(flagProtos.contains(AddBlockFlagProto.NO_LOCAL_WRITE));
+    assertTrue(
+        flagProtos.contains(AddBlockFlagProto.forNumber(
+            AddBlockFlag.NO_LOCAL_RACK.getMode())));
+    assertTrue(flagProtos.contains(AddBlockFlagProto.IGNORE_CLIENT_LOCALITY));
+    // reverse direction must yield the same set of flags.
+    EnumSet<AddBlockFlag> convertedFlags =
+        PBHelperClient.convertAddBlockFlags(flagProtos);
+    assertEquals(flags, convertedFlags);
   }
 
   @Test
