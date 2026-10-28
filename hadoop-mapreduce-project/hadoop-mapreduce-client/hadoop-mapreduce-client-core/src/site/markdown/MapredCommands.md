@@ -183,7 +183,7 @@ Usage: `mapred frameworkuploader -target <target> [-fs <filesystem>] [-input <cl
 | -nosymlink | This flag can be used to exclude symlinks that point to the same directory. This is not widely used. For example, `/a/foo.jar` and a symlink `/a/bar.jar` that points to `/a/foo.jar` would normally add `foo.jar` and `bar.jar` to the tarball as separate files despite them actually being the same file. This flag would make the tool exclude `/a/bar.jar` so only one copy of the file is added. |
 | -initialReplication *num* | This is the replication count that the framework tarball is created with. It is safe to leave this value at the default 3. This is the tested scenario. |
 | -finalReplication *num* | The uploader tool sets the replication once all blocks are collected and uploaded. If quick initial startup is required, then it is advised to set this to the commissioned node count divided by two but not more than 512. |
-| -acceptableReplication *num* | The tool will wait until the tarball has been replicated this number of times before exiting. This should be a replication count less than or equal to the value in `finalReplication`. This is typically a 90% of the value in `finalReplication` to accomodate failing nodes. |
+| -acceptableReplication *num* | The tool will wait until the tarball has been replicated this number of times before exiting. This should be a replication count less than or equal to the value in `finalReplication`. This is typically a 90% of the value in `finalReplication` to accommodate failing nodes. |
 | -timeout *seconds* | A timeout in seconds to wait to reach `acceptableReplication` before the tool exits. The tool logs an error otherwise and returns.
 
 

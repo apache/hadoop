@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.tools.GetConf.Command;
 import org.apache.hadoop.hdfs.tools.GetConf.CommandHandler;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -219,7 +220,7 @@ public class TestGetConf {
       if (!checkPort) {
         expectedHosts[i++] = addr.getHostName();
       }else {
-        expectedHosts[i++] = addr.getHostName()+":"+addr.getPort();
+        expectedHosts[i++] = NetUtils.getHostPortString(addr);
       }
     }
 
@@ -316,6 +317,17 @@ public class TestGetConf {
     conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, "localhost:1001");
     verifyAddresses(conf, TestType.NAMENODE, false, "localhost:1001");
     verifyAddresses(conf, TestType.NNRPCADDRESSES, true, "localhost:1001");
+
+    // An IPv6 literal host name is printed bracketed. use_ip=false keeps the
+    // literal as the host name, as with no PTR record, without a DNS lookup.
+    conf = new HdfsConfiguration();
+    conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, "[2001:db8::10]:1001");
+    SecurityUtil.setTokenServiceUseIp(false);
+    try {
+      verifyAddresses(conf, TestType.NNRPCADDRESSES, true, "[2001:db8::10]:1001");
+    } finally {
+      SecurityUtil.setTokenServiceUseIp(true);
+    }
   }
 
   /**
