@@ -21,6 +21,7 @@ package org.apache.hadoop.fs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -401,6 +402,20 @@ public class TestHarFileSystemBasics {
     } catch (IOException ioe) {
       // ok, expected.
     }
+  }
+
+  @Test
+  public void testNegativeHarFsCreateFileAndAppendFileBuilders() throws Exception {
+    // The builder API must honor the read-only contract of HarFS:
+    // createFile().build() and appendFile().build() route to the
+    // unsupported create()/append() operations and must throw IOE.
+    final Path fooPath = new Path(rootPath, "foo/bar");
+    localFileSystem.createNewFile(fooPath);
+
+    LambdaTestUtils.intercept(IOException.class, "not allowed",
+        () -> harFileSystem.createFile(fooPath).build());
+    LambdaTestUtils.intercept(IOException.class, "not allowed",
+        () -> harFileSystem.appendFile(fooPath).build());
   }
 
   @Test
