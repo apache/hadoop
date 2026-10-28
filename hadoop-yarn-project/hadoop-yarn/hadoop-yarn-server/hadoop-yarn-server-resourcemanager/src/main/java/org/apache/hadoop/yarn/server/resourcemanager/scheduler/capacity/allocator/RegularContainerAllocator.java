@@ -840,7 +840,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     return allocationResult;
   }
 
-  private ContainerAllocation allocate(Resource clusterResource,
+  ContainerAllocation allocate(Resource clusterResource,
       CandidateNodeSet<FiCaSchedulerNode> candidates,
       SchedulingMode schedulingMode, ResourceLimits resourceLimits,
       SchedulerRequestKey schedulerKey, RMContainer reservedContainer) {
@@ -922,12 +922,6 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       if (AllocationState.RESERVED == result.getAllocationState()) {
         lastReservation = result;
         lastReservationNode = node;
-        if (iter.hasNext()) {
-          continue;
-        } else {
-          return doAllocation(lastReservation, lastReservationNode,
-              schedulerKey, reservedContainer);
-        }
       }
     }
 
