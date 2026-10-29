@@ -463,8 +463,6 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     MEMORY, VCORES;
   }
 
-  AppPriorityACLConfigurationParser priorityACLConfig = new AppPriorityACLConfigurationParser();
-
   public CapacitySchedulerConfiguration() {
     this(new Configuration());
   }

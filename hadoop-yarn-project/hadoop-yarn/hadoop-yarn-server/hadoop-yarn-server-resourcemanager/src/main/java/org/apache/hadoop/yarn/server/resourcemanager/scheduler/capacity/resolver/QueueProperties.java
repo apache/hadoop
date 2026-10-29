@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -43,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AppPrior
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AppPriorityACLGroup;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueTemplate;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AbsoluteResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.QueueCapacityConfigParser;
@@ -54,7 +56,67 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.*;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ALL_ACL;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_CREATED_QUEUE_MANAGEMENT_POLICY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_CREATE_QUEUE_MAX_QUEUES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AVERAGE_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_ALLOW_ZERO_CAPACITY_SUM;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_APP_ORDERING_POLICY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_AUTO_CREATED_QUEUE_MANAGEMENT_POLICY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_AUTO_CREATE_CHILD_QUEUE_ENABLED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_AUTO_CREATE_QUEUE_MAX_QUEUES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_AUTO_QUEUE_CREATION_ENABLED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_AUTO_QUEUE_CREATION_V2_MAX_QUEUES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_CONFIGURATION_APPLICATION_PRIORITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_FAIL_AUTO_CREATION_ON_EXCEEDING_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_LIFETIME_SUFFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_CAPACITY_VALUE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_QUEUE_DEPTH;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_MAX_PARALLEL_APPLICATIONS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_QUEUE_ORDERING_POLICY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_USER_LIMIT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_USER_LIMIT_FACTOR;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.FAIL_AUTO_CREATION_ON_EXCEEDING_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.INSTANTANEOUS_MAX_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.IS_RESERVABLE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_AM_RESOURCE_SUFFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_APPLICATIONS_SUFFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_LIFETIME_SUFFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_QUEUE_DEPTH;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAX_PARALLEL_APPLICATIONS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MINIMUM_CAPACITY_VALUE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.NONE_ACL;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ORDERING_POLICY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.QUEUE_PREEMPTION_DISABLED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.RESERVATION_ADMISSION_POLICY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.RESERVATION_AGENT_NAME;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.RESERVATION_ENFORCEMENT_WINDOW;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.RESERVATION_MOVE_ON_EXPIRY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.RESERVATION_PLANNER_NAME;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.RESERVATION_SHOW_RESERVATION_AS_QUEUE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.RESERVATION_WINDOW;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.RESOURCE_PATTERN;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.UNDEFINED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_SETTINGS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_WEIGHT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_WEIGHT_PATTERN;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getUnits;
+import static org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration.DEFAULT_RESERVATION_ADMISSION_POLICY;
+import static org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration.DEFAULT_RESERVATION_AGENT_NAME;
+import static org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration.DEFAULT_RESERVATION_ENFORCEMENT_WINDOW;
+import static org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration.DEFAULT_RESERVATION_MOVE_ON_EXPIRY;
+import static org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration.DEFAULT_RESERVATION_PLANNER_NAME;
+import static org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration.DEFAULT_RESERVATION_WINDOW;
+import static org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration.DEFAULT_SHOW_RESERVATIONS_AS_QUEUES;
 
 /**
  * One {@link QueueProperty} per per-queue configuration key of the Capacity
@@ -115,7 +177,6 @@ public final class QueueProperties {
   private QueueProperties() {
   }
 
-  // P01
   public static final QueueProperty<List<String>> QUEUES = property(
       CapacitySchedulerConfiguration.QUEUES, false, ALL,
       (conf, key, queue, label, arg) -> {
@@ -129,7 +190,7 @@ public final class QueueProperties {
         return trimmedQueueNames;
       });
 
-  // P02, percentage reading
+  // Percentage reading
   public static final QueueProperty<Float> CAPACITY = property(
       CapacitySchedulerConfiguration.CAPACITY, false, ALL,
       (conf, key, queue, label, arg) -> {
@@ -151,7 +212,7 @@ public final class QueueProperties {
         return capacity;
       });
 
-  // P02 and P04, weight reading; -1 means not set
+  // Weight reading; -1 means not set
   public static final QueueProperty<Float> CAPACITY_WEIGHT = property(
       CapacitySchedulerConfiguration.CAPACITY, true, ALL,
       (conf, key, queue, label, arg) -> {
@@ -167,7 +228,7 @@ public final class QueueProperties {
         return weight;
       });
 
-  // P02 and P04, legacy absolute resource classification
+  // Legacy absolute resource classification
   public static final QueueProperty<Boolean> CAPACITY_IS_ABSOLUTE_RESOURCE =
       property(CapacitySchedulerConfiguration.CAPACITY, true, ALL,
           (conf, key, queue, label, arg) -> {
@@ -177,20 +238,20 @@ public final class QueueProperties {
           });
 
   /**
-   * P02 and P04, legacy absolute minimum resource. The argument is the set of
+   * Legacy absolute minimum resource. The argument is the set of
    * resource type names known to the caller.
    */
   public static final QueueProperty<Resource> MINIMUM_RESOURCE = property(
       CapacitySchedulerConfiguration.CAPACITY, true, ALL,
       QueueProperties::readAbsoluteResource);
 
-  // P02 and P04, capacity vector
+  // Capacity vector
   public static final QueueProperty<QueueCapacityVector> CAPACITY_VECTOR =
       property(CapacitySchedulerConfiguration.CAPACITY, true, ALL,
           (conf, key, queue, label, arg) ->
               CAPACITY_PARSER.parse(conf.apply(key), queue));
 
-  // P03, percentage reading
+  // Percentage reading
   public static final QueueProperty<Float> MAXIMUM_CAPACITY = property(
       CapacitySchedulerConfiguration.MAXIMUM_CAPACITY, false, ALL,
       (conf, key, queue, label, arg) -> {
@@ -206,7 +267,7 @@ public final class QueueProperties {
       });
 
   /**
-   * P03 and P05, legacy absolute maximum resource. The argument is the set of
+   * Legacy absolute maximum resource. The argument is the set of
    * resource type names known to the caller.
    */
   public static final QueueProperty<Resource> MAXIMUM_RESOURCE = property(
@@ -214,7 +275,7 @@ public final class QueueProperties {
       QueueProperties::readAbsoluteResource);
 
   /**
-   * P03 and P05, maximum capacity vector. The argument is the vector used
+   * Maximum capacity vector. The argument is the vector used
    * when nothing is configured; by default an empty vector, which means the
    * parent's maximum.
    */
@@ -231,19 +292,18 @@ public final class QueueProperties {
             return capacityVector;
           });
 
-  // P04, percentage reading
+  // Percentage reading
   public static final QueueProperty<Float> LABELED_CAPACITY = property(
       CapacitySchedulerConfiguration.CAPACITY, true, ALL,
       (conf, key, queue, label, arg) ->
           readLabeledCapacity(conf, key, queue, label, 0f));
 
-  // P05, percentage reading
+  // Percentage reading
   public static final QueueProperty<Float> LABELED_MAXIMUM_CAPACITY = property(
       CapacitySchedulerConfiguration.MAXIMUM_CAPACITY, true, ALL,
       (conf, key, queue, label, arg) ->
           readLabeledCapacity(conf, key, queue, label, 100f));
 
-  // P06
   public static final QueueProperty<Float> MAXIMUM_AM_RESOURCE_PERCENT =
       property(MAXIMUM_AM_RESOURCE_SUFFIX, false, SET_UP,
           (conf, key, queue, label, arg) -> {
@@ -253,26 +313,24 @@ public final class QueueProperties {
             return readFloat(conf, key, fallback);
           });
 
-  // P07; the empty label reads the P06 key a second time
+  // The empty label reads the MAXIMUM_AM_RESOURCE_PERCENT key a second time
   public static final QueueProperty<Float>
       LABELED_MAXIMUM_AM_RESOURCE_PERCENT = property(
           MAXIMUM_AM_RESOURCE_SUFFIX, true, ALL,
           (conf, key, queue, label, arg) -> readFloat(conf, key,
               MAXIMUM_AM_RESOURCE_PERCENT.read(conf, queue)));
 
-  // P08, -1 when not set
+  // -1 when not set
   public static final QueueProperty<Integer> MAXIMUM_APPLICATIONS = property(
       MAXIMUM_APPLICATIONS_SUFFIX, false, LEAVES,
       (conf, key, queue, label, arg) -> readInt(conf, key, (int) UNDEFINED));
 
-  // P09
   public static final QueueProperty<Float> USER_LIMIT = property(
       CapacitySchedulerConfiguration.USER_LIMIT, false, LEAVES,
       (conf, key, queue, label, arg) -> readFloat(conf, key,
           readFloat(conf, PREFIX + CapacitySchedulerConfiguration.USER_LIMIT,
               DEFAULT_USER_LIMIT)));
 
-  // P10
   public static final QueueProperty<Float> USER_LIMIT_FACTOR = property(
       CapacitySchedulerConfiguration.USER_LIMIT_FACTOR, false, LEAVES,
       (conf, key, queue, label, arg) -> readFloat(conf, key,
@@ -280,7 +338,7 @@ public final class QueueProperties {
               .USER_LIMIT_FACTOR, DEFAULT_USER_LIMIT_FACTOR)));
 
   /**
-   * P11, the weights of the queue's own user-settings keys. The argument is
+   * The weights of the queue's own user-settings keys. The argument is
    * the map of keys under {@code user-settings.} (prefix removed) to their raw
    * values, and the function maps a raw value to the value to parse. The
    * resolver adds the PARENT step, the union with the ancestors' weights.
@@ -306,7 +364,7 @@ public final class QueueProperties {
           });
 
   /**
-   * P12, the configured state, {@code null} when not set. The resolver adds
+   * The configured state, {@code null} when not set. The resolver adds
    * the PARENT step of the initial state.
    */
   public static final QueueProperty<QueueState> STATE = property(
@@ -318,7 +376,7 @@ public final class QueueProperties {
       });
 
   /**
-   * P13, {@code null} when not set on a non-root queue. The resolver adds the
+   * {@code null} when not set on a non-root queue. The resolver adds the
    * PARENT step.
    */
   public static final QueueProperty<Set<String>> ACCESSIBLE_NODE_LABELS =
@@ -350,7 +408,7 @@ public final class QueueProperties {
           });
 
   /**
-   * P14, {@code null} when not set. The resolver adds the PARENT step.
+   * {@code null} when not set. The resolver adds the PARENT step.
    */
   public static final QueueProperty<String> DEFAULT_NODE_LABEL_EXPRESSION =
       property(CapacitySchedulerConfiguration.DEFAULT_NODE_LABEL_EXPRESSION,
@@ -361,18 +419,18 @@ public final class QueueProperties {
           });
 
   /**
-   * P15, the ACL text. Dynamic queues take it from their templates only,
+   * The ACL text. Dynamic queues take it from their templates only,
    * see {@link QueueConfigResolver}.
    */
   public static final QueueProperty<String> ACL_SUBMIT_APPLICATIONS =
       queueAcl("acl_submit_applications");
 
-  // P16, as P15
+  // As ACL_SUBMIT_APPLICATIONS
   public static final QueueProperty<String> ACL_ADMINISTER_QUEUE =
       queueAcl("acl_administer_queue");
 
   /**
-   * P17, parsed and capped priority ACL groups. The argument is the cluster
+   * Parsed and capped priority ACL groups. The argument is the cluster
    * maximum application priority.
    */
   public static final QueueProperty<List<AppPriorityACLGroup>>
@@ -383,7 +441,7 @@ public final class QueueProperties {
                 aclString == null ? ALL_ACL : aclString);
           });
 
-  // P18 to P20, the ACL text; every queue defaults to all access
+  // The ACL text; every queue defaults to all access
   public static final QueueProperty<String> ACL_SUBMIT_RESERVATIONS =
       string("acl_submit_reservations", PLANS, ALL_ACL);
   public static final QueueProperty<String> ACL_LIST_RESERVATIONS =
@@ -391,7 +449,7 @@ public final class QueueProperties {
   public static final QueueProperty<String> ACL_ADMINISTER_RESERVATIONS =
       string("acl_administer_reservations", PLANS, ALL_ACL);
 
-  // P21, leaf semantics: the untrimmed application ordering policy name
+  // Leaf semantics: the untrimmed application ordering policy name
   public static final QueueProperty<String> APP_ORDERING_POLICY = property(
       ORDERING_POLICY, false, LEAF,
       (conf, key, queue, label, arg) -> {
@@ -400,7 +458,7 @@ public final class QueueProperties {
       });
 
   /**
-   * P21, parent semantics: the trimmed queue ordering policy name. The
+   * Parent semantics: the trimmed queue ordering policy name. The
    * argument is the parent's policy name, used when the key is not set.
    */
   public static final QueueProperty<String> QUEUE_ORDERING_POLICY = property(
@@ -413,25 +471,24 @@ public final class QueueProperties {
       });
 
   /**
-   * P22 to P24, the ordering policy parameters passed to the policy, which
+   * The ordering policy parameters passed to the policy, which
    * parses them. The argument is the map of keys under
    * {@code ordering-policy.} (prefix removed) to their raw values.
    */
   public static final QueueProperty<Map<String, String>>
       ORDERING_POLICY_PARAMETERS = entries(ORDERING_POLICY + DOT, LEAF);
 
-  // P25
   public static final QueueProperty<Integer> PRIORITY =
       integer("priority", SET_UP, 0);
 
-  // P26
   public static final QueueProperty<Integer> DEFAULT_APPLICATION_PRIORITY =
       integer(CapacitySchedulerConfiguration.DEFAULT_APPLICATION_PRIORITY,
           LEAF, DEFAULT_CONFIGURATION_APPLICATION_PRIORITY);
 
   /**
-   * P27, {@link Resources#none()} when not set. The resolver adds the
-   * fallback to P28 and P29 and the PARENT and GLOBAL steps.
+   * {@link Resources#none()} when not set. The resolver adds the fallback to
+   * MAXIMUM_ALLOCATION_MB and MAXIMUM_ALLOCATION_VCORES and the PARENT and
+   * GLOBAL steps.
    */
   public static final QueueProperty<Resource> MAXIMUM_ALLOCATION = property(
       CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION, false, SET_UP,
@@ -444,26 +501,26 @@ public final class QueueProperties {
             ResourceUtils.getResourcesTypeInfo());
       });
 
-  // P28, -1 when not set
+  // -1 when not set
   public static final QueueProperty<Long> MAXIMUM_ALLOCATION_MB = property(
       CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_MB, false, SET_UP,
       (conf, key, queue, label, arg) ->
           (long) readInt(conf, key, (int) UNDEFINED));
 
-  // P29, -1 when not set
+  // -1 when not set
   public static final QueueProperty<Integer> MAXIMUM_ALLOCATION_VCORES =
       integer(CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_VCORES, SET_UP,
           (int) UNDEFINED);
 
   /**
-   * P30. The argument is the default, which is the parent's value below the
+   * The argument is the default, which is the parent's value below the
    * root. The resolver adds the scheduler-wide monitor gate.
    */
   public static final QueueProperty<Boolean> PREEMPTION_DISABLED =
       flagWithDefaultArgument(QUEUE_PREEMPTION_DISABLED);
 
   /**
-   * P31, the in-hierarchy flag. The argument is the default, which is the
+   * The in-hierarchy flag. The argument is the default, which is the
    * parent's in-hierarchy value below the root. The resolver adds the
    * scheduler-wide intra-queue preemption gate.
    */
@@ -472,19 +529,19 @@ public final class QueueProperties {
           + QUEUE_PREEMPTION_DISABLED);
 
   /**
-   * P32, -1 when not set. The resolver adds the PARENT step.
+   * -1 when not set. The resolver adds the PARENT step.
    */
   public static final QueueProperty<Long> MAXIMUM_APPLICATION_LIFETIME =
       longValue(MAXIMUM_LIFETIME_SUFFIX, SET_UP, (long) UNDEFINED);
 
   /**
-   * P33, -1 when not set. The resolver adds the PARENT step and the fallback
+   * -1 when not set. The resolver adds the PARENT step and the fallback
    * to the maximum lifetime.
    */
   public static final QueueProperty<Long> DEFAULT_APPLICATION_LIFETIME =
       longValue(DEFAULT_LIFETIME_SUFFIX, SET_UP, (long) UNDEFINED);
 
-  // P34; the queue value is not trimmed, unlike every other number
+  // The queue value is not trimmed, unlike every other number
   public static final QueueProperty<Integer> MAX_PARALLEL_APPS = property(
       MAX_PARALLEL_APPLICATIONS, false, SET_UP,
       (conf, key, queue, label, arg) -> {
@@ -496,7 +553,7 @@ public final class QueueProperties {
       });
 
   /**
-   * P35, the configured class name of the queue's multi-node sorting policy,
+   * The configured class name of the queue's multi-node sorting policy,
    * {@code null} when multi-node lookup is off. The getter also checks that
    * the class can be loaded, which the resolver does not.
    */
@@ -521,127 +578,109 @@ public final class QueueProperties {
             return policyClassName.trim();
           });
 
-  // P36
   public static final QueueProperty<Boolean> ALLOW_ZERO_CAPACITY_SUM =
       bool(CapacitySchedulerConfiguration.ALLOW_ZERO_CAPACITY_SUM,
           PARENT_OBJECTS,
           DEFAULT_ALLOW_ZERO_CAPACITY_SUM);
 
-  // P37
   public static final QueueProperty<Boolean> AUTO_CREATE_CHILD_QUEUE_ENABLED =
       bool(CapacitySchedulerConfiguration.AUTO_CREATE_CHILD_QUEUE_ENABLED,
           ALL, DEFAULT_AUTO_CREATE_CHILD_QUEUE_ENABLED);
 
-  // P38
   public static final QueueProperty<Integer> AUTO_CREATE_CHILD_QUEUE_MAX_QUEUES =
       integer(AUTO_CREATE_QUEUE_MAX_QUEUES, PARENTS,
           DEFAULT_AUTO_CREATE_QUEUE_MAX_QUEUES);
 
-  // P39
   public static final QueueProperty<Boolean>
       AUTO_CREATE_CHILD_QUEUE_FAIL_ON_EXCEEDING_CAPACITY = bool(
           FAIL_AUTO_CREATION_ON_EXCEEDING_CAPACITY, PARENTS,
           DEFAULT_FAIL_AUTO_CREATION_ON_EXCEEDING_CAPACITY);
 
-  // P40, the class name
+  // The class name
   public static final QueueProperty<String>
       AUTO_CREATED_QUEUE_MANAGEMENT_POLICY_NAME = string(
           AUTO_CREATED_QUEUE_MANAGEMENT_POLICY, PARENTS,
           DEFAULT_AUTO_CREATED_QUEUE_MANAGEMENT_POLICY);
 
   /**
-   * P41, the v1 leaf queue template of a managed parent: full template keys
+   * The v1 leaf queue template of a managed parent: full template keys
    * to raw values. The argument is that map.
    */
   public static final QueueProperty<Map<String, String>> LEAF_QUEUE_TEMPLATE =
       entries(AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX + DOT, PARENT_OBJECTS);
 
-  // P42
   public static final QueueProperty<Boolean> AUTO_QUEUE_CREATION_V2_ENABLED =
       bool(CapacitySchedulerConfiguration.AUTO_QUEUE_CREATION_V2_ENABLED, ALL,
           DEFAULT_AUTO_QUEUE_CREATION_ENABLED);
 
-  // P43
   public static final QueueProperty<Integer>
       AUTO_QUEUE_CREATION_V2_MAX_QUEUES = integer(
           CapacitySchedulerConfiguration.AUTO_QUEUE_CREATION_V2_MAX_QUEUES,
           PARENTS, DEFAULT_AUTO_QUEUE_CREATION_V2_MAX_QUEUES);
 
-  // P44
   public static final QueueProperty<Integer> AUTO_QUEUE_CREATION_V2_MAX_DEPTH =
       property(MAXIMUM_QUEUE_DEPTH, false, PARENT_OBJECTS,
           (conf, key, queue, label, arg) -> readInt(conf, key, readInt(conf,
               GLOBAL_MAXIMUM_QUEUE_DEPTH, DEFAULT_MAXIMUM_QUEUE_DEPTH)));
 
-  // P45
   public static final QueueProperty<Boolean> AUTO_QUEUE_AUTO_REMOVAL_ENABLED =
       property(AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE, false, ALL,
         (conf, key, queue, label, arg) -> readBoolean(conf, key,
               DEFAULT_AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE));
 
   /**
-   * P46, the v2 {@code template} entries a child of the queue receives, with
+   * The v2 {@code template} entries a child of the queue receives, with
    * the most specific wildcard path first. The argument is that map.
    */
   public static final QueueProperty<Map<String, String>> AQC_V2_TEMPLATE =
       entries(AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX,
           PARENT_OBJECTS);
 
-  // P47, as P46 for {@code leaf-template}
+  // As AQC_V2_TEMPLATE, for {@code leaf-template}
   public static final QueueProperty<Map<String, String>> AQC_V2_LEAF_TEMPLATE =
       entries(AutoCreatedQueueTemplate.AUTO_QUEUE_LEAF_TEMPLATE_PREFIX,
           PARENT_OBJECTS);
 
-  // P48, as P46 for {@code parent-template}
+  // As AQC_V2_TEMPLATE, for {@code parent-template}
   public static final QueueProperty<Map<String, String>>
       AQC_V2_PARENT_TEMPLATE = entries(
           AutoCreatedQueueTemplate.AUTO_QUEUE_PARENT_TEMPLATE_PREFIX,
           PARENT_OBJECTS);
 
-  // P49
   public static final QueueProperty<Boolean> RESERVABLE =
       bool(IS_RESERVABLE, ALL, false);
 
-  // P50
   public static final QueueProperty<Long> RESERVATION_WINDOW_MS = longValue(
       RESERVATION_WINDOW, PLANS, DEFAULT_RESERVATION_WINDOW);
 
-  // P51
   public static final QueueProperty<Float> AVERAGE_CAPACITY_PERCENT =
       property(AVERAGE_CAPACITY, false, PLANS,
           (conf, key, queue, label, arg) ->
               readFloat(conf, key, MAXIMUM_CAPACITY_VALUE));
 
-  // P52
   public static final QueueProperty<Float> INSTANTANEOUS_MAX_CAPACITY_PERCENT =
       property(INSTANTANEOUS_MAX_CAPACITY, false, PLANS,
           (conf, key, queue, label, arg) ->
               readFloat(conf, key, MAXIMUM_CAPACITY_VALUE));
 
-  // P53
   public static final QueueProperty<String> RESERVATION_ADMISSION_POLICY_NAME =
       string(RESERVATION_ADMISSION_POLICY, PLANS,
           DEFAULT_RESERVATION_ADMISSION_POLICY);
 
-  // P54
   public static final QueueProperty<String> RESERVATION_AGENT =
       string(RESERVATION_AGENT_NAME, PLANS, DEFAULT_RESERVATION_AGENT_NAME);
 
-  // P55
   public static final QueueProperty<String> RESERVATION_PLANNER =
       string(RESERVATION_PLANNER_NAME, PLANS, DEFAULT_RESERVATION_PLANNER_NAME);
 
-  // P56
   public static final QueueProperty<Boolean> RESERVATION_MOVE_ON_EXPIRY_ENABLED =
       bool(RESERVATION_MOVE_ON_EXPIRY, PLANS,
           DEFAULT_RESERVATION_MOVE_ON_EXPIRY);
 
-  // P57
   public static final QueueProperty<Long> RESERVATION_ENFORCEMENT_WINDOW_MS =
       longValue(RESERVATION_ENFORCEMENT_WINDOW, PLANS,
           DEFAULT_RESERVATION_ENFORCEMENT_WINDOW);
 
-  // P58
   public static final QueueProperty<Boolean> SHOW_RESERVATIONS_AS_QUEUES =
       bool(RESERVATION_SHOW_RESERVATION_AS_QUEUE, PLANS,
           DEFAULT_SHOW_RESERVATIONS_AS_QUEUES);
@@ -649,7 +688,7 @@ public final class QueueProperties {
   // Values the resolver derives from other resolved values; they have no
   // key of their own and cannot be read from a configuration
 
-  /** The labels labeled properties are resolved for (Q11). */
+  /** The labels labeled properties are resolved for. */
   public static final QueueProperty<Set<String>> CONFIGURED_NODE_LABELS =
       derived("configured-node-labels", false, SET_UP);
 
@@ -675,7 +714,7 @@ public final class QueueProperties {
 
   /** Every configured property, in key table order. */
   public static final List<QueueProperty<?>> ALL_PROPERTIES =
-      Collections.unmodifiableList(java.util.Arrays.<QueueProperty<?>>asList(
+      Collections.unmodifiableList(Arrays.<QueueProperty<?>>asList(
           QUEUES, CAPACITY, CAPACITY_WEIGHT, CAPACITY_IS_ABSOLUTE_RESOURCE,
           MINIMUM_RESOURCE, CAPACITY_VECTOR, MAXIMUM_CAPACITY,
           MAXIMUM_RESOURCE, MAXIMUM_CAPACITY_VECTOR, LABELED_CAPACITY,

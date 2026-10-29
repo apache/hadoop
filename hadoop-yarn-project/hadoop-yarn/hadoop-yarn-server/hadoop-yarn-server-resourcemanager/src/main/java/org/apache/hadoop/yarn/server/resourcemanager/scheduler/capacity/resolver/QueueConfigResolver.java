@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -57,7 +58,50 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.*;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.ABSOLUTE_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.ABSOLUTE_MAXIMUM_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.ACCESSIBLE_NODE_LABELS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.ACL_ADMINISTER_QUEUE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.ACL_APPLICATION_MAX_PRIORITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.ACL_SUBMIT_APPLICATIONS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.ALL_PROPERTIES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.AQC_V2_LEAF_TEMPLATE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.AQC_V2_PARENT_TEMPLATE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.AQC_V2_TEMPLATE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.AUTO_CREATE_CHILD_QUEUE_ENABLED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.AUTO_QUEUE_CREATION_V2_ENABLED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.AUTO_QUEUE_CREATION_V2_MAX_DEPTH;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.CAPACITY_IS_ABSOLUTE_RESOURCE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.CAPACITY_VECTOR;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.CAPACITY_WEIGHT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.CONFIGURED_NODE_LABELS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.DEFAULT_APPLICATION_LIFETIME;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.DEFAULT_NODE_LABEL_EXPRESSION;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.EFFECTIVE_MAXIMUM_APPLICATIONS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.INTRA_QUEUE_PREEMPTION_DISABLED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.LABELED_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.LABELED_MAXIMUM_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.LEAF_QUEUE_TEMPLATE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.MAXIMUM_ALLOCATION;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.MAXIMUM_ALLOCATION_MB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.MAXIMUM_ALLOCATION_VCORES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.MAXIMUM_APPLICATIONS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.MAXIMUM_APPLICATIONS_PER_USER;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.MAXIMUM_APPLICATION_LIFETIME;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.MAXIMUM_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.MAXIMUM_CAPACITY_VECTOR;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.ORDERING_POLICY_PARAMETERS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.PREEMPTION_DISABLED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.QUEUES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.QUEUE_ORDERING_POLICY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.RESERVABLE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.STATE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.USER_LIMIT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.USER_LIMIT_FACTOR;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.USER_WEIGHTS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.readBoolean;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.readInt;
 
 /**
  * Resolves the configuration of every queue from a {@link ConfigSnapshot},
@@ -105,7 +149,7 @@ public final class QueueConfigResolver {
 
   /** Properties resolved by dedicated code instead of a plain read. */
   private static final Set<QueueProperty<?>> SPECIAL = new HashSet<>(
-      java.util.Arrays.<QueueProperty<?>>asList(LABELED_CAPACITY,
+      Arrays.<QueueProperty<?>>asList(LABELED_CAPACITY,
           LABELED_MAXIMUM_CAPACITY, USER_WEIGHTS, STATE,
           ACCESSIBLE_NODE_LABELS, DEFAULT_NODE_LABEL_EXPRESSION,
           ACL_APPLICATION_MAX_PRIORITY, QUEUE_ORDERING_POLICY,
@@ -759,7 +803,7 @@ public final class QueueConfigResolver {
    */
   private static void resolveDynamicAcls(ResolvedQueueConfig queue,
       ResolvedQueueConfig parent, ConfigSnapshot snapshot, boolean legacy) {
-    for (QueueProperty<String> acl : java.util.Arrays.asList(
+    for (QueueProperty<String> acl : Arrays.asList(
         ACL_SUBMIT_APPLICATIONS, ACL_ADMINISTER_QUEUE)) {
       Resolved<String> value = null;
       if (legacy) {
@@ -782,7 +826,7 @@ public final class QueueConfigResolver {
             queue.getKind() == Kind.LEAF ? AQC_V2_LEAF_TEMPLATE
                 : AQC_V2_PARENT_TEMPLATE;
         for (QueueProperty<Map<String, String>> template
-            : java.util.Arrays.asList(typeSpecific, AQC_V2_TEMPLATE)) {
+            : Arrays.asList(typeSpecific, AQC_V2_TEMPLATE)) {
           String raw = templateEntries(parent, template).get(acl.getName());
           if (value == null && raw != null) {
             value = Resolved.of(raw, ValueSource.TEMPLATE_V2,
@@ -839,8 +883,10 @@ public final class QueueConfigResolver {
    * applications and maximum applications per user, for a cluster that has
    * resources. Effective resources and the values computed from them at
    * runtime are not derived.
-   * @param extraSibling a queue that is not in the tree but is a sibling of
-   *                     the others, or {@code null}
+   * @param legacyMode whether the legacy queue mode is enabled
+   * @param siblingWeights the sum of the weights of the queue and its
+   *                       siblings per label, used to normalize legacy
+   *                       weights; {@code null} for the root
    */
   private static void derive(ResolvedQueueTree tree, ResolvedQueueConfig queue,
       boolean legacyMode, Resolved<Map<String, Float>> siblingWeights) {
@@ -1051,7 +1097,7 @@ public final class QueueConfigResolver {
       ResolvedQueueConfig queue, Resolved<Integer> maxApps) {
     Resolved<Float> userLimit = queue.get(USER_LIMIT);
     Resolved<Float> userLimitFactor = queue.get(USER_LIMIT_FACTOR);
-    for (Resolved<?> input : java.util.Arrays.<Resolved<?>>asList(maxApps,
+    for (Resolved<?> input : Arrays.<Resolved<?>>asList(maxApps,
         userLimit, userLimitFactor)) {
       if (input.isFailed()) {
         return failedInteger(input);
