@@ -561,31 +561,49 @@ extends AbstractDelegationTokenIdentifier>
   protected byte[] createPassword(TokenIdent identifier) {
     this.apiLock.writeLock().lock();
     try {
-      int sequenceNum;
-      long now = Time.now();
-      sequenceNum = incrementDelegationTokenSeqNum();
-      identifier.setIssueDate(now);
-      identifier.setMaxDate(now + tokenMaxLifetime);
-      identifier.setMasterKeyId(currentKey.getKeyId());
-      identifier.setSequenceNumber(sequenceNum);
-      LOG.info("Creating password for identifier: " + formatTokenId(identifier) +
-          ", currentKey: " + currentKey.getKeyId());
-      byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
-      DelegationTokenInformation tokenInfo =
-          new DelegationTokenInformation(now + tokenRenewInterval, password,
-              getTrackingIdIfEnabled(identifier));
+      DelegationTokenInformation tokenInfo = prepareToken(identifier,
+          incrementDelegationTokenSeqNum());
       try {
         METRICS.trackStoreToken(() -> storeToken(identifier, tokenInfo));
       } catch (IOException ioe) {
         LOG.error("Could not store token " + formatTokenId(identifier) + "!!", ioe);
       }
-      return password;
+      return tokenInfo.getPassword();
     } finally {
       this.apiLock.writeLock().unlock();
     }
   }
 
-
+  /**
+   * Initialize an identifier and its password using a consistent signing key.
+   * Sequence allocation and persistence are the caller's responsibility and
+   * must not be performed inside this critical section by external stores.
+   * The caller must not modify the identifier after preparation.
+   *
+   * @param identifier identifier to initialize
+   * @param sequenceNumber previously allocated unique sequence number
+   * @return prepared token information
+   */
+  protected final DelegationTokenInformation prepareToken(TokenIdent identifier,
+      int sequenceNumber) {
+    DelegationTokenInformation tokenInfo;
+    this.apiLock.writeLock().lock();
+    try {
+      long now = Time.now();
+      identifier.setIssueDate(now);
+      identifier.setMaxDate(now + tokenMaxLifetime);
+      identifier.setMasterKeyId(currentKey.getKeyId());
+      identifier.setSequenceNumber(sequenceNumber);
+      byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
+      tokenInfo = new DelegationTokenInformation(now + tokenRenewInterval, password,
+          getTrackingIdIfEnabled(identifier));
+    } finally {
+      this.apiLock.writeLock().unlock();
+    }
+    LOG.info("Creating password for identifier: " + formatTokenId(identifier)
+        + ", currentKey: " + identifier.getMasterKeyId());
+    return tokenInfo;
+  }
 
   /**
    * Find the DelegationTokenInformation for the given token id, and verify that
