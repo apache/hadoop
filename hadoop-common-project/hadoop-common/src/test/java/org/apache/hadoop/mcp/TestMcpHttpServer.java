@@ -282,7 +282,7 @@ public class TestMcpHttpServer {
       assertEquals(404, afterDelete.getResponseCode());
     }
   }
-  
+
   @Test
   public void testDeleteRejectionsOverHttp() throws Exception {
     try (McpHttpServer httpServer = startPlainHttpServer(buildToolServer())) {

@@ -422,6 +422,12 @@ public class TestMcpHttpServlet {
 
     assertEquals(404, response.status());
     assertEquals(McpJsonRpc.REQUEST_ID_LIMIT_MESSAGE, response.body().get("message").asText());
+
+    // The session was removed, so later requests get the unknown-session 404.
+    response = sendRequest(server,
+        "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/list\"}", sessionId);
+    assertEquals(404, response.status());
+    assertEquals(McpJsonRpc.SESSION_NOT_FOUND_MESSAGE, response.body().get("message").asText());
   }
 
   private static McpServer buildServer() {

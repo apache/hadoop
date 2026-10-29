@@ -112,13 +112,13 @@ public final class McpSession {
    * Records a request id, which the specification forbids reusing within a session.
    * {@code 1} and {@code "1"} are different ids.
    *
-   * @throws RequestRejectedException with 404 if the session has used its maximum number of
-   *     ids, which ends the session; with 400 if the id was already used in this session
+   * @throws RequestIdLimitReachedException if the session has used its maximum number of ids,
+   *     which ends the session
+   * @throws RequestRejectedException with 400 if the id was already used in this session
    */
   synchronized void recordRequestId(JsonNode idNode) throws RequestRejectedException {
     if (maxRequestIds > 0 && usedRequestIds.size() >= maxRequestIds) {
-      throw new RequestRejectedException(HttpServletResponse.SC_NOT_FOUND,
-          McpJsonRpc.REQUEST_ID_LIMIT_MESSAGE);
+      throw new RequestIdLimitReachedException();
     }
     // Differentiating integers and numbers in string format.
     String key = idNode.isTextual()

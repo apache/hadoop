@@ -140,14 +140,14 @@ public final class McpRequestHandler {
               McpJsonRpc.CAPACITY_LIMIT_MESSAGE);
         }
         // The initialize id is the first id used in the new session.
-        session.recordRequestId(idNode);
+        recordRequestId(session, idNode);
         return initializeResponse(idNode, session);
       }
 
       checkProtocolVersion(context);
       McpSession session = resolveSession(context);
       if (!isNotification) {
-        session.recordRequestId(idNode);
+        recordRequestId(session, idNode);
       }
       return dispatch(method, isNotification, idNode, paramsNode, context, session);
     } catch (RequestRejectedException e) {
@@ -263,6 +263,23 @@ public final class McpRequestHandler {
           McpJsonRpc.SESSION_NOT_FOUND_MESSAGE);
     }
     return session;
+  }
+
+  /**
+   * Records the request id in the session. A session that has used its maximum number of
+   * request ids is removed.
+   *
+   * @throws RequestRejectedException with 404 if the session reached its request id limit,
+   *     with 400 if the id was already used in the session
+   */
+  private void recordRequestId(McpSession session, JsonNode idNode)
+      throws RequestRejectedException {
+    try {
+      session.recordRequestId(idNode);
+    } catch (RequestIdLimitReachedException e) {
+      sessionStore.remove(session.getId());
+      throw e;
+    }
   }
 
   /**
