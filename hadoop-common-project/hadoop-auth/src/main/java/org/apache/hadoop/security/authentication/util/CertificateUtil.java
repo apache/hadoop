@@ -52,10 +52,8 @@ public class CertificateUtil {
     } catch (CertificateException ce) {
       // Report the exception toRSAPublicKey wrapped, not the wrapper, so that
       // the cause a caller sees is the one this method has always reported:
-      // the CertificateException the parse itself raised. Wrapping the wrapper
-      // would add a level to the chain that was not there before.
-      Throwable cause = ce.getCause() == null ? ce : ce.getCause();
-      throw new ServletException(ce.getMessage(), cause);
+      // the CertificateException the parse itself raised.
+      throw new ServletException(ce.getMessage(), ce.getCause());
     }
   }
 

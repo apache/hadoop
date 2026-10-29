@@ -13,14 +13,10 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Objects;
 import javax.servlet.ServletContext;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Presents a ServletContext to a {@link SignerSecretProvider} as a
@@ -33,16 +29,13 @@ import org.slf4j.LoggerFactory;
  * including DelegationTokenAuthenticationFilter in hadoop-common.
  * <p>
  * This class is the one place in the provider hierarchy that names a servlet
- * type, and it goes away with the deprecated
+ * type, and it goes away with the
  * {@link SignerSecretProvider#init(java.util.Properties, ServletContext, long)}
  * it exists to support.
  */
 @InterfaceStability.Unstable
 @InterfaceAudience.Private
 final class ServletSecretProviderContext implements SecretProviderContext {
-
-  private static final Logger LOG =
-      LoggerFactory.getLogger(ServletSecretProviderContext.class);
 
   private final ServletContext servletContext;
 
@@ -51,67 +44,33 @@ final class ServletSecretProviderContext implements SecretProviderContext {
   }
 
   /**
-   * Returns a context backed by the given ServletContext, or one backed by a
-   * map of its own when there is no ServletContext.
+   * Returns a context backed by the given ServletContext.
    * <p>
-   * Most callers of the deprecated init pass null - only AuthenticationFilter
-   * ever passes a real context - and a provider that does not use the store is
-   * unaffected either way. Handing back a store rather than null keeps a
-   * provider that does use it from having to check.
+   * The ServletContext may be null - most callers of init pass null - and a
+   * provider that never touches the store is unaffected. One that does fails
+   * on first access, as it did when it was handed the null ServletContext
+   * directly.
    *
    * @param servletContext the servlet context, or null
    * @return an attribute store, never null
    */
   static SecretProviderContext of(ServletContext servletContext) {
-    return servletContext == null
-        ? new MapSecretProviderContext()
-        : new ServletSecretProviderContext(servletContext);
+    return new ServletSecretProviderContext(servletContext);
   }
 
   @Override
   public Object getAttribute(String name) {
-    return servletContext.getAttribute(name);
+    return servletContext(name).getAttribute(name);
   }
 
   @Override
   public void setAttribute(String name, Object value) {
-    servletContext.setAttribute(name, value);
+    servletContext(name).setAttribute(name, value);
   }
 
-  /**
-   * The store used when there is no ServletContext to write through to.
-   * Attributes live as long as the provider does and are seen by nothing else,
-   * which is what passing a null ServletContext already meant.
-   */
-  @VisibleForTesting
-  static final class MapSecretProviderContext
-      implements SecretProviderContext {
-
-    private final Map<String, Object> attributes = new HashMap<>();
-
-    @Override
-    public Object getAttribute(String name) {
-      return attributes.get(name);
-    }
-
-    /**
-     * Stores the attribute, and says so.
-     * <p>
-     * A provider only writes here to share an object with the rest of the
-     * application - the CuratorFramework client of
-     * {@link ZKSignerSecretProvider} is the one case in this tree. There is
-     * nothing to share it with: this store is private to the provider, so a
-     * second provider in the same JVM builds a second client rather than
-     * finding this one. Before there was a store at all a null ServletContext
-     * threw, which was at least loud; this keeps it visible.
-     */
-    @Override
-    public void setAttribute(String name, Object value) {
-      LOG.warn("SignerSecretProvider was initialized without a ServletContext,"
-          + " so the attribute {} is being stored in a map private to this"
-          + " provider. Anything that expects to share it - including another"
-          + " provider in this JVM - will not find it there.", name);
-      attributes.put(name, value);
-    }
+  private ServletContext servletContext(String name) {
+    return Objects.requireNonNull(servletContext,
+        () -> "SignerSecretProvider was initialized without a ServletContext,"
+            + " so there is nowhere to share the attribute " + name);
   }
 }
