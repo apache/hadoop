@@ -22,13 +22,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
@@ -54,6 +61,76 @@ public class TestRouterRMAdminService extends BaseRouterRMAdminTest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRouterRMAdminService.class);
+
+  @Test
+  public void testServiceStopClosesPipelines() {
+    RouterRMAdminService service = getRouterRMAdminService();
+    RMAdminRequestInterceptor first = mock(RMAdminRequestInterceptor.class);
+    RMAdminRequestInterceptor second = mock(RMAdminRequestInterceptor.class);
+    RequestInterceptorChainWrapper firstWrapper = new RequestInterceptorChainWrapper();
+    RequestInterceptorChainWrapper secondWrapper = new RequestInterceptorChainWrapper();
+    firstWrapper.init(first);
+    secondWrapper.init(second);
+    service.getPipelines().put("first", firstWrapper);
+    service.getPipelines().put("second", secondWrapper);
+    doThrow(new IllegalStateException("shutdown failed")).when(first).shutdown();
+
+    service.stop();
+    assertTrue(service.getPipelines().isEmpty());
+    verify(first).shutdown();
+    verify(second).shutdown();
+    firstWrapper.finalize();
+    secondWrapper.close();
+    secondWrapper.finalize();
+    verify(first).shutdown();
+    verify(second).shutdown();
+  }
+
+  @Test
+  public void testEvictedPipelineCleanup() {
+    RMAdminRequestInterceptor interceptor = mock(RMAdminRequestInterceptor.class);
+    RequestInterceptorChainWrapper wrapper = new RequestInterceptorChainWrapper();
+    wrapper.init(interceptor);
+    Map<String, RequestInterceptorChainWrapper> pipelines =
+        getRouterRMAdminService().getPipelines();
+    pipelines.put("evicted", wrapper);
+    for (int i = 0; i < TEST_MAX_CACHE_SIZE; i++) {
+      pipelines.put("user-" + i, new RequestInterceptorChainWrapper());
+    }
+    assertNull(pipelines.get("evicted"));
+    verifyNoInteractions(interceptor);
+    wrapper.finalize();
+    wrapper.close();
+    verify(interceptor).shutdown();
+  }
+
+  @Test
+  public void testStopBeforeStart() {
+    RouterRMAdminService service = new RouterRMAdminService();
+    service.init(new YarnConfiguration());
+    service.stop();
+  }
+
+  @Test
+  public void testFailedPipelineInitializationClosesInterceptor() throws Exception {
+    RMAdminRequestInterceptor interceptor = mock(RMAdminRequestInterceptor.class);
+    doThrow(new IllegalStateException("init failed")).when(interceptor)
+        .init(anyString());
+    try (RouterRMAdminService service = new RouterRMAdminService() {
+      @Override
+      protected RMAdminRequestInterceptor createRequestInterceptorChain() {
+        return interceptor;
+      }
+    }) {
+      YarnConfiguration conf = new YarnConfiguration();
+      conf.set(YarnConfiguration.ROUTER_RMADMIN_ADDRESS, "127.0.0.1:0");
+      service.init(conf);
+      service.start();
+      assertThrows(IllegalStateException.class, service::getInterceptorChain);
+      assertTrue(service.getPipelines().isEmpty());
+      verify(interceptor).shutdown();
+    }
+  }
 
   /**
    * Tests if the pipeline is created properly.

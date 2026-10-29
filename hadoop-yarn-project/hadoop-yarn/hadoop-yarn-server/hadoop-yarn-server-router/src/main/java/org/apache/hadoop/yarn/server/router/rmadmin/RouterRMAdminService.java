@@ -156,7 +156,18 @@ public class RouterRMAdminService extends AbstractService
     if (this.server != null) {
       this.server.stop();
     }
-    userPipelineMap.clear();
+    if (userPipelineMap != null) {
+      synchronized (userPipelineMap) {
+        for (RequestInterceptorChainWrapper pipeline : userPipelineMap.values()) {
+          try {
+            pipeline.close();
+          } catch (RuntimeException e) {
+            LOG.warn("Failed to close RMAdmin interceptor pipeline", e);
+          }
+        }
+        userPipelineMap.clear();
+      }
+    }
     super.serviceStop();
   }
 
@@ -228,9 +239,14 @@ public class RouterRMAdminService extends AbstractService
 
         RMAdminRequestInterceptor interceptorChain =
             this.createRequestInterceptorChain();
-        interceptorChain.init(user);
         chainWrapper.init(interceptorChain);
+        interceptorChain.init(user);
       } catch (Exception e) {
+        try {
+          chainWrapper.close();
+        } catch (RuntimeException closeException) {
+          e.addSuppressed(closeException);
+        }
         LOG.error("Init RMAdminRequestInterceptor error for user: {}.", user, e);
         throw e;
       }
@@ -245,8 +261,9 @@ public class RouterRMAdminService extends AbstractService
    *
    */
   @Private
-  public static class RequestInterceptorChainWrapper {
+  public static class RequestInterceptorChainWrapper implements AutoCloseable {
     private RMAdminRequestInterceptor rootInterceptor;
+    private boolean closed;
 
     /**
      * Initializes the wrapper with the specified parameters.
@@ -266,12 +283,22 @@ public class RouterRMAdminService extends AbstractService
       return rootInterceptor;
     }
 
+    @Override
+    public synchronized void close() {
+      if (!closed) {
+        closed = true;
+        if (rootInterceptor != null) {
+          rootInterceptor.shutdown();
+        }
+      }
+    }
+
     /**
-     * Shutdown the chain of interceptors when the object is destroyed.
+     * Close evicted pipelines that have not been explicitly closed.
      */
     @Override
     protected void finalize() {
-      rootInterceptor.shutdown();
+      close();
     }
   }
 
