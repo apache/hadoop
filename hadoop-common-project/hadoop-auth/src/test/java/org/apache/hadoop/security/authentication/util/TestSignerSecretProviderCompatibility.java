@@ -14,18 +14,14 @@
 package org.apache.hadoop.security.authentication.util;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 
 import javax.servlet.ServletContext;
@@ -33,7 +29,7 @@ import javax.servlet.ServletContext;
 import org.junit.jupiter.api.Test;
 
 /**
- * A SignerSecretProvider written against the deprecated
+ * A SignerSecretProvider written against
  * {@link SignerSecretProvider#init(Properties, ServletContext, long)} must keep
  * working without being recompiled, because implementations of it live outside
  * this tree - signer.secret.provider takes a classname.
@@ -43,7 +39,6 @@ import org.junit.jupiter.api.Test;
  * concrete bridge rather than a changed abstract method, and they go when it
  * does.
  */
-@SuppressWarnings("deprecation")
 public class TestSignerSecretProviderCompatibility {
 
   private static final byte[] SECRET =
@@ -159,13 +154,8 @@ public class TestSignerSecretProviderCompatibility {
   }
 
   @Test
-  public void testContextProviderIsReachedThroughTheDeprecatedEntryPoint()
-      throws Exception {
-    Map<String, Object> attributes = new HashMap<>();
+  public void testContextProviderIsReachedThroughInit() throws Exception {
     ServletContext servletContext = mock(ServletContext.class);
-    when(servletContext.getAttribute("a"))
-        .thenAnswer(invocation -> attributes.get("a"));
-
     ContextProvider provider = new ContextProvider();
     provider.init(new Properties(), servletContext, 1000);
 
@@ -174,46 +164,25 @@ public class TestSignerSecretProviderCompatibility {
     // Writes reach the real ServletContext, so an object a provider shares
     // this way is still found there by everything that looks for it.
     provider.seen.setAttribute("a", "value");
-    org.mockito.Mockito.verify(servletContext).setAttribute("a", "value");
-  }
-
-  @Test
-  public void testNullServletContextYieldsAUsableStore() throws Exception {
-    ContextProvider provider = new ContextProvider();
-    provider.init(new Properties(), null, 1000);
-
-    assertNotNull(provider.seen,
-        "a null ServletContext should still yield a store");
-    provider.seen.setAttribute("a", "value");
-    assertSame("value", provider.seen.getAttribute("a"));
-    assertFalse(provider.seen instanceof ServletSecretProviderContext);
+    verify(servletContext).setAttribute("a", "value");
   }
 
   /**
-   * A provider that shares an object through the store - which in this tree
-   * means ZKSignerSecretProvider and its Curator client - gets a store private
-   * to itself when there is no ServletContext, so a second provider does not
-   * find what the first one put there. That is a real change from the
-   * NullPointerException a null ServletContext used to raise, so it is pinned
-   * here rather than left to be discovered.
+   * A provider that shares an object through the store - ZKSignerSecretProvider
+   * and its Curator client, in this tree - fails as soon as it touches the
+   * store when there is no ServletContext, as it did before the store existed.
+   * A provider that never touches it is initialized as normal.
    */
   @Test
-  public void testNullServletContextDoesNotShareBetweenProviders()
-      throws Exception {
-    ContextProvider first = new ContextProvider();
-    ContextProvider second = new ContextProvider();
-    first.init(new Properties(), null, 1000);
-    second.init(new Properties(), null, 1000);
+  public void testNullServletContextFailsOnFirstAccess() throws Exception {
+    ContextProvider provider = new ContextProvider();
+    provider.init(new Properties(), null, 1000);
 
-    first.seen.setAttribute("shared", "from-first");
-
-    assertNull(second.seen.getAttribute("shared"),
-        "a store backed by no ServletContext is private to its provider");
-    assertTrue(
-        first.seen instanceof ServletSecretProviderContext
-            .MapSecretProviderContext,
-        "expected the private map store, got "
-            + first.seen.getClass().getName());
+    assertNotNull(provider.seen, "initialize should have been called");
+    assertThrows(NullPointerException.class,
+        () -> provider.seen.getAttribute("a"));
+    assertThrows(NullPointerException.class,
+        () -> provider.seen.setAttribute("a", "value"));
   }
 
   @Test

@@ -108,7 +108,7 @@ public class TestCertificateUtil {
     String pem = "not a certificate";
     try {
       CertificateUtil.parseRSAPublicKey(pem);
-      fail("Should not have thrown ServletException");
+      fail("Should have thrown ServletException");
     } catch (ServletException se) {
       assertTrue(se.getMessage().contains("corrupt"));
       assertTrue(se.getCause() instanceof CertificateException);
@@ -125,7 +125,7 @@ public class TestCertificateUtil {
   public void testDeprecatedEntryPointDoesNotDeepenTheCauseChain() {
     try {
       CertificateUtil.parseRSAPublicKey("not a certificate");
-      fail("Should not have thrown ServletException");
+      fail("Should have thrown ServletException");
     } catch (ServletException se) {
       Throwable cause = se.getCause();
       assertNotNull(cause, "the ServletException should carry a cause");
