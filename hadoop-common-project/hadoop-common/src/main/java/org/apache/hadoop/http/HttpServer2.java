@@ -2008,9 +2008,7 @@ public final class HttpServer2 implements FilterContainer {
      */
     private String inferMimeType(ServletRequest request) {
       String path = ((HttpServletRequest)request).getRequestURI();
-      ServletContextHandler.Context sContext =
-          (ServletContextHandler.Context)config.getServletContext();
-      String mime = sContext.getMimeType(path);
+      String mime = config.getServletContext().getMimeType(path);
       return (mime == null) ? null : mime;
     }
 
