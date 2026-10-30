@@ -19,8 +19,6 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
-import org.apache.hadoop.fs.s3a.impl.EncryptionS3ClientFactory;
 import org.apache.hadoop.fs.s3a.impl.LazySharedThreadPoolHolder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.assertj.core.api.Assertions;
@@ -33,6 +31,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_CLIENT_SHARED_THREADPOOL_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CLIENT_SHARED_THREADPOOL_KEEPALIVE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CLIENT_SHARED_THREADPOOL_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_KMS_CLIENT_SHARED_THREADPOOL_ENABLED;
@@ -49,18 +48,32 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_STS_CLIENT_SHARED_THREADPOO
 import static org.apache.hadoop.fs.s3a.Constants.AWS_STS_CLIENT_SHARED_THREADPOOL_SIZE;
 
 /**
- * Tests for the shared scheduled executors in DefaultS3ClientFactory.
+ * Tests for LazySharedThreadPoolHolder, the shared-pool defaults and the S3
+ * client factory wiring.
  */
 public class TestSharedScheduledExecutor {
 
   @Test
-  public void testLazyHolderDisabledByDefault() {
+  public void testLazyHolderEnabledByDefault() {
     LazySharedThreadPoolHolder holder = new LazySharedThreadPoolHolder(
-        "test.enabled", "test.size", "test.keepalive", "test-disabled");
-    Configuration conf = new Configuration();
+        "test.enabled", "test.size", "test.keepalive", "test-default-on");
+    Configuration conf = new Configuration(false);
     ScheduledExecutorService executor = holder.get(conf);
     Assertions.assertThat(executor)
-        .as("Executor should be null when disabled")
+        .as("Executor should be created when the enabled key is unset")
+        .isNotNull();
+    executor.shutdown();
+  }
+
+  @Test
+  public void testLazyHolderDisabledWhenConfiguredFalse() {
+    LazySharedThreadPoolHolder holder = new LazySharedThreadPoolHolder(
+        "test.enabled", "test.size", "test.keepalive", "test-disabled");
+    Configuration conf = new Configuration(false);
+    conf.setBoolean("test.enabled", false);
+    ScheduledExecutorService executor = holder.get(conf);
+    Assertions.assertThat(executor)
+        .as("Executor should be null when explicitly disabled")
         .isNull();
   }
 
@@ -206,7 +219,7 @@ public class TestSharedScheduledExecutor {
   }
 
   /**
-   * Test that without shared pool, each holder creates its own threads.
+   * Test that without a shared pool, each executor creates its own threads.
    * This demonstrates the thread growth problem.
    */
   @Test
@@ -263,7 +276,7 @@ public class TestSharedScheduledExecutor {
     for (int i = 0; i < numCalls; i++) {
       ScheduledExecutorService executor = holder.get(conf);
       Assertions.assertThat(executor)
-          .as("Should return same executor instance")
+          .as("Executor should be created when enabled")
           .isNotNull();
       executor.submit(() -> {}).get();
     }
@@ -358,14 +371,15 @@ public class TestSharedScheduledExecutor {
 
   /**
    * Verify the shared-thread-pool defaults declared in core-default.xml match
-   * the constants used by the lazy holders: every pool is disabled by default
+   * the constants used by the lazy holders: every pool is enabled by default
    * and the size/keepalive defaults are the documented values. This catches a
    * typo in a core-default.xml name or a mismatch between Constants, the holder
    * defaults and core-default.xml.
    */
   @Test
   public void testProductionThreadPoolDefaultsInCoreDefaultXml() {
-    Configuration conf = new Configuration();
+    Configuration conf = new Configuration(false);
+    conf.addResource("core-default.xml");
     String[] enabledKeys = {
         AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED,
         AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_ENABLED,
@@ -386,9 +400,9 @@ public class TestSharedScheduledExecutor {
     };
 
     for (String key : enabledKeys) {
-      Assertions.assertThat(conf.getBoolean(key, true))
-          .as("%s should default to false in core-default.xml", key)
-          .isFalse();
+      Assertions.assertThat(conf.getBoolean(key, false))
+          .as("%s should match the enabled default in core-default.xml", key)
+          .isEqualTo(AWS_CLIENT_SHARED_THREADPOOL_ENABLED_DEFAULT);
     }
     for (String key : sizeKeys) {
       Assertions.assertThat(conf.getInt(key, -1))
@@ -403,13 +417,14 @@ public class TestSharedScheduledExecutor {
   }
 
   /**
-   * Verify each AWS client factory wires its shared-thread-pool holder with the
+   * Verify the S3 client factories wire their shared-thread-pool holders with the
    * config keys for that client, in the correct slots. The holder constructor
    * takes only strings, so a swapped or mis-pasted key would otherwise be
    * silent; this asserts the enabled/size/keepalive keys land where intended.
+   * STS and KMS are checked in their own package tests.
    */
   @Test
-  public void testFactoryExecutorHoldersWiredWithExpectedKeys() {
+  public void testS3FactoryExecutorHoldersWiredWithExpectedKeys() {
     assertHolderKeys(DefaultS3ClientFactory.s3SyncExecutorHolder(),
         AWS_S3_CLIENT_SHARED_THREADPOOL_ENABLED,
         AWS_S3_CLIENT_SHARED_THREADPOOL_SIZE,
@@ -418,14 +433,6 @@ public class TestSharedScheduledExecutor {
         AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_ENABLED,
         AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_SIZE,
         AWS_S3_ASYNC_CLIENT_SHARED_THREADPOOL_KEEPALIVE);
-    assertHolderKeys(STSClientFactory.stsExecutorHolder(),
-        AWS_STS_CLIENT_SHARED_THREADPOOL_ENABLED,
-        AWS_STS_CLIENT_SHARED_THREADPOOL_SIZE,
-        AWS_STS_CLIENT_SHARED_THREADPOOL_KEEPALIVE);
-    assertHolderKeys(EncryptionS3ClientFactory.kmsExecutorHolder(),
-        AWS_KMS_CLIENT_SHARED_THREADPOOL_ENABLED,
-        AWS_KMS_CLIENT_SHARED_THREADPOOL_SIZE,
-        AWS_KMS_CLIENT_SHARED_THREADPOOL_KEEPALIVE);
   }
 
   /**
@@ -437,14 +444,8 @@ public class TestSharedScheduledExecutor {
    */
   private static void assertHolderKeys(LazySharedThreadPoolHolder holder,
       String enabledKey, String sizeKey, String keepAliveKey) {
-    Assertions.assertThat(holder.getEnabledKey())
-        .as("enabled key")
-        .isEqualTo(enabledKey);
-    Assertions.assertThat(holder.getSizeKey())
-        .as("size key")
-        .isEqualTo(sizeKey);
-    Assertions.assertThat(holder.getKeepAliveKey())
-        .as("keepalive key")
-        .isEqualTo(keepAliveKey);
+    Assertions.assertThat(holder.getConfigKeys())
+        .as("enabled, size and keepalive keys")
+        .containsExactly(enabledKey, sizeKey, keepAliveKey);
   }
 }

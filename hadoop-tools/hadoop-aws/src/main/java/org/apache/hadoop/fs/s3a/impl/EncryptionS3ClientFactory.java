@@ -68,7 +68,7 @@ public class EncryptionS3ClientFactory extends DefaultS3ClientFactory {
    * @return the holder
    */
   @VisibleForTesting
-  public static LazySharedThreadPoolHolder kmsExecutorHolder() {
+  static LazySharedThreadPoolHolder kmsExecutorHolder() {
     return KMS_EXECUTOR;
   }
 
