@@ -553,9 +553,14 @@ public class AbfsConfiguration{
   private int maxApacheHttpClientIoExceptionsRetries;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE,
+      FS_AZURE_APACHE_HTTP_CLIENT_MAX_DEFAULT_CACHE_SIZE, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE,
       MinValue = MIN_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, MaxValue = MAX_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE)
-  private int apacheMaxCacheSize;
+  private int apacheMaxDefaultCacheSize;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_APACHE_HTTP_CLIENT_MAX_NON_DEFAULT_CACHE_SIZE, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE,
+      MinValue = MIN_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE, MaxValue = MAX_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE)
+  private int apacheMaxNonDefaultCacheSize;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT,
@@ -653,6 +658,18 @@ public class AbfsConfiguration{
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_READ_POLICY,
           DefaultValue = DEFAULT_AZURE_READ_POLICY)
   private String abfsReadPolicy;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_BLOB_LAYOUT_CACHE_EVICTION_MINS,
+      DefaultValue = DEFAULT_FS_AZURE_BLOB_LAYOUT_CACHE_EVICTION_MINS)
+  private long blobLayoutCacheEvictionMins;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_BLOB_LAYOUT_CACHE_MAX_COUNT,
+      DefaultValue = DEFAULT_FS_AZURE_BLOB_LAYOUT_CACHE_MAX_COUNT)
+  private long blobLayoutCacheMaxCount;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_BLOB_LAYOUT_FETCH_TIMEOUT_MILLIS,
+      DefaultValue = DEFAULT_FS_AZURE_BLOB_LAYOUT_FETCH_TIMEOUT_MILLIS)
+  private long blobLayoutFetchTimeout;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_RESTRICT_GPS_ON_OPENFILE,
   DefaultValue = DEFAULT_FS_AZURE_RESTRICT_GPS_ON_OPENFILE)
@@ -1377,8 +1394,18 @@ public class AbfsConfiguration{
     return maxApacheHttpClientIoExceptionsRetries;
   }
 
-  public int getApacheMaxCacheSize() {
-    return apacheMaxCacheSize;
+  /**
+   * @return get Apache cache size for default hosts
+   */
+  public int getApacheMaxDefaultCacheSize() {
+    return apacheMaxDefaultCacheSize;
+  }
+
+  /**
+   * @return get Apache cache size for non-default hosts
+   */
+  public int getApacheMaxNonDefaultCacheSize() {
+    return apacheMaxNonDefaultCacheSize;
   }
 
   public int getApacheCacheWarmupCount() {
@@ -2291,5 +2318,40 @@ public class AbfsConfiguration{
    */
   public boolean isRbacOnlyMode() {
     return this.rbacOnlyMode;
+  }
+
+  /**
+   * Get the time in minutes for evicting entries from the blob layout cache.
+   * @return the maximum time for which layout entry can stay after the stream is closed.
+   */
+  public long getBlobLayoutCacheEvictionMins() {
+    return blobLayoutCacheEvictionMins;
+  }
+
+  /**
+   * Gets the maximum number of entries that can be stored in the blob layout cache.
+   * @return the maximum number of entries in the blob layout cache.
+   */
+  public long getBlobLayoutCacheMaxCount() {
+    return blobLayoutCacheMaxCount;
+  }
+
+  /**
+   * Config to check if data locality is enabled.
+   * It first checks account level config and then fall back to account agnostic Value.
+   * @return the maximum time for which layout entry can stay after the stream is closed.
+   */
+  public boolean isDataLocalityEnabled() {
+    return rawConfig.getBoolean(accountConf(FS_AZURE_ENABLE_DATA_LOCALITY),
+        rawConfig.getBoolean(FS_AZURE_ENABLE_DATA_LOCALITY,
+            DEFAULT_FS_AZURE_ENABLE_DATA_LOCALITY));
+  }
+
+  /**
+   * Get max wait time to get the layout response
+   * @return the maximum wait time process should wait to get the layout response before it times out.
+   */
+  public long getBlobLayoutFetchTimeoutInMillis() {
+    return blobLayoutFetchTimeout;
   }
 }

@@ -26,10 +26,6 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -70,8 +66,6 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.FileSystemOperationUnhandledException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidFileSystemPropertyException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriAuthorityException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
@@ -1003,7 +997,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         }
         resourceType = getClient().checkIsDir(op) ? DIRECTORY : FILE;
         contentLength = extractContentLength(op);
-        eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
+        eTag = extractEtagHeader(op);
       }
       /* The only remaining case is:
        * - restrictGpsOnOpenFile config is enabled with null/wrong FileStatus and encryptionType not as ENCRYPTION_CONTEXT
@@ -1019,6 +1013,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       perfInfo.registerSuccess(true);
 
+      // Add statistics for InputStream
       return getRelevantInputStream(statistics, relativePath, contentLength,
           parameters, contextEncryptionAdapter, eTag, tracingContext);
     }
@@ -1032,29 +1027,32 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final String eTag,
       TracingContext tracingContext) {
     AbfsReadPolicy inputPolicy = AbfsReadPolicy.getAbfsReadPolicy(getAbfsConfiguration().getAbfsReadPolicy());
-    switch (inputPolicy) {
-    case SEQUENTIAL:
-      return new AbfsPrefetchInputStream(getClient(), statistics, relativePath,
-          contentLength, populateAbfsInputStreamContext(
-          parameters.map(OpenFileParameters::getOptions),
-          contextEncryptionAdapter),
-          eTag, tracingContext);
-
-    case RANDOM:
-      return new AbfsRandomInputStream(getClient(), statistics, relativePath,
-          contentLength, populateAbfsInputStreamContext(
-          parameters.map(OpenFileParameters::getOptions),
-          contextEncryptionAdapter),
-          eTag, tracingContext);
-
-    case ADAPTIVE:
-    default:
-      return new AbfsAdaptiveInputStream(getClient(), statistics, relativePath,
-          contentLength, populateAbfsInputStreamContext(
-          parameters.map(OpenFileParameters::getOptions),
-          contextEncryptionAdapter),
-          eTag, tracingContext);
+    AbfsClient abfsClient;
+    if (abfsConfiguration.isDataLocalityEnabled()) {
+       abfsClient = getClient(AbfsServiceType.BLOB);
+    } else {
+      abfsClient = getClient();
     }
+    return switch (inputPolicy) {
+      case SEQUENTIAL ->
+          new AbfsPrefetchInputStream(abfsClient, statistics, relativePath,
+              contentLength, populateAbfsInputStreamContext(
+              parameters.map(OpenFileParameters::getOptions),
+              contextEncryptionAdapter),
+              eTag, tracingContext);
+      case RANDOM ->
+          new AbfsRandomInputStream(abfsClient, statistics, relativePath,
+              contentLength, populateAbfsInputStreamContext(
+              parameters.map(OpenFileParameters::getOptions),
+              contextEncryptionAdapter),
+              eTag, tracingContext);
+      default ->
+          new AbfsAdaptiveInputStream(abfsClient, statistics, relativePath,
+              contentLength, populateAbfsInputStreamContext(
+              parameters.map(OpenFileParameters::getOptions),
+              contextEncryptionAdapter),
+              eTag, tracingContext);
+    };
   }
 
   private AbfsInputStreamContext populateAbfsInputStreamContext(
@@ -1966,44 +1964,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private boolean parseIsDirectory(final String resourceType) {
     return resourceType != null
         && resourceType.equalsIgnoreCase(AbfsHttpConstants.DIRECTORY);
-  }
-
-  private Hashtable<String, String> parseCommaSeparatedXmsProperties(String xMsProperties) throws
-          InvalidFileSystemPropertyException, InvalidAbfsRestOperationException {
-    Hashtable<String, String> properties = new Hashtable<>();
-
-    final CharsetDecoder decoder = Charset.forName(XMS_PROPERTIES_ENCODING).newDecoder();
-
-    if (xMsProperties != null && !xMsProperties.isEmpty()) {
-      String[] userProperties = xMsProperties.split(AbfsHttpConstants.COMMA);
-
-      if (userProperties.length == 0) {
-        return properties;
-      }
-
-      for (String property : userProperties) {
-        if (property.isEmpty()) {
-          throw new InvalidFileSystemPropertyException(xMsProperties);
-        }
-
-        String[] nameValue = property.split(AbfsHttpConstants.EQUAL, 2);
-        if (nameValue.length != 2) {
-          throw new InvalidFileSystemPropertyException(xMsProperties);
-        }
-
-        byte[] decodedValue = Base64.decode(nameValue[1]);
-
-        final String value;
-        try {
-          value = decoder.decode(ByteBuffer.wrap(decodedValue)).toString();
-        } catch (CharacterCodingException ex) {
-          throw new InvalidAbfsRestOperationException(ex);
-        }
-        properties.put(nameValue[0], value);
-      }
-    }
-
-    return properties;
   }
 
   private AbfsPerfInfo startTracking(String callerName, String calleeName) {
