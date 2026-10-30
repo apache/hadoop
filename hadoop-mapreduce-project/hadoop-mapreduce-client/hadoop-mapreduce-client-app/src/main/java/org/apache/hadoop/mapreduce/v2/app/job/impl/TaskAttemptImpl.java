@@ -1453,8 +1453,8 @@ public abstract class TaskAttemptImpl implements
     ContainerId containerId = taInfo.getContainerId();
     NodeId containerNodeId = NodeId.fromString(
         taInfo.getHostname() + ":" + taInfo.getPort());
-    String nodeHttpAddress = StringInterner.weakIntern(taInfo.getHostname() + ":"
-        + taInfo.getHttpPort());
+    String nodeHttpAddress = StringInterner.weakIntern(
+        NetUtils.getHostPortString(taInfo.getHostname(), taInfo.getHttpPort()));
     // Resource/Priority/Tokens are only needed while launching the container on
     // an NM, these are already completed tasks, so setting them to null
     container =
