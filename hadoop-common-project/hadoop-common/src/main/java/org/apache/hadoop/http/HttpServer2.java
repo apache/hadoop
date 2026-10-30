@@ -95,6 +95,7 @@ import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
@@ -106,6 +107,7 @@ import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.server.session.SessionHandler;
+import org.eclipse.jetty.servlet.ErrorPageErrorHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.FilterMapping;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -767,7 +769,9 @@ public final class HttpServer2 implements FilterContainer {
       throws IOException {
 
     Preconditions.checkNotNull(webAppContext);
-    webAppContext.getErrorHandler().setShowStacks(LOG.isTraceEnabled());
+    ErrorPageErrorHandler errorHandler = new ReasonBodyErrorHandler();
+    errorHandler.setShowStacks(LOG.isTraceEnabled());
+    webAppContext.setErrorHandler(errorHandler);
 
     int maxThreads = conf.getInt(HTTP_MAX_THREADS_KEY, -1);
     // If HTTP_MAX_THREADS is not configured, QueueThreadPool() will use the
@@ -989,6 +993,7 @@ public final class HttpServer2 implements FilterContainer {
       handler.getSessionCookieConfig().setSecure(true);
       logContext.setSessionHandler(handler);
       logContext.addAliasCheck(new SymlinkAllowedResourceAliasChecker(logContext));
+      logContext.setErrorHandler(new ReasonBodyErrorHandler());
       setContextAttributes(logContext, conf);
       addNoCacheFilter(logContext);
       defaultContexts.put(logContext, true);
@@ -1008,6 +1013,7 @@ public final class HttpServer2 implements FilterContainer {
     handler.getSessionCookieConfig().setSecure(true);
     staticContext.setSessionHandler(handler);
     staticContext.addAliasCheck(new SymlinkAllowedResourceAliasChecker(staticContext));
+    staticContext.setErrorHandler(new ReasonBodyErrorHandler());
     setContextAttributes(staticContext, conf);
     defaultContexts.put(staticContext, true);
   }
@@ -1512,6 +1518,48 @@ public final class HttpServer2 implements FilterContainer {
     listener.close();
     listener.open();
     LOG.info("Jetty bound to port " + listener.getLocalPort());
+  }
+
+  /**
+   * The error handler for every context HttpServer2 sets up.
+   * <p>
+   * Jetty writes an error page only for GET, POST and HEAD; an error on any
+   * other method goes back with no body. The few places whose message a caller
+   * acts on - the authentication and CSRF filters - cannot leave that message
+   * to the reason phrase alone, which not every caller gets, so they mark
+   * their errors with
+   * {@link AuthenticationFilter#ERROR_MESSAGE_FOR_ANY_METHOD_ATTRIBUTE}, and
+   * this handler writes the error page for a marked error whatever the method.
+   * Every other error is answered as Jetty answers it: no body, and no
+   * error-page dispatch, for methods other than GET, POST and HEAD.
+   * <p>
+   * Extends the handler a WebAppContext installs for itself, so that
+   * &lt;error-page&gt; and &lt;exception-type&gt; mappings from a webapp's
+   * web.xml keep working; a plain ErrorHandler would silently drop them.
+   */
+  static final class ReasonBodyErrorHandler extends ErrorPageErrorHandler {
+
+    @Override
+    public boolean errorPageForMethod(String method) {
+      // Whether the error is marked is only known in handle, which Jetty only
+      // calls when this says yes. handle keeps to Jetty's own choice for
+      // unmarked errors.
+      return true;
+    }
+
+    @Override
+    public void handle(String target, Request baseRequest,
+        HttpServletRequest request, HttpServletResponse response)
+        throws IOException, ServletException {
+      if (super.errorPageForMethod(request.getMethod())
+          || request.getAttribute(
+              AuthenticationFilter.ERROR_MESSAGE_FOR_ANY_METHOD_ATTRIBUTE)
+              != null) {
+        super.handle(target, baseRequest, request, response);
+      } else {
+        baseRequest.setHandled(true);
+      }
+    }
   }
 
   /**
