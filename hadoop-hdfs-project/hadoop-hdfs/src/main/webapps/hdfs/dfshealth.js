@@ -132,7 +132,7 @@
       var base = dust.makeBase(HELPERS);
       dust.render('dfshealth', base.push(data), function(err, out) {
         $('#tab-overview').html(out);
-        $('#ui-tabs a[href="#tab-overview"]').tab('show');
+        hadoopBootstrap.showTab('#ui-tabs a[href="#tab-overview"]');
       });
     }
   }
@@ -185,7 +185,7 @@
       var data = workaround(resp);
       dust.render('startup-progress', data, function(err, out) {
         $('#tab-startup-progress').html(out);
-        $('#ui-tabs a[href="#tab-startup-progress"]').tab('show');
+        hadoopBootstrap.showTab('#ui-tabs a[href="#tab-startup-progress"]');
       });
     }).fail(ajax_error_handler);
   }
@@ -397,7 +397,7 @@
           });
           $("#table-datanodes").width('100%');
           renderHistogram(data);
-          $('#ui-tabs a[href="#tab-datanode"]').tab('show');
+          hadoopBootstrap.showTab('#ui-tabs a[href="#tab-datanode"]');
         });
       })).fail(ajax_error_handler);
   }
@@ -436,7 +436,7 @@
         var base = dust.makeBase(HELPERS);
         dust.render('datanode-volume-failures', base.push(data), function(err, out) {
           $('#tab-datanode-volume-failures').html(out);
-          $('#ui-tabs a[href="#tab-datanode-volume-failures"]').tab('show');
+          hadoopBootstrap.showTab('#ui-tabs a[href="#tab-datanode-volume-failures"]');
         });
       })).fail(ajax_error_handler);
   }
@@ -447,7 +447,7 @@
       guard_with_startup_progress(function (resp) {
       dust.render('snapshot-info', resp.beans[0], function(err, out) {
           $('#tab-snapshot').html(out);
-          $('#ui-tabs a[href="#tab-snapshot"]').tab('show');
+          hadoopBootstrap.showTab('#ui-tabs a[href="#tab-snapshot"]');
 
           // Build a map to store snapshottable directory -> snapshots
           var snapshots = 'Snapshots' in resp.beans[0] ? resp.beans[0].Snapshots : [];
@@ -594,7 +594,7 @@
   }
   load_page();
 
-  $(window).bind('hashchange', function () {
+  $(window).on('hashchange', function () {
     load_page();
   });
 })();
