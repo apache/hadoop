@@ -559,19 +559,21 @@ extends AbstractDelegationTokenIdentifier>
   
   @Override
   protected byte[] createPassword(TokenIdent identifier) {
+    DelegationTokenInformation tokenInfo;
     this.apiLock.writeLock().lock();
     try {
-      DelegationTokenInformation tokenInfo = prepareToken(identifier,
+      tokenInfo = prepareToken(identifier,
           incrementDelegationTokenSeqNum());
       try {
         METRICS.trackStoreToken(() -> storeToken(identifier, tokenInfo));
       } catch (IOException ioe) {
         LOG.error("Could not store token " + formatTokenId(identifier) + "!!", ioe);
       }
-      return tokenInfo.getPassword();
     } finally {
       this.apiLock.writeLock().unlock();
     }
+    logTokenCreation(identifier);
+    return tokenInfo.getPassword();
   }
 
   /**
@@ -600,9 +602,17 @@ extends AbstractDelegationTokenIdentifier>
     } finally {
       this.apiLock.writeLock().unlock();
     }
+    return tokenInfo;
+  }
+
+  /**
+   * Log token creation after releasing the API write lock.
+   *
+   * @param identifier initialized token identifier
+   */
+  protected final void logTokenCreation(TokenIdent identifier) {
     LOG.info("Creating password for identifier: " + formatTokenId(identifier)
         + ", currentKey: " + identifier.getMasterKeyId());
-    return tokenInfo;
   }
 
   /**

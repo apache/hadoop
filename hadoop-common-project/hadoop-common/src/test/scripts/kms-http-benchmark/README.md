@@ -1,4 +1,20 @@
-<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements. See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership. The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
 
 # KMS HTTP throughput benchmark
 
@@ -76,7 +92,7 @@ The defaults are exactly the matrix above. Optional properties are `kms.benchmar
 Build one original common jar from the baseline checkout and one from the fixed checkout. Keep all other source and dependency versions identical. Then run:
 
 ```sh
-python3 dev-support/benchmarks/kms-http-benchmark.py \
+python3 hadoop-common-project/hadoop-common/src/test/scripts/kms-http-benchmark/kms_http_benchmark.py \
   --baseline-common /absolute/path/to/original/hadoop-common.jar \
   --fixed-common /absolute/path/to/fixed/hadoop-common.jar \
   --maven mvn \

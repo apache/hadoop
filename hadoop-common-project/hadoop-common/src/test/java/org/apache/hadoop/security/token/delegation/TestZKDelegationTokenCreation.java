@@ -31,6 +31,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.curator.test.TestingServer;
 import org.apache.curator.framework.recipes.shared.SharedCount;
@@ -38,6 +39,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
+import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.spi.LoggingEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
@@ -140,6 +145,73 @@ public class TestZKDelegationTokenCreation {
 
     void verify(Token<DelegationTokenIdentifier> token) throws IOException {
       verifyToken(identifier(token), token.getPassword());
+    }
+  }
+
+  private static void assertCreationLogOutsideWriteLock(
+      AbstractDelegationTokenSecretManager<?> manager, Runnable issue) throws Exception {
+    Field field = AbstractDelegationTokenSecretManager.class.getDeclaredField("apiLock");
+    field.setAccessible(true);
+    ReentrantReadWriteLock lock = (ReentrantReadWriteLock) field.get(manager);
+    AtomicBoolean logged = new AtomicBoolean();
+    AtomicBoolean heldWriteLock = new AtomicBoolean();
+    Logger logger = Logger.getLogger(AbstractDelegationTokenSecretManager.class);
+    Level previousLevel = logger.getLevel();
+    AppenderSkeleton appender = new AppenderSkeleton() {
+      @Override
+      protected void append(LoggingEvent event) {
+        if (event.getRenderedMessage().startsWith("Creating password for identifier:")) {
+          logged.set(true);
+          heldWriteLock.set(lock.isWriteLockedByCurrentThread());
+        }
+      }
+
+      @Override
+      public boolean requiresLayout() {
+        return false;
+      }
+
+      @Override
+      public void close() {
+      }
+    };
+    logger.setLevel(Level.INFO);
+    logger.addAppender(appender);
+    try {
+      issue.run();
+      assertTrue(logged.get(), "Creation must retain its log message");
+      assertFalse(heldWriteLock.get(), "Creation logging must not hold the API write lock");
+    } finally {
+      logger.removeAppender(appender);
+      logger.setLevel(previousLevel);
+    }
+  }
+
+  @Test
+  public void testInMemoryCreationLogOutsideWriteLock() throws Exception {
+    TestDelegationToken.TestDelegationTokenSecretManager manager =
+        new TestDelegationToken.TestDelegationTokenSecretManager(
+            3600000, 3600000, 3600000, 3600000);
+    try {
+      manager.startThreads();
+      assertCreationLogOutsideWriteLock(manager, () -> new Token<>(
+          new TestDelegationToken.TestDelegationTokenIdentifier(
+              new Text("owner"), new Text("renewer"), new Text()), manager));
+    } finally {
+      manager.stopThreads();
+    }
+  }
+
+  @Test
+  public void testZKCreationLogOutsideWriteLock() throws Exception {
+    try (TestingServer server = new TestingServer()) {
+      Manager manager = new Manager(server.getConnectString());
+      try {
+        manager.startThreads();
+        assertCreationLogOutsideWriteLock(manager, manager::issue);
+      } finally {
+        manager.stopThreads();
+      }
     }
   }
 

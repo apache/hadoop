@@ -530,6 +530,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     // Neither range reservation nor token persistence may hold apiLock.
     DelegationTokenInformation info = prepareToken(identifier,
         incrementDelegationTokenSeqNum());
+    logTokenCreation(identifier);
     try {
       getMetrics().trackStoreToken(() -> storeToken(identifier, info));
     } catch (IOException e) {

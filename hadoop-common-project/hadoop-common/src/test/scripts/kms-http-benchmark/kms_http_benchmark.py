@@ -40,17 +40,20 @@ CLASSES = [
 
 
 def class_hashes(jar):
+    """Identify the secret-manager implementations actually present in a jar."""
     with zipfile.ZipFile(jar) as archive:
         return [hashlib.sha256(archive.read(name)).hexdigest() for name in CLASSES]
 
 
 def write_json(path, value):
+    """Atomically replace a JSON report after a completed measurement."""
     temporary = path.with_suffix(".tmp")
     temporary.write_text(json.dumps(value, indent=2) + "\n")
     temporary.replace(path)
 
 
 def summarize(samples):
+    """Summarize accepted runs by operation mix and implementation."""
     summary = []
     for percent in [0, 1, 5, 10]:
         row = {"verifyPercent": 100 - percent, "createPercent": percent}
@@ -83,8 +86,37 @@ def summarize(samples):
     return summary
 
 
+def run_benchmark(root, args, label, jar, repetition):
+    """Execute one four-mix comparison run without changing installed jars."""
+    run = args.output.resolve() / f"{label}-r{repetition}"
+    run.mkdir()
+    command = [args.maven, "-o", "-pl", "hadoop-common-project/hadoop-kms",
+               "-Dtest=TestKMSHttpBenchmark", "-Dkms.benchmark=true",
+               "-Dkms.benchmark.repetitions=1",
+               f"-Dkms.benchmark.concurrency={args.concurrency}",
+               "-Dkms.benchmark.create.percent=0,1,5,10",
+               f"-Dkms.benchmark.warmup.seconds={args.warmup_seconds}",
+               f"-Dkms.benchmark.seconds={args.seconds}",
+               f"-Dkms.benchmark.label={label}",
+               f"-Dkms.benchmark.common.jar={jar}",
+               f"-Dkms.benchmark.output={run}",
+               "-Dmaven.test.failure.ignore=false", "-Dcheckstyle.skip",
+               "-Dspotbugs.skip", "test"]
+    write_json(run / "command.json", command)
+    print(f"Starting {label} repetition {repetition}", flush=True)
+    started = time.monotonic()
+    with (run / "maven.log").open("w") as log:
+        subprocess.run(command, cwd=root, stdout=log, stderr=subprocess.STDOUT,
+                       timeout=4 * (args.warmup_seconds + args.seconds + 180),
+                       check=True)
+    print(f"Completed {label} repetition {repetition} "
+          f"in {time.monotonic() - started:.1f}s", flush=True)
+    return json.loads((run / "results.json").read_text())
+
+
 def main():
-    root = Path(__file__).resolve().parents[2]
+    """Run alternating baseline/fixed pairs and validate their measurements."""
+    root = Path(__file__).resolve().parents[6]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--baseline-common", type=Path, required=True)
     parser.add_argument("--fixed-common", type=Path, required=True)
@@ -117,41 +149,19 @@ def main():
     for repetition in range(1, args.repetitions + 1):
         order = ["baseline", "fixed"] if repetition % 2 else ["fixed", "baseline"]
         for label in order:
-            run = output / (label + "-r" + str(repetition))
-            run.mkdir()
-            command = [args.maven, "-o", "-pl", "hadoop-common-project/hadoop-kms",
-                       "-Dtest=TestKMSHttpBenchmark", "-Dkms.benchmark=true",
-                       "-Dkms.benchmark.repetitions=1",
-                       "-Dkms.benchmark.concurrency=" + str(args.concurrency),
-                       "-Dkms.benchmark.create.percent=0,1,5,10",
-                       "-Dkms.benchmark.warmup.seconds=" + str(args.warmup_seconds),
-                       "-Dkms.benchmark.seconds=" + str(args.seconds),
-                       "-Dkms.benchmark.label=" + label,
-                       "-Dkms.benchmark.common.jar=" + str(jars[label]),
-                       "-Dkms.benchmark.output=" + str(run),
-                       "-Dmaven.test.failure.ignore=false", "-Dcheckstyle.skip",
-                       "-Dspotbugs.skip", "test"]
-            write_json(run / "command.json", command)
-            print("Starting " + label + " repetition " + str(repetition), flush=True)
-            started = time.monotonic()
-            with (run / "maven.log").open("w") as log:
-                subprocess.run(command, cwd=root, stdout=log, stderr=subprocess.STDOUT,
-                               timeout=4 * (args.warmup_seconds + args.seconds + 180),
-                               check=True)
-            samples = json.loads((run / "results.json").read_text())
+            run = output / f"{label}-r{repetition}"
+            samples = run_benchmark(root, args, label, jars[label], repetition)
             if len(samples) != 4 or {s["createPercent"] for s in samples} != {0, 1, 5, 10}:
-                raise RuntimeError("Missing request mix in " + str(run))
+                raise RuntimeError(f"Missing request mix in {run}")
             for sample in samples:
                 observed = [sample["serverMetadata"]["abstractManagerSha256"],
                             sample["serverMetadata"]["zkManagerSha256"]]
                 if not sample["valid"] or observed != fingerprints[label]:
-                    raise RuntimeError("Invalid sample or wrong loaded classes: " + str(run))
+                    raise RuntimeError(f"Invalid sample or wrong loaded classes: {run}")
                 sample["repetition"] = repetition
                 report["samples"].append(sample)
             report["summary"] = summarize(report["samples"])
             write_json(output / "comparison.json", report)
-            print("Completed " + label + " repetition " + str(repetition)
-                  + " in %.1fs" % (time.monotonic() - started), flush=True)
     print(json.dumps(report["summary"], indent=2))
     print("Saved " + str(output / "comparison.json"))
 
