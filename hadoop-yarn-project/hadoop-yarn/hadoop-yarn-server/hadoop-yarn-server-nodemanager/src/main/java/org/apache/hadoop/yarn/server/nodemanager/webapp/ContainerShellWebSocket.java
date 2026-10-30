@@ -33,11 +33,11 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
-import org.eclipse.jetty.websocket.api.Session;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
-import org.eclipse.jetty.websocket.api.annotations.WebSocket;
+import org.eclipse.jetty.ee8.websocket.api.Session;
+import org.eclipse.jetty.ee8.websocket.api.annotations.OnWebSocketClose;
+import org.eclipse.jetty.ee8.websocket.api.annotations.OnWebSocketConnect;
+import org.eclipse.jetty.ee8.websocket.api.annotations.OnWebSocketMessage;
+import org.eclipse.jetty.ee8.websocket.api.annotations.WebSocket;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -120,7 +120,7 @@ public class ContainerShellWebSocket {
         session.close(1003, "Nonsecure mode is unsupported.");
         return;
       }
-      LOG.info(session.getRemoteAddress().getHostString() + " connected!");
+      LOG.info(session.getRemoteAddress() + " connected!");
       LOG.info(
           "Making interactive connection to running docker container with ID: "
               + cId);
@@ -140,7 +140,7 @@ public class ContainerShellWebSocket {
   @OnWebSocketClose
   public void onClose(Session session, int status, String reason) {
     try {
-      LOG.info(session.getRemoteAddress().getHostString() + " closed!");
+      LOG.info(session.getRemoteAddress() + " closed!");
       String exit = "exit\r\n";
       pair.out.write(exit.getBytes(StandardCharsets.UTF_8));
       pair.out.flush();
