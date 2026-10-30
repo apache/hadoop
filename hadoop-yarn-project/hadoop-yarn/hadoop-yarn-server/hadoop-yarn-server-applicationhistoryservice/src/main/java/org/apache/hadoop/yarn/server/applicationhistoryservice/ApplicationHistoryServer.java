@@ -41,8 +41,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.records.timeline.reader.TimelineDomainReader;
-import org.apache.hadoop.yarn.api.records.timeline.reader.TimelineEntityReader;
-import org.apache.hadoop.yarn.api.records.timeline.reader.TimelinePutResponseReader;
 import org.apache.hadoop.yarn.api.records.timeline.reader.TimelineEntitiesReader;
 import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineEntityWriter;
 import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineEntitiesWriter;
@@ -357,16 +355,12 @@ public class ApplicationHistoryServer extends CompositeService {
 
   protected ResourceConfig configure() {
     ResourceConfig config = new ResourceConfig();
-    config.packages("org.apache.hadoop.yarn.server.timeline.webapp");
-    config.packages("org.apache.hadoop.yarn.server.applicationhistoryservice.webapp");
     config.register(TimelineWebServices.class);
     config.register(AHSWebServices.class);
     config.register(TimelineEntitiesWriter.class);
     config.register(TimelineEntitiesReader.class);
-    config.register(TimelineEntityReader.class);
     config.register(TimelineEntityWriter.class);
     config.register(TimelineDomainReader.class);
-    config.register(TimelinePutResponseReader.class);
     config.register(new JerseyBinder());
     config.register(GenericExceptionHandler.class);
     config.register(YarnJacksonJaxbJsonProvider.class);

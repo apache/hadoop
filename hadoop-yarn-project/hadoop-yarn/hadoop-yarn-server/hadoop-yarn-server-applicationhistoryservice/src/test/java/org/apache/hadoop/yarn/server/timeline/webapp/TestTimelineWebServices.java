@@ -67,15 +67,11 @@ import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilter;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+import org.apache.hadoop.yarn.api.records.timeline.reader.TimelineDomainReader;
 import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineEntitiesWriter;
 import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineDomainWriter;
 import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineEntityWriter;
-import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineDomainsWriter;
-import org.apache.hadoop.yarn.api.records.timeline.writer.TimelinePutResponseWriter;
-import org.apache.hadoop.yarn.api.records.timeline.writer.TimelineEventsWriter;
 import org.apache.hadoop.yarn.server.timeline.reader.TimelineAboutReader;
-import org.apache.hadoop.yarn.server.timeline.reader.TimelineDomainReader;
-import org.apache.hadoop.yarn.server.timeline.reader.TimelineDomainsReader;
 import org.apache.hadoop.yarn.server.timeline.reader.TimelineEntitiesReader;
 import org.apache.hadoop.yarn.server.timeline.reader.TimelineEntityReader;
 import org.apache.hadoop.yarn.server.timeline.reader.TimelineEventsReader;
@@ -108,15 +104,11 @@ public class TestTimelineWebServices extends JerseyTestBase {
     ResourceConfig config = new ResourceConfig();
     config.register(new JerseyBinder());
     config.register(TimelineWebServices.class);
-    config.register(TimelineEntitiesReader.class);
     config.register(TimelineEntitiesWriter.class);
+    config.register(TimelineEntitiesReader.class);
     config.register(TimelineEntityWriter.class);
     config.register(TimelineDomainReader.class);
-    config.register(TimelineDomainsWriter.class);
-    config.register(TimelineDomainWriter.class);
-    config.register(TimelineEventsWriter.class);
     config.register(GenericExceptionHandler.class);
-    config.register(TimelinePutResponseWriter.class);
     config.register(YarnJacksonJaxbJsonProvider.class);
     forceSet(TestProperties.CONTAINER_PORT, JERSEY_RANDOM_PORT);
     return config;
@@ -462,9 +454,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
     entities.addEntity(entity);
 
     WebTarget r = target()
-        .register(TimelineDomainsReader.class)
         .register(TimelineEntitiesWriter.class)
-        .register(TimelineDomainReader.class)
+        .register(YarnJacksonJaxbJsonProvider.class)
         .register(TimelineEntityReader.class)
         .register(TimelinePutResponseReader.class)
         .register(TimelineEntitiesReader.class);
@@ -492,9 +483,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
     entities.addEntity(entity);
 
     WebTarget r = target()
-        .register(TimelineDomainsReader.class)
         .register(TimelineEntitiesWriter.class)
-        .register(TimelineDomainReader.class)
+        .register(YarnJacksonJaxbJsonProvider.class)
         .register(TimelineEntityReader.class)
         .register(TimelinePutResponseReader.class)
         .register(TimelineEntitiesReader.class);
@@ -546,9 +536,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
     entities.addEntity(new TimelineEntity());
 
     WebTarget r = target()
-        .register(TimelineDomainsReader.class)
         .register(TimelineEntitiesWriter.class)
-        .register(TimelineDomainReader.class)
+        .register(YarnJacksonJaxbJsonProvider.class)
         .register(TimelineEntityReader.class)
         .register(TimelinePutResponseReader.class)
         .register(TimelineEntitiesReader.class);
@@ -577,9 +566,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
       entities.addEntity(entity);
 
       WebTarget r = target()
-          .register(TimelineDomainsReader.class)
           .register(TimelineEntitiesWriter.class)
-          .register(TimelineDomainReader.class)
+          .register(YarnJacksonJaxbJsonProvider.class)
           .register(TimelineEntityReader.class)
           .register(TimelinePutResponseReader.class)
           .register(TimelineEntitiesReader.class);
@@ -622,9 +610,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
       entities.addEntity(entity);
 
       r = target()
-          .register(TimelineDomainsReader.class)
           .register(TimelineEntitiesWriter.class)
-          .register(TimelineDomainReader.class)
+          .register(YarnJacksonJaxbJsonProvider.class)
           .register(TimelineEntityReader.class)
           .register(TimelinePutResponseReader.class)
           .register(TimelineEntitiesReader.class);
@@ -674,9 +661,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
       entities.addEntity(entity);
 
       WebTarget r = target()
-          .register(TimelineDomainsReader.class)
           .register(TimelineEntitiesWriter.class)
-          .register(TimelineDomainReader.class)
+          .register(YarnJacksonJaxbJsonProvider.class)
           .register(TimelineEntityReader.class)
           .register(TimelinePutResponseReader.class)
           .register(TimelineEntitiesReader.class);
@@ -727,9 +713,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
       entities.addEntity(entity);
 
       WebTarget r = target()
-          .register(TimelineDomainsReader.class)
           .register(TimelineEntitiesWriter.class)
-          .register(TimelineDomainReader.class)
+          .register(YarnJacksonJaxbJsonProvider.class)
           .register(TimelineEntityReader.class)
           .register(TimelinePutResponseReader.class)
           .register(TimelineEntitiesReader.class);
@@ -819,9 +804,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
       entities.addEntity(entity);
 
       WebTarget r = target()
-          .register(TimelineDomainsReader.class)
           .register(TimelineEntitiesWriter.class)
-          .register(TimelineDomainReader.class)
+          .register(YarnJacksonJaxbJsonProvider.class)
           .register(TimelineEntityReader.class)
           .register(TimelinePutResponseReader.class)
           .register(TimelineEntitiesReader.class);
@@ -846,9 +830,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
       entity.setDomainId("domain_id_2");
       entities.addEntity(entity);
       r = target()
-          .register(TimelineDomainsReader.class)
           .register(TimelineEntitiesWriter.class)
-          .register(TimelineDomainReader.class)
+          .register(YarnJacksonJaxbJsonProvider.class)
           .register(TimelineEntityReader.class)
           .register(TimelinePutResponseReader.class)
           .register(TimelineEntitiesReader.class);
@@ -902,9 +885,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
       entities.addEntity(entity);
 
       WebTarget r = target()
-          .register(TimelineDomainsReader.class)
           .register(TimelineEntitiesWriter.class)
-          .register(TimelineDomainReader.class)
+          .register(YarnJacksonJaxbJsonProvider.class)
           .register(TimelineEntityReader.class)
           .register(TimelinePutResponseReader.class)
           .register(TimelineEntitiesReader.class)
@@ -935,9 +917,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
       entities.addEntity(entity);
 
       r = target()
-          .register(TimelineDomainsReader.class)
           .register(TimelineEntitiesWriter.class)
-          .register(TimelineDomainReader.class)
+          .register(YarnJacksonJaxbJsonProvider.class)
           .register(TimelineEntityReader.class)
           .register(TimelinePutResponseReader.class)
           .register(TimelineEntitiesReader.class)
@@ -975,7 +956,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
 
   @Test
   public void testGetDomain() throws Exception {
-    WebTarget r = target().register(TimelineDomainReader.class);
+    WebTarget r = target().register(YarnJacksonJaxbJsonProvider.class);
     Response response = r.path("ws").path("v1").path("timeline")
         .path("domain").path("domain_id_1")
         .request(MediaType.APPLICATION_JSON)
@@ -991,7 +972,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
     try {
-      WebTarget r = target().register(TimelineDomainReader.class);
+      WebTarget r = target().register(YarnJacksonJaxbJsonProvider.class);
 
       when(request.getRemoteUser()).thenReturn("owner_1");
       Response response = r.path("ws").path("v1").path("timeline")
@@ -1020,7 +1001,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
 
   @Test
   public void testGetDomains() throws Exception {
-    WebTarget r = target().register(TimelineDomainsReader.class);
+    WebTarget r = target().register(YarnJacksonJaxbJsonProvider.class);
     Response response = r.path("ws").path("v1").path("timeline")
         .path("domain")
         .queryParam("owner", "owner_1")
@@ -1042,7 +1023,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
     try {
       when(request.getRemoteUser()).thenReturn("owner_1");
-      WebTarget r = target().register(TimelineDomainsReader.class);
+      WebTarget r = target().register(YarnJacksonJaxbJsonProvider.class);
       Response response = r.path("ws").path("v1").path("timeline")
           .path("domain")
           .queryParam("user.name", "owner_1")
@@ -1079,7 +1060,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
     domain.setId("test_domain_id");
 
     WebTarget r = target()
-        .register(TimelineDomainReader.class)
+        .register(YarnJacksonJaxbJsonProvider.class)
         .register(TimelineDomainWriter.class);
 
     // No owner, will be rejected
@@ -1143,7 +1124,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
       domain.setId("test_domain_id_acl");
 
       WebTarget r = target()
-          .register(TimelineDomainReader.class)
+          .register(YarnJacksonJaxbJsonProvider.class)
           .register(TimelineDomainWriter.class);
 
       when(request.getRemoteUser()).thenReturn("tester");
