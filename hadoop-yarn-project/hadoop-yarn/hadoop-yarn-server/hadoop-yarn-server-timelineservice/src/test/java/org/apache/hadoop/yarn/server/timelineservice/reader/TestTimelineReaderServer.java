@@ -18,11 +18,17 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
+import java.io.IOException;
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.service.ServiceOperations;
+import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
@@ -57,6 +63,49 @@ public class TestTimelineReaderServer {
       assertEquals(STATE.STOPPED, server.getServiceState());
     } finally {
       server.stop();
+    }
+  }
+
+  /**
+   * A web server that fails to stop must not take the child services down with
+   * it: the reader is one of them, and it owns the storage monitor's polling
+   * executor, whose threads are not daemons.
+   */
+  @Test
+  @Timeout(60000)
+  void testChildServicesStoppedWhenWebAppStopFails() throws Exception {
+    Configuration config = new YarnConfiguration();
+    config.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    config.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+    config.set(YarnConfiguration.TIMELINE_SERVICE_READER_WEBAPP_ADDRESS,
+        "localhost:0");
+    config.setClass(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
+        FileSystemTimelineReaderImpl.class, TimelineReader.class);
+
+    @SuppressWarnings("resource")
+    TimelineReaderServer server = new TimelineReaderServer() {
+      @Override
+      void stopTimelineReaderWebApp() throws Exception {
+        super.stopTimelineReaderWebApp();
+        throw new IOException("simulated web server stop failure");
+      }
+    };
+    try {
+      server.init(config);
+      server.start();
+      List<Service> children = server.getServices();
+      assertEquals(2, children.size());
+
+      assertThrows(ServiceStateException.class, server::stop);
+
+      for (Service child : children) {
+        assertEquals(STATE.STOPPED, child.getServiceState(),
+            child.getName() + " was left running by the failed stop");
+      }
+    } finally {
+      // stop() here would rethrow the simulated failure and mask any earlier
+      // one; it is a no-op anyway once the service has reached STOPPED.
+      ServiceOperations.stopQuietly(server);
     }
   }
 
