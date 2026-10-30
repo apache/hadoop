@@ -19,13 +19,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Matcher;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ConfigSnapshot;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties;
 
+import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_SETTINGS;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_WEIGHT;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_WEIGHT_PATTERN;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.getQueuePrefix;
 
 public final class UserWeights {
@@ -51,16 +50,8 @@ public final class UserWeights {
         .getRawPropertiesWithPrefix(queuePathPlusPrefix, false);
 
     UserWeights userWeights = new UserWeights();
-    for (Map.Entry<String, String> item: props.entrySet()) {
-      Matcher m = USER_WEIGHT_PATTERN.matcher(item.getKey());
-      if (m.find()) {
-        String userName = item.getKey().replaceFirst("\\." + USER_WEIGHT, "");
-        if (!userName.isEmpty()) {
-          String value = conf.substituteCommonVariables(item.getValue());
-          userWeights.data.put(userName, new Float(value));
-        }
-      }
-    }
+    userWeights.data.putAll(QueueProperties.USER_WEIGHTS.read(
+        conf::substituteCommonVariables, queuePath, NO_LABEL, props));
     return userWeights;
   }
 
