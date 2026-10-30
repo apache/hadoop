@@ -38,9 +38,11 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.management.ManagementFactory;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -1995,6 +1997,17 @@ public class TestCheckpoint {
 
       Mockito.doReturn(new StorageInfo(1, 1, "X", 1, NodeType.NAME_NODE).toColonSeparatedString())
         .when(dstImage).toColonSeparatedString();
+
+      // The reason is in the body itself, as well as in what the client reports.
+      HttpURLConnection connection = (HttpURLConnection) new URL(fsName,
+          ImageServlet.PATH_SPEC + "?" + ImageServlet.getParamStringForImage(
+              null, 0, new StorageInfo(1, 1, "X", 1, NodeType.NAME_NODE),
+              false)).openConnection();
+      assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+          connection.getResponseCode());
+      String body = new String(connection.getErrorStream().readAllBytes(),
+          StandardCharsets.UTF_8);
+      assertTrue(body.contains("but the secondary expected"), body);
 
       try {
         TransferFsImage.downloadImageToStorage(fsName, 0, dstImage, false, false);
