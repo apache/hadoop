@@ -16,41 +16,46 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.util;
 
-import org.apache.hadoop.test.AbstractHadoopTestBase;
-import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
-import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
-import org.apache.hadoop.util.StopWatch;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Basic test for S3A's blocking executor service.
+ * Test for the blocking executor service.
  */
 @Timeout(60)
-public class ITestBlockingThreadPoolExecutorService extends AbstractHadoopTestBase {
+public class TestBlockingThreadPoolExecutorService extends AbstractHadoopTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(
-      ITestBlockingThreadPoolExecutorService.class);
+      TestBlockingThreadPoolExecutorService.class);
 
   private static final int NUM_ACTIVE_TASKS = 4;
+
   private static final int NUM_WAITING_TASKS = 2;
+
   private static final int TASK_SLEEP_MSEC = 100;
+
   private static final int SHUTDOWN_WAIT_MSEC = 200;
+
   private static final int SHUTDOWN_WAIT_TRIES = 5;
+
   private static final int BLOCKING_THRESHOLD_MSEC = 50;
 
   private static final Integer SOME_VALUE = 1337;
@@ -62,6 +67,7 @@ public class ITestBlockingThreadPoolExecutorService extends AbstractHadoopTestBa
     ensureDestroyed();
   }
 
+
   /**
    * Basic test of running one trivial task.
    */
@@ -69,8 +75,7 @@ public class ITestBlockingThreadPoolExecutorService extends AbstractHadoopTestBa
   public void testSubmitCallable() throws Exception {
     ensureCreated();
     Future<Integer> f = tpe.submit(callableSleeper);
-    Integer v = f.get();
-    assertEquals(SOME_VALUE, v);
+    Assertions.assertThat(f.get()).isEqualTo(SOME_VALUE);
   }
 
   /**
@@ -91,9 +96,9 @@ public class ITestBlockingThreadPoolExecutorService extends AbstractHadoopTestBa
   protected void verifyQueueSize(ExecutorService executorService,
       int expectedQueueSize) {
     CountDownLatch latch = new CountDownLatch(1);
-    for (int i = 0; i < expectedQueueSize; i++) {
-      executorService.submit(new LatchedSleeper(latch));
-    }
+    IntStream.range(0, expectedQueueSize)
+        .mapToObj(i -> new LatchedSleeper(latch))
+        .forEach(executorService::submit);
     StopWatch stopWatch = new StopWatch().start();
     latch.countDown();
     executorService.submit(sleeper);
@@ -121,6 +126,27 @@ public class ITestBlockingThreadPoolExecutorService extends AbstractHadoopTestBa
     verifyQueueSize(wrapper, size);
   }
 
+  @Test
+  public void testShutdownQueueRejectsOperations() throws Throwable {
+    ensureCreated();
+    tpe.shutdown();
+    try {
+      Assertions.assertThat(tpe.isShutdown())
+          .describedAs("%s should be shutdown", tpe)
+          .isTrue();
+      // runnable
+      intercept(RejectedExecutionException.class, () ->
+          tpe.submit(failToRun));
+      // callable
+      intercept(RejectedExecutionException.class, () ->
+          tpe.submit(() -> 0));
+      intercept(RejectedExecutionException.class, () ->
+          tpe.execute(failToRun));
+    } finally {
+      tpe = null;
+    }
+  }
+
   // Helper functions, etc.
 
   private void assertDidBlock(StopWatch sw) {
@@ -133,28 +159,28 @@ public class ITestBlockingThreadPoolExecutorService extends AbstractHadoopTestBa
     }
   }
 
-  private Runnable sleeper = new Runnable() {
-    @Override
-    public void run() {
-      String name = Thread.currentThread().getName();
-      try {
-        Thread.sleep(TASK_SLEEP_MSEC);
-      } catch (InterruptedException e) {
-        LOG.info("Thread {} interrupted.", name);
-        Thread.currentThread().interrupt();
-      }
+  private Runnable failToRun = () -> {
+    throw new RuntimeException("Failed to Run");
+  };
+
+  private Runnable sleeper = () -> {
+    String name = Thread.currentThread().getName();
+    try {
+      Thread.sleep(TASK_SLEEP_MSEC);
+    } catch (InterruptedException e) {
+      LOG.info("Thread {} interrupted.", name);
+      Thread.currentThread().interrupt();
     }
   };
 
-  private Callable<Integer> callableSleeper = new Callable<Integer>() {
-    @Override
-    public Integer call() throws Exception {
-      sleeper.run();
-      return SOME_VALUE;
-    }
+  private Callable<Integer> callableSleeper = () -> {
+    sleeper.run();
+    return SOME_VALUE;
   };
+
 
   private class LatchedSleeper implements Runnable {
+
     private final CountDownLatch latch;
 
     LatchedSleeper(CountDownLatch latch) {
