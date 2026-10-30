@@ -39,6 +39,72 @@
         <javascript.test>*Spec</javascript.test>
     </properties>
 
+  <dependencyManagement>
+    <!--
+        hadoop-project pins Jetty to ${jetty.version} so that one release lands
+        on each module's classpath. Here that release has to be Solr's: Solr 8
+        calls Jetty 9.4 APIs even without a container, because
+        EmbeddedSolrServer's constructor loads HttpShardHandlerFactory, which
+        uses the Jetty 9.4 HTTP client. Nothing in this module uses Hadoop's
+        Jetty - it builds a war and runs Solr embedded - so the whole module
+        follows Solr, and these entries override what it inherits.
+    -->
+    <dependencies>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-server</artifactId>
+        <version>${solr.jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-http</artifactId>
+        <version>${solr.jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-util</artifactId>
+        <version>${solr.jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-io</artifactId>
+        <version>${solr.jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-client</artifactId>
+        <version>${solr.jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-servlet</artifactId>
+        <version>${solr.jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-webapp</artifactId>
+        <version>${solr.jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty.websocket</groupId>
+        <artifactId>websocket-client</artifactId>
+        <version>${solr.jetty.version}</version>
+      </dependency>
+      <!--
+        The rest of Solr's Jetty - the server side solr-core and
+        solr-test-framework bring, and the http2 modules - on the same
+        release, so no 9.4 artifact keeps the version Solr was built with.
+      -->
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-bom</artifactId>
+        <version>${solr.jetty.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
     <dependency>
       <groupId>io.swagger</groupId>
@@ -90,22 +156,22 @@
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
           <artifactId>http2-hpack</artifactId>
-          <version>${jetty.version}</version>
+          <version>${solr.jetty.version}</version>
       </dependency>
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
           <artifactId>http2-client</artifactId>
-          <version>${jetty.version}</version>
+          <version>${solr.jetty.version}</version>
       </dependency>
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
           <artifactId>http2-common</artifactId>
-          <version>${jetty.version}</version>
+          <version>${solr.jetty.version}</version>
       </dependency>
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
           <artifactId>http2-http-client-transport</artifactId>
-          <version>${jetty.version}</version>
+          <version>${solr.jetty.version}</version>
       </dependency>
 
       <dependency>
