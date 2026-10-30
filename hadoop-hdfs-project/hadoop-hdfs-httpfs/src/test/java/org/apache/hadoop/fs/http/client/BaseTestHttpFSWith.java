@@ -82,7 +82,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.ContainerFactory;
 import org.json.simple.parser.JSONParser;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.webapp.WebAppContext;
+import org.eclipse.jetty.ee8.webapp.WebAppContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
