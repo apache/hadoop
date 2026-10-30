@@ -245,6 +245,22 @@ public class NMNullStateStoreService extends NMStateStoreService {
   }
 
   @Override
+  public RecoveredLogAggregatorState loadLogAggregatorState() throws IOException {
+    throw new UnsupportedOperationException(
+        "Recovery not supported by this state store");
+  }
+
+  @Override
+  public void storeLogAggregator(ContainerId containerId)
+      throws IOException {
+  }
+
+  @Override
+  public void removeLogAggregator(ContainerId containerId)
+      throws IOException {
+  }
+
+  @Override
   public RecoveredAMRMProxyState loadAMRMProxyState() throws IOException {
     throw new UnsupportedOperationException(
         "Recovery not supported by this state store");
