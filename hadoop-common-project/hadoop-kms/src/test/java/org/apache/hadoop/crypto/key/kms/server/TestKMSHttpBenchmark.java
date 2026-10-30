@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.Writer;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -38,6 +39,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -56,6 +58,10 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.authentication.server.AuthenticationToken;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager.DelegationTokenInformation;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationHandler;
@@ -66,6 +72,7 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -91,6 +98,8 @@ public class TestKMSHttpBenchmark {
   private static final String KEY = "benchmark-key";
   private static final String TOKEN_PATH =
       "/benchmark/ZKDTSMRoot/ZKDTSMTokensRoot";
+  private static final String KEY_PATH =
+      "/benchmark/ZKDTSMRoot/ZKDTSMMasterKeyRoot";
   private static final double LOG_BUCKET = Math.log(1.01);
 
   /** Seeded shuffled blocks ensure exact ratios across submitted operations. */
@@ -234,6 +243,29 @@ public class TestKMSHttpBenchmark {
   }
 
   @Test
+  public void testMaintenanceWindowIncludesStalledCompletions() {
+    Phase phase = new Phase();
+    phase.startEpochMillis = 1000;
+    phase.startNanos = 1_000_000_000L;
+    Trace trace = new Trace();
+    trace.add(phase.startNanos, phase.startNanos + 50_000_000L);
+    trace.add(phase.startNanos + 50_000_000L, phase.startNanos + 250_000_000L);
+    trace.add(phase.startNanos + 120_000_000L, phase.startNanos + 150_000_000L);
+    trace.add(phase.startNanos + 250_000_000L, phase.startNanos + 260_000_000L);
+    phase.traces.add(trace);
+    Map<String, Object> work = new LinkedHashMap<>();
+    work.put("startEpochMillis", 1100);
+    work.put("endEpochMillis", 1200);
+    work.put("elapsedNanos", 100_000_000L);
+    Map<String, Object> impact = maintenanceImpact(phase, JSON.valueToTree(work), 1);
+    assertEquals(1L, impact.get("completionsDuringMaintenance"));
+    assertEquals(10.0, impact.get("verifyRequestsPerSecondDuringMaintenance"));
+    Map<?, ?> latency = (Map<?, ?>) impact.get("overlappingVerificationLatency");
+    assertEquals(2L, latency.get("latencySamples"));
+    assertEquals(200.0, latency.get("maxMillis"));
+  }
+
+  @Test
   @Timeout(value = 4, unit = TimeUnit.HOURS)
   @EnabledIfSystemProperty(named = "kms.benchmark", matches = "true")
   public void benchmark() throws Exception {
@@ -325,30 +357,92 @@ public class TestKMSHttpBenchmark {
           require(client, verifyRequest(verify, invalid.encodeToUrlString()), 403);
           assertTrue(status(client, new HttpGet(verify)) != 200,
               "Metadata must require authentication");
+          String mutation = System.getProperty("kms.benchmark.mutation", "create");
+          if (!Arrays.asList("create", "renew", "cancel").contains(mutation)) {
+            throw new IllegalArgumentException("Unknown mutation: " + mutation);
+          }
+          String[] mutationTokens = new String[concurrency];
+          for (int i = 0; i < mutationTokens.length; i++) {
+            mutationTokens[i] = token(require(client, new HttpGet(create), 200));
+          }
+          if (!mutation.equals("create")) {
+            String selected = mutationTokens[0];
+            require(client, mutationRequest(create, "renew", selected), 200);
+            String disposable = token(require(client, new HttpGet(create), 200));
+            require(client, mutationRequest(create, "cancel", disposable), 200);
+            require(client, verifyRequest(verify, disposable), 403);
+          }
+          ConcurrentLinkedQueue<String> cancellationTokens = new ConcurrentLinkedQueue<>();
+          if (mutation.equals("cancel") && percent > 0) {
+            // All issuance happens before warmup, never in a measured cancellation.
+            int count = positive("kms.benchmark.cancel.tokens", 100000);
+            ExecutorService preparation = Executors.newFixedThreadPool(concurrency);
+            try {
+              List<Future<?>> preparing = new ArrayList<>();
+              for (int worker = 0; worker < concurrency; worker++) {
+                final int offset = worker;
+                preparing.add(preparation.submit(() -> {
+                  for (int i = offset; i < count; i += concurrency) {
+                    cancellationTokens.add(token(require(client, new HttpGet(create), 200)));
+                  }
+                  return null;
+                }));
+              }
+              for (Future<?> future : preparing) {
+                future.get(10, TimeUnit.MINUTES);
+              }
+            } finally {
+              preparation.shutdownNow();
+              assertTrue(preparation.awaitTermination(30, TimeUnit.SECONDS));
+            }
+          }
+          String maintenance = System.getProperty("kms.benchmark.maintenance", "none");
+          JsonNode prepared = null;
+          if (!maintenance.equals("none")) {
+            assertEquals(0, percent, "Maintenance cases use verification-only HTTP traffic");
+            assertTrue(Arrays.asList("new-key", "rotate", "expired-keys", "expired-tokens")
+                .contains(maintenance), "Unknown maintenance operation");
+            int defaultWork = maintenance.equals("expired-tokens") ? 5000
+                : maintenance.equals("expired-keys") ? 1000 : 500;
+            Map<String, Object> plan = new LinkedHashMap<>();
+            plan.put("operation", maintenance);
+            plan.put("work", positive("kms.benchmark.maintenance.work", defaultWork));
+            write(directory.resolve("maintenance-plan.json"), plan);
+            kms.command('P');
+            prepared = kms.await(directory.resolve("maintenance-prepared.json"));
+          }
           kms.command('D'); // Disable diagnostic counters for measured traffic.
-          phase(client, create, verify, tokens, percent, concurrency, warmup);
-          int tokensBefore = curator.getChildren().forPath(TOKEN_PATH).size();
+          Phase warmed = phase(client, create, verify, tokens, percent, concurrency, warmup,
+              mutation, mutationTokens, cancellationTokens);
+          int tokensBefore = curator.checkExists().forPath(TOKEN_PATH).getNumChildren();
           JsonNode kmsBefore = kms.snapshot();
           JsonNode zkBefore = zk.snapshot();
           Map<String, Object> clientBefore = jvmStats();
+          int keysBefore = curator.checkExists().forPath(KEY_PATH).getNumChildren();
           Phase measurement = phase(client, create, verify, tokens,
-              percent, concurrency, seconds);
+              percent, concurrency, seconds, mutation, mutationTokens, cancellationTokens,
+              prepared == null ? null : kms);
           Map<String, Object> clientAfter = jvmStats();
           JsonNode kmsAfter = kms.snapshot();
           JsonNode zkAfter = zk.snapshot();
-          int tokensAfter = curator.getChildren().forPath(TOKEN_PATH).size();
+          int tokensAfter = curator.checkExists().forPath(TOKEN_PATH).getNumChildren();
           Map<String, Object> result = new LinkedHashMap<>();
           result.put("verifyPercent", 100 - percent);
-          result.put("createPercent", percent);
+          result.put("createPercent", percent); // Legacy schedule field for comparison tooling.
+          result.put("mutationOperation", mutation);
+          result.put("mutationPercent", percent);
           result.put("concurrency", concurrency);
           result.put("warmupSeconds", warmup);
           result.put("measurementSeconds", seconds);
           result.put("actualElapsedWithDrainSeconds", measurement.elapsed);
+          result.put("actualWallElapsedWithDrainSeconds", measurement.wallElapsed);
           result.put("addedDelayMillis", 0);
           result.put("sequenceBatchSize", 100);
           result.put("authentication", "simple issuance; delegation-token verification");
           result.put("verify", measurement.verify.result(seconds));
-          result.put("create", measurement.create.result(seconds));
+          result.put("warmupVerify", warmed.verify.result(warmup));
+          result.put("mutation", measurement.create.result(seconds));
+          result.put(mutation, measurement.create.result(seconds));
           result.put("successfulRequestsPerSecond",
               (measurement.verify.successfulInWindow
                   + measurement.create.successfulInWindow) / (double) seconds);
@@ -363,9 +457,29 @@ public class TestKMSHttpBenchmark {
           result.put("serverMetadata", kms.ready);
           result.put("directory", directory.toString());
           long submitted = measurement.verify.submitted + measurement.create.submitted;
+          JsonNode maintenanceResult = null;
+          if (prepared != null) {
+            maintenanceResult = kms.await(directory.resolve("maintenance-result.json"));
+            assertTrue(!maintenanceResult.has("error"), maintenanceResult.toString());
+            assertTrue(maintenanceResult.path("startEpochMillis").asLong()
+                >= measurement.startEpochMillis);
+            assertTrue(maintenanceResult.path("endEpochMillis").asLong()
+                < measurement.startEpochMillis + seconds * 1000L,
+                "Maintenance exceeded the load window; increase measurement duration");
+            assertEquals(prepared.path("expectedTokenDelta").asInt(), tokensAfter - tokensBefore);
+            assertEquals(prepared.path("expectedKeyDelta").asInt(),
+                curator.checkExists().forPath(KEY_PATH).getNumChildren() - keysBefore);
+            result.put("maintenanceOperation", maintenance);
+            result.put("maintenancePrepared", prepared);
+            result.put("maintenance", maintenanceResult);
+            result.put("maintenanceImpact",
+                maintenanceImpact(measurement, maintenanceResult, seconds));
+          }
           boolean validRun = measurement.verify.errors + measurement.create.errors == 0
               && submitted > 0 && measurement.create.submitted * 100 == submitted * percent
-              && tokensAfter - tokensBefore == measurement.create.submitted;
+              && (prepared != null || tokensAfter - tokensBefore == (mutation.equals("create")
+                  ? measurement.create.submitted : mutation.equals("cancel")
+                      ? -measurement.create.submitted : 0));
           result.put("valid", validRun);
           return result;
         }
@@ -377,10 +491,88 @@ public class TestKMSHttpBenchmark {
     private final Operation verify = new Operation();
     private final Operation create = new Operation();
     private double elapsed;
+    private double wallElapsed;
+    private long startEpochMillis;
+    private long startNanos;
+    private Trace trace;
+    private final List<Trace> traces = new ArrayList<>();
+  }
+
+  /** Primitive, thread-confined timestamps, enabled only for maintenance cases. */
+  private static final class Trace {
+    private long[] times = new long[4096];
+    private int used;
+
+    void add(long start, long end) {
+      if (used + 2 > times.length) {
+        times = Arrays.copyOf(times, times.length * 2);
+      }
+      times[used++] = start;
+      times[used++] = end;
+    }
+  }
+
+  private static Map<String, Object> maintenanceImpact(Phase phase, JsonNode work, int seconds) {
+    // Cross-JVM alignment uses wall-clock milliseconds; elapsed work time uses
+    // the child's monotonic clock. Windows are approximate to one millisecond.
+    long begin = phase.startNanos + TimeUnit.MILLISECONDS.toNanos(
+        work.path("startEpochMillis").asLong() - phase.startEpochMillis);
+    long end = phase.startNanos + TimeUnit.MILLISECONDS.toNanos(
+        work.path("endEpochMillis").asLong() - phase.startEpochMillis);
+    long completions = 0;
+    long[] bins = new long[seconds * 10];
+    double[] maxima = new double[bins.length];
+    Operation overlapping = new Operation();
+    for (Trace trace : phase.traces) {
+      for (int i = 0; i < trace.used; i += 2) {
+        long start = trace.times[i];
+        long finish = trace.times[i + 1];
+        if (finish >= begin && finish < end) {
+          completions++;
+        }
+        if (start < end && finish >= begin) {
+          overlapping.record(start, finish, Long.MAX_VALUE, null);
+        }
+        int bin = (int) ((finish - phase.startNanos) / TimeUnit.MILLISECONDS.toNanos(100));
+        if (bin >= 0 && bin < bins.length) {
+          bins[bin]++;
+          maxima[bin] = Math.max(maxima[bin], (finish - start) / 1_000_000.0);
+        }
+      }
+    }
+    Map<String, Object> result = new LinkedHashMap<>();
+    result.put("clockAlignmentPrecisionMillis", 1);
+    result.put("completionsDuringMaintenance", completions);
+    result.put("verifyRequestsPerSecondDuringMaintenance", completions
+        / (work.path("elapsedNanos").asLong() / 1_000_000_000.0));
+    Map<String, Object> latency = overlapping.result(1);
+    Map<String, Object> selected = new LinkedHashMap<>();
+    for (String key : Arrays.asList("latencySamples", "p50Millis", "p95Millis",
+        "p99Millis", "maxMillis")) {
+      selected.put(key, latency.get(key));
+    }
+    selected.put("p9999Millis", overlapping.percentile(0.9999));
+    result.put("overlappingVerificationLatency", selected);
+    result.put("completedRequestsPer100Millis", bins);
+    result.put("maxVerificationLatencyPer100Millis", maxima);
+    result.put("maintenanceStartOffsetMillis",
+        work.path("startEpochMillis").asLong() - phase.startEpochMillis);
+    result.put("maintenanceEndOffsetMillis",
+        work.path("endEpochMillis").asLong() - phase.startEpochMillis);
+    return result;
   }
 
   private static Phase phase(CloseableHttpClient client, URI create, URI verify,
-      String[] tokens, int percent, int concurrency, int seconds) throws Exception {
+      String[] tokens, int percent, int concurrency, int seconds, String mutation,
+      String[] mutationTokens, ConcurrentLinkedQueue<String> cancellationTokens) throws Exception {
+    return phase(client, create, verify, tokens, percent, concurrency, seconds,
+        mutation, mutationTokens, cancellationTokens, null);
+  }
+
+  private static Phase phase(CloseableHttpClient client, URI create, URI verify,
+      String[] tokens, int percent, int concurrency, int seconds, String mutation,
+      String[] mutationTokens, ConcurrentLinkedQueue<String> cancellationTokens,
+      Child maintenance) throws Exception {
     ExecutorService workers = Executors.newFixedThreadPool(concurrency);
     CountDownLatch ready = new CountDownLatch(concurrency);
     CountDownLatch start = new CountDownLatch(1);
@@ -393,52 +585,90 @@ public class TestKMSHttpBenchmark {
         final int worker = i;
         futures.add(workers.submit(() -> {
           Phase result = new Phase();
+          if (maintenance != null) {
+            result.trace = new Trace();
+          }
           ready.countDown();
           start.await();
           int operation;
           while ((operation = schedule[0].next()) >= 0) {
             long requestStart = System.nanoTime();
             String error = null;
-            HttpGet request = operation == 1 ? new HttpGet(create)
-                : verifyRequest(verify, tokens[worker % tokens.length]);
-            try (CloseableHttpResponse response = client.execute(request)) {
-              int code = response.getStatusLine().getStatusCode();
-              byte[] body = EntityUtils.toByteArray(response.getEntity());
-              if (code != 200) {
-                error = "HTTP_" + code;
+            HttpRequestBase request = null;
+            try {
+              if (operation == 0) {
+                request = verifyRequest(verify, tokens[worker % tokens.length]);
+              } else if (mutation.equals("create")) {
+                request = new HttpGet(create);
               } else {
-                JsonNode json = JSON.readTree(body);
-                if (operation == 1) {
-                  token(json);
-                } else if (!KEY.equals(json.path("name").asText())) {
-                  error = "INVALID_METADATA";
+                String selected = mutation.equals("cancel") ? cancellationTokens.poll()
+                    : mutationTokens[worker];
+                if (selected == null) {
+                  throw new IllegalStateException("Cancellation token pool exhausted");
+                }
+                request = mutationRequest(create, mutation, selected);
+              }
+              try (CloseableHttpResponse response = client.execute(request)) {
+                int code = response.getStatusLine().getStatusCode();
+                byte[] body = EntityUtils.toByteArray(response.getEntity());
+                if (code != 200) {
+                  error = "HTTP_" + code;
+                } else {
+                  JsonNode json = JSON.readTree(body);
+                  if (operation == 1 && mutation.equals("create")) {
+                    token(json);
+                  } else if (operation == 1 && mutation.equals("renew")) {
+                    if (json.path("long").asLong() <= System.currentTimeMillis()) {
+                      error = "INVALID_RENEWAL";
+                    }
+                  } else if (operation == 0 && !KEY.equals(json.path("name").asText())) {
+                    error = "INVALID_METADATA";
+                  }
                 }
               }
             } catch (Exception e) {
               error = e.getClass().getSimpleName();
             } finally {
-              request.releaseConnection();
+              if (request != null) {
+                request.releaseConnection();
+              }
             }
+            long finish = System.nanoTime();
             (operation == 1 ? result.create : result.verify)
-                .record(requestStart, System.nanoTime(), timing[1], error);
+                .record(requestStart, finish, timing[1], error);
+            if (result.trace != null && error == null) {
+              result.trace.add(requestStart, finish);
+            }
           }
           return result;
         }));
       }
       assertTrue(ready.await(30, TimeUnit.SECONDS));
+      long epoch = System.currentTimeMillis();
       timing[0] = System.nanoTime();
       timing[1] = timing[0] + TimeUnit.SECONDS.toNanos(seconds);
       schedule[0] = new Schedule(percent, timing[1], 42);
       start.countDown();
+      if (maintenance != null) {
+        maintenance.command('M');
+      }
       Phase result = new Phase();
+      result.startEpochMillis = epoch;
+      result.startNanos = timing[0];
       long finishDeadline = timing[1] + TimeUnit.SECONDS.toNanos(120);
       for (Future<Phase> future : futures) {
         Phase local = future.get(Math.max(1, finishDeadline - System.nanoTime()),
             TimeUnit.NANOSECONDS);
         result.verify.add(local.verify);
         result.create.add(local.create);
+        if (local.trace != null) {
+          result.traces.add(local.trace);
+        }
       }
       result.elapsed = (System.nanoTime() - timing[0]) / 1_000_000_000.0;
+      result.wallElapsed = (System.currentTimeMillis() - epoch) / 1000.0;
+      assertTrue(Math.abs(result.wallElapsed - result.elapsed) < 1.0,
+          "Host suspension or wall-clock discontinuity invalidated the measurement");
       assertEquals(0, result.verify.errors + result.create.errors,
           "HTTP errors: " + result.verify.errorTypes + result.create.errorTypes);
       return result;
@@ -447,6 +677,13 @@ public class TestKMSHttpBenchmark {
       workers.shutdownNow();
       assertTrue(workers.awaitTermination(30, TimeUnit.SECONDS));
     }
+  }
+
+  private static HttpPut mutationRequest(URI create, String mutation, String token) {
+    String op = mutation.equals("cancel")
+        ? "CANCELDELEGATIONTOKEN" : "RENEWDELEGATIONTOKEN";
+    return new HttpPut(create.toString().replace("GETDELEGATIONTOKEN", op)
+        + "&token=" + java.net.URLEncoder.encode(token, StandardCharsets.UTF_8));
   }
 
   private static HttpGet verifyRequest(URI uri, String token) {
@@ -664,6 +901,8 @@ public class TestKMSHttpBenchmark {
     Path directory = new File(args[1]).toPath();
     TestingServer zk = null;
     MiniKMS kms = null;
+    ExecutorService maintenanceWorker = Executors.newSingleThreadExecutor();
+    JsonNode maintenancePlan = null;
     try {
       String endpoint;
       if ("zk".equals(role)) {
@@ -728,11 +967,35 @@ public class TestKMSHttpBenchmark {
             }
           }
           write(directory.resolve(role + "-stats-" + snapshot++ + ".json"), stats);
+        } else if (command == 'P') {
+          maintenancePlan = JSON.readTree(directory.resolve("maintenance-plan.json").toFile());
+          write(directory.resolve("maintenance-prepared.json"),
+              prepareMaintenance(maintenancePlan));
+        } else if (command == 'M') {
+          final JsonNode plan = maintenancePlan;
+          maintenanceWorker.submit(() -> {
+            Map<String, Object> result;
+            try {
+              result = runMaintenance(plan);
+            } catch (Throwable e) {
+              result = new LinkedHashMap<>();
+              result.put("error", e.toString());
+            }
+            try {
+              write(directory.resolve("maintenance-result.json"), result);
+            } catch (Exception e) {
+              throw new IllegalStateException(e);
+            }
+          });
         } else if (command == 'D') {
           DiagnosticHandler.diagnostic = false;
         }
       }
     } finally {
+      maintenanceWorker.shutdownNow();
+      if (!maintenanceWorker.awaitTermination(30, TimeUnit.SECONDS)) {
+        throw new IllegalStateException("Maintenance worker did not stop");
+      }
       if (kms != null) {
         kms.stop();
       }
@@ -740,6 +1003,108 @@ public class TestKMSHttpBenchmark {
         zk.close();
       }
     }
+  }
+
+  private static Object invokeManager(String name, Class<?>[] types, Object... args)
+      throws Exception {
+    Class<?> type = DiagnosticHandler.manager.getClass();
+    while (type != null) {
+      try {
+        Method method = type.getDeclaredMethod(name, types);
+        method.setAccessible(true);
+        return method.invoke(DiagnosticHandler.manager, args);
+      } catch (NoSuchMethodException e) {
+        type = type.getSuperclass();
+      }
+    }
+    throw new NoSuchMethodException(name);
+  }
+
+  private static Object managerField(String name) throws Exception {
+    Class<?> type = DiagnosticHandler.manager.getClass();
+    while (type != null) {
+      try {
+        Field field = type.getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(DiagnosticHandler.manager);
+      } catch (NoSuchFieldException e) {
+        type = type.getSuperclass();
+      }
+    }
+    throw new NoSuchFieldException(name);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Map<String, Object> prepareMaintenance(JsonNode plan) throws Exception {
+    String operation = plan.path("operation").asText();
+    int count = plan.path("work").asInt();
+    Class<?>[] none = new Class<?>[0];
+    if (operation.equals("expired-keys")) {
+      Map<Integer, DelegationKey> keys =
+          (Map<Integer, DelegationKey>) managerField("allKeys");
+      for (int i = 0; i < count; i++) {
+        int id = (Integer) invokeManager("incrementCurrentKeyId", none);
+        javax.crypto.SecretKey secret =
+            (javax.crypto.SecretKey) invokeManager("generateSecret", none);
+        DelegationKey key = new DelegationKey(id, 1L, secret);
+        invokeManager("storeDelegationKey", new Class<?>[]{DelegationKey.class}, key);
+        keys.put(id, key);
+      }
+    } else if (operation.equals("expired-tokens")) {
+      Map<AbstractDelegationTokenIdentifier, DelegationTokenInformation> tokens =
+          (Map<AbstractDelegationTokenIdentifier, DelegationTokenInformation>)
+              managerField("currentTokens");
+      Method password = DelegationTokenInformation.class.getDeclaredMethod("getPassword");
+      password.setAccessible(true);
+      for (int i = 0; i < count; i++) {
+        AbstractDelegationTokenIdentifier id = DiagnosticHandler.manager.createIdentifier();
+        id.setOwner(new Text("benchmark"));
+        id.setRenewer(new Text("benchmark"));
+        int sequence = (Integer) invokeManager("incrementDelegationTokenSeqNum", none);
+        DelegationTokenInformation prepared = (DelegationTokenInformation) invokeManager(
+            "prepareToken", new Class<?>[]{AbstractDelegationTokenIdentifier.class, int.class},
+            id, sequence);
+        DelegationTokenInformation expired = new DelegationTokenInformation(
+            1L, (byte[]) password.invoke(prepared));
+        invokeManager("storeToken", new Class<?>[]{AbstractDelegationTokenIdentifier.class,
+            DelegationTokenInformation.class}, id, expired);
+        tokens.put(id, expired);
+      }
+    }
+    Map<String, Object> result = new LinkedHashMap<>();
+    result.put("operation", operation);
+    result.put("work", count);
+    result.put("expectedTokenDelta", operation.equals("expired-tokens") ? -count : 0);
+    result.put("expectedKeyDelta", operation.equals("new-key") || operation.equals("rotate")
+        ? count : operation.equals("expired-keys") ? 1 - count : 0);
+    return result;
+  }
+
+  private static Map<String, Object> runMaintenance(JsonNode plan) throws Exception {
+    String operation = plan.path("operation").asText();
+    int work = plan.path("work").asInt();
+    int calls = operation.equals("new-key") || operation.equals("rotate") ? work : 1;
+    String method = operation.equals("new-key") ? "updateCurrentKey"
+        : operation.equals("expired-tokens") ? "removeExpiredToken" : "rollMasterKey";
+    Operation latency = new Operation();
+    long epochStart = System.currentTimeMillis();
+    long begin = System.nanoTime();
+    for (int i = 0; i < calls; i++) {
+      long start = System.nanoTime();
+      invokeManager(method, new Class<?>[0]);
+      latency.record(start, System.nanoTime(), Long.MAX_VALUE, null);
+    }
+    long end = System.nanoTime();
+    long epochEnd = System.currentTimeMillis();
+    Map<String, Object> result = new LinkedHashMap<>();
+    result.put("operation", operation);
+    result.put("work", work);
+    result.put("completedCalls", calls);
+    result.put("startEpochMillis", epochStart);
+    result.put("endEpochMillis", epochEnd);
+    result.put("elapsedNanos", end - begin);
+    result.put("operationLatency", latency.result((end - begin) / 1_000_000_000.0));
+    return result;
   }
 
   private static Map<String, Object> zooKeeperStats(String endpoint) throws Exception {

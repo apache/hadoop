@@ -110,3 +110,94 @@ Mixed-load median throughput increased by 1.52x, 4.48x, and 7.47x as creation in
 ZooKeeper metrics recorded real fsync activity. No artificial delays, renewals, cancellations, concurrency sweep, or batch-size variation were used. These results concern authenticated metadata requests against a local single-server setup, not encryption requests, TLS/Kerberos costs, or a production quorum. They replace secret-manager-only speedups as the end-to-end evidence for this change.
 
 Charts and the public benchmark report are available in [HADOOP-20045](https://issues.apache.org/jira/browse/HADOOP-20045).
+
+## Renewal and cancellation workloads (HADOOP-20046)
+
+Select `--mutation renew` or `--mutation cancel` on the comparison runner (or set
+`-Dkms.benchmark.mutation=renew|cancel` on the Java test). The four percentages
+then describe verification versus the selected mutation. The legacy
+`kms.benchmark.create.percent` property still selects those percentages; output
+also records `mutationOperation` and `mutationPercent` explicitly. The generic
+`mutation` counters and operation-named counters contain mutation results.
+
+Renewal uses a separate token per worker, leaving the verification tokens
+unchanged. Cancellation consumes unique tokens from a pool issued before
+warmup. There is no replacement issuance in the load window. Pool creation is
+outside both warmup and measurement, but adds setup time and ZooKeeper state.
+Use `--cancel-tokens` (default 100000), or `kms.benchmark.cancel.tokens`, to size
+that pool for warmup plus measurement. Pool exhaustion fails the case rather
+than changing its workload. The token-node validation expects growth for
+creation, no change for renewal, and a decrease matching completed cancellations.
+
+Both additional modes preflight renewal, cancellation, and rejection of a
+cancelled token. They retain the original authentication checks, no-cookie/no-
+retry client behavior, exact submission ratios, latency accounting, and loaded
+class fingerprint checks. Benchmark key rotation and expired-key cleanup
+separately; these request workloads do not measure either operation.
+
+## Verification during background maintenance
+
+Use `kms-maintenance-benchmark.py` to compare the real KMS secret manager's
+maintenance paths while 32 clients issue verification-only HTTP metadata GETs:
+
+```sh
+python3 dev-support/benchmarks/kms-maintenance-benchmark.py \
+  --baseline-common /absolute/path/to/parent/hadoop-common.jar \
+  --fixed-common /absolute/path/to/fixed/hadoop-common.jar \
+  --output /absolute/path/to/fresh/maintenance-results
+```
+
+The default matrix contains three repetitions of each original/fixed pair,
+with alternating pair order and five seconds of HTTP warmup. Measurement lasts
+fifteen seconds for key scenarios and at least sixty seconds for the larger
+expired-token batch. Each case has fresh KMS/ZooKeeper JVMs. It injects no latency,
+does not alter batch size 100, and does not replace the manager or its storage
+hooks. A test-only child-process control command invokes the actual maintenance
+method through reflection, on a separate thread from the HTTP workers.
+
+| Scenario | Real path and fixed work |
+| --- | --- |
+| `new-key` | 500 calls to `updateCurrentKey()`; new signing-key installation |
+| `rotate` | 500 calls to `rollMasterKey()`; retiring-key updates plus replacement installation |
+| `expired-keys` | One rotation with 1,000 expired keys already stored and cached |
+| `expired-tokens` | One cleanup with 5,000 expired tokens already stored and cached |
+
+New-key installation in the fixed implementation also persists the retiring
+key's expiry before publication. Rotation includes both retiring and new-key
+persistence; this is not a synthetic isolated timing of a storage hook without
+its caller's lock. Expired-token storage deletion was already outside the API
+write lock in the parent; its inclusion measures the cleanup coordination and
+conditional-delete changes rather than assuming another global I/O lock fix.
+These repeated maintenance batches are stress workloads, not production cadence.
+
+Preparation uses real stored objects and initializes their expired cache state
+before warmup. The harness checks exact token/key node-count changes after the
+batch, actual loaded class fingerprints, successful maintenance completion
+inside the load window, and zero HTTP/validation errors. Normal tests include a
+window-accounting regression ensuring stalled requests that finish after
+maintenance ends remain in the overlap-latency statistics.
+
+Request timestamps are collected in primitive thread-confined arrays only for
+maintenance measurements. The report contains verification completions per
+second during the actual maintenance interval, latencies of all requests whose
+lifetimes overlap it (including late completions), observed maximum and p99.99,
+100 ms completion/maximum-latency time series, whole-window throughput, warmup
+throughput, and maintenance duration. Cross-JVM interval alignment uses wall
+clock milliseconds, approximately 1 ms resolution; operation duration uses the
+child's monotonic clock. This remains a closed-loop benchmark without coordinated
+omission correction. A full-window p99 alone can hide a short global stall.
+
+Use `--operations` to select a comma-separated subset. The underlying opt-in
+Java test uses `kms.benchmark.maintenance` and
+`kms.benchmark.maintenance.work`; select zero mutation percent for these cases.
+If the batch outlasts measurement, the case fails rather than truncating it.
+
+The runner supports `--resume` for interrupted comparisons. It checks settings,
+work sizes, loaded-class hashes, and the duration of every retained sample,
+then skips only validated cases. Failed attempts remain in separate directories.
+
+The HADOOP-20046 results, charts, design, and exported measurements are attached
+to [HADOOP-20046](https://issues.apache.org/jira/browse/HADOOP-20046).
+The maintenance comparison contains three runs per build and scenario; the
+renewal/cancellation 95:5 checks are single runs. Tail latency did not improve
+uniformly, so use the full report alongside the throughput numbers.

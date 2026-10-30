@@ -53,7 +53,9 @@ def write_json(path, value):
 def summarize(samples):
     summary = []
     for percent in [0, 1, 5, 10]:
-        row = {"verifyPercent": 100 - percent, "createPercent": percent}
+        row = {"verifyPercent": 100 - percent, "createPercent": percent,
+               "mutationPercent": percent,
+               "mutationOperation": samples[0].get("mutationOperation", "create")}
         for label in ["baseline", "fixed"]:
             runs = [s for s in samples
                     if s["label"] == label and s["createPercent"] == percent]
@@ -67,13 +69,13 @@ def summarize(samples):
                 "maxRequestsPerSecond": max(rates),
                 "medianVerifyPerSecond": statistics.median(
                     s["verify"]["successfulRequestsPerSecond"] for s in runs),
-                "medianCreatePerSecond": statistics.median(
-                    s["create"]["successfulRequestsPerSecond"] for s in runs),
+                "medianMutationPerSecond": statistics.median(
+                    s.get("mutation", s.get("create"))["successfulRequestsPerSecond"] for s in runs),
                 "medianVerifyP99Millis": statistics.median(
                     s["verify"]["p99Millis"] for s in runs),
-                "medianCreateP99Millis": statistics.median(
-                    s["create"]["p99Millis"] for s in runs),
-                "errors": sum(s["verify"]["errors"] + s["create"]["errors"]
+                "medianMutationP99Millis": statistics.median(
+                    s.get("mutation", s.get("create"))["p99Millis"] for s in runs),
+                "errors": sum(s["verify"]["errors"] + s.get("mutation", s.get("create"))["errors"]
                               for s in runs),
             }
         if "baseline" in row and "fixed" in row:
@@ -89,6 +91,8 @@ def main():
     parser.add_argument("--baseline-common", type=Path, required=True)
     parser.add_argument("--fixed-common", type=Path, required=True)
     parser.add_argument("--maven", default="mvn")
+    parser.add_argument("--mutation", choices=["create", "renew", "cancel"], default="create")
+    parser.add_argument("--cancel-tokens", type=int, default=100000)
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--concurrency", type=int, default=32)
     parser.add_argument("--warmup-seconds", type=int, default=5)
@@ -96,8 +100,8 @@ def main():
     parser.add_argument("--output", type=Path, default=(root / "hadoop-common-project"
                         / "hadoop-kms/target/kms-http-comparison"))
     args = parser.parse_args()
-    if min(args.repetitions, args.concurrency, args.warmup_seconds, args.seconds) <= 0:
-        parser.error("Repetitions, concurrency and durations must be positive")
+    if min(args.repetitions, args.concurrency, args.warmup_seconds, args.seconds, args.cancel_tokens) <= 0:
+        parser.error("Repetitions, concurrency, durations and cancellation pool size must be positive")
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     if (output / "comparison.json").exists():
@@ -108,6 +112,7 @@ def main():
     if fingerprints["baseline"] == fingerprints["fixed"]:
         parser.error("The two jars contain identical secret-manager classes")
     report = {
+        "mutationOperation": args.mutation,
         "concurrency": args.concurrency, "sequenceBatchSize": 100,
         "addedDelayMillis": 0, "warmupSeconds": args.warmup_seconds,
         "measurementSeconds": args.seconds, "repetitions": args.repetitions,
@@ -122,6 +127,8 @@ def main():
             command = [args.maven, "-o", "-pl", "hadoop-common-project/hadoop-kms",
                        "-Dtest=TestKMSHttpBenchmark", "-Dkms.benchmark=true",
                        "-Dkms.benchmark.repetitions=1",
+                       "-Dkms.benchmark.mutation=" + args.mutation,
+                       "-Dkms.benchmark.cancel.tokens=" + str(args.cancel_tokens),
                        "-Dkms.benchmark.concurrency=" + str(args.concurrency),
                        "-Dkms.benchmark.create.percent=0,1,5,10",
                        "-Dkms.benchmark.warmup.seconds=" + str(args.warmup_seconds),
@@ -146,6 +153,8 @@ def main():
                             sample["serverMetadata"]["zkManagerSha256"]]
                 if not sample["valid"] or observed != fingerprints[label]:
                     raise RuntimeError("Invalid sample or wrong loaded classes: " + str(run))
+                if sample.get("mutationOperation") != args.mutation:
+                    raise RuntimeError("Wrong mutation workload: " + str(run))
                 sample["repetition"] = repetition
                 report["samples"].append(sample)
             report["summary"] = summarize(report["samples"])
