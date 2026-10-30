@@ -430,7 +430,7 @@ org.eclipse.jetty.websocket:javax-websocket-server-impl:9.4.58.v20250814
 org.ehcache:ehcache:3.8.2
 org.ini4j:ini4j:0.5.4
 org.objenesis:objenesis:2.6
-org.xerial.snappy:snappy-java:1.1.10.4
+org.xerial.snappy:snappy-java:1.1.10.12
 org.yaml:snakeyaml:2.0
 org.wildfly.openssl:wildfly-openssl:2.2.5.Final
 ro.isdc.wro4j:wro4j-maven-plugin:1.8.0
