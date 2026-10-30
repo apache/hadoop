@@ -108,8 +108,10 @@ public class AppsBlock extends HtmlBlock {
       throw new BadRequestException(
         "app.started-time.end must be greater than app.started-time.begin");
     }
-    request.setStartRange(
-        Range.between(appStartedTimeBegain, appStartedTimeEnd));
+    if (appStartedTimeBegain != 0 || appStartedTimeEnd != Long.MAX_VALUE) {
+      request.setStartRange(
+          Range.between(appStartedTimeBegain, appStartedTimeEnd));
+    }
 
     if (callerUGI == null) {
       appReports = getApplicationReport(request);
