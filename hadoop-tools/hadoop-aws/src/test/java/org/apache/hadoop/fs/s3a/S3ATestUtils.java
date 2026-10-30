@@ -2080,19 +2080,21 @@ public final class S3ATestUtils {
       throws IOException, InterruptedException, TimeoutException {
     Configuration uncached = new Configuration(conf);
     disableFilesystemCaching(uncached);
-    WeakReference<FileSystem> sentinel = null;
+    List<CompletableFuture<WeakReference<FileSystem>>> futures =
+        new ArrayList<>(instances);
     for (int i = 0; i < instances; i++) {
-      // Uncached instance; deliberately neither retained nor closed, so it
-      // becomes eligible for collection once this iteration ends.
-      FileSystem fs = FileSystem.get(uri, uncached);
-      fs.listStatus(new Path("/"));
-      if (sentinel == null) {
-        sentinel = new WeakReference<>(fs);
-      }
+      futures.add(submit(EXECUTOR, () -> {
+        // Uncached instance; deliberately neither retained nor closed, so it
+        // becomes eligible for collection once this task ends.
+        FileSystem fs = FileSystem.get(uri, uncached);
+        fs.listStatus(new Path("/"));
+        return new WeakReference<>(fs);
+      }));
     }
+    waitForCompletion(futures);
     // System.gc() is only a hint, so prove a real collection happened: request
     // GC until the weak reference to an abandoned instance clears.
-    final WeakReference<FileSystem> ref = sentinel;
+    final WeakReference<FileSystem> ref = waitForCompletion(futures.get(0));
     waitFor(() -> {
       System.gc();
       return ref.get() == null;
