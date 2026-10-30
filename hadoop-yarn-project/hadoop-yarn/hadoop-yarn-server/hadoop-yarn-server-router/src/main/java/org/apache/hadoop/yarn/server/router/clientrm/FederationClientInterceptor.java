@@ -2110,7 +2110,7 @@ public class FederationClientInterceptor
   }
 
   @VisibleForTesting
-  public ThreadPoolExecutor getExecutorService() {
+  ThreadPoolExecutor getExecutorService() {
     return executorService;
   }
 

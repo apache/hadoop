@@ -16,14 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.router;
+package org.apache.hadoop.yarn.server.router.clientrm;
 
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
-import org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor;
 import org.apache.hadoop.yarn.server.router.rmadmin.FederationRMAdminInterceptor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
