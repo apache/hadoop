@@ -28,6 +28,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.io.*;
@@ -42,7 +43,6 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.security.SecurityUtil;
-import org.eclipse.jetty.server.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -703,11 +703,27 @@ public class ImageServlet extends HttpServlet {
 
   private void sendError(HttpServletResponse response, int code, String message)
       throws IOException {
-    if (response instanceof Response) {
-      ((Response)response).setStatusWithReason(code, message);
+    // A refusal reaches here twice: once where it is found, and again from
+    // doGet's or doPut's catch, which wraps it as "GetImage failed" or
+    // "PutImage failed". The first call has already answered the client, and
+    // the exception rethrown after the second is logged by the container, so
+    // the second report adds nothing worth a warning.
+    if (response.isCommitted()) {
+      LOG.debug("Could not report \"{}\": the response is already committed.",
+          message);
+      return;
     }
-
-    response.sendError(code, message);
+    // Write the reason into the body rather than leaving it to sendError.
+    // This servlet closes its output stream on the way out of every request,
+    // which commits the response before the container can render an error
+    // page, and a container need not send a custom reason phrase. As sendError
+    // would, drop whatever part of a file is still in the buffer.
+    byte[] body = message.getBytes(StandardCharsets.UTF_8);
+    response.resetBuffer();
+    response.setStatus(code, message);
+    response.setContentType("text/plain; charset=utf-8");
+    response.setContentLength(body.length);
+    response.getOutputStream().write(body);
   }
 
   /*
