@@ -163,11 +163,19 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
     }
 
     Object invokeMethod() throws Throwable {
-      if (isRpc && SET_CALL_ID_FOR_TEST.get()) {
+      final boolean setCallId = isRpc && SET_CALL_ID_FOR_TEST.get();
+      if (setCallId) {
         Client.setCallIdAndRetryCount(callId, counters.retries,
             retryInvocationHandler.asyncCallHandler);
       }
-      return retryInvocationHandler.invokeMethod(method, args);
+      try {
+        return retryInvocationHandler.invokeMethod(method, args);
+      } finally {
+        if (setCallId) {
+          // The attempt may fail before an RPC consumes the call id.
+          Client.setCallIdAndRetryCountUnprotected(null, 0, null);
+        }
+      }
     }
 
     @Override
