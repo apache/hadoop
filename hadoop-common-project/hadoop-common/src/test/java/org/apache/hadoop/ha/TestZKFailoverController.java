@@ -27,7 +27,9 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
+import java.net.BindException;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.security.NoSuchAlgorithmException;
 
 import java.util.function.Supplier;
@@ -135,6 +137,27 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     DummyHAService svc = cluster.getService(1);
     assertEquals(ZKFailoverController.ERR_CODE_NO_ZK,
         runFC(svc));
+  }
+
+  @Test
+  public void testBindExceptionIsNotMaskedWhenZkfcRpcServerFailsToStart()
+      throws Exception {
+    DummyHAService svc = cluster.getService(1);
+    assertEquals(0, runFC(svc, "-formatZK"));
+
+    try (ServerSocket occupiedSocket = new ServerSocket(0, 1,
+        java.net.InetAddress.getByName("127.0.0.1"))) {
+      int occupiedPort = occupiedSocket.getLocalPort();
+      DummyZKFC zkfc = new DummyZKFC(conf, svc) {
+        @Override
+        protected InetSocketAddress getRpcAddressToBindTo() {
+          return new InetSocketAddress("127.0.0.1", occupiedPort);
+        }
+      };
+
+      LambdaTestUtils.intercept(BindException.class, "Address already in use",
+          () -> zkfc.run(new String[0]));
+    }
   }
 
   @Test
