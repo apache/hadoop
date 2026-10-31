@@ -2339,4 +2339,50 @@ public class TestBlockManager {
       DataNodeFaultInjector.set(oldInjector);
     }
   }
+
+  @Test
+  public void testDoesNotEnqueueBlocksWhenDeletingEmptyDir() throws Exception {
+    Configuration conf = new Configuration();
+    // Pause the MarkedDeleteBlockScrubber so the queue state can be observed
+    // deterministically right after the delete call.
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_UNLOCK_INTERVAL_MS,
+        TimeUnit.HOURS.toMillis(1));
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
+      BlockManager blockManager = cluster.getNamesystem().getBlockManager();
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      Path dir = new Path("/test/dir");
+      fs.mkdirs(new Path(dir, "leaf"));
+      fs.delete(dir, true);
+
+      assertTrue(blockManager.getMarkedDeleteQueue().isEmpty(),
+          "Deleting an empty directory must not enqueue an empty block list");
+    }
+  }
+
+  @Test
+  public void testEnqueueBlocksWhenDeletingFile() throws Exception {
+    Configuration conf = new Configuration();
+    // Pause the MarkedDeleteBlockScrubber so we can observe the enqueued batch
+    // before the background thread drains it.
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_UNLOCK_INTERVAL_MS,
+        TimeUnit.HOURS.toMillis(1));
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
+      BlockManager blockManager = cluster.getNamesystem().getBlockManager();
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      Path file = new Path("/test/file");
+      DFSTestUtil.createFile(fs, file, 1024L, (short) 1, 0L);
+      DFSTestUtil.waitReplication(fs, file, (short) 1);
+
+      fs.delete(file, false);
+
+      assertEquals(1, blockManager.getMarkedDeleteQueue().size(),
+          "Deleting a file with blocks should enqueue exactly one batch");
+    }
+  }
 }
