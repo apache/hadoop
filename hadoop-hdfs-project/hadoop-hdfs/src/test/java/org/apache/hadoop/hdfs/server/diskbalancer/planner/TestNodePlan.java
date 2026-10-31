@@ -43,6 +43,29 @@ public class TestNodePlan {
     assertThat(NodePlan.parseJson(json)).isNotNull();
   }
 
+  /**
+   * HDFS-17872: Plan steps must carry tolerancePercent so the DataNode receives
+   * it. Verify serialization round-trip preserves tolerance percent.
+   */
+  @Test
+  public void testPlanStepTolerancePercentInJson() throws IOException {
+    NodePlan nodePlan = new NodePlan("datanode1", 50070);
+    MoveStep moveStep = new MoveStep();
+    moveStep.setBandwidth(100);
+    moveStep.setBytesToMove(1024);
+    moveStep.setIdealStorage(0.5);
+    moveStep.setMaxDiskErrors(5);
+    moveStep.setTolerancePercent(15);
+    moveStep.setVolumeSetID("volumeSetId");
+    nodePlan.addStep(moveStep);
+    String json = nodePlan.toJson();
+    NodePlan parsed = NodePlan.parseJson(json);
+    assertThat(parsed.getVolumeSetPlans()).hasSize(1);
+    assertThat(parsed.getVolumeSetPlans().get(0).getTolerancePercent())
+        .describedAs("tolerancePercent should be propagated in plan JSON")
+        .isEqualTo(15);
+  }
+
   @Test
   public void testNodePlanWithDisallowedStep() throws Exception {
     NodePlan nodePlan = new NodePlan("datanode1234", 1234);
