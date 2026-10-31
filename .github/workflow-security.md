@@ -116,6 +116,12 @@ these events ran in the context of the PR's base branch, which could be used
 to target older versions of the codebase with vulnerabilities. Now it always
 uses the default base repo. branch.
 
+From November 2026, ASF Infra disables `pull_request_target` for ASF
+repositories[^1]. The PR "Build" check no longer uses it; see
+[Build Checks for Fork Pull Requests](#build-checks-for-fork-pull-requests).
+At the time of writing, `labeler.yml` and `notify_cloud_aws.yml` still use it
+and must be migrated separately.
+
 #### workflow_run
 
 ***privileged***
@@ -132,6 +138,18 @@ have a non-privileged workflow that you need to follow with a privileged one. Th
 Since they are privileged, though, you must be careful not to run untrusted
 code or depend on untrusted variables.
 
+#### schedule and workflow_dispatch
+
+***privileged***
+
+`schedule` events run the workflow from the latest commit on the default
+branch. `workflow_dispatch` events run it on a branch chosen by the user who
+dispatches it, and only users with write access can do so. A pull request
+cannot trigger either of them, so the workflow code that runs has been
+reviewed. They can still hold secrets and a write token, so treat any data
+they read about pull requests or forks (titles, branch names, run results) as
+untrusted input.
+
 #### Comparison
 
 | Trigger            | Context           | Secrets Access? | GITHUB_TOKEN Permissions | Risk Level
@@ -140,6 +158,34 @@ code or depend on untrusted variables.
 | pull_request       | The merge commit  | No (from forks) | Read-only | Low (Safe for untrusted code)
 | pull_request_target | The ~~base~~ default branch | Yes | Write (usually) | CRITICAL (Dangerous if misconfigured)
 | workflow_run       | The default branch | Yes | Write (usually) | High (Runs after another workflow)
+| schedule           | The default branch | Yes | Write (usually) | Low (Not triggered by PRs)
+| workflow_dispatch  | The branch chosen  | Yes | Write (usually) | Low (Only users with write access dispatch)
+
+## Build Checks for Fork Pull Requests
+
+The upstream repository does not automatically build pull requests from
+forks. Instead, contributors enable GitHub Actions in their fork, where
+`build_and_test.yml` runs on `push` (or `workflow_dispatch`) with the fork's
+own token.
+
+`fork_ci_status.yml` mirrors that run as the "Build" check on the upstream
+pull request, using ASF Infra's _fork-ci action_[^20]. It replaced the
+earlier `pull_request_target` bridge (`notify_test_workflow.yml` and
+`update_build_status.yml`):
+
+- It runs only on `schedule` (every 10 minutes) and `workflow_dispatch`. It
+  deliberately has no `workflow_run` trigger, which Zizmor flags as a
+  dangerous trigger. The cost is that a new pull request's check appears on
+  the next scheduled run rather than immediately.
+- Its token has only `actions: read`, `checks: write` and
+  `pull-requests: read`. It reads GitHub API metadata only, and never checks
+  out, builds or downloads anything from the pull request or the fork.
+- The contributor controls the workflow that runs in their fork, so the
+  "Build" check is informational. It does not replace code review or the
+  Yetus precommit checks.
+- To mirror another fork workflow, add another fork-ci step with a distinct
+  check name to `fork_ci_status.yml`. Keep all such steps in that one
+  serialized workflow.
 
 ## Recent Supply Chain Attacks
 
@@ -187,4 +233,5 @@ to the rest of the links in this document.
 [^17]: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run
 [^18]: https://openssf.org/blog/2024/08/12/mitigating-attack-vectors-in-github-workflows/
 [^19]: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
+[^20]: https://github.com/apache/infrastructure-actions/tree/fork-ci/v1.0.0/fork-ci
 
