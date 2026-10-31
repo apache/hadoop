@@ -172,7 +172,7 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
         return retryInvocationHandler.invokeMethod(method, args);
       } finally {
         if (setCallId) {
-          // The attempt may fail before an RPC consumes the call id.
+          // Clear what this attempt set, even if no RPC consumed it.
           Client.setCallIdAndRetryCountUnprotected(null, 0, null);
         }
       }
