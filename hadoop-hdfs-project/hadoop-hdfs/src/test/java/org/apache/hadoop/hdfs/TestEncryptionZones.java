@@ -22,9 +22,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -1669,7 +1671,8 @@ public class TestEncryptionZones {
     // Run the XML OIV processor
     ByteArrayOutputStream output = new ByteArrayOutputStream();
     PrintStream pw = new PrintStream(output);
-    PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), pw);
+    PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(),
+        new OutputStreamWriter(pw, StandardCharsets.UTF_8));
     v.visit(new RandomAccessFile(originalFsimage, "r"));
     final String xml = output.toString();
     SAXParser parser = XMLUtils.newSecureSAXParserFactory().newSAXParser();
