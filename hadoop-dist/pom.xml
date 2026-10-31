@@ -266,6 +266,7 @@
                     </argument>
                     <argument>${project.version}</argument>
                     <argument>${project.build.directory}</argument>
+                    <argument>${project.build.outputTimestamp}</argument>
                   </arguments>
                 </configuration>
               </execution>
