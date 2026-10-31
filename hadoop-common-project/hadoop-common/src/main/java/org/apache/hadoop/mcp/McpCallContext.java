@@ -39,4 +39,12 @@ public final class McpCallContext {
   public HttpServletRequest getRequest() {
     return request;
   }
+
+  String getSessionIdHeader() {
+    return request.getHeader(McpRequestHandler.SESSION_HEADER);
+  }
+
+  String getProtocolVersionHeader() {
+    return request.getHeader(McpJsonRpc.PROTOCOL_VERSION_HEADER);
+  }
 }
