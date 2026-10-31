@@ -124,8 +124,8 @@
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>jakarta.servlet</groupId>
-          <artifactId>jakarta.servlet-api</artifactId>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
@@ -419,10 +419,10 @@
     </dependency>
     <!-- Add back in the transitive dependencies excluded from hadoop-common in client TODO remove once we have a filter for "is in these artifacts" -->
     <!-- skip javax.servlet:javax.servlet-api because it's in client -->
-    <!-- skip jakarta.servlet:jakarta.servlet-api because it's in client -->
+    <!-- skip org.eclipse.jetty.toolchain:jetty-servlet-api because it's in client -->
     <!-- skip jakarta.ws.rs-api:jakarta.ws.rs because it's in client -->
     <!-- Skip commons-logging:commons-logging-api because it looks like nothing actually included it -->
-    <!-- Skip jetty-util because it's in client -->
+    <!-- jetty-util is not in client; it is declared directly further down -->
     <dependency>
       <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-common</artifactId>
@@ -464,7 +464,7 @@
     </dependency>
     <!-- add back in transitive dependencies of hadoop-mapreduce-client-app removed in client -->
     <!-- Skipping javax.servlet:javax.servlet-api because it's in client -->
-    <!-- Skipping jakarta.servlet:jakarta.servlet-api because it's in client -->
+    <!-- Skipping org.eclipse.jetty.toolchain:jetty-servlet-api because it's in client -->
     <!-- Skipping jakarta.ws.rs-api:jakarta.ws.rs because it's in client -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -476,8 +476,8 @@
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>jakarta.servlet</groupId>
-          <artifactId>jakarta.servlet-api</artifactId>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
@@ -551,8 +551,8 @@
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>jakarta.servlet</groupId>
-          <artifactId>jakarta.servlet-api</artifactId>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-servlet-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
@@ -620,10 +620,6 @@
           <artifactId>jakarta.ws.rs-api</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>jakarta.servlet</groupId>
-          <artifactId>jakarta.servlet-api</artifactId>
-        </exclusion>
-        <exclusion>
           <artifactId>junit-jupiter</artifactId>
           <groupId>org.junit.jupiter</groupId>
         </exclusion>
@@ -632,7 +628,7 @@
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.test-framework.providers</groupId>
-      <artifactId>jersey-test-framework-provider-jetty</artifactId>
+      <artifactId>jersey-test-framework-provider-jdk-http</artifactId>
       <exclusions>
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
@@ -643,6 +639,13 @@
           <groupId>org.junit.jupiter</groupId>
         </exclusion>
       </exclusions>
+      <optional>true</optional>
+    </dependency>
+    <!-- jetty-util is excluded above as "in client", but hadoop-client-runtime does not shade
+         it, so declare it directly to keep it in this jar. -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-util</artifactId>
       <optional>true</optional>
     </dependency>
     <!-- skipping jersey-server because it's above -->
@@ -707,8 +710,14 @@
                       <exclude>junit:junit</exclude>
                       <exclude>com.google.code.findbugs:jsr305</exclude>
                       <exclude>ch.qos.reload4j:reload4j</exclude>
-                      <exclude>org.eclipse.jetty.websocket:websocket-common</exclude>
-                      <exclude>org.eclipse.jetty.websocket:websocket-api</exclude>
+                      <!--
+                        WebSocket is hadoop-client-runtime's to ship. Jetty 12
+                        renamed both of these and split the Jetty-flavoured API
+                        out per EE environment, so the two names become three.
+                      -->
+                      <exclude>org.eclipse.jetty.websocket:jetty-websocket-core-common</exclude>
+                      <exclude>org.eclipse.jetty.ee8.websocket:jetty-ee8-websocket-jetty-api</exclude>
+                      <exclude>org.eclipse.jetty.ee8.websocket:jetty-ee8-websocket-jetty-common</exclude>
                       <!-- We need a filter that matches just those things that are included in the above artiacts -->
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>
@@ -836,24 +845,12 @@
                       </excludes>
                     </filter>
                     <filter>
-                      <artifact>org.eclipse.jetty.websocket:javax-websocket-server-impl</artifact>
-                      <excludes>
-                        <exclude>*/**</exclude>
-                      </excludes>
-                    </filter>
-                    <filter>
-                      <artifact>org.eclipse.jetty.websocket:websocket-client</artifact>
-                      <excludes>
-                        <exclude>*/**</exclude>
-                      </excludes>
-                    </filter>
-                    <filter>
                       <artifact>org.eclipse.jetty:jetty-io</artifact>
                       <excludes>
                         <exclude>*/**</exclude>
                       </excludes>
                     </filter>
-                    <!-- Jetty 9.4.x: jetty-client and jetty-xml are depended by org.eclipse.jetty.websocket:websocket-client.-->
+                    <!-- jetty-client and jetty-xml are depended by the Jetty WebSocket client. -->
                     <filter>
                       <artifact>org.eclipse.jetty:jetty-client</artifact>
                       <excludes>
@@ -945,6 +942,8 @@
                         <exclude>com/sun/security/**/*</exclude>
                         <exclude>com/sun/jndi/**/*</exclude>
                         <exclude>com/sun/management/**/*</exclude>
+                        <exclude>com/sun/net/httpserver/*</exclude>
+                        <exclude>com/sun/net/httpserver/**/*</exclude>
                         <exclude>com/ibm/security/*</exclude>
                         <exclude>com/ibm/security/**/*</exclude>
                         <!-- Exclude zstd-jni -->
