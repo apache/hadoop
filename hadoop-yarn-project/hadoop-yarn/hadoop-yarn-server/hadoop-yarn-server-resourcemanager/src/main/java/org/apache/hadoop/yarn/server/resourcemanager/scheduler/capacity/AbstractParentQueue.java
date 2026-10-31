@@ -67,6 +67,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.Activi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.AllocationState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.QueueOrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.Resolved;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolvedQueueConfig;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ValueSource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerAllocationProposal;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.SchedulerContainer;
@@ -79,7 +83,6 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedParentQueue;
 
 public abstract class AbstractParentQueue extends AbstractCSQueue {
   private static final Logger LOG =
@@ -122,8 +125,13 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     setDynamicQueue(isDynamic);
     this.rootQueue = (parent == null);
 
-    float rawCapacity = queueContext.getConfiguration()
-          .getNonLabeledQueueCapacity(this.queuePath);
+    // A dynamic queue reads these before the template entries of its parent
+    // are written for it, so not from its resolved configuration, which
+    // includes them
+    ResolvedQueueConfig resolved = isDynamic ? null : getResolvedQueueConfig();
+    float rawCapacity = resolved == null
+        ? queueContext.getConfiguration().getNonLabeledQueueCapacity(this.queuePath)
+        : resolved.get(QueueProperties.CAPACITY).getValue();
 
     String rootCapacityError =
         QueueCapacityChecks.checkRootCapacity(queueName, rootQueue, rawCapacity);
@@ -132,9 +140,9 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     }
 
     this.childQueues = new ArrayList<>();
-    this.allowZeroCapacitySum =
-          queueContext.getConfiguration()
-              .getAllowZeroCapacitySum(getQueuePathObject());
+    this.allowZeroCapacitySum = resolved == null
+        ? queueContext.getConfiguration().getAllowZeroCapacitySum(getQueuePathObject())
+        : resolved.get(QueueProperties.ALLOW_ZERO_CAPACITY_SUM).getValue();
 
   }
 
@@ -166,11 +174,22 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
         }
       }
 
-      // Initialize queue ordering policy
-      queueOrderingPolicy = configuration.getQueueOrderingPolicy(
-          getQueuePathObject(), parent == null ?
-              null :
-              ((AbstractParentQueue) parent).getQueueOrderingPolicyConfigName());
+      // Initialize queue ordering policy. A queue that does not set one takes
+      // the config name of its live parent's policy, as always: a custom
+      // policy may report a name that differs from its configured class name,
+      // which the inherited resolved value cannot reproduce.
+      Resolved<String> policyName =
+          getResolvedQueueConfig().get(QueueProperties.QUEUE_ORDERING_POLICY);
+      String policyType = policyName.getValue();
+      if (parent != null && !isSetForQueue(policyName)) {
+        String parentPolicy =
+            ((AbstractParentQueue) parent).getQueueOrderingPolicyConfigName();
+        policyType = (parentPolicy == null
+            ? CapacitySchedulerConfiguration.DEFAULT_QUEUE_ORDERING_POLICY
+            : parentPolicy).trim();
+      }
+      queueOrderingPolicy = CapacitySchedulerConfiguration.createQueueOrderingPolicy(
+          policyType, getQueuePathObject());
       queueOrderingPolicy.setQueues(childQueues);
 
       LOG.info(getQueueName() + ", " + getCapacityOrWeightString()
@@ -188,14 +207,10 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     }
   }
 
-  @Override
-  protected void setDynamicQueueACLProperties() {
-    super.setDynamicQueueACLProperties();
-
-    if (parent instanceof AbstractParentQueue) {
-      acls.putAll(getACLsForFlexibleAutoCreatedParentQueue(
-          ((AbstractParentQueue) parent).getAutoCreatedQueueTemplate()));
-    }
+  private static boolean isSetForQueue(Resolved<String> value) {
+    ValueSource source = value.getSource();
+    return source == ValueSource.QUEUE || source == ValueSource.TEMPLATE_V1
+        || source == ValueSource.TEMPLATE_V2;
   }
 
   // Check weight configuration, throw exception when configuration is invalid
