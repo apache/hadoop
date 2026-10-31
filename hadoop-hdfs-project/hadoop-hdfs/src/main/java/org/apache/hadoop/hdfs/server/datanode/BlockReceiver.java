@@ -24,6 +24,7 @@ import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
+import java.io.File;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStreamWriter;
@@ -33,12 +34,17 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Queue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.zip.Checksum;
 
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSPacket;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -51,6 +57,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodePeerMetrics;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
@@ -148,6 +155,16 @@ class BlockReceiver implements Closeable {
   private boolean pinning;
   private final AtomicLong lastSentTime = new AtomicLong(0L);
   private long maxSendIdleTime;
+  private final BufferedBlockWriter buffer;
+  private final FsVolumeImpl volume;
+  private final long bufferFlushIdleTimeoutMs;
+  private volatile ScheduledFuture<?> flushTask;
+  private volatile long lastPacketReceivedTime = System.currentTimeMillis();
+
+  private static final AtomicLongFieldUpdater<BlockReceiver>
+      LAST_PACKET_RECEIVED_TIME_UPDATER =
+      AtomicLongFieldUpdater.newUpdater(BlockReceiver.class,
+          "lastPacketReceivedTime");
 
   BlockReceiver(final ExtendedBlock block, final StorageType storageType,
       final DataInputStream in,
@@ -159,7 +176,8 @@ class BlockReceiver implements Closeable {
       CachingStrategy cachingStrategy,
       final boolean allowLazyPersist,
       final boolean pinning,
-      final String storageId) throws IOException {
+      final String storageId,
+      final boolean isLastInPipeline) throws IOException {
     try{
       this.block = block;
       this.in = in;
@@ -192,6 +210,9 @@ class BlockReceiver implements Closeable {
       // the interval of 0.5*readTimeout. Here, we set 0.9*readTimeout to be
       // the threshold for detecting congestion.
       this.maxSendIdleTime = (long) (readTimeout * 0.9);
+      this.bufferFlushIdleTimeoutMs = datanode.getConf().getLong(
+          DFSConfigKeys.DFS_DATANODE_WRITE_BUFFER_IDLE_FLUSH_TIMEOUT_MS,
+          DFSConfigKeys.DFS_DATANODE_WRITE_BUFFER_IDLE_FLUSH_TIMEOUT_MS_DEFAULT);
       if (LOG.isDebugEnabled()) {
         LOG.debug(getClass().getSimpleName() + ": " + block
             + "\n storageType=" + storageType + ", inAddr=" + inAddr
@@ -209,6 +230,7 @@ class BlockReceiver implements Closeable {
         );
       }
 
+      boolean isNewRbw = false;
       //
       // Open local disk out
       //
@@ -225,6 +247,7 @@ class BlockReceiver implements Closeable {
           }
           datanode.notifyNamenodeReceivingBlock(
               block, replicaHandler.getReplica().getStorageUuid());
+          isNewRbw = true;
           break;
         case PIPELINE_SETUP_STREAMING_RECOVERY:
           replicaHandler = datanode.data.recoverRbw(
@@ -276,10 +299,25 @@ class BlockReceiver implements Closeable {
       this.checksumOut = new DataOutputStream(new BufferedOutputStream(
           streams.getChecksumOut(), DFSUtilClient.getSmallBufferSize(
           datanode.getConf())));
+      this.volume = (replicaInfo.getReplicaInfo() != null
+          && replicaInfo.getReplicaInfo().getVolume() instanceof FsVolumeImpl)
+              ? (FsVolumeImpl) replicaInfo.getReplicaInfo().getVolume()
+              : null;
+      boolean isLocalReplica = replicaInfo instanceof LocalReplica;
+      File blockFile = isLocalReplica
+          ? ((LocalReplica) replicaInfo).getBlockFile()
+          : null;
+      boolean isWriteMemoryBufferEnabled =
+          datanode.isWriteMemoryBufferEnabled() && isNewRbw
+              && (!datanode.isWriteMemoryBufferLastReplicaOnly()
+                  || isLastInPipeline);
+      this.buffer = createWriteBuffer(isWriteMemoryBufferEnabled, blockFile,
+          volume, datanode);
       // write data chunk header if creating a new replica
       if (isCreate) {
         BlockMetadataHeader.writeHeader(checksumOut, diskChecksum);
       } 
+      startBufferFlushTimer();
     } catch (ReplicaAlreadyExistsException | ReplicaNotFoundException
         | DiskOutOfSpaceException e) {
       throw e;
@@ -304,6 +342,24 @@ class BlockReceiver implements Closeable {
     }
   }
 
+  private BufferedBlockWriter createWriteBuffer(
+      boolean isWriteMemoryBufferEnabled, File blockFile, FsVolumeImpl volume,
+      DataNode datanode) {
+    if (volume == null || blockFile == null) {
+      return null;
+    }
+    if (isWriteMemoryBufferEnabled) {
+      try {
+        return new BufferedBlockWriterImpl(this, blockFile, volume,
+            datanode.getMaxConcurrentWriteBuffers());
+      } catch (Exception e) {
+        LOG.error("Failed to create pooled write buffer; falling back to "
+            + "the unbuffered write path", e);
+      }
+    }
+    return null;
+  }
+
   /** Return the datanode object. */
   DataNode getDataNode() {return datanode;}
 
@@ -322,11 +378,74 @@ class BlockReceiver implements Closeable {
     }
   }
 
+  private synchronized void startBufferFlushTimer() {
+    if (bufferFlushIdleTimeoutMs <= 0 || buffer == null) {
+      return;
+    }
+    scheduleBufferFlush();
+  }
+
+  private void scheduleBufferFlush() {
+    ScheduledExecutorService executorService = datanode.getBufferFlushService();
+    if (executorService == null) {
+      LOG.warn("Idle buffer flush is configured ({} ms) but the scheduler is "
+          + "not initialized for block {}. Idle flush will not run.",
+          bufferFlushIdleTimeoutMs, block.getBlockName());
+      return;
+    }
+    flushTask = executorService.schedule(this::handleBufferFlushTimeout,
+        bufferFlushIdleTimeoutMs, TimeUnit.MILLISECONDS);
+  }
+
+  private synchronized void cancelBufferFlushTimer() {
+    if (flushTask != null) {
+      flushTask.cancel(false);
+      flushTask = null;
+    }
+  }
+
+  private synchronized void handleBufferFlushTimeout() {
+    if (flushTask == null) {
+      return;
+    }
+    try {
+      if (buffer != null && buffer.hasPendingData()) {
+        long idleMs = System.currentTimeMillis()
+            - LAST_PACKET_RECEIVED_TIME_UPDATER.get(this);
+        if (idleMs >= bufferFlushIdleTimeoutMs) {
+          buffer.flush();
+          // Only persist the buffered bytes here for durability / memory
+          // relief. Do NOT advance the RBW visible length (bytesAcked) from
+          // this scheduler thread: bytesAcked is otherwise written solely by
+          // the PacketResponder ack path, and ReplicaInPipeline.setBytesAcked
+          // applies a (bytesAcked - prev) delta to the volume's reserved-space
+          // accounting. A second, unsynchronized writer here could race that
+          // path, make bytesAcked non-monotonic and apply a negative
+          // reserved-space delta. It would also risk exposing a chunk whose
+          // checksum is not yet in the meta file. Leaving visibility to the
+          // ack path keeps vanilla RBW semantics (streaming, not-yet-acked
+          // bytes are simply not visible until the next ack/hsync/close).
+          LOG.info("Idle-flushed write buffer for block {} after {} ms with "
+              + "no packet from client {}", block.getBlockName(), idleMs,
+              clientname);
+        }
+      }
+    } catch (Throwable t) {
+      flushTask = null;
+      LOG.warn("Idle buffer flush failed for block {}", block.getBlockName(), t);
+    }
+    if (flushTask != null) {
+      scheduleBufferFlush();
+    }
+  }
+
   /**
    * close files and release volume reference.
    */
   @Override
   public void close() throws IOException {
+    cancelBufferFlushTimer();
+
     Span span = Tracer.getCurrentSpan();
     if (span != null) {
       span.addKVAnnotation("maxWriteToDiskMs",
@@ -362,6 +481,20 @@ class BlockReceiver implements Closeable {
     finally {
       IOUtils.closeStream(checksumOut);
     }
+    if (buffer != null) {
+      // Guard the mandatory final buffer flush/sync: syncData()/flush() now
+      // propagate IOException, so a failure here MUST NOT skip the buffered
+      // resource cleanup in the finally below (buffer.release()) -- otherwise
+      // the memory-cap permit, pooled Netty buffer and FileChannel would leak,
+      // and repeated close-time disk errors would exhaust the permit pool and
+      // wedge future buffered writers. Record the error and fall through so
+      // cleanup still runs; it is rethrown at the end of close().
+      try {
+        buffer.flushOrSync(true, true, true);
+      } catch (IOException e) {
+        ioe = (ioe == null) ? e : ioe;
+      }
+    }
     // close block file
     try {
       if (streams.getDataOut() != null) {
@@ -382,6 +515,9 @@ class BlockReceiver implements Closeable {
     }
     finally{
       streams.close();
+      if (buffer != null) {
+        buffer.release();
+      }
     }
     if (replicaHandler != null) {
       IOUtils.cleanupWithLogger(null, replicaHandler);
@@ -425,6 +561,25 @@ class BlockReceiver implements Closeable {
    * @throws IOException
    */
   void flushOrSync(boolean isSync, long seqno) throws IOException {
+    flushOrSync(isSync, isSync, false, false, seqno);
+  }
+
+  void flushOrSync(boolean isSync) throws IOException {
+    flushOrSync(isSync, -1);
+  }
+
+  public void flushOrSync(boolean isSync, boolean bufferFlush)
+      throws IOException {
+    flushOrSync(isSync, isSync, bufferFlush, false);
+  }
+
+  public void flushOrSync(boolean isSync, boolean isChecksumSync,
+      boolean bufferFlush, boolean isClosed) throws IOException {
+    flushOrSync(isSync, isChecksumSync, bufferFlush, isClosed, -1);
+  }
+
+  private void flushOrSync(boolean isSync, boolean isChecksumSync,
+      boolean bufferFlush, boolean isClosed, long seqno) throws IOException {
     long flushTotalNanos = 0;
     long begin = Time.monotonicNow();
     DataNodeFaultInjector.get().delay();
@@ -432,11 +587,17 @@ class BlockReceiver implements Closeable {
       long flushStartNanos = System.nanoTime();
       checksumOut.flush();
       long flushEndNanos = System.nanoTime();
-      if (isSync) {
+      if (isChecksumSync) {
         streams.syncChecksumOut();
         datanode.metrics.addFsyncNanos(System.nanoTime() - flushEndNanos);
       }
       flushTotalNanos += flushEndNanos - flushStartNanos;
+    }
+    if (buffer != null && !isSync && !bufferFlush) {
+      return;
+    }
+    if (buffer != null) {
+      buffer.flush();
     }
     if (streams.getDataOut() != null) {
       long flushStartNanos = System.nanoTime();
@@ -444,7 +605,11 @@ class BlockReceiver implements Closeable {
       long flushEndNanos = System.nanoTime();
       if (isSync) {
         long fsyncStartNanos = flushEndNanos;
-        streams.syncDataOut();
+        if (buffer != null) {
+          buffer.syncData(block.getBlockName(), isClosed);
+        } else {
+          streams.syncDataOut();
+        }
         datanode.metrics.addFsyncNanos(System.nanoTime() - fsyncStartNanos);
       }
       flushTotalNanos += flushEndNanos - flushStartNanos;
@@ -552,6 +717,9 @@ class BlockReceiver implements Closeable {
   private int receivePacket() throws IOException {
     // read the next packet
     packetReceiver.receiveNextPacket(in);
+    if (bufferFlushIdleTimeoutMs > 0) {
+      LAST_PACKET_RECEIVED_TIME_UPDATER.set(this, System.currentTimeMillis());
+    }
 
     PacketHeader header = packetReceiver.getHeader();
     long seqno = header.getSeqno();
@@ -741,6 +909,21 @@ class BlockReceiver implements Closeable {
                   + ": previous write did not end at the chunk boundary."
                   + " onDiskLen=" + onDiskLen);
             }
+            if (buffer != null) {
+              // Defensive guard for the partial-chunk CRC recalculation path.
+              // computePartialChunkCrc re-reads the last partial chunk from the
+              // physical block file, so those tail bytes must be on disk and
+              // not still sitting in the write buffer. In the current design
+              // this branch is effectively unreachable while buffering is
+              // active: doCrcRecalc only becomes true when the packet start
+              // offset disagrees with the on-disk chunk boundary (append /
+              // pipeline-recovery), and buffering is enabled only for a brand
+              // new RBW (PIPELINE_SETUP_CREATE, isNewRbw) -- append/recovery
+              // BlockReceivers run with buffer == null. Flushing here keeps the
+              // "never read past physical EOF" invariant intact if that gating
+              // is ever relaxed, and costs nothing on the normal path.
+              buffer.flush();
+            }
             long offsetInChecksum = BlockMetadataHeader.getHeaderSize() +
                 onDiskLen / bytesPerChecksum * checksumSize;
             partialCrc = computePartialChunkCrc(onDiskLen, offsetInChecksum);
@@ -757,8 +940,12 @@ class BlockReceiver implements Closeable {
           
           // Write data to disk.
           long begin = Time.monotonicNow();
-          streams.writeDataToDisk(dataBuf.array(),
-              startByteToDisk, numBytesToDisk);
+          if (buffer != null) {
+            buffer.writeData(dataBuf, startByteToDisk, numBytesToDisk);
+          } else {
+            streams.writeDataToDisk(dataBuf.array(),
+                startByteToDisk, numBytesToDisk);
+          }
           // no-op in prod
           DataNodeFaultInjector.get().delayWriteToDisk();
           long duration = Time.monotonicNow() - begin;
@@ -1054,6 +1241,13 @@ class BlockReceiver implements Closeable {
     } finally {
       // Clear the previous interrupt state of this thread.
       Thread.interrupted();
+      flushBufferSafelyIfEnabled();
+      if (buffer != null) {
+        LOG.info("[{}] During closing buffer, on-disk-bytes={}, "
+            + "buffer-flushed-bytes={}, interrupted={}", block.getBlockName(),
+            replicaInfo.getBytesOnDisk(), buffer.getFlushedBytes(),
+            Thread.currentThread().isInterrupted());
+      }
 
       // If a shutdown for restart was initiated, upstream needs to be notified.
       // There is no need to do anything special if the responder was closed
@@ -1084,14 +1278,14 @@ class BlockReceiver implements Closeable {
               // It is already going down. Ignore this.
             }
           }
-          responder.interrupt();
+          interrupt(responder);
         }
         IOUtils.closeStream(this);
         cleanupBlock();
       }
       if (responder != null) {
         try {
-          responder.interrupt();
+          interrupt(responder);
           // join() on the responder should timeout a bit earlier than the
           // configured deadline. Otherwise, the join() on this thread will
           // likely timeout as well.
@@ -1105,13 +1299,28 @@ class BlockReceiver implements Closeable {
             throw new IOException(msg);
           }
         } catch (InterruptedException e) {
-          responder.interrupt();
+          interrupt(responder);
           // do not throw if shutting down for restart.
           if (!datanode.isRestarting()) {
             throw new InterruptedIOException("Interrupted receiveBlock");
           }
         }
         responder = null;
+      }
+    }
+  }
+
+  private void interrupt(Thread thread) {
+    flushBufferSafelyIfEnabled();
+    thread.interrupt();
+  }
+
+  private void flushBufferSafelyIfEnabled() {
+    if (buffer != null) {
+      try {
+        buffer.flush();
+      } catch (IOException e) {
+        LOG.warn("Failed to flush write buffer for {}", block.getBlockName(), e);
       }
     }
   }
@@ -1533,14 +1742,14 @@ class BlockReceiver implements Closeable {
             LOG.info(myString, e);
             running = false;
             if (!Thread.interrupted()) { // failure not caused by interruption
-              receiverThread.interrupt();
+              BlockReceiver.this.interrupt(receiverThread);
             }
           }
         } catch (Throwable e) {
           if (running) {
             LOG.info(myString, e);
             running = false;
-            receiverThread.interrupt();
+            BlockReceiver.this.interrupt(receiverThread);
           }
         }
       }
@@ -1671,7 +1880,24 @@ class BlockReceiver implements Closeable {
           totalAckTimeNanos);
       if (replyAck.isSuccess()
           && offsetInBlock > replicaInfo.getBytesAcked()) {
-        replicaInfo.setBytesAcked(offsetInBlock);
+        long ackedLen = offsetInBlock;
+        if (buffer != null) {
+          // With DataNode write buffering, a packet's bytes may still reside
+          // in the in-memory buffer and NOT yet be in the block file. Acked
+          // bytes become the RBW replica's visible length, which a concurrent
+          // reader (BlockSender / short-circuit) reads directly from the block
+          // file -- so never advance the visible/acked length past what has
+          // actually been flushed to disk, otherwise the reader would read
+          // past the physical end of the file. The remaining buffered bytes
+          // become visible on the next buffer flush (or on hsync/close, which
+          // flush fully). Buffering is only enabled for brand-new RBW blocks
+          // (block start offset 0), so getFlushedBytes() equals the on-disk
+          // data length here.
+          ackedLen = Math.min(ackedLen, buffer.getFlushedBytes());
+        }
+        if (ackedLen > replicaInfo.getBytesAcked()) {
+          replicaInfo.setBytesAcked(ackedLen);
+        }
       }
       // send my ack back to upstream datanode
       long begin = Time.monotonicNow();
@@ -1747,5 +1973,9 @@ class BlockReceiver implements Closeable {
         + ", ackStatus=" + ackStatus
         + ")";
     }
+  }
+
+  public ExtendedBlock getBlock() {
+    return block;
   }
 }
