@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -52,10 +53,11 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class TestAllocationTagsManager {
   private RMContext rmContext;
+  private MockRM rm;
 
   @BeforeEach
   public void setup() {
-    MockRM rm = new MockRM();
+    rm = new MockRM();
     rm.start();
     MockNodes.resetHostIds();
     List<RMNode> rmNodes =
@@ -64,6 +66,14 @@ public class TestAllocationTagsManager {
       rm.getRMContext().getRMNodes().putIfAbsent(rmNode.getNodeID(), rmNode);
     }
     rmContext = rm.getRMContext();
+  }
+
+  @AfterEach
+  public void tearDown() {
+    if (rm != null) {
+      rm.stop();
+      rm = null;
+    }
   }
 
   @Test
