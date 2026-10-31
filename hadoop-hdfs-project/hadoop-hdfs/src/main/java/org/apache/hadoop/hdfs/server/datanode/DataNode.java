@@ -2529,7 +2529,28 @@ public class DataNode extends ReconfigurableBase
       IOUtils.cleanupWithLogger(LOG, fis);
       throw e;
     }
+    checkMetaHeader(blk, fis[1]);
     return fis;
+  }
+
+  /**
+   * A short-circuit client parses the meta header even when it skips
+   * checksums, and on a corrupt header falls back to a remote read that
+   * does not open the meta file, so nobody would report the replica.
+   * The descriptors are still returned: failing the request would make
+   * the client disable short-circuit reads for this whole DataNode.
+   */
+  private void checkMetaHeader(ExtendedBlock blk, FileInputStream metaIn) {
+    try {
+      BlockMetadataHeader.preadHeader(metaIn.getChannel());
+    } catch (IOException e) {
+      // The header of a replica being written may not be on disk yet.
+      if (data.isValidBlock(blk)) {
+        LOG.warn("Cannot read the meta header of {} for a short-circuit "
+            + "read: {}", blk, e.toString());
+        handleBadBlock(blk, e, false);
+      }
+    }
   }
 
   private void checkBlockToken(ExtendedBlock block,
