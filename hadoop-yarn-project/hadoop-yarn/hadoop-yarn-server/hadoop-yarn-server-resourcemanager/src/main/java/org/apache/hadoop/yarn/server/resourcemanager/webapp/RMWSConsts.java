@@ -42,6 +42,13 @@ public final class RMWSConsts {
   /** Path for {@code RMWebServiceProtocol#getClusterMetricsInfo}. */
   public static final String METRICS = "/metrics";
 
+  /** Path for {@code RMWebServices#getCommonIssueList}. */
+  public static final String COMMON_ISSUE_LIST = "/common-issues/list";
+
+  /** Path for {@code RMWebServices#getCommonIssueData}. */
+  public static final String COMMON_ISSUE_COLLECT =
+      "/common-issues/collect";
+
   /** Path for {@code RMWebServiceProtocol#getSchedulerInfo}. */
   public static final String SCHEDULER = "/scheduler";
 
@@ -219,6 +226,8 @@ public final class RMWSConsts {
 
   // ----------------QueryParams for RMWebServiceProtocol----------------
 
+  public static final String ISSUEID = "issueId";
+  public static final String ISSUEARGS = "args";
   public static final String TIME = "time";
   public static final String STATES = "states";
   public static final String NODEID = "nodeId";
