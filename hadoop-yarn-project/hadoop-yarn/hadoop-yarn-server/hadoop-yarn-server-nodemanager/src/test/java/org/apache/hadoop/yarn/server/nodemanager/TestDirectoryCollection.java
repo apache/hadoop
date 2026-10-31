@@ -20,12 +20,17 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.nio.file.attribute.UserPrincipal;
 import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,17 +51,22 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestDirectoryCollection {
 
+  private static final UserPrincipal OTHER_USER = () -> "not-the-owner";
+
   private File testDir;
   private File testFile;
+  private UserPrincipal nmUser;
 
   private Configuration conf;
   private FileContext localFs;
 
   @BeforeEach
   public void setupForTests() throws IOException {
+    nmUser = DirectoryCollection.lookupNmUser();
     conf = new Configuration();
     localFs = FileContext.getLocalFSFileContext(conf);
     testDir = Files.createTempDirectory(TestDirectoryCollection.class.getName()).toFile();
@@ -541,6 +551,232 @@ public class TestDirectoryCollection {
     assertEquals(1, diskErrorInformationMap.size());
     assertTrue(diskErrorInformationMap.values().iterator().next()
         .message.contains(testFile.getName()));
+  }
+
+  @Test
+  public void testSubAccessibilityToleratesEntryDeletedDuringWalk() throws IOException {
+    java.nio.file.Path gone = testFile.toPath();
+    BasicFileAttributes attrs = Files.readAttributes(gone, BasicFileAttributes.class);
+    Files.delete(gone);
+    DirectoryCollection.SubAccessibilityVisitor visitor =
+        new DirectoryCollection.SubAccessibilityVisitor(testDir.toPath(), nmUser);
+    assertEquals(FileVisitResult.CONTINUE, visitor.visitFile(gone, attrs));
+    assertEquals(FileVisitResult.SKIP_SUBTREE,
+        visitor.preVisitDirectory(new File(testDir, "missingDir").toPath(), attrs));
+    assertEquals(FileVisitResult.CONTINUE,
+        visitor.visitFileFailed(gone, new NoSuchFileException(gone.toString())));
+  }
+
+  @Test
+  public void testSubAccessibilitySkipsFilesOwnedByOtherUsers() throws IOException {
+    Files.setPosixFilePermissions(testFile.toPath(),
+        PosixFilePermissions.fromString("-w--w--w-"));
+    java.nio.file.Path file = testFile.toPath();
+    BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
+
+    DirectoryCollection.SubAccessibilityVisitor otherUser =
+        new DirectoryCollection.SubAccessibilityVisitor(testDir.toPath(), OTHER_USER);
+    assertEquals(FileVisitResult.CONTINUE, otherUser.visitFile(file, attrs));
+
+    DirectoryCollection.SubAccessibilityVisitor owner =
+        new DirectoryCollection.SubAccessibilityVisitor(testDir.toPath(), nmUser);
+    IOException e = assertThrows(IOException.class,
+        () -> owner.visitFile(file, attrs));
+    assertEquals("Cannot read " + file, e.getMessage());
+  }
+
+  @Test
+  public void testSubAccessibilityDetectsNmOwnedEntryBelowRootOwnedByOtherUser()
+      throws IOException {
+    // root/                  owned by another user, but accessible (rwx)   ← used to cause SKIP_SUBTREE
+    //└── filecache/10/job.jar   owned by the NM user, NOT readable        ← must still be reported
+    java.nio.file.Path root = testDir.toPath();
+    File unreadable = new File(testDir, "filecache/10/job.jar");
+    assertTrue(unreadable.getParentFile().mkdirs());
+    assertTrue(unreadable.createNewFile());
+    Files.setPosixFilePermissions(unreadable.toPath(),
+        PosixFilePermissions.fromString("-w--w--w-"));
+
+    DirectoryCollection.SubAccessibilityVisitor rootOwnedByOtherUser =
+        new DirectoryCollection.SubAccessibilityVisitor(root, nmUser) {
+          @Override
+          boolean isOwnedByNmUser(java.nio.file.Path path) throws IOException {
+            return !path.equals(root) && super.isOwnedByNmUser(path);
+          }
+        };
+    IOException e = assertThrows(IOException.class,
+        () -> Files.walkFileTree(root, Collections.emptySet(), 3, rootOwnedByOtherUser));
+    assertEquals("Cannot read " + unreadable.toPath(), e.getMessage());
+  }
+
+  @Test
+  public void testSubAccessibilityDescendsIntoReadableDirsOwnedByOtherUsers()
+      throws IOException {
+    File readOnly = new File(testDir, "readOnly");
+    File noAccess = new File(testDir, "noAccess");
+    assertTrue(readOnly.mkdir());
+    assertTrue(noAccess.mkdir());
+    Files.setPosixFilePermissions(readOnly.toPath(),
+        PosixFilePermissions.fromString("r-x------"));
+    Files.setPosixFilePermissions(noAccess.toPath(),
+        PosixFilePermissions.fromString("-w-------"));
+    BasicFileAttributes attrs =
+        Files.readAttributes(readOnly.toPath(), BasicFileAttributes.class);
+
+    DirectoryCollection.SubAccessibilityVisitor otherUser =
+        new DirectoryCollection.SubAccessibilityVisitor(testDir.toPath(), OTHER_USER);
+    assertEquals(FileVisitResult.CONTINUE,
+        otherUser.preVisitDirectory(readOnly.toPath(), attrs));
+    assertEquals(FileVisitResult.SKIP_SUBTREE,
+        otherUser.preVisitDirectory(noAccess.toPath(), attrs));
+
+    DirectoryCollection.SubAccessibilityVisitor owner =
+        new DirectoryCollection.SubAccessibilityVisitor(testDir.toPath(), nmUser);
+    IOException e = assertThrows(IOException.class,
+        () -> owner.preVisitDirectory(readOnly.toPath(), attrs));
+    assertEquals("Cannot access " + readOnly.toPath(), e.getMessage());
+  }
+
+  @Test
+  public void testSubAccessibilitySkipsUnlistableDirsOwnedByOtherUsersDuringWalk()
+      throws IOException {
+    // root/usercache/user/filecache   traverse-only (--x), like the LCE private cache dir
+    java.nio.file.Path root = testDir.toPath();
+    File unlistable = new File(testDir, "usercache/user/filecache");
+    assertTrue(unlistable.mkdirs());
+    Files.setPosixFilePermissions(unlistable.toPath(),
+        PosixFilePermissions.fromString("--x------"));
+
+    Files.walkFileTree(root, Collections.emptySet(), Integer.MAX_VALUE,
+        new DirectoryCollection.SubAccessibilityVisitor(root, OTHER_USER));
+  }
+
+  @Test
+  public void testSubAccessibilityReportsUnlistableDirsOwnedByNmUserDuringWalk()
+      throws IOException {
+    java.nio.file.Path root = testDir.toPath();
+    File unlistable = new File(testDir, "filecache/probe");
+    assertTrue(unlistable.mkdirs());
+    Files.setPosixFilePermissions(unlistable.toPath(),
+        PosixFilePermissions.fromString("---------"));
+
+    IOException e = assertThrows(IOException.class,
+        () -> Files.walkFileTree(root, Collections.emptySet(), Integer.MAX_VALUE,
+            new DirectoryCollection.SubAccessibilityVisitor(root, nmUser)));
+    assertEquals("Cannot access " + unlistable.toPath(), e.getMessage());
+  }
+
+  @Test
+  public void testSubAccessibilityReportsUnlistableRootDirRegardlessOfOwner()
+      throws IOException {
+    java.nio.file.Path root = new File(testDir, "root").toPath();
+    Files.createDirectory(root);
+    Files.setPosixFilePermissions(root, PosixFilePermissions.fromString("-wx------"));
+
+    for (int maxDepth : new int[]{0, 1}) {
+      IOException e = assertThrows(IOException.class,
+          () -> Files.walkFileTree(root, Collections.emptySet(), maxDepth,
+              new DirectoryCollection.SubAccessibilityVisitor(root, OTHER_USER)));
+      assertEquals("Cannot access " + root, e.getMessage());
+    }
+  }
+
+  @Test
+  public void testSubAccessibilityAlwaysChecksRootDirPermissionRegardlessOfOwner()
+      throws IOException {
+    java.nio.file.Path root = new File(testDir, "root").toPath();
+    Files.createDirectory(root);
+    Files.setPosixFilePermissions(root, PosixFilePermissions.fromString("r-x------"));
+
+    for (int maxDepth : new int[]{0, 1}) {
+      IOException e = assertThrows(IOException.class,
+          () -> Files.walkFileTree(root, Collections.emptySet(), maxDepth,
+              new DirectoryCollection.SubAccessibilityVisitor(root, OTHER_USER)));
+      assertEquals("Cannot access " + root, e.getMessage());
+    }
+  }
+
+  @Test
+  public void testSubAccessibilityIgnoresBrokenSymlink() throws IOException {
+    Files.createSymbolicLink(new File(testDir, "link").toPath(),
+        new File(testDir, "missing").toPath());
+    DirectoryCollection dc = new DirectoryCollection(new String[]{testDir.toString()});
+    dc.setSubAccessibilityValidationEnabled(true);
+    Map<String, DirectoryCollection.DiskErrorInformation> dcErrors =
+            dc.testDirs(Collections.singletonList(testDir.toString()), Collections.emptySet());
+    assertTrue(dcErrors.isEmpty(), "No errors found when broken symlink is checked");
+  }
+
+  @Test
+  public void testSubAccessibilityRespectsMaxDepth() throws IOException {
+    File appDir = new File(testDir, "usercache/user/appcache/app_1");
+    assertTrue(appDir.mkdirs());
+    File unreadable = new File(appDir, "data");
+    assertTrue(unreadable.createNewFile());
+    Files.setPosixFilePermissions(unreadable.toPath(),
+        PosixFilePermissions.fromString("-w--w--w-"));
+    DirectoryCollection dc = new DirectoryCollection(new String[]{testDir.toString()});
+    dc.setSubAccessibilityValidationEnabled(true);
+
+    dc.setSubAccessibilityValidationMaxDepth(3);
+    Map<String, DirectoryCollection.DiskErrorInformation> errorWithMax3 =
+            dc.testDirs(Collections.singletonList(testDir.toString()), Collections.emptySet());
+    assertTrue(errorWithMax3.isEmpty());
+
+
+    dc.setSubAccessibilityValidationMaxDepth(5);
+    Map<String, DirectoryCollection.DiskErrorInformation> errorWithMax5 =
+            dc.testDirs(Collections.singletonList(testDir.toString()), Collections.emptySet());
+    assertEquals(1, errorWithMax5.size());
+    assertEquals("Cannot read " + unreadable.toPath(),
+        errorWithMax5.get(testDir.toString()).message);
+  }
+
+  @Test
+  public void testSubAccessibilityRejectsNegativeMaxDepth() {
+    conf.setInt(YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH, -1);
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        () -> DirectoryCollection.getSubAccessibilityValidationMaxDepth(conf));
+    assertTrue(e.getMessage().contains(
+        YarnConfiguration.NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_MAX_DEPTH));
+    assertTrue(e.getMessage().contains("must not be negative"));
+  }
+
+  @Test
+  public void testSubAccessibilityUnderConcurrentChurn() throws Exception {
+    File cache = new File(testDir, "filecache");
+    AtomicBoolean stop = new AtomicBoolean();
+    Thread churn = new Thread(() -> {
+      int i = 0;
+      while (!stop.get()) {
+        File entry = new File(cache, (i++) + "_tmp");
+        File deep = new File(entry, "a/b/c");
+        deep.mkdirs();
+        for (int f = 0; f < 50; f++) {
+          try {
+            new File(deep, "f" + f).createNewFile();
+          } catch (IOException ignored) {
+          }
+        }
+        FileUtil.fullyDelete(entry);
+      }
+    });
+    churn.start();
+    try {
+      DirectoryCollection dc = new DirectoryCollection(new String[]{testDir.toString()});
+      dc.setSubAccessibilityValidationEnabled(true);
+      dc.setSubAccessibilityValidationMaxDepth(Integer.MAX_VALUE);
+      for (int i = 0; i < 500; i++) {
+        final int iteration = i;
+        Map<String, DirectoryCollection.DiskErrorInformation> errors =
+            dc.testDirs(Collections.singletonList(testDir.toString()), Collections.emptySet());
+        assertTrue(errors.isEmpty(), () -> "Iteration " + iteration + ": " +
+            errors.values().iterator().next().message);
+      }
+    } finally {
+      stop.set(true);
+      churn.join();
+    }
   }
 
   static class DirsChangeListenerTest implements DirsChangeListener {

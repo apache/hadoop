@@ -2036,6 +2036,19 @@
   </property>
 
   <property>
+    <description>Maximum depth below each node manager local/log directory that the
+      content accessibility validation checks. The directory itself and the
+      entries owned by the NM user must be accessible. Entries owned by
+      other users (e.g. application directories created by the
+      LinuxContainerExecutor) are descended into whether the NM user can
+      read them, but their permissions are not checked. Entries removed
+      concurrently (cache cleanup, localization, application cleanup, log
+      aggregation) and dangling symlinks are ignored.</description>
+    <name>yarn.nodemanager.disk-health-checker.working-dir-content-accessibility-validation.max-depth</name>
+    <value>3</value>
+  </property>
+
+  <property>
     <description>The maximum percentage of disk space utilization allowed after 
     which a disk is marked as bad. Values can range from 0.0 to 100.0. 
     If the value is greater than or equal to 100, the nodemanager will check 
