@@ -111,6 +111,16 @@ public class TestableFederationClientInterceptor
     }
   }
 
+  @Override
+  protected ApplicationClientProtocol getProbeRMProxyForSubCluster(
+      SubClusterId subClusterId) throws IOException {
+    try {
+      return getClientRMProxyForSubCluster(subClusterId);
+    } catch (YarnException e) {
+      throw new IOException(e);
+    }
+  }
+
   private static class MockClientRMService extends ClientRMService {
 
     MockClientRMService(RMContext rmContext, YarnScheduler scheduler,

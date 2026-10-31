@@ -24,12 +24,21 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +47,9 @@ import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesT
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.ROOT_QUEUE_PATH;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Extends the FederationInterceptorREST and overrides methods to provide a
@@ -108,6 +120,38 @@ public class TestableFederationInterceptorREST
       LOG.error("setupResourceManager failed.", e);
       throw new IOException(e);
     }
+  }
+
+  /**
+   * The RMs asked for an application whose home SubCluster is not in the
+   * StateStore answer from the mock interceptors of their SubClusters.
+   */
+  @Override
+  protected ApplicationClientProtocol getProbeRMProxyForSubCluster(
+      SubClusterId subClusterId) throws IOException {
+    DefaultRequestInterceptorREST rm = getInterceptorForSubCluster(subClusterId);
+    if (rm == null) {
+      throw new IOException("No interceptor for SubCluster " + subClusterId);
+    }
+    ApplicationClientProtocol proxy = mock(ApplicationClientProtocol.class);
+    try {
+      when(proxy.getApplicationReport(any(GetApplicationReportRequest.class)))
+          .thenAnswer(invocation -> {
+            ApplicationId appId = invocation.<GetApplicationReportRequest>getArgument(0)
+                .getApplicationId();
+            try {
+              rm.getApp(null, appId.toString(), null);
+            } catch (NotFoundException e) {
+              throw new ApplicationNotFoundException(e.getMessage());
+            }
+            ApplicationReport report = Records.newRecord(ApplicationReport.class);
+            report.setApplicationId(appId);
+            return GetApplicationReportResponse.newInstance(report);
+          });
+    } catch (YarnException e) {
+      throw new IOException(e);
+    }
+    return proxy;
   }
 
   @Override
