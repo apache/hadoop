@@ -349,8 +349,18 @@ public class RawLocalFileSystem extends FileSystem {
         range.setData(new CompletableFuture<>());
       }
       final ByteBufferPool pool = new VectorIOBufferPool(allocate, release);
+      final AsynchronousFileChannel channel;
+      try {
+        channel = getAsyncChannel();
+      } catch (IOException | RuntimeException e) {
+        // No reads have started and no buffers have been allocated.
+        for (FileRange range : sortedRanges) {
+          range.getData().completeExceptionally(e);
+        }
+        throw e;
+      }
       // Initiate the asynchronous reads.
-      new AsyncHandler(getAsyncChannel(),
+      new AsyncHandler(channel,
           sortedRanges,
           pool,
           this::recordBytesRead)
@@ -414,10 +424,22 @@ public class RawLocalFileSystem extends FileSystem {
     private void initiateRead() {
       for(int i = 0; i < ranges.size(); ++i) {
         FileRange range = ranges.get(i);
-        buffers[i] = allocateRelease.getBuffer(false, range.getLength());
-        final ByteBuffer buffer = buffers[i];
-        LOG.debug("Reading file range {} into buffer {}", range, System.identityHashCode(buffer));
-        channel.read(buffer, range.getOffset(), i, this);
+        try {
+          buffers[i] = allocateRelease.getBuffer(false, range.getLength());
+          final ByteBuffer buffer = buffers[i];
+          // Pooled buffers may be larger than the requested range.
+          buffer.limit(range.getLength());
+          LOG.debug("Reading file range {} into buffer {}", range, System.identityHashCode(buffer));
+          channel.read(buffer, range.getOffset(), i, this);
+        } catch (RuntimeException e) {
+          // Submission failed before the channel accepted this read. Earlier
+          // reads still own their buffers until their completion handlers run.
+          failed(e, i);
+          for (int j = i + 1; j < ranges.size(); ++j) {
+            ranges.get(j).getData().completeExceptionally(e);
+          }
+          throw e;
+        }
       }
     }
 
@@ -441,7 +463,11 @@ public class RawLocalFileSystem extends FileSystem {
       } else {
         if (buffer.remaining() > 0) {
           // issue a read for the rest of the buffer
-          channel.read(buffer, range.getOffset() + buffer.position(), rangeIndex, this);
+          try {
+            channel.read(buffer, range.getOffset() + buffer.position(), rangeIndex, this);
+          } catch (RuntimeException e) {
+            failed(e, rangeIndex);
+          }
         } else {
           // read finished
           statisticsUpdater.accept(range.getLength());
@@ -463,10 +489,16 @@ public class RawLocalFileSystem extends FileSystem {
     @Override
     public void failed(Throwable exc, Integer rangeIndex) {
       LOG.debug("Failed while reading range {} ", rangeIndex, exc);
-      // release the buffer
-      allocateRelease.putBuffer(buffers[rangeIndex]);
-      // report the failure.
-      ranges.get(rangeIndex).getData().completeExceptionally(exc);
+      try {
+        allocateRelease.putBuffer(buffers[rangeIndex]);
+      } catch (RuntimeException releaseFailure) {
+        if (releaseFailure != exc) {
+          exc.addSuppressed(releaseFailure);
+        }
+      } finally {
+        // Report the original failure even if the release callback failed.
+        ranges.get(rangeIndex).getData().completeExceptionally(exc);
+      }
     }
 
   }
