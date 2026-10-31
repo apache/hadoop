@@ -54,6 +54,12 @@ public abstract class BaseSharingPolicyTest {
 
   public Class expectedError;
 
+  // A fixed start time (2026-10-12T12:30:00Z), so that the test does not
+  // depend on the time of day it runs at: its offset within the periods
+  // (12h30m in a day, 30m in 2h) keeps the generated allocations clear of
+  // the period boundaries.
+  private static final long INIT_TIME = 1791808200000L;
+
   private long step;
   private long initTime;
 
@@ -71,7 +77,7 @@ public abstract class BaseSharingPolicyTest {
   public void setup() {
     // 1 sec step
     step = 1000L;
-    initTime = System.currentTimeMillis();
+    initTime = INIT_TIME;
 
     minAlloc = Resource.newInstance(1024, 1);
     res = new DefaultResourceCalculator();
@@ -152,31 +158,35 @@ public abstract class BaseSharingPolicyTest {
 
     Resource alloc = Resources.multiply(minAlloc, height * totCont);
 
-    // loop in case the periodicity of the reservation is smaller than LCM
     long rStart = initTime % period;
-    long rEnd = initTime % period + duration;
 
-
-    // handle wrap-around
-    if (period > 1 && rEnd > period) {
-      long diff = rEnd - period;
-      rEnd = period;
-
-      // handle multiple wrap-arounds (e.g., 5h duration on a 2h periodicity)
-      if(duration > period) {
-        rle.addInterval(new ReservationInterval(0, period),
-            Resources.multiply(alloc, duration / period - 1));
-        rle.addInterval(new ReservationInterval(0, diff % period), alloc);
-      } else {
-        rle.addInterval(new ReservationInterval(0, diff), alloc);
-      }
+    if (period <= 1) {
+      rle.addInterval(new ReservationInterval(rStart, rStart + duration),
+          alloc);
+      return rle;
     }
 
-    if(rStart > rEnd){
-      rle.addInterval(new ReservationInterval(rStart, period), alloc);
-      rle.addInterval(new ReservationInterval(0, rEnd), alloc);
-    } else {
-      rle.addInterval(new ReservationInterval(rStart, rEnd), alloc);
+    // Fold the duration onto the period, so that the generated allocation
+    // always amounts to duration * alloc regardless of rStart (i.e., of the
+    // time of day the test runs at). Each full period covered by the
+    // duration (e.g., 5h duration on a 2h periodicity) adds alloc over the
+    // whole period.
+    long fullPeriods = duration / period;
+    if (fullPeriods > 0) {
+      rle.addInterval(new ReservationInterval(0, period),
+          Resources.multiply(alloc, fullPeriods));
+    }
+
+    // the remainder starts at rStart and may wrap around the period end
+    long remainder = duration % period;
+    if (remainder > 0) {
+      long rEnd = rStart + remainder;
+      if (rEnd > period) {
+        rle.addInterval(new ReservationInterval(rStart, period), alloc);
+        rle.addInterval(new ReservationInterval(0, rEnd - period), alloc);
+      } else {
+        rle.addInterval(new ReservationInterval(rStart, rEnd), alloc);
+      }
     }
     return rle;
   }
