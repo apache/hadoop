@@ -23,6 +23,9 @@ import static org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecre
 import static org.apache.hadoop.security.token.delegation.web.DelegationTokenManager.REMOVAL_SCAN_INTERVAL;
 import static org.apache.hadoop.security.token.delegation.web.DelegationTokenManager.RENEW_INTERVAL;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,6 +33,7 @@ import org.apache.hadoop.hdfs.server.federation.router.security.token.ZKDelegati
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.TestZKDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecretManager;
@@ -52,6 +56,47 @@ public class TestZKDelegationTokenSecretManagerImpl
     super.tearDown();
     // Prevent a STOPPED Curator from leaking into the next test.
     ZKDelegationTokenSecretManager.setCurator(null);
+  }
+
+  private static class CreationManager extends ZKDelegationTokenSecretManagerImpl {
+    CreationManager(Configuration conf) {
+      super(conf);
+    }
+
+    boolean cached(AbstractDelegationTokenIdentifier id) {
+      return currentTokens.containsKey(id);
+    }
+
+    void persist(AbstractDelegationTokenIdentifier id) throws Exception {
+      addOrUpdateToken(id, new DelegationTokenInformation(
+          Time.now() + 60_000, new byte[]{1}), false);
+    }
+  }
+
+  @Test
+  public void testCreationWithoutSpeculativeCachePublication() throws Exception {
+    Configuration conf = getSecretConf(zkServer.getConnectString());
+    conf.setBoolean(ZK_DTSM_TOKEN_WATCHER_ENABLED, false);
+    conf.setInt(ZK_DTSM_ROUTER_TOKEN_SYNC_INTERVAL, 3600);
+    CreationManager manager = new CreationManager(conf);
+    try {
+      AbstractDelegationTokenIdentifier id = manager.createIdentifier();
+      id.setSequenceNumber(123456);
+      manager.persist(id);
+      assertFalse(manager.cached(id));
+      assertThrows(org.apache.zookeeper.KeeperException.NodeExistsException.class,
+          () -> manager.persist(id));
+      assertFalse(manager.cached(id), "Failed creation must not publish a token");
+
+      AbstractDelegationTokenIdentifier issued = manager.createIdentifier();
+      issued.setOwner(new Text("owner"));
+      issued.setRenewer(new Text("renewer"));
+      Token<AbstractDelegationTokenIdentifier> token = new Token<>(issued, manager);
+      assertFalse(manager.cached(issued));
+      assertArrayEquals(token.getPassword(), manager.retrievePassword(issued));
+    } finally {
+      manager.stopThreads();
+    }
   }
 
   @SuppressWarnings("unchecked")
