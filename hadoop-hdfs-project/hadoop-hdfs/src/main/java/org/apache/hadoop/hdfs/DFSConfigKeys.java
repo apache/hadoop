@@ -983,6 +983,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.directoryscan.max.notify.count";
   public static final long
       DFS_DATANODE_DIRECTORYSCAN_MAX_NOTIFY_COUNT_DEFAULT = 5;
+  public static final String
+      DFS_DATANODE_DIRECTORYSCAN_REGULAR_FILE_CHECK_KEY =
+      "dfs.datanode.directoryscan.regular.file.check";
+  public static final boolean
+      DFS_DATANODE_DIRECTORYSCAN_REGULAR_FILE_CHECK_DEFAULT = true;
   public static final String  DFS_DATANODE_DNS_INTERFACE_KEY = "dfs.datanode.dns.interface";
   public static final String  DFS_DATANODE_DNS_INTERFACE_DEFAULT = "default";
   public static final String  DFS_DATANODE_DNS_NAMESERVER_KEY = "dfs.datanode.dns.nameserver";
