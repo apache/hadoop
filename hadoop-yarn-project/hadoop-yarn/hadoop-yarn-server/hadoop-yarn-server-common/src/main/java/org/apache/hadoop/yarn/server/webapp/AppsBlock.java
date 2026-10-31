@@ -86,11 +86,11 @@ public class AppsBlock extends HtmlBlock {
       request.setLimit(appsNum);
     }
 
-    String appStartedTimeBegainStr = $(APP_START_TIME_BEGIN);
-    long appStartedTimeBegain = 0;
-    if (appStartedTimeBegainStr != null && !appStartedTimeBegainStr.isEmpty()) {
-      appStartedTimeBegain = Long.parseLong(appStartedTimeBegainStr);
-      if (appStartedTimeBegain < 0) {
+    String appStartedTimeBeginStr = $(APP_START_TIME_BEGIN);
+    long appStartedTimeBegin = 0;
+    if (appStartedTimeBeginStr != null && !appStartedTimeBeginStr.isEmpty()) {
+      appStartedTimeBegin = Long.parseLong(appStartedTimeBeginStr);
+      if (appStartedTimeBegin < 0) {
         throw new BadRequestException(
           "app.started-time.begin must be greater than 0");
       }
@@ -104,13 +104,13 @@ public class AppsBlock extends HtmlBlock {
           "app.started-time.end must be greater than 0");
       }
     }
-    if (appStartedTimeBegain > appStartedTimeEnd) {
+    if (appStartedTimeBegin > appStartedTimeEnd) {
       throw new BadRequestException(
         "app.started-time.end must be greater than app.started-time.begin");
     }
-    if (appStartedTimeBegain != 0 || appStartedTimeEnd != Long.MAX_VALUE) {
+    if (appStartedTimeBegin != 0 || appStartedTimeEnd != Long.MAX_VALUE) {
       request.setStartRange(
-          Range.between(appStartedTimeBegain, appStartedTimeEnd));
+          Range.between(appStartedTimeBegin, appStartedTimeEnd));
     }
 
     if (callerUGI == null) {
