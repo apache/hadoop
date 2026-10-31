@@ -489,7 +489,8 @@ public class WebAppProxyServlet extends HttpServlet {
 
       URI trackingUri = getTrackingUri(req, resp, id,
           applicationReport.getOriginalTrackingUrl(),
-          fetchedAppReport.getAppReportSource());
+          fetchedAppReport.getAppReportSource(),
+          fetchedAppReport.getAhsAppPageUrlBase(getAhsAppPageUrlBase()));
 
       // If the tracking URI is null, there was a redirect, so just return.
       if (trackingUri == null) {
@@ -609,12 +610,15 @@ public class WebAppProxyServlet extends HttpServlet {
    * @param id the application ID
    * @param originalUri the reported tracking URI
    * @param appReportSource the source of the application report
+   * @param ahsAppPageUrlBase the application page of the history server the
+   *          report was fetched from, or null if unknown
    * @return a valid tracking URI or null if redirected instead
    * @throws IOException thrown if the redirect fails
    * @throws URISyntaxException if the tracking URI is invalid
    */
   private URI getTrackingUri(HttpServletRequest req, HttpServletResponse resp,
-      ApplicationId id, String originalUri, AppReportSource appReportSource)
+      ApplicationId id, String originalUri, AppReportSource appReportSource,
+      String ahsAppPageUrlBase)
       throws IOException, URISyntaxException, YarnException {
     URI trackingUri = null;
 
@@ -631,9 +635,16 @@ public class WebAppProxyServlet extends HttpServlet {
       } else if (appReportSource == AppReportSource.AHS) {
         // fallback to Application History Server app page if the application
         // report was fetched from AHS
+        if (ahsAppPageUrlBase == null) {
+          // e.g. no web address configured for the history server of a
+          // SubCluster: do not redirect to another history server
+          notFound(resp, "Application " + id + " has no tracking URL and the web "
+              + "address of the history server it was found in is unknown");
+          return null;
+        }
         LOG.debug("Original tracking url is '{}'. Redirecting to AHS app page",
             originalUri == null ? "NULL" : originalUri);
-        ProxyUtils.sendRedirect(req, resp, StringHelper.pjoin(getAhsAppPageUrlBase(),
+        ProxyUtils.sendRedirect(req, resp, StringHelper.pjoin(ahsAppPageUrlBase,
             id.toString()));
       }
     } else if (ProxyUriUtils.getSchemeFromUrl(originalUri).isEmpty()) {

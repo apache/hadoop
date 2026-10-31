@@ -4374,6 +4374,33 @@ public class YarnConfiguration extends Configuration {
       TimeUnit.MILLISECONDS.toMillis(10);
 
   /**
+   * Time to ask the RMs of all the active SubClusters for an application
+   * whose home SubCluster is not in the Federation StateStore.
+   */
+  public static final String ROUTER_APPLICATION_PROBE_TIMEOUT =
+      ROUTER_PREFIX + "application-probe.timeout";
+  public static final long DEFAULT_ROUTER_APPLICATION_PROBE_TIMEOUT =
+      TimeUnit.SECONDS.toMillis(10);
+
+  /**
+   * Prefix of the per-SubCluster Application History Server RPC addresses,
+   * e.g. yarn.router.application-history.address.SC1=host:10200. The Router
+   * asks them for the applications that no RM knows any more. Without any,
+   * the Router uses its own yarn.timeline-service.address if
+   * yarn.timeline-service.generic-application-history.enabled is true.
+   */
+  public static final String ROUTER_APPLICATION_HISTORY_ADDRESS_PREFIX =
+      ROUTER_PREFIX + "application-history.address.";
+
+  /**
+   * Prefix of the per-SubCluster Application History Server web addresses,
+   * e.g. yarn.router.application-history.webapp.address.SC1=host:8188, which
+   * the Router web proxy redirects to for the applications found there.
+   */
+  public static final String ROUTER_APPLICATION_HISTORY_WEBAPP_ADDRESS_PREFIX =
+      ROUTER_PREFIX + "application-history.webapp.address.";
+
+  /**
    * The interceptor class used in FederationClientInterceptor should return
    * partial ApplicationReports.
    */
