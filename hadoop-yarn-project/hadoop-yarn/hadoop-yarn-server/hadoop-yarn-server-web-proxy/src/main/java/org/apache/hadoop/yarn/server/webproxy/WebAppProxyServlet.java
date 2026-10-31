@@ -64,8 +64,10 @@ import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.http.Header;
+import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.ProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
@@ -73,7 +75,9 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.DefaultRedirectStrategy;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.protocol.HttpContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -265,6 +269,12 @@ public class WebAppProxyServlet extends HttpServlet {
     // similar could cause issues otherwise.
     InetAddress localAddress = InetAddress.getByName(proxyHost);
     LOG.debug("local InetAddress for proxy host: {}", localAddress);
+    // The tracking URL is supplied by the application and is fetched
+    // server-side, so a malicious AM can return a redirect pointing at the
+    // cluster's internal services or the cloud metadata endpoint. Only follow
+    // redirects that stay on the application's own host.
+    httpClientBuilder.setRedirectStrategy(
+        new SameHostRedirectStrategy(link.getHost()));
     httpClientBuilder.setDefaultRequestConfig(
         connectionTimeoutEnabled ?
             RequestConfig.custom()
@@ -335,7 +345,41 @@ public class WebAppProxyServlet extends HttpServlet {
       base.releaseConnection();
     }
   }
-  
+
+  /**
+   * Refuse to follow a proxied redirect whose target host differs from the
+   * host of the application's tracking URL. Same-host redirects (the common
+   * case for an application web UI) are still followed.
+   */
+  @VisibleForTesting
+  static void checkSameHost(String allowedHost, URI target)
+      throws ProtocolException {
+    String targetHost = target == null ? null : target.getHost();
+    if (allowedHost != null && targetHost != null
+        && !allowedHost.equalsIgnoreCase(targetHost)) {
+      throw new ProtocolException(
+          "Refusing to follow application redirect to a different host: "
+              + targetHost);
+    }
+  }
+
+  @VisibleForTesting
+  static final class SameHostRedirectStrategy extends DefaultRedirectStrategy {
+    private final String allowedHost;
+
+    SameHostRedirectStrategy(String allowedHost) {
+      this.allowedHost = allowedHost;
+    }
+
+    @Override
+    public URI getLocationURI(HttpRequest request, HttpResponse response,
+        HttpContext context) throws ProtocolException {
+      URI target = super.getLocationURI(request, response, context);
+      checkSameHost(allowedHost, target);
+      return target;
+    }
+  }
+
   private static String getCheckCookieName(ApplicationId id){
     return "checked_"+id;
   }
