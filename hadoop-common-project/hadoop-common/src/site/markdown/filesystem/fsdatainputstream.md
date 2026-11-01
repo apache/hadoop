@@ -731,11 +731,15 @@ if release = null raise NullPointerException
   SHOULD call `release(buffer)` with the buffer created by invoking the `allocate()` function into which
   the data was being read.
 * Implementations MUST NOT call `release(buffer)` with any non-null buffer _not_ obtained through `allocate()`.
-* Implementations MUST only call `release(buffer)` when a failure has occurred and the future is about to have `Future.completedExceptionally()` invoked.
+* For buffers holding caller-visible range data, implementations MUST only call `release(buffer)`
+  when a failure has occurred and the future is about to have `CompletableFuture.completeExceptionally()` invoked.
+* Implementations SHOULD release buffers used only internally, such as checksum buffers, once all
+  operations using them have completed, whether successfully or exceptionally.
+* Implementations MUST NOT release a buffer if it, or a slice of it, has been returned to the caller.
+* For each call to `allocate()`, implementations MUST NOT call `release()` more than once with the allocated buffer.
 
 It is an extension to the original Vector Read API -not all versions of Hadoop with the original `readVectored()` call define it.
 If used directly in application code, that application is restricting itself to later versions
 of the API.
 
 If used via reflection, if this method is not found, fall back to the original method.
-
