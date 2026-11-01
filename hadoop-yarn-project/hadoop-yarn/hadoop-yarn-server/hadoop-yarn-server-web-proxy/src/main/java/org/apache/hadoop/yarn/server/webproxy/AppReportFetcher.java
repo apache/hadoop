@@ -129,6 +129,32 @@ public abstract class AppReportFetcher {
     return fetchedAppReport;
   }
 
+  /**
+   * Get an application report from the Application History Server only.
+   *
+   * @param appId id of the application to get.
+   * @return the report, or null if the Application History Server is not
+   *         enabled or does not know the application.
+   * @throws YarnException on any other error.
+   * @throws IOException connection exception.
+   */
+  protected FetchedAppReport getApplicationReportFromAHS(ApplicationId appId)
+      throws YarnException, IOException {
+    if (!isAHSEnabled) {
+      return null;
+    }
+    GetApplicationReportRequest request =
+        this.recordFactory.newRecordInstance(GetApplicationReportRequest.class);
+    request.setApplicationId(appId);
+    try {
+      ApplicationReport appReport =
+          historyManager.getApplicationReport(request).getApplicationReport();
+      return new FetchedAppReport(appReport, AppReportSource.AHS);
+    } catch (ApplicationNotFoundException e) {
+      return null;
+    }
+  }
+
   public abstract String getRmAppPageUrlBase(ApplicationId appId) throws IOException, YarnException;
 
   public String getAhsAppPageUrlBase() {
