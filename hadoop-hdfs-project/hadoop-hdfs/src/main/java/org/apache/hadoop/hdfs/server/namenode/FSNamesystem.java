@@ -98,6 +98,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DEPRIORITIZE_SLOW_DISK_DATANODE_FOR_READ_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DEPRIORITIZE_SLOW_DISK_DATANODE_FOR_READ_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import java.lang.reflect.Constructor;
@@ -121,6 +123,7 @@ import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.OBSERVER;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
+import org.apache.hadoop.hdfs.server.blockmanagement.SlowDiskTracker;
 import org.apache.hadoop.hdfs.server.namenode.fgl.FSNLockManager;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotDeletionGc;
@@ -511,6 +514,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final boolean isPermissionEnabled;
   private final boolean isStoragePolicyEnabled;
   private final boolean isStoragePolicySuperuserOnly;
+  private final boolean deprioritizeSlowDiskDatanodeForRead;
   private final UserGroupInformation fsOwner;
   private final String supergroup;
   private final boolean standbyShouldCheckpoint;
@@ -912,6 +916,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.isStoragePolicySuperuserOnly =
           conf.getBoolean(DFS_STORAGE_POLICY_PERMISSIONS_SUPERUSER_ONLY_KEY,
               DFS_STORAGE_POLICY_PERMISSIONS_SUPERUSER_ONLY_DEFAULT);
+
+      this.deprioritizeSlowDiskDatanodeForRead =
+              conf.getBoolean(DFS_NAMENODE_DEPRIORITIZE_SLOW_DISK_DATANODE_FOR_READ_KEY,
+                      DFS_NAMENODE_DEPRIORITIZE_SLOW_DISK_DATANODE_FOR_READ_DEFAULT);
 
       this.snapshotDiffReportLimit =
           conf.getInt(DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT,
@@ -2309,7 +2317,103 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     LocatedBlocks blocks = res.blocks;
     sortLocatedBlocks(clientMachine, blocks);
+
+    // Whether to demote and reorder slow-disk DataNodes depends on the configuration
+    if (deprioritizeSlowDiskDatanodeForRead) {
+      sortLocatedBlocksBySlowDisk(blocks);
+    }
+
     return blocks;
+  }
+
+  /**
+   * Sort LocatedBlocks by slow disk info, moving slow replicas
+   * to the end. This sorting is performed after the network
+   * topology sorting, preserving the topology order of normal
+   * replicas.
+   */
+  private void sortLocatedBlocksBySlowDisk(LocatedBlocks blocks) {
+    if (blocks == null) {
+      return;
+    }
+
+    SlowDiskTracker slowDiskTracker = blockManager.getDatanodeManager()
+        .getSlowDiskTracker();
+    if (slowDiskTracker == null) {
+      return;
+    }
+    Map<String, Double> slowDiskMap = slowDiskTracker.getAllValidSlowDisks();
+
+    if (slowDiskMap.isEmpty()) {
+      return;
+    }
+
+    for (LocatedBlock lb : blocks.getLocatedBlocks()) {
+      // Skip erasure coded blocks: reordering locations without updating
+      // blockIndices and blockTokens would cause data corruption.
+      if (lb instanceof LocatedStripedBlock) {
+        continue;
+      }
+
+      DatanodeInfo[] dnList = lb.getLocations();
+      String[] storageIDs = lb.getStorageIDs();
+
+      if (dnList == null || dnList.length <= 1 || storageIDs == null) {
+        continue;
+      }
+
+      // Use an index array for stable sorting to maintain network topology order
+      Integer[] indices = new Integer[dnList.length];
+      for (int i = 0; i < dnList.length; i++) {
+        indices[i] = i;
+      }
+
+      // Pre-calculate the slow disk key to avoid repeatedly concatenating strings during sorting
+      String[] slowKeys = new String[dnList.length];
+      for (int i = 0; i < dnList.length; i++) {
+        slowKeys[i] = dnList[i].getIpcAddr(false) + ":" + storageIDs[i];
+      }
+
+      Arrays.sort(indices, (i1, i2) -> {
+        String slowKey1 = slowKeys[i1];
+        String slowKey2 = slowKeys[i2];
+
+        boolean slow1 = slowDiskMap.containsKey(slowKey1);
+        boolean slow2 = slowDiskMap.containsKey(slowKey2);
+
+        if (slow1 && !slow2) {
+          return 1;
+        }
+        if (!slow1 && slow2) {
+          return -1;
+        }
+
+        // If all disks are slow disks, sort them by latency
+        if (slow1 && slow2) {
+          Double latency1 = slowDiskMap.get(slowKey1);
+          Double latency2 = slowDiskMap.get(slowKey2);
+          if (latency1 != null && latency2 != null) {
+            return Double.compare(latency1, latency2);
+          }
+        }
+
+        // Maintain the original order (network topology)
+        return Integer.compare(i1, i2);
+      });
+
+      DatanodeInfo[] sortedDN = new DatanodeInfo[dnList.length];
+      String[] sortedStorage = new String[storageIDs.length];
+
+      for (int i = 0; i < indices.length; i++) {
+        sortedDN[i] = dnList[indices[i]];
+        sortedStorage[i] = storageIDs[indices[i]];
+      }
+
+      System.arraycopy(sortedDN, 0, dnList, 0, dnList.length);
+      System.arraycopy(sortedStorage, 0, storageIDs, 0, storageIDs.length);
+
+      lb.updateCachedStorageInfo();
+    }
   }
 
   private void sortLocatedBlocks(String clientMachine, LocatedBlocks blocks) {
