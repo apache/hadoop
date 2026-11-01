@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -44,6 +45,7 @@ import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_HTTP_AUTH_PREFIX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -91,6 +93,58 @@ public class TestTimelineServerRequests {
   void testPutAndGetTimelineEntity() throws Exception {
     putEntity();
     getEntity();
+  }
+
+  @Test
+  void testDocumentedFieldNames() throws Exception {
+    postAndCheck("doc_id", "{\"entities\":[{\"entity\":\"doc_id\",\"entitytype\":\"DOC\","
+        + "\"starttime\":1,\"events\":[{\"timestamp\":1,\"eventtype\":\"E\","
+        + "\"eventinfo\":{\"k\":\"v\"}}],\"relatedentities\":{\"R\":[\"doc_id_r\"]},"
+        + "\"primaryfilters\":{\"p\":[\"v\"]},\"otherinfo\":{\"o\":\"v\"}}]}");
+
+    String url = String.format("http://%s:%d/ws/v1/timeline/DOC/doc_id?user.name=foo",
+        HOST, testTimelineServer.getPort());
+    Client client = ClientBuilder.newClient();
+    try {
+      String body = client.target(url).request(MediaType.APPLICATION_JSON).get(String.class);
+      for (String name : new String[] {"entity", "entitytype", "starttime", "eventtype",
+          "eventinfo", "primaryfilters", "otherinfo", "domain"}) {
+        assertTrue(body.contains("\"" + name + "\":"), name + " missing from " + body);
+      }
+      assertFalse(body.contains("entityType"), body);
+    } finally {
+      client.close();
+    }
+  }
+
+  @Test
+  void testCamelCaseFieldNamesAreAccepted() throws Exception {
+    postAndCheck("camel_id", "{\"entities\":[{\"entityId\":\"camel_id\",\"entityType\":\"DOC\","
+        + "\"startTime\":1,\"events\":[{\"timestamp\":1,\"eventType\":\"E\","
+        + "\"eventInfo\":{\"k\":\"v\"}}],\"relatedEntities\":{\"R\":[\"camel_id_r\"]},"
+        + "\"primaryFilters\":{\"p\":[\"v\"]},\"otherInfo\":{\"o\":\"v\"}}]}");
+  }
+
+  private void postAndCheck(String id, String json) throws IOException {
+    String url = String.format("http://%s:%d/ws/v1/timeline?user.name=foo",
+        HOST, testTimelineServer.getPort());
+    Client client = ClientBuilder.newClient();
+    try (Response response = client.target(url).request(MediaType.APPLICATION_JSON)
+        .post(Entity.json(json))) {
+      assertEquals(200, response.getStatus());
+    } finally {
+      client.close();
+    }
+    TimelineEntity stored =
+        testTimelineServer.getTimelineStore().getEntity(id, "DOC", null);
+    assertNotNull(stored, "Timeline entity should not be null");
+    assertEquals(1L, stored.getStartTime());
+    assertEquals("E", stored.getEvents().get(0).getEventType());
+    assertEquals("v", stored.getEvents().get(0).getEventInfo().get("k"));
+    assertNotNull(testTimelineServer.getTimelineStore().getEntity(id + "_r", "R", null),
+        "Related entity should not be null");
+    assertEquals("v", stored.getOtherInfo().get("o"));
+    assertTrue(stored.getPrimaryFilters().containsKey("p"));
   }
 
   private void putEntity() throws IOException, YarnException {
