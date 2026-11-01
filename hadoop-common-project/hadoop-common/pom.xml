@@ -142,6 +142,15 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <!-- Optional: compiled against here, but projects that depend on
+         hadoop-common keep getting it through jetty-server, so declaring it
+         does not change what Maven resolves for them. -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-http</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-servlet</artifactId>
