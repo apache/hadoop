@@ -150,6 +150,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private CuratorCacheBridge keyCache;
   private CuratorCacheBridge tokenCache;
   private final int seqNumBatchSize;
+  private final Object sequenceNumberLock = new Object();
   private int currentSeqNum;
   private int currentMaxSeqNum;
 
@@ -266,10 +267,12 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       }
       // the first batch range should be allocated during this starting window
       // by calling the incrSharedCount
-      currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
-      currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
-      LOG.info("Fetched initial range of seq num, from {} to {} ",
-          currentSeqNum+1, currentMaxSeqNum);
+      synchronized (sequenceNumberLock) {
+        currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
+        currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
+        LOG.info("Fetched initial range of seq num, from {} to {} ",
+            currentSeqNum + 1, currentMaxSeqNum);
+      }
     } catch (Exception e) {
       throw new IOException("Could not start Sequence Counter", e);
     }
@@ -501,27 +504,39 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   @Override
   protected int incrementDelegationTokenSeqNum() {
-    // The secret manager will keep a local range of seq num which won't be
-    // seen by peers, so only when the range is exhausted it will ask zk for
-    // another range again
-    if (currentSeqNum >= currentMaxSeqNum) {
-      try {
-        // after a successful batch request, we can get the range starting point
-        currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
-        currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
-        LOG.info("Fetched new range of seq num, from {} to {} ",
-            currentSeqNum+1, currentMaxSeqNum);
-      } catch (InterruptedException e) {
-        // The ExpirationThread is just finishing.. so dont do anything..
-        LOG.debug(
-            "Thread interrupted while performing token counter increment", e);
-        Thread.currentThread().interrupt();
-      } catch (Exception e) {
-        throw new RuntimeException("Could not increment shared counter !!", e);
+    synchronized (sequenceNumberLock) {
+      // A range belongs exclusively to this manager. Never consume a number
+      // beyond the range unless its replacement was successfully reserved.
+      if (currentSeqNum >= currentMaxSeqNum) {
+        try {
+          int start = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
+          currentSeqNum = start;
+          currentMaxSeqNum = start + seqNumBatchSize;
+          LOG.info("Fetched new range of seq num, from {} to {}",
+              currentSeqNum + 1, currentMaxSeqNum);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new IllegalStateException("Interrupted reserving token sequence range", e);
+        } catch (Exception e) {
+          throw new IllegalStateException("Could not increment shared counter", e);
+        }
       }
+      return ++currentSeqNum;
     }
+  }
 
-    return ++currentSeqNum;
+  @Override
+  protected byte[] createPassword(TokenIdent identifier) {
+    // Neither range reservation nor token persistence may hold apiLock.
+    DelegationTokenInformation info = prepareToken(identifier,
+        incrementDelegationTokenSeqNum());
+    logTokenCreation(identifier);
+    try {
+      getMetrics().trackStoreToken(() -> storeToken(identifier, info));
+    } catch (IOException e) {
+      throw new IllegalStateException("Could not store delegation token", e);
+    }
+    return info.getPassword();
   }
 
   @Override
