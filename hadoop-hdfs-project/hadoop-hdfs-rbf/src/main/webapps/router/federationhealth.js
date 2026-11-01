@@ -98,7 +98,7 @@
       var base = dust.makeBase(HELPERS);
       dust.render('federationhealth', base.push(data), function(err, out) {
         $('#tab-overview').html(out);
-        $('#ui-tabs a[href="#tab-overview"]').tab('show');
+        hadoopBootstrap.showTab('#ui-tabs a[href="#tab-overview"]');
       });
     }
   }
@@ -171,7 +171,7 @@
         var base = dust.makeBase(HELPERS);
         dust.render('namenode-info', base.push(data), function(err, out) {
           $('#tab-namenode').html(out);
-          $('#ui-tabs a[href="#tab-namenode"]').tab('show');
+          hadoopBootstrap.showTab('#ui-tabs a[href="#tab-namenode"]');
         });
       })).fail(ajax_error_handler);
   }
@@ -235,7 +235,7 @@
         var base = dust.makeBase(HELPERS);
         dust.render('router-info', base.push(data), function(err, out) {
           $('#tab-router').html(out);
-          $('#ui-tabs a[href="#tab-router"]').tab('show');
+          hadoopBootstrap.showTab('#ui-tabs a[href="#tab-router"]');
         });
       })).fail(ajax_error_handler);
   }
@@ -448,7 +448,7 @@
             }
           });
           renderHistogram(data);
-          $('#ui-tabs a[href="#tab-datanode"]').tab('show');
+          hadoopBootstrap.showTab('#ui-tabs a[href="#tab-datanode"]');
         });
       })).fail(ajax_error_handler);
   }
@@ -509,7 +509,7 @@
               { 'type': 'string' , "defaultContent": "" },
               { 'type': 'string' , "defaultContent": "" }
             ]});
-          $('#ui-tabs a[href="#tab-mounttable"]').tab('show');
+          hadoopBootstrap.showTab('#ui-tabs a[href="#tab-mounttable"]');
         });
       })).fail(ajax_error_handler);
   }
@@ -566,7 +566,7 @@
   }
   load_page();
 
-  $(window).bind('hashchange', function () {
+  $(window).on('hashchange', function () {
     load_page();
   });
 })();
