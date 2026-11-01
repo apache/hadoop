@@ -38,4 +38,14 @@
         </description>
     </property>
 
+    <property>
+        <name>hdfs.fedbalance.preserve.acl.enabled</name>
+        <value>true</value>
+        <description>
+            Whether FedBalance should preserve ACLs in the submitted DistCp
+            jobs when ACLs are supported by the source and destination
+            filesystems.
+        </description>
+    </property>
+
 </configuration>
