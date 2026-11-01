@@ -1195,9 +1195,7 @@ public class NameNode extends ReconfigurableBase implements
     if (!haEnabled || startOpt == StartupOption.UPGRADE
         || startOpt == StartupOption.UPGRADEONLY) {
       return ACTIVE_STATE;
-    } else if (conf.getBoolean(DFS_NAMENODE_OBSERVER_ENABLED_KEY,
-          DFS_NAMENODE_OBSERVER_ENABLED_DEFAULT)
-        || startOpt == StartupOption.OBSERVER) {
+    } else if (isObserverEnabled(conf) || startOpt == StartupOption.OBSERVER) {
       // Set Observer state using config instead of startup option
       // This allows other startup options to be used when starting observer.
       // e.g. rollingUpgrade
@@ -1205,6 +1203,24 @@ public class NameNode extends ReconfigurableBase implements
     } else {
       return STANDBY_STATE;
     }
+  }
+
+  /**
+   * Check whether this NameNode should start as an Observer.
+   * Checks the per-NameNode scoped key
+   * {@code dfs.namenode.observer.enabled.<nameserviceId>.<namenodeId>} first,
+   * falling back to the global {@code dfs.namenode.observer.enabled}.
+   */
+  private boolean isObserverEnabled(Configuration conf) {
+    String nsId = getNameServiceId(conf);
+    String namenodeId = HAUtil.getNameNodeId(conf, nsId);
+    String perNnKey = DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_OBSERVER_ENABLED_KEY, nsId, namenodeId);
+    if (conf.get(perNnKey) != null) {
+      return conf.getBoolean(perNnKey, false);
+    }
+    return conf.getBoolean(
+        DFS_NAMENODE_OBSERVER_ENABLED_KEY, DFS_NAMENODE_OBSERVER_ENABLED_DEFAULT);
   }
 
   protected HAContext createHAContext() {
