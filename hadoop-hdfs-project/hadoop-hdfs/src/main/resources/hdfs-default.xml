@@ -947,6 +947,20 @@
 </property>
 
 <property>
+  <name>dfs.datanode.directoryscan.regular.file.check</name>
+  <value>true</value>
+  <description>Whether the directory scanner verifies that the block file and
+  the meta file of every block are regular files (not directories, symlinks
+  or special files). The check issues two extra lstat calls per block after
+  all volumes have been listed, in block id order across all volumes. On
+  DataNodes whose number of files exceeds the kernel inode cache this second
+  pass is a random read on every volume and can take hours; set this to false
+  to skip it. Blocks that differ in other ways are still checked for regular
+  files during reconciliation.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.reconcile.blocks.batch.size</name>
   <value>1000</value>
   <description>Setting this to define reconcile batch size.</description>
