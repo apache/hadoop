@@ -182,6 +182,27 @@ public class DiskBalancerCLI extends Configured implements Tool {
   }
 
   /**
+   * Rewrites "-help &lt;subcmd&gt;" to "--help=&lt;subcmd&gt;" so that Commons CLI's
+   * optionalArg option captures the sub-command name as the option value
+   * rather than leaving it as an unrecognised positional argument.
+   */
+  private static String[] normalizeHelpArg(String[] args) {
+    for (int i = 0; i < args.length - 1; i++) {
+      if (("-" + HELP).equals(args[i]) || ("--" + HELP).equals(args[i])) {
+        String next = args[i + 1];
+        if (!next.startsWith("-")) {
+          String[] result = new String[args.length - 1];
+          System.arraycopy(args, 0, result, 0, i);
+          result[i] = "--" + HELP + "=" + next;
+          System.arraycopy(args, i + 2, result, i + 1, args.length - i - 2);
+          return result;
+        }
+      }
+    }
+    return args;
+  }
+
+  /**
    * Execute the command with the given arguments.
    *
    * @param args command specific arguments.
@@ -190,6 +211,7 @@ public class DiskBalancerCLI extends Configured implements Tool {
    */
   @Override
   public int run(String[] args) throws Exception {
+    args = normalizeHelpArg(args);
     Options opts = getOpts();
     CommandLine cmd = parseArgs(args, opts);
     String[] cmdArgs = cmd.getArgs();
