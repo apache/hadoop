@@ -50,7 +50,17 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 
 /**
  * Implementation of the delete() operation.
- * This issues only one bulk delete at a time,
+ * A non-empty directory, as well as a directory where its emptiness
+ * is unknown, is deleted by listing all contained files (or objects
+ * with matching key prefix), then deleting those files (objects) in
+ * bulk delete requests, and finally deleting the (then) empty
+ * directory itself.
+ * <p>
+ * When "fs.s3a.delete.non-empty-directory.enabled" is true, only
+ * one delete request is sent for the directory (key prefix). The
+ * S3 endpoint has to support this feature.
+ * <p>
+ * Bulk deletes are issued only one at a time,
  * intending to update S3Guard after every request succeeded.
  * Now that S3Guard has been removed, it
  * would be possible to issue multiple delete calls
@@ -118,6 +128,12 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
   private final boolean dirOperationsPurgeUploads;
 
   /**
+   * When true, non-empty directories are deleted with a single request
+   * (for S3-compatible endpoints that support it).
+   */
+  private final boolean deleteNonEmptyDirectoryEnabled;
+
+  /**
    * Count of uploads aborted.
    */
   private Optional<Long> uploadsAborted = Optional.empty();
@@ -129,14 +145,18 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
    * @param recursive recursive delete?
    * @param callbacks callback provider
    * @param pageSize size of delete pages
-   * @param dirOperationsPurgeUploads Do directory operations purge pending uploads?
+   * @param dirOperationsPurgeUploads Do directory operations purge pending
+   *        uploads?
+   * @param deleteNonEmptyDirectoryEnabled use single delete for non-empty dirs
+   *        when supported
    */
   public DeleteOperation(final StoreContext context,
       final S3AFileStatus status,
       final boolean recursive,
       final OperationCallbacks callbacks,
       final int pageSize,
-      final boolean dirOperationsPurgeUploads) {
+      final boolean dirOperationsPurgeUploads,
+      final boolean deleteNonEmptyDirectoryEnabled) {
 
     super(context);
     this.status = status;
@@ -149,6 +169,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
     executor = MoreExecutors.listeningDecorator(
         context.createThrottledExecutor(1));
     this.dirOperationsPurgeUploads = dirOperationsPurgeUploads;
+    this.deleteNonEmptyDirectoryEnabled = deleteNonEmptyDirectoryEnabled;
   }
 
   public long getFilesDeleted() {
@@ -166,6 +187,16 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
 
   /**
    * Delete a file or directory tree.
+   * <p>
+   * A non-empty directory, as well as a directory where its emptiness
+   * is unknown, is deleted by listing all contained files (or objects
+   * with matching key prefix), then deleting those files (objects) in
+   * bulk delete requests, and finally deleting the (then) empty
+   * directory itself.
+   * <p>
+   * When "fs.s3a.delete.non-empty-directory.enabled" is true, only
+   * one delete request is sent for the directory (key prefix). The
+   * S3 endpoint has to support this feature.
    * <p>
    * This call does not create any fake parent directory; that is
    * left to the caller.
@@ -223,6 +254,10 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
       }
       if (status.isEmptyDirectory() == Tristate.TRUE) {
         LOG.debug("deleting empty directory {}", path);
+        deleteObjectAtPath(path, key, false);
+      } else if (deleteNonEmptyDirectoryEnabled) {
+        LOG.debug("deleting non-empty directory {} with single request "
+            + "(endpoint supports it)", path);
         deleteObjectAtPath(path, key, false);
       } else {
         deleteDirectoryTree(path, key);
@@ -294,8 +329,8 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
       maybeAwaitCompletion(deleteFuture);
       uploadsAborted = waitForCompletionIgnoringExceptions(abortUploads);
     }
-    LOG.debug("Delete \"{}\" completed; deleted {} objects and aborted {} uploads", path,
-        filesDeleted, uploadsAborted.orElse(0L));
+    LOG.debug("Delete \"{}\" completed; deleted {} objects and aborted {} uploads",
+        path, filesDeleted, uploadsAborted.orElse(0L));
   }
 
   /**
@@ -331,7 +366,8 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
    */
   private void queueForDeletion(final String key,
       boolean isDirMarker) throws IOException {
-    LOG.debug("Adding object to delete: \"{}\"", key);
+    LOG.debug("Adding {} to delete: \"{}\"",
+        isDirMarker ? "dir marker" : "file", key);
     keys.add(new DeleteEntry(key, isDirMarker));
     if (keys.size() == pageSize) {
       submitNextBatch();
