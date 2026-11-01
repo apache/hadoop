@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.Resolved;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ValueSource;
 
 import java.util.Set;
 
@@ -41,8 +44,10 @@ public final class QueueStateHelper {
    */
   public static void setQueueState(AbstractCSQueue queue) {
     QueueState previousState = queue.getState();
-    QueueState configuredState = queue.getQueueContext().getConfiguration().getConfiguredState(
-        queue.getQueuePathObject());
+    QueueState configuredState = getConfiguredState(
+        queue.getResolvedQueueConfig().get(QueueProperties.STATE));
+    // The parent's current state, which follows state transitions and is not
+    // a function of the configuration
     QueueState parentState = (queue.getParent() == null) ? null : queue.getParent().getState();
 
     // verify that we can not any value for State other than RUNNING/STOPPED
@@ -56,6 +61,19 @@ public final class QueueStateHelper {
     } else {
       reinitializeState(queue, previousState, configuredState);
     }
+  }
+
+  /**
+   * Gets the state configured for a queue from its resolved state, which falls back to the
+   * state inherited from the parent.
+   * @param state the resolved state of the queue
+   * @return the configured state, null if the queue has no configured state
+   */
+  private static QueueState getConfiguredState(Resolved<QueueState> state) {
+    QueueState value = state.getValue();
+    ValueSource source = state.getSource();
+    return source == ValueSource.QUEUE || source == ValueSource.TEMPLATE_V1
+        || source == ValueSource.TEMPLATE_V2 ? value : null;
   }
 
   private static void reinitializeState(
