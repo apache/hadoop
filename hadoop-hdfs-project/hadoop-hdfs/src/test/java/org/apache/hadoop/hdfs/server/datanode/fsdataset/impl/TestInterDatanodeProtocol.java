@@ -208,9 +208,17 @@ public class TestInterDatanodeProtocol {
       checkMetaInfo(newblock, datanode);
       
       // Verify correct null response trying to init recovery for a missing block
+      ExtendedBlock missingBlock = new ExtendedBlock(b.getBlockPoolId(),
+          Long.MAX_VALUE, 0, 0);
+      assertNull(idp.initReplicaRecovery(
+          new RecoveringBlock(missingBlock,
+              locatedblock.getLocations(), recoveryId)));
+
+      // A datanode cannot vouch for a missing replica of a block pool whose
+      // replicas it has not loaded
       ExtendedBlock badBlock = new ExtendedBlock("fake-pool",
           b.getBlockId(), 0, 0);
-      assertNull(idp.initReplicaRecovery(
+      assertThrows(IOException.class, () -> idp.initReplicaRecovery(
           new RecoveringBlock(badBlock,
               locatedblock.getLocations(), recoveryId)));
     }
