@@ -1958,7 +1958,7 @@ public final class Constants {
 
   // ==================== AWS Client Shared Thread Pool Configuration ===========
   // These settings control whether AWS SDK clients share a thread pool
-  // instead of each client creating its own. This prevents thread leaks
+  // instead of each client creating its own. This bounds thread growth
   // when many S3A filesystem instances are created.
 
   /**
@@ -1970,6 +1970,11 @@ public final class Constants {
    * Default keepalive in seconds for AWS client shared thread pool: {@value}.
    */
   public static final int AWS_CLIENT_SHARED_THREADPOOL_KEEPALIVE_DEFAULT = 60;
+
+  /**
+   * Default for whether AWS client shared thread pools are enabled: {@value}.
+   */
+  public static final boolean AWS_CLIENT_SHARED_THREADPOOL_ENABLED_DEFAULT = true;
 
   /**
    * Enable shared thread pool for AWS S3 sync client: {@value}.

@@ -85,7 +85,7 @@ public class STSClientFactory {
    * @return the holder
    */
   @VisibleForTesting
-  public static LazySharedThreadPoolHolder stsExecutorHolder() {
+  static LazySharedThreadPoolHolder stsExecutorHolder() {
     return STS_EXECUTOR;
   }
 
