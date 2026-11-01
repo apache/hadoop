@@ -456,6 +456,9 @@ The following artifacts are EPL and ASL2.
 The following artifacts are EPL and CDDL 1.0.
  * org.eclipse.jetty.orbit:javax.mail.glassfish
 
+The following artifacts are EPL 2.0 and GPLv2 with classpath exception.
+ * jakarta.annotation:jakarta.annotation-api
+
 
 ------
 Oracle
@@ -463,10 +466,7 @@ Oracle
 The following artifacts are CDDL + GPLv2 with classpath exception.
 https://glassfish.dev.java.net/nonav/public/CDDL+GPL.html
 
- * javax.servlet:javax.servlet-api
- * javax.annotation:javax.annotation-api
  * javax.transaction:javax.transaction-api
- * javax.websocket:javax.websocket-api
 
 ------
 Oracle OpenJDK

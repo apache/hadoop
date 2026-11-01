@@ -360,7 +360,7 @@ public class TimelineWebServices {
   }
 
   private void init(HttpServletResponse response) {
-    response.setContentType(null);
+    JettyUtils.clearContentType(response);
   }
 
   private static UserGroupInformation getUser(HttpServletRequest req) {
