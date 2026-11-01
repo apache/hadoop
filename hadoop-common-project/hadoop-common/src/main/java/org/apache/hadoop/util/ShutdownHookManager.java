@@ -185,6 +185,9 @@ public final class ShutdownHookManager {
         SERVICE_SHUTDOWN_TIMEOUT_DEFAULT,
         TIME_UNIT_DEFAULT);
     if (duration < TIMEOUT_MINIMUM) {
+      LOG.warn("Configured {} value of {} seconds is below the minimum of {} "
+          + "seconds; using {} seconds",
+          SERVICE_SHUTDOWN_TIMEOUT, duration, TIMEOUT_MINIMUM, TIMEOUT_MINIMUM);
       duration = TIMEOUT_MINIMUM;
     }
     return duration;
