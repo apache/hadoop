@@ -31,7 +31,9 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -78,6 +80,8 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    * @return the entity type
    */
   @XmlElement(name = "entitytype")
+  @JsonProperty("entitytype")
+  @JsonAlias("entityType")
   public String getEntityType() {
     return entityType;
   }
@@ -98,6 +102,8 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    * @return the entity Id
    */
   @XmlElement(name = "entity")
+  @JsonProperty("entity")
+  @JsonAlias("entityId")
   public String getEntityId() {
     return entityId;
   }
@@ -118,6 +124,8 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    * @return the start time of the entity
    */
   @XmlElement(name = "starttime")
+  @JsonProperty("starttime")
+  @JsonAlias("startTime")
   public Long getStartTime() {
     return startTime;
   }
@@ -177,6 +185,8 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    * 
    * @return the related entities
    */
+  @JsonProperty("relatedentities")
+  @JsonAlias("relatedEntities")
   public Map<String, Set<String>> getRelatedEntities() {
     return relatedEntities;
   }
@@ -241,6 +251,8 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    * 
    * @return the primary filters
    */
+  @JsonProperty("primaryfilters")
+  @JsonAlias("primaryFilters")
   public Map<String, Set<Object>> getPrimaryFilters() {
     return primaryFilters;
   }
@@ -304,6 +316,8 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    * 
    * @return the other information of the entity
    */
+  @JsonProperty("otherinfo")
+  @JsonAlias("otherInfo")
   public Map<String, Object> getOtherInfo() {
     return otherInfo;
   }
@@ -354,6 +368,8 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    * @return the domain ID
    */
   @XmlElement(name = "domain")
+  @JsonProperty("domain")
+  @JsonAlias("domainId")
   public String getDomainId() {
     return domainId;
   }
