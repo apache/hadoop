@@ -39,8 +39,8 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
 
 add_executable(protoc-gen-hrpc protoc_gen_hrpc.cc)
 target_link_libraries(protoc-gen-hrpc
-  ${PROTOBUF_PROTOC_LIBRARY}
-  ${PROTOBUF_LIBRARY}
+  protobuf::libprotoc
+  protobuf::libprotobuf
   ${protobuf_ABSL_USED_TARGETS})
 
 function(GEN_HRPC SRCS)

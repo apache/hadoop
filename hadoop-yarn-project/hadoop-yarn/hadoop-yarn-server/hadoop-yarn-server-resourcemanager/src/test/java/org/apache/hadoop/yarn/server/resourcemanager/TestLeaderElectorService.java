@@ -76,11 +76,18 @@ public class TestLeaderElectorService {
 
   @AfterEach
   public void tearDown() throws Exception {
-    if (rm1 != null) {
-      rm1.stop();
-    }
-    if (rm2 !=null) {
-      rm2.stop();
+    try {
+      if (rm1 != null) {
+        rm1.stop();
+      }
+      if (rm2 != null) {
+        rm2.stop();
+      }
+    } finally {
+      if (zkCluster != null) {
+        zkCluster.close();
+        zkCluster = null;
+      }
     }
   }
 

@@ -32,7 +32,7 @@
     <packagingType>pom</packagingType>
     <webappDir>${basedir}/target/webapp</webappDir>
     <nodeExecutable>${basedir}/target/webapp/node/node</nodeExecutable>
-    <packageManagerScript>node_modules/.bin/react-router</packageManagerScript>
+    <packageManagerScript>node_modules/@react-router/dev/bin.js</packageManagerScript>
     <keepUIBuildCache>false</keepUIBuildCache>
   </properties>
 
@@ -166,7 +166,7 @@
                   <goal>install-node-and-npm</goal>
                 </goals>
                 <configuration>
-                  <nodeVersion>v22.16.0</nodeVersion>
+                  <nodeVersion>v22.23.4</nodeVersion>
                   <npmVersion>10.8.1</npmVersion>
                 </configuration>
               </execution>

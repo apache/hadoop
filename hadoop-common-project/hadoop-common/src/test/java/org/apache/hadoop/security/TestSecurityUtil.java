@@ -626,18 +626,39 @@ public class TestSecurityUtil {
   private void  testCacheableResolve(SecurityUtil.CacheableHostResolver resolver)
       throws Exception {
     // Call getByName twice with the same host
-    InetAddress addr1 = resolver.getByName("127.0.0.1");
-    InetAddress addr2 = resolver.getByName("127.0.0.1");
+    InetAddress addr1 = resolver.getByName("localhost");
+    InetAddress addr2 = resolver.getByName("localhost");
     assertNotNull(addr1);
     assertNotNull(addr2);
     // Both addresses should be the same instance (cached value)
     assertSame(addr1, addr2);
+    assertSame(addr1, resolver.getCache().getIfPresent("localhost"));
 
     // wait for timeout of cache item
     Thread.sleep(1500);
-    InetAddress addr3 = resolver.getByName("127.0.0.1");
+    // the JDK caches hostname lookups itself, so check the entry, not identity
+    assertNull(resolver.getCache().getIfPresent("localhost"));
+    InetAddress addr3 = resolver.getByName("localhost");
     assertNotNull(addr3);
-    assertNotSame(addr1, addr3);
+  }
+
+  /**
+   * IP literals bypass the cache, so a reverse lookup done by one caller via
+   * getHostName() does not change the host string seen by later callers.
+   */
+  @Test
+  public void testCacheableResolverDoesNotShareIpLiteral() throws Exception {
+    SecurityUtil.StandardHostResolver resolver =
+        new SecurityUtil.StandardHostResolver(10);
+    for (String ip : new String[] {"127.0.0.1", "::1", "[::1]"}) {
+      InetAddress addr1 = resolver.getByName(ip);
+      addr1.getHostName();
+      InetAddress addr2 = resolver.getByName(ip);
+      assertNotSame(addr1, addr2);
+      assertEquals(InetAddress.getByName(ip).getHostAddress(),
+          new InetSocketAddress(addr2, 0).getHostString());
+    }
+    assertEquals(0, resolver.getCache().size());
   }
 
   /**
