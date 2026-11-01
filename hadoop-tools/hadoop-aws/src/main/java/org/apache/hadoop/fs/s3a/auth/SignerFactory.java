@@ -181,9 +181,13 @@ public final class SignerFactory {
     checkState(clazz != null, "No http signer class defined in %s", configKey);
     LOG.debug("Creating http signer {} from {}", clazz, configKey);
     try {
-      return createAuthScheme(scheme, clazz.newInstance());
+      HttpSigner<AwsCredentialsIdentity> signer = clazz.getDeclaredConstructor().newInstance();
+      if (signer instanceof Configurable configurable) {
+        configurable.setConf(conf);
+      }
+      return createAuthScheme(scheme, signer);
 
-    } catch (InstantiationException | IllegalAccessException e) {
+    } catch (ReflectiveOperationException e) {
       throw new InstantiationIOException(
           InstantiationIOException.Kind.InstantiationFailure,
           null,
