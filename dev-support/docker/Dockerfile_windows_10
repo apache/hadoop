@@ -17,7 +17,7 @@
 # Dockerfile for installing the necessary dependencies for building Hadoop.
 # See BUILDING.txt.
 
-FROM mcr.microsoft.com/windows:ltsc2019
+FROM mcr.microsoft.com/windows/servercore:ltsc2019
 
 # Need to disable the progress bar for speeding up the downloads.
 # hadolint ignore=SC2086
@@ -50,54 +50,78 @@ RUN powershell Copy-Item -Recurse -Path 'C:\Program Files\Git' -Destination C:\G
 RUN powershell git clone https://github.com/microsoft/vcpkg.git \
     && cd vcpkg \
     && git fetch --all \
-    && git checkout 2025.03.19 \
+    && git checkout 2026.07.29 \
     && .\bootstrap-vcpkg.bat
 
 ADD vcpkg/vcpkg.json .
 
 RUN powershell .\vcpkg\vcpkg.exe install --x-install-root .\vcpkg\installed
 
-# Install Azul Java 8 JDK.
-RUN powershell Invoke-WebRequest -URI https://cdn.azul.com/zulu/bin/zulu8.62.0.19-ca-jdk8.0.332-win_x64.zip -OutFile $Env:TEMP\zulu8.62.0.19-ca-jdk8.0.332-win_x64.zip
-RUN powershell Expand-Archive -Path $Env:TEMP\zulu8.62.0.19-ca-jdk8.0.332-win_x64.zip -DestinationPath "C:\Java"
+# Install Microsoft Build of OpenJDK 17.
+# Every artifact downloaded below is pinned by SHA-512. Where the publisher
+# distributes its own digest, the value here was cross-checked against it
+# (Microsoft publishes SHA-256 for the JDK, cmake.org for CMake, and the ASF
+# publishes SHA-512 for Maven); the rest are pinned from a verified download.
+ENV JDK17_SHA512 391836ae41b75890ac92ef83939488ab4ceff7e3067d085e4e204b994d61abde0f32ac7a1bc1b41ea14fccd15d267e88ff4149aafba8fccee5eb4ea85676a56b
+RUN powershell Invoke-WebRequest -URI https://aka.ms/download-jdk/microsoft-jdk-17.0.20.1-windows-x64.msi -OutFile C:\jdk17.msi
+RUN powershell if ((Get-FileHash C:\jdk17.msi -Algorithm sha512).Hash -ne $Env:JDK17_SHA512) { throw 'jdk17.msi SHA-512 mismatch' }
+RUN powershell Start-Process msiexec.exe -ArgumentList '/i','C:\jdk17.msi','INSTALLDIR=C:\Java\jdk17\','/quiet','/norestart' -Wait
+RUN powershell if (-not (Test-Path 'C:\Java\jdk17\bin\javac.exe')) { throw 'JDK 17 installation failed' }
+RUN powershell Remove-Item C:\jdk17.msi -Force
 
 # Install Apache Maven.
+ENV MAVEN_SHA512 251c676eb88684d6dd86c666817979d256a335c31ad34ab0e1df17eeca1cd504a6c890e906a46d04e51cc7a4fb02f33a75971ef750558034e0a81c257be02267
 RUN powershell Invoke-WebRequest -URI https://archive.apache.org/dist/maven/maven-3/3.9.15/binaries/apache-maven-3.9.15-bin.zip -OutFile $Env:TEMP\apache-maven-3.9.15-bin.zip
+RUN powershell if ((Get-FileHash $Env:TEMP\apache-maven-3.9.15-bin.zip -Algorithm sha512).Hash -ne $Env:MAVEN_SHA512) { throw 'apache-maven-3.9.15-bin.zip SHA-512 mismatch' }
 RUN powershell Expand-Archive -Path $Env:TEMP\apache-maven-3.9.15-bin.zip -DestinationPath "C:\Maven"
 
-# Install CMake 3.19.0.
-RUN powershell Invoke-WebRequest -URI https://cmake.org/files/v3.19/cmake-3.19.0-win64-x64.zip -OutFile $Env:TEMP\cmake-3.19.0-win64-x64.zip
-RUN powershell Expand-Archive -Path $Env:TEMP\cmake-3.19.0-win64-x64.zip -DestinationPath "C:\CMake"
+# Install CMake 3.30.2.
+ENV CMAKE_SHA512 7ec8fde26fc56ef7be0bb00cc3f67be55277fc9bf9ab1a04023b49e0babdd92512915fda457c18b25c4294b3b864dda642ce8326e56508150c893a60532ad44e
+RUN powershell Invoke-WebRequest -URI https://cmake.org/files/v3.30/cmake-3.30.2-windows-x86_64.zip -OutFile $Env:TEMP\cmake-3.30.2-windows-x86_64.zip
+RUN powershell if ((Get-FileHash $Env:TEMP\cmake-3.30.2-windows-x86_64.zip -Algorithm sha512).Hash -ne $Env:CMAKE_SHA512) { throw 'cmake-3.30.2-windows-x86_64.zip SHA-512 mismatch' }
+RUN powershell Expand-Archive -Path $Env:TEMP\cmake-3.30.2-windows-x86_64.zip -DestinationPath "C:\CMake"
 
-# Install zstd 1.5.4.
+# Install zstd 1.5.4. The zstd CLI is needed to unpack the MSYS2 *.pkg.tar.zst
+# archives below; it is unrelated to Hadoop's zstd codec, which HADOOP-19855
+# replaced with zstd-jni.
+ENV ZSTD_SHA512 32a9265d39dab9880cc5305bd0287da4534d3fdb21b3b470722d0b0b3aa3c6ea46f7d79da20e13e4b26b1382b75f908feb59b45f737f2e1cd2f1c1224c468cf8
 RUN powershell Invoke-WebRequest -Uri https://github.com/facebook/zstd/releases/download/v1.5.4/zstd-v1.5.4-win64.zip -OutFile $Env:TEMP\zstd-v1.5.4-win64.zip
+RUN powershell if ((Get-FileHash $Env:TEMP\zstd-v1.5.4-win64.zip -Algorithm sha512).Hash -ne $Env:ZSTD_SHA512) { throw 'zstd-v1.5.4-win64.zip SHA-512 mismatch' }
 RUN powershell Expand-Archive -Path $Env:TEMP\zstd-v1.5.4-win64.zip -DestinationPath "C:\ZStd"
 RUN setx PATH "%PATH%;C:\ZStd"
 
-# Install libopenssl 3.5.2-1 needed for rsync 3.2.7.
+# Install libopenssl 3.5.2-1 needed for rsync 3.5.1.
+ENV LIBOPENSSL_SHA512 62ed995c350f8419eafb59c1aaaa4ff06657a33352917d84ccadd04f8904162ababdf075a7130c861b8d85098225866d8bc5c2b830fea54250386ed48dc130d0
 RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libopenssl-3.5.2-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libopenssl-3.5.2-1-x86_64.pkg.tar.zst
+RUN powershell if ((Get-FileHash $Env:TEMP\libopenssl-3.5.2-1-x86_64.pkg.tar.zst -Algorithm sha512).Hash -ne $Env:LIBOPENSSL_SHA512) { throw 'libopenssl-3.5.2-1-x86_64.pkg.tar.zst SHA-512 mismatch' }
 RUN powershell zstd -d $Env:TEMP\libopenssl-3.5.2-1-x86_64.pkg.tar.zst -o $Env:TEMP\libopenssl-3.5.2-1-x86_64.pkg.tar
 RUN powershell mkdir "C:\LibOpenSSL"
 RUN powershell tar -xvf $Env:TEMP\libopenssl-3.5.2-1-x86_64.pkg.tar -C "C:\LibOpenSSL"
 
-# Install libxxhash 0.8.3 needed for rsync 3.2.7.
+# Install libxxhash 0.8.3 needed for rsync 3.5.1.
+ENV LIBXXHASH_SHA512 a6d7a05aa94836abf0b5bc611db08217b4d1207feb539d9c18692fa9269bb255d6ee877bc146a2b2a177299bc0456c370af3356cd4dfbcf212e2182773494b2f
 RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libxxhash-0.8.3-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar.zst
+RUN powershell if ((Get-FileHash $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar.zst -Algorithm sha512).Hash -ne $Env:LIBXXHASH_SHA512) { throw 'libxxhash-0.8.3-1-x86_64.pkg.tar.zst SHA-512 mismatch' }
 RUN powershell zstd -d $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar.zst -o $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar
 RUN powershell mkdir "C:\LibXXHash"
 RUN powershell tar -xvf $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar -C "C:\LibXXHash"
 
-# Install libzstd 1.5.4 needed for rsync 3.2.7.
-RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libzstd-1.5.5-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libzstd-1.5.5-1-x86_64.pkg.tar.zst
-RUN powershell zstd -d $Env:TEMP\libzstd-1.5.5-1-x86_64.pkg.tar.zst -o $Env:TEMP\libzstd-1.5.5-1-x86_64.pkg.tar
+# Install libzstd 1.5.7 needed for rsync 3.5.1.
+ENV LIBZSTD_SHA512 02cf577567773f7f93f4df404d3b0a62d0cab4b2b63c76d572ef3af591e9fe6571b3d7e79e868ae5d7967b8f540941489a4004367c64113e1688f392827fc6cd
+RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libzstd-1.5.7-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libzstd-1.5.7-1-x86_64.pkg.tar.zst
+RUN powershell if ((Get-FileHash $Env:TEMP\libzstd-1.5.7-1-x86_64.pkg.tar.zst -Algorithm sha512).Hash -ne $Env:LIBZSTD_SHA512) { throw 'libzstd-1.5.7-1-x86_64.pkg.tar.zst SHA-512 mismatch' }
+RUN powershell zstd -d $Env:TEMP\libzstd-1.5.7-1-x86_64.pkg.tar.zst -o $Env:TEMP\libzstd-1.5.7-1-x86_64.pkg.tar
 RUN powershell mkdir "C:\LibZStd"
-RUN powershell tar -xvf $Env:TEMP\libzstd-1.5.5-1-x86_64.pkg.tar -C "C:\LibZStd"
+RUN powershell tar -xvf $Env:TEMP\libzstd-1.5.7-1-x86_64.pkg.tar -C "C:\LibZStd"
 
-# Install rsync 3.2.7.
-RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/rsync-3.2.7-2-x86_64.pkg.tar.zst -OutFile $Env:TEMP\rsync-3.2.7-2-x86_64.pkg.tar.zst
-RUN powershell zstd -d $Env:TEMP\rsync-3.2.7-2-x86_64.pkg.tar.zst -o $Env:TEMP\rsync-3.2.7-2-x86_64.pkg.tar
+# Install rsync 3.5.1.
+ENV RSYNC_SHA512 a8da994228c325027a20e0c8bf71a177faf038624e5be06e752b8a0d93f52ade7c594956d63178a75f3010b153d883238048fd76fee49ec2562989b8e97b080c
+RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/rsync-3.5.1-2-x86_64.pkg.tar.zst -OutFile $Env:TEMP\rsync-3.5.1-2-x86_64.pkg.tar.zst
+RUN powershell if ((Get-FileHash $Env:TEMP\rsync-3.5.1-2-x86_64.pkg.tar.zst -Algorithm sha512).Hash -ne $Env:RSYNC_SHA512) { throw 'rsync-3.5.1-2-x86_64.pkg.tar.zst SHA-512 mismatch' }
+RUN powershell zstd -d $Env:TEMP\rsync-3.5.1-2-x86_64.pkg.tar.zst -o $Env:TEMP\rsync-3.5.1-2-x86_64.pkg.tar
 RUN powershell mkdir "C:\RSync"
-RUN powershell tar -xvf $Env:TEMP\rsync-3.2.7-2-x86_64.pkg.tar -C "C:\RSync"
-# Copy the dependencies of rsync 3.2.7.
+RUN powershell tar -xvf $Env:TEMP\rsync-3.5.1-2-x86_64.pkg.tar -C "C:\RSync"
+# Copy the dependencies of rsync 3.5.1.
 RUN powershell Copy-Item -Path "C:\LibOpenSSL\usr\bin\*.dll" -Destination "C:\Program` Files\Git\usr\bin"
 RUN powershell Copy-Item -Path "C:\LibXXHash\usr\bin\*.dll" -Destination "C:\Program` Files\Git\usr\bin"
 RUN powershell Copy-Item -Path "C:\LibZStd\usr\bin\*.dll" -Destination "C:\Program` Files\Git\usr\bin"
@@ -120,29 +144,41 @@ RUN powershell pkg-resolver\install-pip.ps1
 RUN powershell pip install python-dateutil
 
 ## Install the Microsoft Visual C++ 2010 Redistributable to link leveldbjni native library
+ENV VCREDIST_SHA512 3af3dcaad4fc9651dce75c75a85bca0b15782a190f0fbb4ae21a6182cbc2f78138aa8ff26b350efef302f95c74b1808b2436aa199d43a5ee17fd0796a79c405b
 RUN powershell -Command Invoke-WebRequest -Uri https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe -OutFile vcredist_x64.exe
+RUN powershell if ((Get-FileHash vcredist_x64.exe -Algorithm sha512).Hash -ne $Env:VCREDIST_SHA512) { throw 'vcredist_x64.exe SHA-512 mismatch' }
 RUN powershell -Command Start-Process -FilePath .\vcredist_x64.exe -ArgumentList '/quiet', '/norestart' -Wait
 RUN powershell -Command Remove-Item vcredist_x64.exe
 
 # Create a user HadoopBuilder with basic privileges and use it for building Hadoop on Windows.
+# Windows Server Core enables password complexity by default (unlike the
+# Windows client image), which rejects the passwordless build account below.
+# The default is restored further down, once the account exists, so the
+# shipped image is not left with a relaxed policy.
+RUN powershell secedit /export /cfg "C:\pwpol.cfg"
+RUN powershell "(Get-Content C:\pwpol.cfg).Replace('PasswordComplexity = 1', 'PasswordComplexity = 0') | Out-File C:\pwpol.cfg"
+RUN powershell secedit /configure /db "C:\windows\security\local.sdb" /cfg "C:\pwpol.cfg"
+RUN powershell Remove-Item -Force "C:\pwpol.cfg" -Confirm:$false
+
 RUN powershell New-LocalUser -Name 'HadoopBuilder' -Description 'User account for building Apache Hadoop' -Password ([securestring]::new()) -AccountNeverExpires -PasswordNeverExpires
 
-# Grant the privilege to create symbolic links to HadoopBuilder.
+# Grant the privilege to create symbolic links to HadoopBuilder, and restore the
+# default password complexity policy now that the account has been created.
 RUN powershell secedit /export /cfg "C:\secpol.cfg"
-RUN powershell "(Get-Content C:\secpol.cfg).Replace('SeCreateSymbolicLinkPrivilege = ', 'SeCreateSymbolicLinkPrivilege = HadoopBuilder,') | Out-File C:\secpol.cfg"
+RUN powershell "(Get-Content C:\secpol.cfg).Replace('SeCreateSymbolicLinkPrivilege = ', 'SeCreateSymbolicLinkPrivilege = HadoopBuilder,').Replace('PasswordComplexity = 0', 'PasswordComplexity = 1') | Out-File C:\secpol.cfg"
 RUN powershell secedit /configure /db "C:\windows\security\local.sdb" /cfg "C:\secpol.cfg"
 RUN powershell Remove-Item -Force "C:\secpol.cfg" -Confirm:$false
 
 # Login as HadoopBuilder and set the necessary environment and PATH variables.
 USER HadoopBuilder
 ENV PROTOBUF_HOME "C:\vcpkg\installed\x64-windows"
-ENV JAVA_HOME "C:\Java\zulu8.62.0.19-ca-jdk8.0.332-win_x64"
+ENV JAVA_HOME "C:\Java\jdk17"
 ENV MAVEN_OPTS '-Xmx2048M -Xss128M'
 ENV IS_WINDOWS 1
 RUN setx PATH "%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
 RUN setx PATH "%PATH%;%JAVA_HOME%\bin"
 RUN setx PATH "%PATH%;C:\Maven\apache-maven-3.9.15\bin"
-RUN setx PATH "%PATH%;C:\CMake\cmake-3.19.0-win64-x64\bin"
+RUN setx PATH "%PATH%;C:\CMake\cmake-3.30.2-windows-x86_64\bin"
 RUN setx PATH "%PATH%;C:\ZStd"
 RUN setx PATH "%PATH%;C:\Program Files\Git\usr\bin"
 RUN setx PATH "%PATH%;C:\Python"
