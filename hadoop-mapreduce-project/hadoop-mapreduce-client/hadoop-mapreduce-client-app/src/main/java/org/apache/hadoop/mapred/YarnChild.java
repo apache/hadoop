@@ -255,6 +255,11 @@ class YarnChild {
         LOG.error(
             "Fast fail the job because the cluster storage capacity was exceeded.");
         fastFailJob = true;
+      } else {
+        LOG.warn(
+            "The cluster storage capacity was exceeded, but fast fail is disabled. "
+                + "Set {} to true to enable fast fail.",
+            MRJobConfig.JOB_DFS_STORAGE_CAPACITY_KILL_LIMIT_EXCEED);
       }
     }
     umbilical.fatalError(taskid, StringUtils.stringifyException(exception),
