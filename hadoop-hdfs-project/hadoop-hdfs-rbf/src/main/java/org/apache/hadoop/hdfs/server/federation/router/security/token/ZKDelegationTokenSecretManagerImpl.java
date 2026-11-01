@@ -192,24 +192,17 @@ public class ZKDelegationTokenSecretManagerImpl extends
       Token<AbstractDelegationTokenIdentifier> token, String canceller)
       throws IOException {
     checkAgainstZkBeforeDeletion.set(false);
-    AbstractDelegationTokenIdentifier ident = super.cancelToken(token,
-        canceller);
-    checkAgainstZkBeforeDeletion.set(true);
-    return ident;
+    try {
+      return super.cancelToken(token, canceller);
+    } finally {
+      checkAgainstZkBeforeDeletion.remove();
+    }
   }
 
   @Override
   protected void removeStoredToken(AbstractDelegationTokenIdentifier ident)
       throws IOException {
     super.removeStoredToken(ident, checkAgainstZkBeforeDeletion.get());
-  }
-
-  @Override
-  protected void addOrUpdateToken(AbstractDelegationTokenIdentifier ident,
-      DelegationTokenInformation info, boolean isUpdate) throws Exception {
-    // Store the data in local memory first
-    currentTokens.put(ident, info);
-    super.addOrUpdateToken(ident, info, isUpdate);
   }
 
   private ZooKeeper getZooKeeperClient() throws IOException {

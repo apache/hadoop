@@ -25,6 +25,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
 import org.apache.curator.RetryPolicy;
@@ -54,6 +56,7 @@ import org.apache.hadoop.util.curator.ZKCuratorManager.HadoopZookeeperFactory;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
+import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -150,6 +153,10 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private CuratorCacheBridge keyCache;
   private CuratorCacheBridge tokenCache;
   private final int seqNumBatchSize;
+  // Bounded local coordination; different stripes can mutate concurrently.
+  private final Lock[] tokenMutationLocks = createTokenMutationLocks();
+
+  private final Object sequenceNumberLock = new Object();
   private int currentSeqNum;
   private int currentMaxSeqNum;
 
@@ -266,10 +273,12 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       }
       // the first batch range should be allocated during this starting window
       // by calling the incrSharedCount
-      currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
-      currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
-      LOG.info("Fetched initial range of seq num, from {} to {} ",
-          currentSeqNum+1, currentMaxSeqNum);
+      synchronized (sequenceNumberLock) {
+        currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
+        currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
+        LOG.info("Fetched initial range of seq num, from {} to {} ",
+            currentSeqNum + 1, currentMaxSeqNum);
+      }
     } catch (Exception e) {
       throw new IOException("Could not start Sequence Counter", e);
     }
@@ -482,6 +491,34 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     }
   }
 
+  private static Lock[] createTokenMutationLocks() {
+    Lock[] locks = new Lock[256];
+    for (int i = 0; i < locks.length; i++) {
+      locks[i] = new ReentrantLock();
+    }
+    return locks;
+  }
+
+  @Override
+  protected Lock getTokenMutationLock(TokenIdent identifier) {
+    return tokenMutationLocks[identifier.getSequenceNumber() & 255];
+  }
+
+  @Override
+  protected boolean persistMasterKeysOutsideApiLock() {
+    return true;
+  }
+
+  @Override
+  protected boolean useTokenMutationLocksForCleanup() {
+    return true;
+  }
+
+  @Override
+  protected void removeExpiredStoredToken(TokenIdent identifier) throws IOException {
+    removeStoredToken(identifier, true);
+  }
+
   @Override
   protected int getDelegationTokenSeqNum() {
     return delTokSeqCounter.getCount();
@@ -501,27 +538,38 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   @Override
   protected int incrementDelegationTokenSeqNum() {
-    // The secret manager will keep a local range of seq num which won't be
-    // seen by peers, so only when the range is exhausted it will ask zk for
-    // another range again
-    if (currentSeqNum >= currentMaxSeqNum) {
-      try {
-        // after a successful batch request, we can get the range starting point
-        currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
-        currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
-        LOG.info("Fetched new range of seq num, from {} to {} ",
-            currentSeqNum+1, currentMaxSeqNum);
-      } catch (InterruptedException e) {
-        // The ExpirationThread is just finishing.. so dont do anything..
-        LOG.debug(
-            "Thread interrupted while performing token counter increment", e);
-        Thread.currentThread().interrupt();
-      } catch (Exception e) {
-        throw new RuntimeException("Could not increment shared counter !!", e);
+    synchronized (sequenceNumberLock) {
+      // A range belongs exclusively to this manager. Never consume a number
+      // beyond the range unless its replacement was successfully reserved.
+      if (currentSeqNum >= currentMaxSeqNum) {
+        try {
+          int start = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
+          currentSeqNum = start;
+          currentMaxSeqNum = start + seqNumBatchSize;
+          LOG.info("Fetched new range of seq num, from {} to {}",
+              currentSeqNum + 1, currentMaxSeqNum);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new IllegalStateException("Interrupted reserving token sequence range", e);
+        } catch (Exception e) {
+          throw new IllegalStateException("Could not increment shared counter", e);
+        }
       }
+      return ++currentSeqNum;
     }
+  }
 
-    return ++currentSeqNum;
+  @Override
+  protected byte[] createPassword(TokenIdent identifier) {
+    // Neither range reservation nor token persistence may hold apiLock.
+    DelegationTokenInformation info = prepareToken(identifier,
+        incrementDelegationTokenSeqNum());
+    try {
+      getMetrics().trackStoreToken(() -> storeToken(identifier, info));
+    } catch (IOException e) {
+      throw new IllegalStateException("Could not store delegation token", e);
+    }
+    return info.getPassword();
   }
 
   @Override
@@ -541,15 +589,13 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   @Override
   protected int incrementCurrentKeyId() {
     try {
-      incrSharedCount(keyIdSeqCounter, 1);
+      return incrSharedCount(keyIdSeqCounter, 1) + 1;
     } catch (InterruptedException e) {
-      // The ExpirationThread is just finishing.. so dont do anything..
-      LOG.debug("Thread interrupted while performing keyId increment", e);
       Thread.currentThread().interrupt();
+      throw new IllegalStateException("Interrupted reserving master key ID", e);
     } catch (Exception e) {
-      throw new RuntimeException("Could not increment shared keyId counter !!", e);
+      throw new IllegalStateException("Could not increment shared keyId counter", e);
     }
-    return keyIdSeqCounter.getCount();
   }
 
   @Override
@@ -593,21 +639,27 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   @Override
   protected DelegationTokenInformation getTokenInfo(TokenIdent ident) {
-    // First check if I have this..
     DelegationTokenInformation tokenInfo = currentTokens.get(ident);
-    // Then query ZK
-    if (tokenInfo == null) {
-      try {
+    if (tokenInfo != null) {
+      return tokenInfo;
+    }
+    Lock mutationLock = getTokenMutationLock(ident);
+    mutationLock.lock();
+    try {
+      tokenInfo = currentTokens.get(ident);
+      if (tokenInfo == null) {
         tokenInfo = getTokenInfoFromZK(ident);
         if (tokenInfo != null) {
           currentTokens.put(ident, tokenInfo);
         }
-      } catch (IOException e) {
-        LOG.error("Error retrieving tokenInfo [" + ident.getSequenceNumber()
-            + "] from ZK", e);
       }
+      return tokenInfo;
+    } catch (IOException e) {
+      LOG.error("Error retrieving tokenInfo [{}] from ZK", ident.getSequenceNumber(), e);
+      return null;
+    } finally {
+      mutationLock.unlock();
     }
-    return tokenInfo;
   }
 
   /**
@@ -645,8 +697,13 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   protected DelegationTokenInformation getTokenInfoFromZK(String nodePath,
       boolean quiet) throws IOException {
+    return getTokenInfoFromZK(nodePath, quiet, new Stat());
+  }
+
+  private DelegationTokenInformation getTokenInfoFromZK(String nodePath,
+      boolean quiet, Stat stat) throws IOException {
     try {
-      byte[] data = zkClient.getData().forPath(nodePath);
+      byte[] data = zkClient.getData().storingStatIn(stat).forPath(nodePath);
       if ((data == null) || (data.length == 0)) {
         return null;
       }
@@ -727,23 +784,30 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       LOG.debug("Removing ZKDTSMDelegationKey_" + key.getKeyId());
     }
     try {
-      if (zkClient.checkExists().forPath(nodeRemovePath) != null) {
-        while(zkClient.checkExists().forPath(nodeRemovePath) != null){
-          try {
-            zkClient.delete().guaranteed().forPath(nodeRemovePath);
-          } catch (NoNodeException nne) {
-            // It is possible that the node might be deleted between the
-            // check and the actual delete.. which might lead to an
-            // exception that can bring down the daemon running this
-            // SecretManager
-            LOG.debug("Node already deleted by peer " + nodeRemovePath);
-          }
+      while (true) {
+        Stat stat = new Stat();
+        byte[] data = zkClient.getData().storingStatIn(stat).forPath(nodeRemovePath);
+        DelegationKey stored = new DelegationKey();
+        try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(data))) {
+          stored.readFields(in);
         }
-      } else {
-        LOG.debug("Attempted to delete a non-existing znode " + nodeRemovePath);
+        if (stored.getExpiryDate() >= now()) {
+          allKeys.putIfAbsent(stored.getKeyId(), stored);
+          return;
+        }
+        try {
+          zkClient.delete().withVersion(stat.getVersion()).forPath(nodeRemovePath);
+          return;
+        } catch (KeeperException.BadVersionException e) {
+          // A peer extended this key's lifetime; check the new expiry.
+        }
       }
+    } catch (NoNodeException e) {
+      LOG.debug("Master key already removed: {}", nodeRemovePath);
     } catch (Exception e) {
-      LOG.debug(nodeRemovePath + " znode could not be removed!!");
+      // Keep the candidate so a later rotation retries a failed deletion.
+      allKeys.putIfAbsent(key.getKeyId(), key);
+      LOG.warn("Could not remove master key {}", nodeRemovePath, e);
     }
   }
 
@@ -760,19 +824,13 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   @Override
   protected void updateToken(TokenIdent ident,
       DelegationTokenInformation tokenInfo) throws IOException {
-    String nodeRemovePath =
-        getNodePath(ZK_DTSM_TOKENS_ROOT, DELEGATION_TOKEN_PREFIX
-            + ident.getSequenceNumber());
     try {
-      if (zkClient.checkExists().forPath(nodeRemovePath) != null) {
-        addOrUpdateToken(ident, tokenInfo, true);
-      } else {
-        addOrUpdateToken(ident, tokenInfo, false);
-        LOG.debug("Attempted to update a non-existing znode " + nodeRemovePath);
-      }
+      addOrUpdateToken(ident, tokenInfo, true);
+    } catch (NoNodeException e) {
+      currentTokens.remove(ident);
+      throw new InvalidToken("Cannot renew a cancelled token " + ident);
     } catch (Exception e) {
-      throw new RuntimeException("Could not update Stored Token ZKDTSMDelegationToken_"
-          + ident.getSequenceNumber(), e);
+      throw new IOException("Could not update stored token " + ident, e);
     }
   }
 
@@ -788,39 +846,26 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         getNodePath(ZK_DTSM_TOKENS_ROOT, DELEGATION_TOKEN_PREFIX
             + ident.getSequenceNumber());
     try {
-      DelegationTokenInformation dtInfo = getTokenInfoFromZK(ident, true);
-      if (dtInfo != null) {
-        // For the case there is no sync or watch miss, it is possible that the
-        // local storage has expired tokens which have been renewed by peer
-        // so double check again to avoid accidental delete
-        if (checkAgainstZkBeforeDeletion
-            && dtInfo.getRenewDate() > now()) {
-          LOG.info("Node already renewed by peer " + nodeRemovePath +
-              " so this token should not be deleted");
+      while (true) {
+        Stat stat = new Stat();
+        DelegationTokenInformation info = getTokenInfoFromZK(nodeRemovePath, true, stat);
+        if (info == null) {
           return;
         }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Removing ZKDTSMDelegationToken_"
-              + ident.getSequenceNumber());
+        if (checkAgainstZkBeforeDeletion && info.getRenewDate() > now()) {
+          return;
         }
-        while(zkClient.checkExists().forPath(nodeRemovePath) != null){
-          try {
-            zkClient.delete().guaranteed().forPath(nodeRemovePath);
-          } catch (NoNodeException nne) {
-            // It is possible that the node might be deleted between the
-            // check and the actual delete.. which might lead to an
-            // exception that can bring down the daemon running this
-            // SecretManager
-            LOG.debug("Node already deleted by peer " + nodeRemovePath);
-          }
+        try {
+          zkClient.delete().withVersion(stat.getVersion()).forPath(nodeRemovePath);
+          return;
+        } catch (KeeperException.BadVersionException e) {
+          // Recheck expiry after a concurrent peer renewal.
+        } catch (NoNodeException e) {
+          return;
         }
-      } else {
-        LOG.debug("Attempted to remove a non-existing znode " + nodeRemovePath);
       }
     } catch (Exception e) {
-      throw new RuntimeException(
-          "Could not remove Stored Token ZKDTSMDelegationToken_"
-          + ident.getSequenceNumber(), e);
+      throw new IOException("Could not remove stored token " + ident, e);
     }
   }
 
@@ -832,8 +877,14 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     TokenIdent id = createIdentifier();
     id.readFields(in);
 
-    syncLocalCacheWithZk(id);
-    return super.cancelToken(token, canceller);
+    Lock mutationLock = getTokenMutationLock(id);
+    mutationLock.lock();
+    try {
+      syncLocalCacheWithZk(id);
+      return super.cancelToken(token, canceller);
+    } finally {
+      mutationLock.unlock();
+    }
   }
 
   protected void addOrUpdateToken(TokenIdent ident,
@@ -841,6 +892,42 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     String nodeCreatePath =
         getNodePath(ZK_DTSM_TOKENS_ROOT, DELEGATION_TOKEN_PREFIX
             + ident.getSequenceNumber());
+
+    if (isUpdate) {
+      DelegationTokenInformation previousLocal = currentTokens.get(ident);
+      while (true) {
+        Stat stat = new Stat();
+        byte[] stored = zkClient.getData().storingStatIn(stat).forPath(nodeCreatePath);
+        long previousRenewDate;
+        try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(stored))) {
+          createIdentifier().readFields(in);
+          previousRenewDate = in.readLong();
+        }
+        DelegationTokenInformation renewed = new DelegationTokenInformation(
+            Math.max(previousRenewDate, info.getRenewDate()), info.getPassword(),
+            info.getTrackingId());
+        try (ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+             DataOutputStream out = new DataOutputStream(bytes)) {
+          ident.write(out);
+          out.writeLong(renewed.getRenewDate());
+          out.writeInt(renewed.getPassword().length);
+          out.write(renewed.getPassword());
+          try {
+            zkClient.setData().withVersion(stat.getVersion())
+                .forPath(nodeCreatePath, bytes.toByteArray());
+          } catch (KeeperException.BadVersionException e) {
+            // A peer renewed the token. Re-read rather than shortening its life.
+            continue;
+          }
+        }
+        // A watcher may have removed or replaced the entry while storage was
+        // pending. Never restore a removal or overwrite that newer observation.
+        if (previousLocal != null) {
+          currentTokens.replace(ident, previousLocal, renewed);
+        }
+        return;
+      }
+    }
 
     try (ByteArrayOutputStream tokenOs = new ByteArrayOutputStream();
          DataOutputStream tokenOut = new DataOutputStream(tokenOs)) {
@@ -853,13 +940,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
             + "ZKDTSMDelegationToken_" +
             ident.getSequenceNumber());
       }
-      if (isUpdate) {
-        zkClient.setData().forPath(nodeCreatePath, tokenOs.toByteArray())
-            .setVersion(-1);
-      } else {
-        zkClient.create().withMode(CreateMode.PERSISTENT)
-            .forPath(nodeCreatePath, tokenOs.toByteArray());
-      }
+      zkClient.create().withMode(CreateMode.PERSISTENT)
+          .forPath(nodeCreatePath, tokenOs.toByteArray());
     }
   }
 
