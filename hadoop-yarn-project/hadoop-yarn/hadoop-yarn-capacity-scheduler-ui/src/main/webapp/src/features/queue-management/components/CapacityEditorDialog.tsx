@@ -17,7 +17,7 @@
  */
 
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -48,6 +48,7 @@ import {
   parseVectorDraft,
 } from '~/features/queue-management/utils/capacityEditor';
 import { computeRemainingHelper } from '../utils/capacityRemainingHelper';
+import { getLabelPartitionAccessIssues } from '../utils/capacityValidation';
 import { RemainingHelperDisplay } from './RemainingHelperDisplay';
 import { CapacityRowEditor } from './CapacityRowEditor';
 import type { CapacityResourceMode, CapacityRowDraft } from '~/stores/slices/capacityEditorSlice';
@@ -99,6 +100,8 @@ export const CapacityEditorDialog: React.FC = () => {
   const getQueuePartitionCapacities = useSchedulerStore(
     (state) => state.getQueuePartitionCapacities,
   );
+  const hasQueueProperty = useSchedulerStore((state) => state.hasQueueProperty);
+  const getQueuePropertyValue = useSchedulerStore((state) => state.getQueuePropertyValue);
 
   const rows = draftOrder
     .map((queuePath) => drafts[queuePath])
@@ -113,7 +116,21 @@ export const CapacityEditorDialog: React.FC = () => {
     getQueuePartitionCapacities,
   });
 
-  const hasBlockingIssues = validationIssues.some((issue) => issue.severity === 'error');
+  const labelAccessIssues = useMemo(
+    () =>
+      getLabelPartitionAccessIssues(rows, selectedNodeLabel, {
+        hasQueueProperty,
+        getQueuePropertyValue,
+      }),
+    [rows, selectedNodeLabel, hasQueueProperty, getQueuePropertyValue],
+  );
+
+  const allValidationIssues = useMemo(
+    () => [...validationIssues, ...labelAccessIssues],
+    [validationIssues, labelAccessIssues],
+  );
+
+  const hasBlockingIssues = allValidationIssues.some((issue) => issue.severity === 'error');
 
   const handleSave = async (force: boolean) => {
     const success = await saveCapacityDrafts({ force });
@@ -275,10 +292,10 @@ export const CapacityEditorDialog: React.FC = () => {
                 ? `accessible-node-labels.${selectedNodeLabel}.maximum-capacity`
                 : 'maximum-capacity';
 
-              const capacityIssuesForRow = validationIssues.filter(
+              const capacityIssuesForRow = allValidationIssues.filter(
                 (issue) => issue.queuePath === row.queuePath && issue.field === capacityFieldName,
               );
-              const maxIssuesForRow = validationIssues.filter(
+              const maxIssuesForRow = allValidationIssues.filter(
                 (issue) => issue.queuePath === row.queuePath && issue.field === maxFieldName,
               );
 

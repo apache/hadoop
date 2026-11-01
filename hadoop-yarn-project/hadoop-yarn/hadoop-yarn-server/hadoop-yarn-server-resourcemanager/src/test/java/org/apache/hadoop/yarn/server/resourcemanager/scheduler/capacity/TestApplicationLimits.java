@@ -754,6 +754,14 @@ public class TestApplicationLimits {
     conf.setCapacity(AA2_QUEUE_PATH, 50);
     conf.setCapacity(AA3_QUEUE_PATH, 0);
 
+    conf.setAccessibleNodeLabels(A_QUEUE_PATH, Set.of("x", "y", "z"));
+    conf.setAccessibleNodeLabels(B_QUEUE_PATH, Set.of("x", "y", "z"));
+    conf.setAccessibleNodeLabels(C_QUEUE_PATH, Set.of("y"));
+    conf.setAccessibleNodeLabels(D_QUEUE_PATH, Set.of("y"));
+    conf.setAccessibleNodeLabels(AA1_QUEUE_PATH, Set.of("x", "y"));
+    conf.setAccessibleNodeLabels(AA2_QUEUE_PATH, Set.of("x", "y", "z"));
+    conf.setAccessibleNodeLabels(AA3_QUEUE_PATH, Set.of("z"));
+
     conf.setCapacityByLabel(A_QUEUE_PATH, "y", 25);
     conf.setCapacityByLabel(B_QUEUE_PATH, "y", 50);
     conf.setCapacityByLabel(C_QUEUE_PATH, "y", 25);
