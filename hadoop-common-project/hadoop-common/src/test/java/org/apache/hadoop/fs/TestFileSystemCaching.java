@@ -40,6 +40,7 @@ import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_CREATION_PARALLEL_COUNT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_IMPL_DISABLE_CACHE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -154,6 +155,15 @@ public class TestFileSystemCaching extends HadoopTestBase {
     conf.setBoolean("fs.uncachedfile.impl.disable.cache", true);
     FileSystem fs1 = FileSystem.get(new URI("uncachedfile://a"), conf);
     FileSystem fs2 = FileSystem.get(new URI("uncachedfile://a"), conf);
+    assertNotSame(fs1, fs2);
+  }
+
+  @Test
+  public void testCacheDisabledGlobally() throws Exception {
+    Configuration conf = newConf();
+    conf.setBoolean(FS_IMPL_DISABLE_CACHE, true);
+    FileSystem fs1 = FileSystem.get(new URI("cachedfile://a"), conf);
+    FileSystem fs2 = FileSystem.get(new URI("cachedfile://a"), conf);
     assertNotSame(fs1, fs2);
   }
   
