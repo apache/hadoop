@@ -46,6 +46,9 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_CREATE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_CREATE_NON_RECURSIVE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_DELETE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_EXIST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_BLOB_LAYOUT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_BLOB_WITHOUT_ENDPOINT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_BLOB_WITH_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_DELEGATION_TOKEN;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_LIST_STATUS;
@@ -58,6 +61,7 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.DIRECTORIES_DELETED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.ERROR_IGNORED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_CREATED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_DELETED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.GET_LAYOUT_FROM_CACHE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.GET_RESPONSES;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_DELETE_REQUEST;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_GET_REQUEST;
@@ -65,12 +69,17 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_HEAD_REQUEST;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_PATCH_REQUEST;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_POST_REQUEST;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_PUT_REQUEST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.LAYOUT_CACHE_HIT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.LAYOUT_CACHE_MISS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.LAYOUT_NOT_PRESENT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.LAYOUT_SHARED_CALLS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.METADATA_INCOMPLETE_RENAME_FAILURES;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_FALLBACK_COUNT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_LISTING_LATENCY;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_PARSE_FAILURE_COUNT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_REQUEST_COUNT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PHOTON_RESPONSE_COUNT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.PUT_LAYOUT_TO_CACHE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.READ_THROTTLES;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_RECOVERY;
@@ -149,7 +158,16 @@ public class AbfsCountersImpl implements AbfsCounters {
       PHOTON_REQUEST_COUNT,
       PHOTON_RESPONSE_COUNT,
       PHOTON_FALLBACK_COUNT,
-      PHOTON_PARSE_FAILURE_COUNT
+      PHOTON_PARSE_FAILURE_COUNT,
+      CALL_GET_BLOB_LAYOUT,
+      CALL_GET_BLOB_WITH_ENDPOINT,
+      CALL_GET_BLOB_WITHOUT_ENDPOINT,
+      PUT_LAYOUT_TO_CACHE,
+      GET_LAYOUT_FROM_CACHE,
+      LAYOUT_CACHE_HIT,
+      LAYOUT_CACHE_MISS,
+      LAYOUT_SHARED_CALLS,
+      LAYOUT_NOT_PRESENT
   };
 
   private static final AbfsStatistic[] DURATION_TRACKER_LIST = {
