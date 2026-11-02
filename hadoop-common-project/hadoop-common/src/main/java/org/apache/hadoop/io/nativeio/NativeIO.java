@@ -350,9 +350,11 @@ public class NativeIO {
 
         } catch (Throwable t) {
           // This can happen if the user has an older version of libhadoop.so
-          // installed - in this case we can continue without native IO
-          // after warning
-          PerformanceAdvisory.LOG.debug("Unable to initialize NativeIO libraries", t);
+          // installed - in this case we can continue without native IO.
+          // Logged at WARN because this failure disables native I/O
+          // features (including HDFS short-circuit shared-memory reads)
+          // and the underlying cause is otherwise hard to diagnose.
+          PerformanceAdvisory.LOG.warn(NATIVE_IO_INIT_FAILURE_MESSAGE, t);
         }
       }
     }
@@ -839,9 +841,11 @@ public class NativeIO {
           nativeLoaded = true;
         } catch (Throwable t) {
           // This can happen if the user has an older version of libhadoop.so
-          // installed - in this case we can continue without native IO
-          // after warning
-          PerformanceAdvisory.LOG.debug("Unable to initialize NativeIO libraries", t);
+          // installed - in this case we can continue without native IO.
+          // Logged at WARN because this failure disables native I/O
+          // features (including HDFS short-circuit shared-memory reads)
+          // and the underlying cause is otherwise hard to diagnose.
+          PerformanceAdvisory.LOG.warn(NATIVE_IO_INIT_FAILURE_MESSAGE, t);
         }
       }
     }
@@ -850,6 +854,24 @@ public class NativeIO {
     private static native void initNativeWindows(
         boolean doThreadsafeWorkaround);
   }
+
+  /*
+   * Log message for native library initialization failures. Kept as a
+   * constant expression (plain literal concatenation) and declared
+   * before the static block below: javac folds constant variables into
+   * referencing classes (guaranteed by the JLS; confirmed empirically
+   * on an equivalent nested-class pattern: no getstatic is emitted),
+   * which matters because the inner classes' static initializers may
+   * run re-entrantly while this class is still initializing (the native
+   * initNative() entry point can trigger them). A plain field read
+   * would then be at the mercy of initialization order; the folded
+   * constant is immune.
+   */
+  private static final String NATIVE_IO_INIT_FAILURE_MESSAGE =
+      "Unable to initialize NativeIO libraries. This is usually caused "
+      + "by a version mismatch between the Hadoop Java code and "
+      + "libhadoop.so (for example, an older native library deployed "
+      + "on the nodes). Native I/O will be disabled.";
 
   private static final Logger LOG = LoggerFactory.getLogger(NativeIO.class);
 
@@ -862,9 +884,11 @@ public class NativeIO {
         nativeLoaded = true;
       } catch (Throwable t) {
         // This can happen if the user has an older version of libhadoop.so
-        // installed - in this case we can continue without native IO
-        // after warning
-        PerformanceAdvisory.LOG.debug("Unable to initialize NativeIO libraries", t);
+        // installed - in this case we can continue without native IO.
+        // Logged at WARN because this failure disables native I/O
+        // features (including HDFS short-circuit shared-memory reads)
+        // and the underlying cause is otherwise hard to diagnose.
+        PerformanceAdvisory.LOG.warn(NATIVE_IO_INIT_FAILURE_MESSAGE, t);
       }
     }
   }
