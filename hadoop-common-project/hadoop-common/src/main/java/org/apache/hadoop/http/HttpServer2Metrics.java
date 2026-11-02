@@ -18,6 +18,7 @@
 package org.apache.hadoop.http;
 
 import org.eclipse.jetty.server.handler.StatisticsHandler;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -28,7 +29,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 
 /**
  * This class collects all the metrics of Jetty's StatisticsHandler
- * and expose them as Hadoop Metrics.
+ * and QueuedThreadPool and exposes them as Hadoop Metrics.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -37,6 +38,7 @@ public class HttpServer2Metrics {
 
   private final StatisticsHandler handler;
   private final int port;
+  private final QueuedThreadPool threadPool;
 
   @Metric("number of requested that have been asynchronously dispatched")
   public int asyncDispatches() {
@@ -143,14 +145,47 @@ public class HttpServer2Metrics {
     return handler.getStatsOnMs();
   }
 
-  HttpServer2Metrics(StatisticsHandler handler, int port) {
+  @Metric("maximum number of threads in the Jetty thread pool")
+  public int httpThreadsMax() {
+    return threadPool.getMaxThreads();
+  }
+  @Metric("minimum number of threads in the Jetty thread pool")
+  public int httpThreadsMin() {
+    return threadPool.getMinThreads();
+  }
+  @Metric("current number of threads in the Jetty thread pool")
+  public int httpThreads() {
+    return threadPool.getThreads();
+  }
+  @Metric("number of idle threads in the Jetty thread pool")
+  public int httpThreadsIdle() {
+    return threadPool.getIdleThreads();
+  }
+  @Metric("number of busy threads in the Jetty thread pool")
+  public int httpThreadsBusy() {
+    return threadPool.getBusyThreads();
+  }
+  @Metric("number of jobs queued waiting for a thread in the Jetty thread pool")
+  public int httpThreadsQueueSize() {
+    return threadPool.getQueueSize();
+  }
+  @Metric("whether the Jetty thread pool is low on threads (1) or not (0)")
+  public int httpThreadsLowOnThreads() {
+    return threadPool.isLowOnThreads() ? 1 : 0;
+  }
+
+  HttpServer2Metrics(StatisticsHandler handler, QueuedThreadPool threadPool,
+      int port) {
     this.handler = handler;
+    this.threadPool = threadPool;
     this.port = port;
   }
 
-  static HttpServer2Metrics create(StatisticsHandler handler, int port) {
+  static HttpServer2Metrics create(StatisticsHandler handler,
+      QueuedThreadPool threadPool, int port) {
     final MetricsSystem ms = DefaultMetricsSystem.instance();
-    final HttpServer2Metrics metrics = new HttpServer2Metrics(handler, port);
+    final HttpServer2Metrics metrics =
+        new HttpServer2Metrics(handler, threadPool, port);
     // Remove the old metrics from metrics system to avoid duplicate error
     // when HttpServer2 is started twice.
     metrics.remove();

@@ -1452,7 +1452,8 @@ public final class HttpServer2 implements FilterContainer {
             port = connector.getLocalPort();
             break;
           }
-          metrics = HttpServer2Metrics.create(statsHandler, port);
+          metrics = HttpServer2Metrics.create(statsHandler,
+              (QueuedThreadPool) webServer.getThreadPool(), port);
         }
       } catch (IOException ex) {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);
