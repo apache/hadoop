@@ -142,13 +142,13 @@ code or depend on untrusted variables.
 
 ***privileged***
 
-`schedule` events run the workflow from the latest commit on the default
-branch. `workflow_dispatch` events run it on a branch chosen by the user who
-dispatches it, and only users with write access can do so. A pull request
-cannot trigger either of them, so the workflow code that runs has been
-reviewed. They can still hold secrets and a write token, so treat any data
-they read about pull requests or forks (titles, branch names, run results) as
-untrusted input.
+`schedule` events run the workflow as merged on the default branch.
+`workflow_dispatch` events run it on any branch chosen by the user who
+dispatches it, including a branch that was never reviewed. Only users with
+write access can dispatch, so write access, not code review, is the trust
+boundary. Neither can be triggered by a pull request or from a fork. Both can
+hold secrets and a write token, so treat any data they read about pull
+requests or forks (titles, branch names, run results) as untrusted input.
 
 #### Comparison
 

@@ -25,10 +25,11 @@
 name: "Fork CI status"
 
 # Security: this privileged (checks: write) workflow is only triggered via
-# `schedule` and `workflow_dispatch`, so it always runs reviewed code from the
-# default branch and PR events cannot trigger it. It deliberately has no
-# `workflow_run` trigger (see SECURITY.md); a new PR's check appears on the
-# next scheduled run. fork-ci only reads GitHub API metadata: it does not
+# `schedule`, which runs it as merged on the default branch, and
+# `workflow_dispatch`, which runs it on a branch chosen by a user with write
+# access. Neither can be triggered by a pull request or from a fork. It
+# deliberately has no `workflow_run` trigger (see SECURITY.md); a new PR's
+# check appears on the next scheduled run. fork-ci only reads GitHub API metadata: it does not
 # check out, build or download artifacts from PR or fork code, and it only
 # writes its own checks.
 on:
