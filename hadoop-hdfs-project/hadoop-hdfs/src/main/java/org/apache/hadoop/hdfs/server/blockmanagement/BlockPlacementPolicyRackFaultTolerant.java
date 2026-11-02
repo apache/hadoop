@@ -195,6 +195,10 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
       // To improve performance, the maximum value of 'bestEffortMaxNodesPerRack'
       // is calculated only when it is not possible to select a node.
       if (numResultsOflastChoose == results.size()) {
+        if (results.isEmpty()) {
+          // No node can be chosen at all, relaxing maxNodesPerRack won't help.
+          break;
+        }
         Map<String, Integer> nodesPerRack = new HashMap<>();
         for (DatanodeStorageInfo dsInfo : results) {
           String rackName = dsInfo.getDatanodeDescriptor().getNetworkLocation();

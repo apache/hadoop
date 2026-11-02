@@ -20,9 +20,11 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -277,6 +279,32 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
       BlockPlacementStatus status = bm.getStriptedBlockPlacementPolicy()
               .verifyBlockPlacement(block.getLocations(), 5);
       assertTrue(status.isPlacementPolicySatisfied());
+    }
+  }
+
+  /**
+   * Verify that ALL_SSD falls back to DISK when there is no SSD. Before the
+   * fix, choosing targets threw a NoSuchElementException once no node could
+   * be chosen at all, which bypassed the storage type fallback in
+   * BlockPlacementPolicyDefault and failed the write.
+   */
+  @Test
+  public void testChooseTargetFallbackStorageType() throws Exception {
+    DistributedFileSystem fs = cluster.getFileSystem();
+    Path dir = new Path("/all_ssd");
+    fs.mkdirs(dir);
+    fs.setStoragePolicy(dir, "ALL_SSD");
+    Path file = new Path(dir, "file");
+    DFSTestUtil.createFile(fs, file, DEFAULT_BLOCK_SIZE, (short) 3, 0L);
+    DFSTestUtil.waitReplication(fs, file, (short) 3);
+
+    LocatedBlocks locatedBlocks =
+        fs.getClient().getLocatedBlocks(file.toString(), 0);
+    for (LocatedBlock block : locatedBlocks.getLocatedBlocks()) {
+      assertEquals(3, block.getStorageTypes().length);
+      for (StorageType type : block.getStorageTypes()) {
+        assertEquals(StorageType.DISK, type);
+      }
     }
   }
 
