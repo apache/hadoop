@@ -169,6 +169,27 @@ please raise your issues with them.
     </property>
 
     <property>
+      <name>fs.oss.multipart.complete.retry.limit</name>
+      <value>3</value>
+      <description>Extra attempts after OSS explicitly rejects a multipart completion
+        with QpsLimitExceeded, for both uploads and copies. Must be between 0 and 10;
+        0 disables these retries. The initial request is not counted, so the default
+        allows at most 4 completion requests. This does not change SDK retries
+        configured by fs.oss.attempts.maximum for other operations.</description>
+    </property>
+
+    <property>
+      <name>fs.oss.multipart.complete.retry.interval</name>
+      <value>500ms</value>
+      <description>Base interval for exponential backoff with jitter when
+        retrying a throttled multipart completion. Must be at least 1ms.
+        Each retry delay, including jitter, is capped at 10s.
+        With the default settings, the three retry delays total at most 10.5s,
+        excluding request execution time.
+        Other completion failures are not retried.</description>
+    </property>
+
+    <property>
       <name>fs.oss.connection.establish.timeout</name>
       <value>50000</value>
       <description>Connection setup timeout in milliseconds.</description>
