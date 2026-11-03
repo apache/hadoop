@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
@@ -105,7 +106,19 @@ public class TestNameNodeRpcServer {
           assertEquals(configured.getAddress(),
               InetAddress.getByName(advertised.getHostName()));
         }
-        assertEquals("localhost", NameNodeRpcServer.getAdvertisedAddress(
+        // The expected name depends on the platform: localhost, localhost.localdomain, or the
+        // literal when the name resolves to another address first (preferIPv6Addresses=true).
+        InetAddress loopback = InetAddress.getByName("127.0.0.1");
+        String reverse = loopback.getCanonicalHostName();
+        String expected = "127.0.0.1";
+        try {
+          if (SecurityUtil.getByName(reverse).equals(loopback)) {
+            expected = reverse;
+          }
+        } catch (UnknownHostException e) {
+          // the literal is kept
+        }
+        assertEquals(expected, NameNodeRpcServer.getAdvertisedAddress(
             NetUtils.createSocketAddr("127.0.0.1:0"), 8020).getHostName());
         assertEquals(InetSocketAddress.createUnresolved("nn.invalid", 8020),
             NameNodeRpcServer.getAdvertisedAddress(
