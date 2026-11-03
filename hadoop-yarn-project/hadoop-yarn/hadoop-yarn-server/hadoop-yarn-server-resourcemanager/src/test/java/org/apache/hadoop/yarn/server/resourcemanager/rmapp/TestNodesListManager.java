@@ -164,8 +164,8 @@ public class TestNodesListManager {
     rm.init(conf);
     NodesListManager nodesListManager = rm.getNodesListManager();
 
-    NodesListManager.Resolver resolver = nodesListManager.getResolver();
-    assertTrue(resolver instanceof NodesListManager.DirectResolver,
+    NodesListManager.Resolver defaultResolver = nodesListManager.getResolver();
+    assertTrue(defaultResolver instanceof NodesListManager.DirectResolver,
         "default resolver should be DirectResolver");
   }
 
