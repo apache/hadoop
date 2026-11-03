@@ -268,10 +268,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       // the first batch range should be allocated during this starting window
       // by calling the incrSharedCount
       synchronized (sequenceNumberLock) {
-        currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
-        currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
-        LOG.info("Fetched initial range of seq num, from {} to {} ",
-            currentSeqNum + 1, currentMaxSeqNum);
+        reserveTokenSequenceRange();
       }
     } catch (Exception e) {
       throw new IOException("Could not start Sequence Counter", e);
@@ -502,6 +499,18 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     }
   }
 
+  /**
+   * Reserves a range before updating local allocator state. The caller must
+   * hold sequenceNumberLock, including during initialization.
+   */
+  private void reserveTokenSequenceRange() throws Exception {
+    int start = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
+    currentSeqNum = start;
+    currentMaxSeqNum = start + seqNumBatchSize;
+    LOG.info("Fetched new range of seq num, from {} to {}",
+        currentSeqNum + 1, currentMaxSeqNum);
+  }
+
   @Override
   protected int incrementDelegationTokenSeqNum() {
     synchronized (sequenceNumberLock) {
@@ -509,11 +518,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       // beyond the range unless its replacement was successfully reserved.
       if (currentSeqNum >= currentMaxSeqNum) {
         try {
-          int start = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
-          currentSeqNum = start;
-          currentMaxSeqNum = start + seqNumBatchSize;
-          LOG.info("Fetched new range of seq num, from {} to {}",
-              currentSeqNum + 1, currentMaxSeqNum);
+          reserveTokenSequenceRange();
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           throw new IllegalStateException("Interrupted reserving token sequence range", e);
