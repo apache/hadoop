@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -222,9 +221,9 @@ public class TestIndexCache {
     
     // run multiple times
     for (int i = 0; i < 20; ++i) {
-      Thread getInfoThread = new SubjectInheritingThread() {
+      Thread getInfoThread = new Thread() {
         @Override
-        public void work() {
+        public void run() {
           try {
             cache.getIndexInformation("bigIndex", partsPerMap, big, user);
           } catch (Exception e) {
@@ -232,9 +231,9 @@ public class TestIndexCache {
           }
         }
       };
-      Thread removeMapThread = new SubjectInheritingThread() {
+      Thread removeMapThread = new Thread() {
         @Override
-        public void work() {
+        public void run() {
           cache.removeMap("bigIndex");
         }
       };
@@ -267,9 +266,9 @@ public class TestIndexCache {
     // run multiple instances
     Thread[] getInfoThreads = new Thread[50];
     for (int i = 0; i < 50; i++) {
-      getInfoThreads[i] = new SubjectInheritingThread() {
+      getInfoThreads[i] = new Thread() {
         @Override
-        public void work() {
+        public void run() {
           try {
             cache.getIndexInformation("racyIndex", partsPerMap, racy, user);
             cache.removeMap("racyIndex");
@@ -286,9 +285,9 @@ public class TestIndexCache {
 
     final Thread mainTestThread = Thread.currentThread();
 
-    Thread timeoutThread = new SubjectInheritingThread() {
+    Thread timeoutThread = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         try {
           Thread.sleep(15000);
           mainTestThread.interrupt();

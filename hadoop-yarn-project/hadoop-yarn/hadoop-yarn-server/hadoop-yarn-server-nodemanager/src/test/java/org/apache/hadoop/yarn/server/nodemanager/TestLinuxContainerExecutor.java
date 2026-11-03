@@ -66,7 +66,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -463,8 +462,8 @@ public class TestLinuxContainerExecutor {
     assumeTrue(shouldRun());
 
     final ContainerId sleepId = getNextContainerId();
-    SubjectInheritingThread t = new SubjectInheritingThread() {
-      public void work() {
+    Thread t = new Thread() {
+      public void run() {
         try {
           runAndBlock(sleepId, "sleep", "100");
         } catch (IOException|ConfigurationException e) {

@@ -25,7 +25,9 @@ import java.util.Random;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_MAX_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -73,6 +75,7 @@ public class TestEditLogAutoroll {
   private FileSystem fs;
   private FSEditLog editLog;
   private final Random random = new Random();
+  private final static int SLEEP_TIME = 100;
 
   public static final Logger LOG = LoggerFactory.getLogger(FSEditLog.class);
 
@@ -84,7 +87,8 @@ public class TestEditLogAutoroll {
     conf.setLong(DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 20);
     // Make it autoroll after 10 edits
     conf.setFloat(DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD, 0.5f);
-    conf.setInt(DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS, 100);
+    conf.setInt(DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS, SLEEP_TIME);
+    conf.setInt(DFS_NAMENODE_EDIT_LOG_AUTOROLL_MAX_INTERVAL_MS, 600000);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGGING,
         useAsyncEditLog);
 
@@ -150,5 +154,25 @@ public class TestEditLogAutoroll {
     nn0.transitionToStandby();
     GenericTestUtils.assertNoThreadsMatching(
         ".*" + NameNodeEditLogRoller.class.getSimpleName() + ".*");
+  }
+
+  @Test
+  public void testForceRoll() throws Exception {
+    // Write some stuff, manually roll
+    fs.mkdirs(new Path("testForceRollNoEdits1"));
+    FSNamesystem fsn = nn0.getNamesystem();
+    fsn.rollEditLog();
+    long lastRollTime = fsn.getLastRollTime();
+    final long startTxId = editLog.getCurSegmentTxId();
+    // Write some more stuff, force a roll by setting last roll time way back in the past
+    fs.mkdirs(new Path("testForceRollNoEdits2"));
+    fsn.setLastRollTime(lastRollTime - 9000000);
+    GenericTestUtils.waitFor(() -> editLog.getCurSegmentTxId() > startTxId, 100, 5000);
+    final long newTxId = editLog.getCurSegmentTxId();
+    // Try to force another roll, but there's nothing to roll
+    fsn.setLastRollTime(lastRollTime - 9000000);
+    // Sleep 2 cycles to ensure auto roller has done the check at least once
+    Thread.sleep(SLEEP_TIME * 2);
+    assertEquals(newTxId, editLog.getCurSegmentTxId());
   }
 }

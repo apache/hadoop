@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -89,6 +90,14 @@ public class TestMiniYarnClusterNodeUtilization {
         CONTAINER_PMEM_1, CONTAINER_VMEM_1, CONTAINER_CPU_1,
         NODE_PMEM_1, NODE_VMEM_1, NODE_CPU_1);
     nm.setNodeStatus(nodeStatus);
+  }
+
+  @AfterEach
+  public void tearDown() {
+    if (cluster != null) {
+      cluster.stop();
+      cluster = null;
+    }
   }
 
   /**

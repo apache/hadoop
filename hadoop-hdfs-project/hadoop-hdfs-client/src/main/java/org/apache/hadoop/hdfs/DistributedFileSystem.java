@@ -69,7 +69,9 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
 import org.apache.hadoop.fs.impl.FileSystemMultipartUploaderBuilder;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -115,6 +117,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
+import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
@@ -123,6 +126,8 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.concurrent.CompletableFuture;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
@@ -376,6 +381,91 @@ public class DistributedFileSystem extends FileSystem
     HdfsPathHandle id = (HdfsPathHandle) fd;
     final DFSInputStream dfsis = dfs.open(id, bufferSize, verifyChecksum);
     return dfs.createWrappedInputStream(dfsis);
+  }
+
+  @Override
+  protected CompletableFuture<FSDataInputStream> openFileWithOptions(
+      final Path path,
+      final OpenFileParameters parameters) throws IOException {
+    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
+        parameters.getMandatoryKeys(),
+        Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS,
+        "for " + path);
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.OPEN);
+    final Path absF = fixRelativePart(path);
+    return LambdaUtils.eval(new CompletableFuture<>(), () -> {
+      LocatedBlocks locatedBlocks =
+          getLocatedBlocksFromStatus(absF, parameters.getStatus());
+      final DFSInputStream dfsis;
+      if (locatedBlocks != null) {
+        dfsis = dfs.open(getPathName(absF), parameters.getBufferSize(),
+            verifyChecksum, locatedBlocks);
+      } else {
+        dfsis = dfs.open(getPathName(absF), parameters.getBufferSize(),
+            verifyChecksum);
+      }
+      try {
+        return dfs.createWrappedInputStream(dfsis);
+      } catch (IOException e) {
+        dfsis.close();
+        throw e;
+      }
+    });
+  }
+
+  private static LocatedBlocks getLocatedBlocksFromStatus(
+      Path path, FileStatus status) {
+    if (status instanceof HdfsLocatedFileStatus locatedFileStatus) {
+      Preconditions.checkArgument(
+          path.getName().equals(status.getPath().getName()),
+          "Filename mismatch between file being opened %s"
+              + " and supplied status %s",
+          path, status.getPath());
+      return locatedFileStatus.getLocatedBlocks();
+    }
+    return null;
+  }
+
+  /**
+   * Create a new input stream for the same file as an existing stream,
+   * reusing its cached block locations to avoid a NameNode RPC.
+   * The returned stream is independent (its own position, buffers, etc.)
+   * but shares the same block location metadata.
+   *
+   * @param existing an open input stream obtained from this filesystem
+   * @return a new independent input stream for the same file
+   * @throws IOException if the stream cannot be cloned
+   */
+  public FSDataInputStream cloneDataInputStream(FSDataInputStream existing)
+      throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.OPEN);
+    InputStream wrapped = existing.getWrappedStream();
+    DFSInputStream dfsis;
+    if (wrapped instanceof DFSInputStream dfsIn) {
+      dfsis = dfsIn;
+    } else if (wrapped instanceof
+        org.apache.hadoop.crypto.CryptoInputStream cryptoIn) {
+      dfsis = (DFSInputStream) cryptoIn.getWrappedStream();
+    } else {
+      throw new IOException("Cannot clone: underlying stream is "
+          + wrapped.getClass().getName() + ", not a DFSInputStream");
+    }
+    if (dfsis.getDFSClient() != dfs) {
+      throw new IOException(
+          "Cannot clone: stream belongs to a different DFSClient instance");
+    }
+    LocatedBlocks locatedBlocks = dfsis.getLocatedBlocks();
+    String src = dfsis.getSrc();
+    DFSInputStream clone = dfs.open(src,
+        dfs.getConf().getIoBufferSize(), verifyChecksum, locatedBlocks);
+    try {
+      return dfs.createWrappedInputStream(clone);
+    } catch (IOException e) {
+      clone.close();
+      throw e;
+    }
   }
 
   @Override

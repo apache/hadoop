@@ -669,7 +669,7 @@ public class TestParentQueue {
   
   @Test
   public void testQueueCapacitySettingChildZero() throws Exception {
-    assertThrows(IOException.class, () -> {
+    IOException e = assertThrows(IOException.class, () -> {
       // Setup queue configs
       setupMultiLevelQueues(csConf);
 
@@ -688,11 +688,14 @@ public class TestParentQueue {
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     });
+    assertEquals("Illegal capacity sum of 0.0 for children of queue b for label=. "
+        + "It is set to 0, but parent percent != 0, and doesn't allow children "
+        + "capacity to set to 0", e.getMessage());
   }
   
   @Test
   public void testQueueCapacitySettingParentZero() throws Exception {
-    assertThrows(IOException.class, () -> {
+    IOException e = assertThrows(IOException.class, () -> {
       // Setup queue configs
       setupMultiLevelQueues(csConf);
 
@@ -710,6 +713,28 @@ public class TestParentQueue {
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     });
+    assertEquals("Illegal capacity sum of 1.0 for children of queue b for label=. "
+        + "queue=b has zero capacity, but childqueues have positive capacities",
+        e.getMessage());
+  }
+
+  @Test
+  public void testQueueCapacitySettingZeroChildrenUnderWeightParent()
+      throws Exception {
+    csConf.setQueues(ROOT, new String[] {A});
+    csConf.setNonLabeledQueueWeight(Q_A, 1);
+    csConf.setQueues(Q_A, new String[] {A1, A2});
+    csConf.setCapacity(Q_A1, 0);
+    csConf.setCapacity(Q_A2, 0);
+    csConf.setAllowZeroCapacitySum(Q_A, true);
+    queueContext.reinitialize();
+
+    CSQueueStore queues = new CSQueueStore();
+    CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+        CapacitySchedulerConfiguration.ROOT, queues, queues,
+        TestUtils.spyHook);
+    assertEquals(0f, queues.get(Q_A1.getFullPath()).getCapacity());
+    assertEquals(0f, queues.get(Q_A2.getFullPath()).getCapacity());
   }
 
   @Test

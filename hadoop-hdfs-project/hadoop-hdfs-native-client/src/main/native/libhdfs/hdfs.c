@@ -1885,6 +1885,79 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file)
     return 0;
 }
 
+hdfsFile hdfsCloneFile(hdfsFS fs, hdfsFile file)
+{
+    // JAVA EQUIVALENT:
+    //  ((DistributedFileSystem) fs).cloneDataInputStream(file)
+    int ret = 0;
+    jthrowable jthr;
+    jvalue jVal;
+    jobject jFS = (jobject)fs;
+    jobject jClonedStream = NULL;
+    hdfsFile clonedFile = NULL;
+
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+        errno = EINTERNAL;
+        return NULL;
+    }
+
+    if (!file || file->type != HDFS_STREAM_INPUT) {
+        fprintf(stderr, "hdfsCloneFile: can only clone input streams\n");
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (!(*env)->IsInstanceOf(env, jFS,
+            getJclass(JC_DISTRIBUTED_FILE_SYSTEM))) {
+        fprintf(stderr,
+            "hdfsCloneFile: not a DistributedFileSystem\n");
+        errno = ENOTSUP;
+        return NULL;
+    }
+
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS,
+            JC_DISTRIBUTED_FILE_SYSTEM, "cloneDataInputStream",
+            JMETHOD1(JPARAM(HADOOP_FSDISTRM), JPARAM(HADOOP_FSDISTRM)),
+            file->file);
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hdfsCloneFile: DistributedFileSystem#cloneDataInputStream");
+        goto done;
+    }
+    jClonedStream = jVal.l;
+
+    clonedFile = calloc(1, sizeof(struct hdfsFile_internal));
+    if (!clonedFile) {
+        fprintf(stderr, "hdfsCloneFile: OOM\n");
+        ret = ENOMEM;
+        goto done;
+    }
+    clonedFile->file = (*env)->NewGlobalRef(env, jClonedStream);
+    if (!clonedFile->file) {
+        ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+            "hdfsCloneFile: NewGlobalRef");
+        goto done;
+    }
+    clonedFile->type = HDFS_STREAM_INPUT;
+    clonedFile->flags = 0;
+    setFileFlagCapabilities(clonedFile, jClonedStream);
+
+done:
+    destroyLocalReference(env, jClonedStream);
+    if (ret) {
+        if (clonedFile) {
+            if (clonedFile->file) {
+                (*env)->DeleteGlobalRef(env, clonedFile->file);
+            }
+            free(clonedFile);
+        }
+        errno = ret;
+        return NULL;
+    }
+    return clonedFile;
+}
+
 int hdfsExists(hdfsFS fs, const char *path)
 {
     JNIEnv *env = getJNIEnv();
@@ -2731,13 +2804,16 @@ int hdfsRename(hdfsFS fs, const char *oldPath, const char *newPath)
     // JAVA EQUIVALENT:
     //  Path old = new Path(oldPath);
     //  Path new = new Path(newPath);
-    //  fs.rename(old, new);
+    //  fs.rename(old, new, org.apache.hadoop.fs.Options.Rename.NONE);
+    // (HDFS: ClientProtocol#rename2; see DFSClient.rename(String,String,Rename...))
 
     jobject jFS = (jobject)fs;
     jthrowable jthr;
     jobject jOldPath = NULL, jNewPath = NULL;
+    jobject jRenameOptionsNone = NULL;
+    jobjectArray jOptsArr = NULL;
+    jclass enumClass = NULL;
     int ret = -1;
-    jvalue jVal;
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
@@ -2759,19 +2835,40 @@ int hdfsRename(hdfsFS fs, const char *oldPath, const char *newPath)
         goto done;
     }
 
-    // Rename the file
-    // TODO: use rename2 here?  (See HDFS-3592)
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
-            "rename", JMETHOD2(JPARAM(HADOOP_PATH), JPARAM
-            (HADOOP_PATH), "Z"), jOldPath, jNewPath);
+    jthr = fetchEnumInstance(env, "org/apache/hadoop/fs/Options$Rename", "NONE",
+            &jRenameOptionsNone);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
-            "hdfsRename(oldPath=%s, newPath=%s): FileSystem#rename",
-            oldPath, newPath);
+            "hdfsRename: Options.Rename.NONE");
         goto done;
     }
-    if (!jVal.z) {
-        errno = EIO;
+    enumClass = (*env)->GetObjectClass(env, jRenameOptionsNone);
+    if (!enumClass) {
+        errno = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+            "hdfsRename: GetObjectClass(Options.Rename)");
+        goto done;
+    }
+    jOptsArr = (*env)->NewObjectArray(env, 1, enumClass, NULL);
+    if (!jOptsArr) {
+        errno = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+            "hdfsRename: NewObjectArray");
+        goto done;
+    }
+    (*env)->SetObjectArrayElement(env, jOptsArr, 0, jRenameOptionsNone);
+    if ((*env)->ExceptionCheck(env)) {
+        errno = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+            "hdfsRename: SetObjectArrayElement");
+        goto done;
+    }
+
+    jthr = invokeMethod(env, NULL, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "rename", JMETHOD3(JPARAM(HADOOP_PATH), JPARAM(HADOOP_PATH),
+            "[Lorg/apache/hadoop/fs/Options$Rename;", JAVA_VOID),
+            jOldPath, jNewPath, jOptsArr);
+    if (jthr) {
+        errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hdfsRename(oldPath=%s, newPath=%s): FileSystem#rename(rename2)",
+            oldPath, newPath);
         goto done;
     }
     ret = 0;
@@ -2779,6 +2876,9 @@ int hdfsRename(hdfsFS fs, const char *oldPath, const char *newPath)
 done:
     destroyLocalReference(env, jOldPath);
     destroyLocalReference(env, jNewPath);
+    destroyLocalReference(env, jOptsArr);
+    destroyLocalReference(env, enumClass);
+    destroyLocalReference(env, jRenameOptionsNone);
     return ret;
 }
 

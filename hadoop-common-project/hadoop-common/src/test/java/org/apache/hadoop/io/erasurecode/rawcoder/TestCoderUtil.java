@@ -19,19 +19,41 @@
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test of the utility of raw erasure coder.
  */
 public class TestCoderUtil {
+  private static final int INITIAL_EMPTY_CHUNK_LENGTH = 4096;
+  private static final int SMALL_CHUNK_SIZE = INITIAL_EMPTY_CHUNK_LENGTH + 1;
+  private static final int LARGE_CHUNK_SIZE = SMALL_CHUNK_SIZE * 2;
+
   private final int numInputs = 9;
   private final int chunkSize = 1024;
+
+  @BeforeEach
+  public void resetEmptyChunk() throws Exception {
+    Field emptyChunk = CoderUtil.class.getDeclaredField("emptyChunk");
+    emptyChunk.setAccessible(true);
+    synchronized (CoderUtil.class) {
+      emptyChunk.set(null, new byte[INITIAL_EMPTY_CHUNK_LENGTH]);
+    }
+  }
 
   @Test
   public void testGetEmptyChunk() {
@@ -55,6 +77,36 @@ public class TestCoderUtil {
     CoderUtil.resetBuffer(inputs, 0, numInputs);
     for (int i = 0; i < numInputs; i++) {
       assertEquals(0, inputs[i]);
+    }
+  }
+
+  @Test
+  public void testGetEmptyChunkDoesNotShrinkWhenCacheGrowsConcurrently()
+      throws Exception {
+    AtomicReference<Thread> workerThread = new AtomicReference<>();
+    ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+      Thread thread = new Thread(r, "get-empty-chunk-small");
+      workerThread.set(thread);
+      return thread;
+    });
+
+    try {
+      Future<byte[]> smallChunk;
+      synchronized (CoderUtil.class) {
+        smallChunk = executor.submit(() -> CoderUtil.getEmptyChunk(
+            SMALL_CHUNK_SIZE));
+        waitUntilBlocked(workerThread);
+        assertTrue(CoderUtil.getEmptyChunk(LARGE_CHUNK_SIZE).length
+            >= LARGE_CHUNK_SIZE);
+      }
+
+      assertTrue(smallChunk.get(10, TimeUnit.SECONDS).length
+          >= LARGE_CHUNK_SIZE,
+          "concurrent caller should return the larger chunk already cached");
+      assertTrue(CoderUtil.getEmptyChunk(LARGE_CHUNK_SIZE).length
+          >= LARGE_CHUNK_SIZE, "empty chunk cache should not shrink");
+    } finally {
+      executor.shutdownNow();
     }
   }
 
@@ -123,5 +175,21 @@ public class TestCoderUtil {
       byte[][] inputs = new byte[numInputs][];
       CoderUtil.findFirstValidInput(inputs);
     });
+  }
+
+  private static void waitUntilBlocked(AtomicReference<Thread> threadRef)
+      throws InterruptedException {
+    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+    while (System.nanoTime() < deadline) {
+      Thread thread = threadRef.get();
+      if (thread != null && thread.getState() == Thread.State.BLOCKED) {
+        return;
+      }
+      Thread.sleep(10);
+    }
+
+    Thread thread = threadRef.get();
+    fail("small getEmptyChunk caller did not block on CoderUtil.class; state="
+        + (thread == null ? "not started" : thread.getState()));
   }
 }

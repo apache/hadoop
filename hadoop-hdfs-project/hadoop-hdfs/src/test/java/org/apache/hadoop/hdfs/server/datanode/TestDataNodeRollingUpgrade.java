@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
@@ -58,6 +59,7 @@ import org.mockito.Mockito;
  * Ensure that the DataNode correctly handles rolling upgrade
  * finalize and rollback.
  */
+@Tag("slow")
 public class TestDataNodeRollingUpgrade {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestDataNodeRollingUpgrade.class);

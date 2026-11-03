@@ -32,6 +32,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
@@ -44,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * Stress-test for potential bugs when replication is changing
  * on blocks during a failover.
  */
+@Tag("slow")
 public class TestDNFencingWithReplication {
   static {
     GenericTestUtils.setLogLevel(FSNamesystem.AUDIT_LOG, Level.WARN);

@@ -34,14 +34,13 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 /**
  * Extends Thread and provides an implementation that is used for processing the
  * AM heart beat request asynchronously and sending back the response using the
  * callback method registered with the system.
  */
-public class AMHeartbeatRequestHandler extends SubjectInheritingThread {
+public class AMHeartbeatRequestHandler extends Thread {
   public static final Logger LOG =
       LoggerFactory.getLogger(AMHeartbeatRequestHandler.class);
 
@@ -84,7 +83,7 @@ public class AMHeartbeatRequestHandler extends SubjectInheritingThread {
   }
 
   @Override
-  public void work() {
+  public void run() {
     while (keepRunning) {
       AsyncAllocateRequestInfo requestInfo;
       try {

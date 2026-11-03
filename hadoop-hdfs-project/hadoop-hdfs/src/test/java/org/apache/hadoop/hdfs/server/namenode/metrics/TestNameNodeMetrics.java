@@ -818,6 +818,7 @@ public class TestNameNodeMetrics {
     Random random = new Random();
     int retryCount = 0;
     while (retryCount < 5) {
+      MiniDFSCluster cluster2 = null;
       try {
         int basePort = 10060 + random.nextInt(100) * 2;
         MiniDFSNNTopology topology = new MiniDFSNNTopology()
@@ -836,7 +837,7 @@ public class TestNameNodeMetrics {
             1);
         // Poll and follow ANN txns very often, for purpose of testing.
         conf2.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
-        MiniDFSCluster cluster2 = new MiniDFSCluster.Builder(conf2)
+        cluster2 = new MiniDFSCluster.Builder(conf2)
             .nnTopology(topology).numDataNodes(1).build();
         cluster2.waitActive();
         DistributedFileSystem fs2 = cluster2.getFileSystem(0);
@@ -877,11 +878,14 @@ public class TestNameNodeMetrics {
             cluster2.getNameNode(1).getNamesystem()
                 .getTransactionsSinceLastCheckpoint(),
             "SBN failed to track 2 added txns after the ckpt.");
-        cluster2.shutdown();
         break;
       } catch (Exception e) {
         LOG.warn("Unable to set up HA cluster, exception thrown: " + e);
         retryCount++;
+      } finally {
+        if (cluster2 != null) {
+          cluster2.shutdown();
+        }
       }
     }
   }

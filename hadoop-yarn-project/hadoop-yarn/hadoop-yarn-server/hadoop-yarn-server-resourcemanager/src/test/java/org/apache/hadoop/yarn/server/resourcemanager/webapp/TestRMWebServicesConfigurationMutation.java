@@ -66,6 +66,7 @@ import javax.ws.rs.core.Response.Status;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.Principal;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -77,6 +78,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServic
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.restoreSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.toJson;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -1065,6 +1067,68 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         .post(Entity.entity(updateInfo, MediaType.APPLICATION_JSON),
         Response.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
+  }
+
+  @Test
+  public void testValidateReturnsProposedSchedulerConf() throws Exception {
+    String rmOnlyKey =
+        CapacitySchedulerConfiguration.PREFIX + "root.b.maximum-applications";
+    ((CapacityScheduler) rm.getResourceScheduler()).getConf()
+        .set(rmOnlyKey, "4321");
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    updateInfo.getUpdateQueueInfo().add(new QueueConfigInfo("root.a",
+        Collections.singletonMap(CAPACITY, "20")));
+    updateInfo.getUpdateQueueInfo().add(new QueueConfigInfo("root.b",
+        Collections.singletonMap(CAPACITY, "80")));
+    updateInfo.getGlobalParams().put(
+        CapacitySchedulerConfiguration.MAXIMUM_SYSTEM_APPLICATIONS, "5000");
+
+    Response response = validateSchedulerConf(updateInfo);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    JSONArray items = new JSONObject(response.readEntity(String.class))
+        .getJSONArray("property");
+    Map<String, String> body = new HashMap<>();
+    for (int i = 0; i < items.length(); i++) {
+      body.put(items.getJSONObject(i).getString("name"),
+          items.getJSONObject(i).getString("value"));
+    }
+    assertEquals("20", body.get(QueuePrefixes.getQueuePrefix(ROOT_A) + CAPACITY));
+    assertEquals("80", body.get(QueuePrefixes.getQueuePrefix(ROOT_B) + CAPACITY));
+    assertEquals("50.0", body.get(
+        QueuePrefixes.getQueuePrefix(ROOT_A) + MAXIMUM_CAPACITY));
+    assertEquals("5000",
+        body.get(CapacitySchedulerConfiguration.MAXIMUM_SYSTEM_APPLICATIONS));
+    // The body is the proposed store configuration, not merged with yarn-site.
+    assertFalse(body.containsKey(rmOnlyKey));
+    // Validation does not apply the change.
+    assertEquals(25f, ((CapacityScheduler) rm.getResourceScheduler())
+        .getConfiguration().getNonLabeledQueueCapacity(ROOT_A), 0.01f);
+  }
+
+  @Test
+  public void testValidateRejectsInvalidCapacitySum() throws Exception {
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    updateInfo.getUpdateQueueInfo().add(new QueueConfigInfo("root.a",
+        Collections.singletonMap(CAPACITY, "50")));
+
+    Response response = validateSchedulerConf(updateInfo);
+    assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    assertEquals("CapacityScheduler configuration validation failed:"
+        + "java.io.IOException: Failed to re-init queues : Illegal capacity "
+        + "sum of 1.25 for children of queue root for label=. "
+        + "It should be either 0 or 1.0", response.readEntity(String.class));
+  }
+
+  private Response validateSchedulerConf(SchedConfUpdateInfo updateInfo) {
+    return target()
+        .register(new IncludeRootJSONProvider())
+        .register(new ExcludeRootJSONProvider())
+        .path("ws").path("v1").path("cluster")
+        .path(RMWSConsts.SCHEDULER_CONF_VALIDATE)
+        .queryParam("user.name", userName)
+        .request(MediaType.APPLICATION_JSON)
+        .post(Entity.entity(updateInfo, MediaType.APPLICATION_JSON),
+            Response.class);
   }
 
   @Override

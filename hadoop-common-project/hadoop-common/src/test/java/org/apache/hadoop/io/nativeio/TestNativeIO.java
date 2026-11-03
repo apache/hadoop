@@ -40,8 +40,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.io.FileUtils;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -56,16 +54,19 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.StatUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
+
+import org.apache.commons.io.FileUtils;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.*;
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.Stat.*;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -73,9 +74,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class TestNativeIO {
   static final Logger LOG = LoggerFactory.getLogger(TestNativeIO.class);
@@ -137,9 +135,9 @@ public class TestNativeIO {
       new AtomicReference<Throwable>();
     List<Thread> statters = new ArrayList<Thread>();
     for (int i = 0; i < 10; i++) {
-      SubjectInheritingThread statter = new SubjectInheritingThread() {
+      Thread statter = new Thread() {
         @Override
-        public void work() {
+        public void run() {
           long et = Time.now() + 5000;
           while (Time.now() < et) {
             try {

@@ -111,7 +111,20 @@ public enum AbfsStatistic {
   RENAME_PATH_ATTEMPTS("rename_path_attempts",
       "Number of times we attempt to rename a path internally"),
   ATOMIC_RENAME_PATH_ATTEMPTS("atomic_rename_path_attempts",
-      "Number of times atomic rename attempted");
+      "Number of times atomic rename attempted"),
+
+  // Photon (Apache Arrow based ListBlob) telemetry.
+  PHOTON_REQUEST_COUNT("abfs_photon_request_count",
+      "Number of ListBlobs requests where ABFS requested Photon/Arrow."),
+  PHOTON_RESPONSE_COUNT("abfs_photon_response_count",
+      "Number of ListBlobs responses received in Arrow format."),
+  PHOTON_FALLBACK_COUNT("abfs_photon_fallback_count",
+      "Number of ListBlobs requests where Arrow was requested but XML was "
+          + "returned."),
+  PHOTON_PARSE_FAILURE_COUNT("abfs_photon_parse_failure_count",
+      "Number of Arrow ListBlobs parsing failures."),
+  PHOTON_LISTING_LATENCY("abfs_photon_listing_latency",
+      "End-to-end listing latency for Photon-enabled listing requests.");
 
   private String statName;
   private String statDescription;

@@ -18,7 +18,6 @@
 package org.apache.hadoop.ipc;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -109,7 +108,7 @@ public class TestRPCWaitForProxy extends TestRpcBase {
    * throwable that was raised in the process
    */
 
-  private class RpcThread extends SubjectInheritingThread {
+  private class RpcThread extends Thread {
     private Throwable caught;
     private int connectRetries;
     private volatile boolean waitStarted = false;
@@ -118,7 +117,7 @@ public class TestRPCWaitForProxy extends TestRpcBase {
       this.connectRetries = connectRetries;
     }
     @Override
-    public void work() {
+    public void run() {
       try {
         Configuration config = new Configuration(conf);
         config.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_KEY,

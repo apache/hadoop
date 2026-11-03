@@ -27,7 +27,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreTestBase.TestDispatcher;
 import org.apache.hadoop.util.ZKUtil;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 import org.junit.jupiter.api.AfterEach;
@@ -113,9 +112,9 @@ public class TestZKRMStateStoreZKClientConnections {
     final AtomicBoolean assertionFailedInThread = new AtomicBoolean(false);
 
     testingServer.stop();
-    SubjectInheritingThread clientThread = new SubjectInheritingThread() {
+    Thread clientThread = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         try {
           store.getData(path);
         } catch (Exception e) {

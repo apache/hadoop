@@ -40,6 +40,6 @@ public class GpuDockerCommandPluginFactory {
     }
 
     throw new YarnException(
-        "Unkown implementation name for Gpu docker plugin, impl=" + impl);
+        "Unknown implementation name for Gpu docker plugin, impl=" + impl);
   }
 }

@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.MiniDFSNNTopology.NNConf;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -106,13 +105,15 @@ public class TestBalancerWithHANameNodes {
    * datanodes); It then adds one new empty node and starts balancing.
    */
   @Test
-  @Timeout(value = 60)
+  @Timeout(value = 300)
   public void testBalancerWithHANameNodes() throws Exception {
+    // 300s, not 60s: waitStoragesNoStale alone may legitimately take up
+    // to 60s, so a 60s test budget fires before the balancer even runs
+    // on a loaded CI agent.  The observer variants below already use
+    // 120s/180s for the same work.
     Configuration conf = new HdfsConfiguration();
     TestBalancer.initConf(conf);
     assertEquals(TEST_CAPACITIES.length, TEST_RACKS.length);
-    NNConf nn1Conf = new MiniDFSNNTopology.NNConf("nn1");
-    nn1Conf.setIpcPort(HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
     Configuration copiedConf = new Configuration(conf);
     cluster = new MiniDFSCluster.Builder(copiedConf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
@@ -181,7 +182,7 @@ public class TestBalancerWithHANameNodes {
    * Test Balancer request Standby NameNode when enable this feature.
    */
   @Test
-  @Timeout(value = 60)
+  @Timeout(value = 300)
   public void testBalancerRequestSBNWithHA() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY, false);
@@ -189,8 +190,6 @@ public class TestBalancerWithHANameNodes {
     //conf.setBoolean(DFS_HA_BALANCER_REQUEST_STANDBY_KEY, true);
     TestBalancer.initConf(conf);
     assertEquals(TEST_CAPACITIES.length, TEST_RACKS.length);
-    NNConf nn1Conf = new MiniDFSNNTopology.NNConf("nn1");
-    nn1Conf.setIpcPort(HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
     Configuration copiedConf = new Configuration(conf);
     cluster = new MiniDFSCluster.Builder(copiedConf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
@@ -302,8 +301,6 @@ public class TestBalancerWithHANameNodes {
     Configuration conf = new HdfsConfiguration();
     TestBalancer.initConf(conf);
     assertEquals(TEST_CAPACITIES.length, TEST_RACKS.length);
-    NNConf nn1Conf = new MiniDFSNNTopology.NNConf("nn1");
-    nn1Conf.setIpcPort(HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
     Configuration copiedConf = new Configuration(conf);
     // Try capture NameNodeConnector log.
     LogCapturer log =LogCapturer.captureLogs(

@@ -64,11 +64,11 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.Timeout;
@@ -80,6 +80,7 @@ import org.slf4j.LoggerFactory;
  * This class tests the decommissioning of datanode with striped blocks.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@Tag("slow")
 public class TestDecommissionWithStriped {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestDecommissionWithStriped.class);
@@ -260,8 +261,8 @@ public class TestDecommissionWithStriped {
 
     // Decommission node in a new thread. Verify that node is decommissioned.
     final CountDownLatch decomStarted = new CountDownLatch(0);
-    SubjectInheritingThread decomTh = new SubjectInheritingThread() {
-      public void work() {
+    Thread decomTh = new Thread() {
+      public void run() {
         try {
           decomStarted.countDown();
           decommissionNode(0, decommisionNodes, AdminStates.DECOMMISSIONED);
@@ -996,7 +997,7 @@ public class TestDecommissionWithStriped {
     // Handle decommission nodes in a new thread.
     // Verify that nodes are decommissioned.
     final CountDownLatch decomStarted = new CountDownLatch(0);
-    new SubjectInheritingThread(
+    new Thread(
         () -> {
           try {
             decomStarted.countDown();

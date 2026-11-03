@@ -81,12 +81,14 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+@Tag("slow")
 public class TestFSImage {
 
   private static final String HADOOP_2_7_ZER0_BLOCK_SIZE_TGZ =
@@ -1166,59 +1168,60 @@ public class TestFSImage {
   @Test
   public void testUpdateBlocksMapAndNameCacheAsync() throws IOException {
     Configuration conf = new Configuration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    cluster.waitActive();
-    DistributedFileSystem fs = cluster.getFileSystem();
-    FSDirectory fsdir = cluster.getNameNode().namesystem.getFSDirectory();
-    File workingDir = GenericTestUtils.getTestDir();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      FSDirectory fsdir = cluster.getNameNode().namesystem.getFSDirectory();
+      File workingDir = GenericTestUtils.getTestDir();
 
-    File preRestartTree = new File(workingDir, "preRestartTree");
-    File postRestartTree = new File(workingDir, "postRestartTree");
+      File preRestartTree = new File(workingDir, "preRestartTree");
+      File postRestartTree = new File(workingDir, "postRestartTree");
 
-    Path baseDir = new Path("/user/foo");
-    fs.mkdirs(baseDir);
-    fs.allowSnapshot(baseDir);
-    for (int i = 0; i < 5; i++) {
-      Path dir = new Path(baseDir, Integer.toString(i));
-      fs.mkdirs(dir);
-      for (int j = 0; j < 5; j++) {
-        Path file = new Path(dir, Integer.toString(j));
-        FSDataOutputStream os = fs.create(file);
-        os.write((byte) j);
-        os.close();
-      }
-      fs.createSnapshot(baseDir, "snap_"+i);
-      fs.rename(new Path(dir, "0"), new Path(dir, "renamed"));
-    }
-    SnapshotTestHelper.dumpTree2File(fsdir, preRestartTree);
-
-    // checkpoint
-    fs.setSafeMode(SafeModeAction.ENTER);
-    fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.LEAVE);
-
-    cluster.restartNameNode();
-    cluster.waitActive();
-    fs = cluster.getFileSystem();
-    fsdir = cluster.getNameNode().namesystem.getFSDirectory();
-
-    // Ensure all the files created above exist, and blocks is correct.
-    for (int i = 0; i < 5; i++) {
-      Path dir = new Path(baseDir, Integer.toString(i));
-      assertTrue(fs.getFileStatus(dir).isDirectory());
-      for (int j = 0; j < 5; j++) {
-        Path file = new Path(dir, Integer.toString(j));
-        if (j == 0) {
-          file = new Path(dir, "renamed");
+      Path baseDir = new Path("/user/foo");
+      fs.mkdirs(baseDir);
+      fs.allowSnapshot(baseDir);
+      for (int i = 0; i < 5; i++) {
+        Path dir = new Path(baseDir, Integer.toString(i));
+        fs.mkdirs(dir);
+        for (int j = 0; j < 5; j++) {
+          Path file = new Path(dir, Integer.toString(j));
+          FSDataOutputStream os = fs.create(file);
+          os.write((byte) j);
+          os.close();
         }
-        FSDataInputStream in = fs.open(file);
-        int n = in.readByte();
-        assertEquals(j, n);
-        in.close();
+        fs.createSnapshot(baseDir, "snap_"+i);
+        fs.rename(new Path(dir, "0"), new Path(dir, "renamed"));
       }
+      SnapshotTestHelper.dumpTree2File(fsdir, preRestartTree);
+
+      // checkpoint
+      fs.setSafeMode(SafeModeAction.ENTER);
+      fs.saveNamespace();
+      fs.setSafeMode(SafeModeAction.LEAVE);
+
+      cluster.restartNameNode();
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
+      fsdir = cluster.getNameNode().namesystem.getFSDirectory();
+
+      // Ensure all the files created above exist, and blocks is correct.
+      for (int i = 0; i < 5; i++) {
+        Path dir = new Path(baseDir, Integer.toString(i));
+        assertTrue(fs.getFileStatus(dir).isDirectory());
+        for (int j = 0; j < 5; j++) {
+          Path file = new Path(dir, Integer.toString(j));
+          if (j == 0) {
+            file = new Path(dir, "renamed");
+          }
+          FSDataInputStream in = fs.open(file);
+          int n = in.readByte();
+          assertEquals(j, n);
+          in.close();
+        }
+      }
+      SnapshotTestHelper.dumpTree2File(fsdir, postRestartTree);
+      SnapshotTestHelper.compareDumpedTreeInFile(
+          preRestartTree, postRestartTree, true);
     }
-    SnapshotTestHelper.dumpTree2File(fsdir, postRestartTree);
-    SnapshotTestHelper.compareDumpedTreeInFile(
-        preRestartTree, postRestartTree, true);
   }
 }

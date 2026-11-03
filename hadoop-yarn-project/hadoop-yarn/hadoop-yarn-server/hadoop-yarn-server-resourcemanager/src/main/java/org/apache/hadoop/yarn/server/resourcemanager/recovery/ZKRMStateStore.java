@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ZKUtil;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.hadoop.util.curator.ZKCuratorManager.SafeTransaction;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -1469,13 +1468,13 @@ public class ZKRMStateStore extends RMStateStore {
    * Helper class that periodically attempts creating a znode to ensure that
    * this RM continues to be the Active.
    */
-  private class VerifyActiveStatusThread extends SubjectInheritingThread {
+  private class VerifyActiveStatusThread extends Thread {
     VerifyActiveStatusThread() {
       super(VerifyActiveStatusThread.class.getName());
     }
 
     @Override
-    public void work() {
+    public void run() {
       try {
         while (!isFencedState()) {
           // Create and delete fencing node

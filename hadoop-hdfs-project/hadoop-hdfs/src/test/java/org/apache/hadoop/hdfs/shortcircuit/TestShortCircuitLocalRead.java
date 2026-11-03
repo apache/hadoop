@@ -62,7 +62,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -564,11 +563,11 @@ public class TestShortCircuitLocalRead {
 
     long start = Time.now();
     final int iteration = 20;
-    SubjectInheritingThread[] threads = new SubjectInheritingThread[threadCount];
+    Thread[] threads = new Thread[threadCount];
     for (int i = 0; i < threadCount; i++) {
-      threads[i] = new SubjectInheritingThread() {
+      threads[i] = new Thread() {
         @Override
-        public void work() {
+        public void run() {
           for (int i = 0; i < iteration; i++) {
             try {
               String user = getCurrentUser();

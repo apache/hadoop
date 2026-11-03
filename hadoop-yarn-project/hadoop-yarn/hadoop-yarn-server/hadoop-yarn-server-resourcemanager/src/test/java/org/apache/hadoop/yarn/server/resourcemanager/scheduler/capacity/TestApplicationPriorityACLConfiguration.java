@@ -113,6 +113,17 @@ public class TestApplicationPriorityACLConfiguration {
     verifyACLs(pGroupB, QUEUE_B_USER, "", maxPriorityQueueB, 0);
   }
 
+  @Test
+  public void testACLMaxPriorityAboveClusterMaxIsReset() throws Exception {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
+    csConf.setPriorityAcls(A_QUEUE_PATH, Priority.newInstance(9),
+        Priority.newInstance(1), new String[] {QUEUE_A_USER});
+
+    List<AppPriorityACLGroup> pGroupA = csConf.getPriorityAcls(
+        A_QUEUE_PATH, Priority.newInstance(5));
+    verifyACLs(pGroupA, QUEUE_A_USER, "", 5, 1);
+  }
+
   private void verifyACLs(List<AppPriorityACLGroup> pGroup, String queueUser,
       String queueGroup, int maxPriority, int defaultPriority) {
     AppPriorityACLGroup group = pGroup.get(0);

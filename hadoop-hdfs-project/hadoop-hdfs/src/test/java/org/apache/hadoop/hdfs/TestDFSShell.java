@@ -70,7 +70,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.event.Level;
@@ -949,9 +948,9 @@ public class TestDFSShell {
 
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     System.setOut(new PrintStream(out));
-    final SubjectInheritingThread tailer = new SubjectInheritingThread() {
+    final Thread tailer = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         final String[] argv = new String[]{"-tail", "-f",
             testFile.toString()};
         try {

@@ -87,6 +87,21 @@ public class TestIds {
   }
 
   @Test
+  public void testTaskIdHashCodeUsesTheTaskTypeOrdinal() {
+    // An enum's own hashCode is an identity hash, which differs from one JVM
+    // to the next, and so would the order of every HashMap keyed by TaskId.
+    JobId jobId = createJobId(1315890136000L, 1);
+    for (TaskType taskType : TaskType.values()) {
+      TaskId taskId = MRBuilderUtils.newTaskId(jobId, 2, taskType);
+      int expected = 1;
+      expected = 31 * expected + 2;
+      expected = 31 * expected + jobId.hashCode();
+      expected = 31 * expected + taskType.ordinal();
+      assertEquals(expected, taskId.hashCode());
+    }
+  }
+
+  @Test
   public void testTaskAttemptId() {
     long ts1 = 1315890136000l;
     long ts2 = 1315890136001l;

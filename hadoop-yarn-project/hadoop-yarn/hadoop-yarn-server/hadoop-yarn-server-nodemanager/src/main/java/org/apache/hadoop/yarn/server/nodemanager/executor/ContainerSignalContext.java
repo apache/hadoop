@@ -96,7 +96,7 @@ public final class ContainerSignalContext {
   }
 
   /**
-   * Retrun true if we are trying to signal the same process.
+   * Return true if we are trying to signal the same process.
    * @param obj compare to this object
    * @return whether we try to signal the same process id
    */

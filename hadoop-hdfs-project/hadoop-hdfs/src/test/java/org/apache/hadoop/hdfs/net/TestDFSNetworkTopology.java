@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
@@ -37,6 +38,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -417,6 +419,53 @@ public class TestDFSNetworkTopology {
         StorageType.ARCHIVE);
 
     assertNotNull(node);
+  }
+
+  /**
+   * Test that chooseRandomWithStorageType correctly handles DatanodeInfo
+   * (not DatanodeDescriptor) in the excludedNodes set.
+   * getEligibleChildren did not subtract storageCount for DatanodeInfo
+   * excluded nodes, which could cause the excluded node to be returned
+   * when the random selection falls on the wrong branch.
+   *
+   * Topology:
+   *   /d1/r1: nodeA (ARCHIVE) -- the only ARCHIVE under /d1
+   *   /d2/r2: nodeB (ARCHIVE) -- the only ARCHIVE under /d2
+   *
+   * Exclude nodeA as a DatanodeInfo with a different UUID, so
+   * HashSet.contains() at rack level won't match by equals().
+   * Without the fix, getEligibleChildren gives /d1 a non-zero weight,
+   * and if selected, nodeA is returned despite being excluded.
+   */
+  @Test
+  public void testChooseRandomWithDatanodeInfoExcluded() {
+    DFSNetworkTopology dfsCluster =
+        DFSNetworkTopology.getInstance(new Configuration());
+    final String[] racks = {"/d1/r1", "/d2/r2"};
+    final String[] hosts = {"hostA", "hostB"};
+    final StorageType[] types = {StorageType.ARCHIVE, StorageType.ARCHIVE};
+    final DatanodeStorageInfo[] storages =
+        DFSTestUtil.createDatanodeStorageInfos(2, racks, hosts, types);
+    DatanodeDescriptor[] dns = DFSTestUtil.toDatanodeDescriptor(storages);
+    dfsCluster.add(dns[0]);
+    dfsCluster.add(dns[1]);
+
+    DatanodeInfo excludedInfo = new DatanodeInfoBuilder()
+        .setNodeID(new DatanodeID(UUID.randomUUID().toString(), dns[0]))
+        .setNetworkLocation(dns[0].getNetworkLocation())
+        .build();
+
+    HashSet<Node> excluded = new HashSet<>();
+    excluded.add(excludedInfo);
+
+    for (int i = 0; i < 100; i++) {
+      Node n = dfsCluster.chooseRandomWithStorageType(
+          "/", null, excluded, StorageType.ARCHIVE);
+      assertNotNull(n, "Should always find a valid ARCHIVE node");
+      DatanodeDescriptor dd = (DatanodeDescriptor) n;
+      assertEquals("hostB", dd.getHostName(),
+          "Should only return hostB since hostA is excluded");
+    }
   }
 
   /**

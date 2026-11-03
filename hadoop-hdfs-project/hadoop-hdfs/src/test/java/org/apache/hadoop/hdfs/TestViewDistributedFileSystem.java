@@ -33,6 +33,7 @@ import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.functional.ConsumerRaisingIOE;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -44,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Tag("slow")
 public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
   @Override
   HdfsConfiguration getTestConfiguration() {

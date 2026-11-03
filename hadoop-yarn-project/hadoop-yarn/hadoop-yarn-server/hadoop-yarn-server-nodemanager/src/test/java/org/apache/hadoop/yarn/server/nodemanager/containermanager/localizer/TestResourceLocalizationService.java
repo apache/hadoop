@@ -87,6 +87,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -162,6 +163,7 @@ import org.mockito.Mockito;
 import org.mockito.internal.matchers.VarargMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.LoggerFactory;
 
 public class TestResourceLocalizationService {
 
@@ -2648,6 +2650,72 @@ public class TestResourceLocalizationService {
       }
     }
 
+  }
+
+  /**
+   * The Public Localizer must stay up when it dequeues a completed download it
+   * has no record of. Before YARN-11993 run() returned on that path, so the
+   * finally block shut the download pool down and every later public
+   * localization on the node was rejected until the NodeManager restarted.
+   */
+  @Test
+  @Timeout(value = 30)
+  public void testPublicLocalizerSurvivesUnknownResource() throws Exception {
+    conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS,
+        lfs.makeQualified(new Path(basedir, "0")).toString());
+
+    DrainDispatcher dispatcher = new DrainDispatcher();
+    dispatcher.init(conf);
+    dispatcher.start();
+
+    // Nothing is localized here, so the dirs handler is never asked for a
+    // path; mocking it keeps the test off the disk.
+    LocalDirsHandlerService mockDirsHandler =
+        mock(LocalDirsHandlerService.class);
+
+    ResourceLocalizationService service =
+        new ResourceLocalizationService(dispatcher,
+            mock(ContainerExecutor.class), mock(DeletionService.class),
+            mockDirsHandler, nmContext, metrics);
+    dispatcher.register(LocalizationEventType.class, service);
+    service.init(conf);
+
+    PublicLocalizer publicLocalizer = service.getPublicLocalizer();
+    GenericTestUtils.LogCapturer logs =
+        GenericTestUtils.LogCapturer.captureLogs(
+            LoggerFactory.getLogger(ResourceLocalizationService.class));
+    try {
+      publicLocalizer.start();
+
+      // Submit straight to the completion queue so the Future is never
+      // recorded in pending. That is exactly the state in which
+      // pending.remove(completed) returns null.
+      publicLocalizer.queue.submit(() -> new Path(basedir, "unknown1"));
+      GenericTestUtils.waitFor(
+          () -> countUnknownResourceLogs(logs.getOutput()) >= 1, 20, 10000);
+      assertEquals(0, publicLocalizer.pending.size());
+
+      // The old code logged this line too, then exited. Only a localizer
+      // that is still taking from the queue can log a second one.
+      publicLocalizer.queue.submit(() -> new Path(basedir, "unknown2"));
+      GenericTestUtils.waitFor(
+          () -> countUnknownResourceLogs(logs.getOutput()) >= 2, 20, 10000);
+    } finally {
+      logs.stopCapturing();
+      publicLocalizer.interrupt();
+      service.stop();
+      dispatcher.stop();
+    }
+  }
+
+  private static int countUnknownResourceLogs(String output) {
+    final String message = "Localized unknown resource";
+    int count = 0;
+    for (int i = output.indexOf(message); i >= 0;
+        i = output.indexOf(message, i + message.length())) {
+      count++;
+    }
+    return count;
   }
 
   private boolean waitForPrivateDownloadToStart(

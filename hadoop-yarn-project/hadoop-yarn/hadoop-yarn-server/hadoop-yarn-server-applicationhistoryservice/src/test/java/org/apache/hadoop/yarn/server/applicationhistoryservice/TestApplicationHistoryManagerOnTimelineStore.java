@@ -61,6 +61,8 @@ import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -351,6 +353,42 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     assertEquals(
         "http://0.0.0.0:8188/applicationhistory/logs/" + "test host:100/container_0_0001_01_000001/"
             + "container_0_0001_01_000001/user1", container.getLogUrl());
+  }
+
+  @Test
+  void testCustomContainerResources() throws Exception {
+    TimelineStore originalStore = store;
+    Configuration resourceConf = new YarnConfiguration();
+    resourceConf.set(YarnConfiguration.RESOURCE_TYPES, "yarn.io/gpu");
+    ResourceUtils.resetResourceTypes(resourceConf);
+    try {
+      createStore(1);
+      ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+          ApplicationId.newInstance(0, 1), 1);
+      ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+      TimelineEntity entity = createContainerEntity(containerId);
+      Map<String, Object> allocation = new HashMap<>();
+      allocation.put("value", 2L);
+      allocation.put("units", "");
+      Map<String, Object> resources = new HashMap<>();
+      resources.put("yarn.io/gpu", allocation);
+      entity.addOtherInfo(ContainerMetricsConstants.ALLOCATED_RESOURCES_INFO,
+          resources);
+      TimelineEntities entities = new TimelineEntities();
+      entities.addEntity(entity);
+      store.put(entities);
+      initTestApplicationHistoryManagerOnTimelineStore("");
+      Resource allocated = historyManager.getContainer(containerId)
+          .getAllocatedResource();
+      assertEquals(2, allocated.getResourceValue("yarn.io/gpu"));
+      assertEquals(-1, allocated.getMemorySize());
+      assertEquals(-1, allocated.getVirtualCores());
+      assertEquals(allocated, historyManager.getContainers(attemptId)
+          .get(containerId).getAllocatedResource());
+    } finally {
+      store = originalStore;
+      ResourceUtils.resetResourceTypes(new YarnConfiguration());
+    }
   }
 
   @MethodSource("callers")

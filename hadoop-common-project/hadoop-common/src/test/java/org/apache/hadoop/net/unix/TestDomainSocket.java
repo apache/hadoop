@@ -47,7 +47,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.unix.DomainSocket.DomainChannel;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
@@ -458,8 +457,8 @@ public class TestDomainSocket {
         new ArrayBlockingQueue<Throwable>(2);
     final DomainSocket serv = (preConnectedSockets != null) ?
       null : DomainSocket.bindAndListen(TEST_PATH);
-    Thread serverThread = new SubjectInheritingThread() {
-      public void work(){
+    Thread serverThread = new Thread() {
+      public void run(){
         // Run server
         DomainSocket conn = null;
         try {
@@ -486,8 +485,8 @@ public class TestDomainSocket {
     };
     serverThread.start();
     
-    SubjectInheritingThread clientThread = new SubjectInheritingThread() {
-      public void work(){
+    Thread clientThread = new Thread() {
+      public void run(){
         try {
           DomainSocket client = preConnectedSockets != null ?
                 preConnectedSockets[1] : DomainSocket.connect(TEST_PATH);
@@ -627,8 +626,8 @@ public class TestDomainSocket {
     for (int i = 0; i < passedFiles.length; i++) {
       passedFds[i] = passedFiles[i].getInputStream().getFD();
     }
-    Thread serverThread = new SubjectInheritingThread() {
-      public void work(){
+    Thread serverThread = new Thread() {
+      public void run(){
         // Run server
         DomainSocket conn = null;
         try {
@@ -650,8 +649,8 @@ public class TestDomainSocket {
     };
     serverThread.start();
 
-    Thread clientThread = new SubjectInheritingThread() {
-      public void work(){
+    Thread clientThread = new Thread() {
+      public void run(){
         try {
           DomainSocket client = DomainSocket.connect(TEST_PATH);
           OutputStream clientOutputStream = client.getOutputStream();
@@ -784,7 +783,7 @@ public class TestDomainSocket {
         }
       }
     };
-    Thread readerThread = new SubjectInheritingThread(reader);
+    Thread readerThread = new Thread(reader);
     readerThread.start();
     socks[0].getOutputStream().write(1);
     socks[0].getOutputStream().write(2);

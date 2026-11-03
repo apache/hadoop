@@ -36,12 +36,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 
 public class TestNNWithQJM {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestNNWithQJM.class);
   final Configuration conf = new HdfsConfiguration();
   private MiniJournalCluster mjc = null;
   private final Path TEST_PATH = new Path("/test-dir");
@@ -168,7 +172,19 @@ public class TestNNWithQJM {
             "Could not sync enough journals to persistent storage", re);
       }
     } finally {
-      //cluster.shutdown();
+      if (cluster != null) {
+        try {
+          cluster.shutdown();
+        } catch (ExitUtil.ExitException e) {
+          // Expected: this NN was fenced by the second cluster above, so
+          // closing its edit log cannot reach a journal quorum and the
+          // shutdown terminates with "Could not sync enough journals".
+          // Releasing what can be released still beats leaving the NN
+          // running for the remaining tests in this class.
+          LOG.warn("Expected exit while shutting down the fenced NN", e);
+          ExitUtil.resetFirstExitException();
+        }
+      }
     }
   }
 
@@ -188,23 +204,34 @@ public class TestNNWithQJM {
       .manageNameDfsDirs(false)
       .build();
     cluster.shutdown();
-    
-    // Reformat just the on-disk portion
-    Configuration onDiskOnly = new Configuration(conf);
-    onDiskOnly.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, defaultEditsDir);
-    NameNode.format(onDiskOnly);
+    // Null out the reference: the build below is expected to throw before
+    // reassigning it, and the finally must not shut this cluster down a
+    // second time -- that would re-run the ExitUtil exit check, whose
+    // AssertionError could mask the test's real failure.
+    cluster = null;
 
-    // Start the NN - should fail because the JNs are still formatted
-    // with the old namespace ID.
     try {
-      ExitUtil.disableSystemExit();
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
-          .manageNameDfsDirs(false).format(false).checkExitOnShutdown(false)
-          .build();
-      fail("New NN with different namespace should have been rejected");
-    } catch (IOException ioe) {
-      GenericTestUtils.assertExceptionContains(
-          "recoverUnfinalizedSegments failed for too many journals", ioe);
+      // Reformat just the on-disk portion
+      Configuration onDiskOnly = new Configuration(conf);
+      onDiskOnly.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, defaultEditsDir);
+      NameNode.format(onDiskOnly);
+
+      // Start the NN - should fail because the JNs are still formatted
+      // with the old namespace ID.
+      try {
+        ExitUtil.disableSystemExit();
+        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+            .manageNameDfsDirs(false).format(false).checkExitOnShutdown(false)
+            .build();
+        fail("New NN with different namespace should have been rejected");
+      } catch (IOException ioe) {
+        GenericTestUtils.assertExceptionContains(
+            "recoverUnfinalizedSegments failed for too many journals", ioe);
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 }

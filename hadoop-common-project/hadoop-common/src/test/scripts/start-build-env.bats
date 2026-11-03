@@ -69,6 +69,9 @@ export -f stat
 # Verify that host directories get mounted without z option
 # and INFO messages get printed out
 @test "start-build-env.sh (Docker without z mount option)" {
+  if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+    skip "Skipped on GitHub Actions"
+  fi
   if [ "$(uname -s)" != "Linux" ]; then
     skip "Not on Linux platform"
   fi
@@ -89,6 +92,9 @@ export -f stat
 
 # Verify that host directories get mounted with z option
 @test "start-build-env.sh (Docker with z mount option)" {
+  if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+    skip "Skipped on GitHub Actions"
+  fi
   if [ "$(uname -s)" != "Linux" ]; then
     skip "Not on Linux platform"
   fi

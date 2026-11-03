@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.web;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.Path;
@@ -83,6 +84,7 @@ import java.util.Map;
 /**
  * Utility methods used in WebHDFS/HttpFS JSON conversion.
  */
+@InterfaceAudience.Private
 public class JsonUtilClient {
   static final DatanodeInfo[] EMPTY_DATANODE_INFO_ARRAY = {};
   static final String UNSUPPPORTED_EXCEPTION_STR =

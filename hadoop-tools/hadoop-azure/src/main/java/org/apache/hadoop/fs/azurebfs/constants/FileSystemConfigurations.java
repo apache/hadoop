@@ -173,6 +173,16 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_ENABLE_ABFS_LIST_ITERATOR = true;
   public static final boolean DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE = true;
   public static final boolean DEFAULT_ENABLE_PAGINATED_DELETE = false;
+  public static final boolean DEFAULT_ENABLE_PHOTON = false;
+
+  /**
+   * Default off-heap memory limit (256 MB) for the Apache Arrow allocator used
+   * to parse a single Photon (Arrow) ListBlobs response. A ListBlobs page
+   * returns at most 5000 entries; even with maximum-length blob names and the
+   * full set of columns this bound leaves ample headroom while still protecting
+   * the process from an oversized or malformed Arrow response.
+   */
+  public static final long DEFAULT_PHOTON_ARROW_MEMORY_LIMIT = 256L * 1024 * 1024;
   public static final boolean DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION = false;
   public static final boolean DEFAULT_ENABLE_FULL_BLOB_ABFS_CHECKSUM_VALIDATION = false;
 
@@ -306,7 +316,16 @@ public final class FileSystemConfigurations {
   public static final int MIN_FS_AZURE_TAIL_LATENCY_ANALYSIS_WINDOW_GRANULARITY = 1;
   public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_PERCENTILE_COMPUTATION_INTERVAL_MILLIS = 500;
   public static final int DEFAULT_FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT = 1;
+  public static final String DEFAULT_FS_AZURE_VECTORED_READ_STRATEGY = "TPS";
+  public static final int DEFAULT_FS_AZURE_MIN_SEEK_FOR_VECTORED_READS = ONE_MB;
+  public static final int DEFAULT_FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS = 4 * ONE_MB;
+  public static final int DEFAULT_FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS_THROUGHPUT = 8 * ONE_MB;
   public static final boolean DEFAULT_FS_AZURE_RESTRICT_GPS_ON_OPENFILE = false;
+  /**
+   * Default value for {@link ConfigurationKeys#FS_AZURE_RBAC_ONLY_MODE}.
+   * Disabled by default to preserve existing behavior.
+   */
+  public static final boolean DEFAULT_FS_AZURE_RBAC_ONLY_MODE = false;
 
   private FileSystemConfigurations() {}
 }

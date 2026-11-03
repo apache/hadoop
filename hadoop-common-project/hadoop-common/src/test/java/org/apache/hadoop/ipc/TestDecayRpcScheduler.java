@@ -21,7 +21,6 @@ package org.apache.hadoop.ipc;
 import static java.lang.Thread.sleep;
 
 import java.util.Map;
-import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -34,10 +33,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.JsonUtils;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -488,10 +489,11 @@ public class TestDecayRpcScheduler {
     scheduler.forceDecay();
     // Check priorities on cache
     String summary = scheduler.getSchedulingDecisionSummary();
-    Map<String, Object> summaryMap = (Map<String, Object>) JSON.parse(summary);
-    assertNotEquals(0L, summaryMap.get("user1"));
-    assertEquals(0L, summaryMap.get("service1"));
-    assertEquals(0L, summaryMap.get("service2"));
+    Map<String, Integer> summaryMap = JsonUtils.parse(summary,
+        new TypeReference<Map<String, Integer>>() {});
+    assertNotEquals(0, summaryMap.get("user1"));
+    assertEquals(0, summaryMap.get("service1"));
+    assertEquals(0, summaryMap.get("service2"));
   }
 
   /**

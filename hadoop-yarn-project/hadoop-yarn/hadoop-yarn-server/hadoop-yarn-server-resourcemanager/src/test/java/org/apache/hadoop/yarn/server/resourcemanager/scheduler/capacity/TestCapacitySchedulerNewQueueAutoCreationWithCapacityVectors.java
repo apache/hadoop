@@ -312,6 +312,15 @@ public class TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors
             e1Auto.getQueueResourceQuotas().getEffectiveMinResource().getVirtualCores());
   }
 
+  @Test
+  public void testExplicitMaximumApplicationsOfDynamicLeafQueue() throws Exception {
+    createPercentageConfig();
+    csConf.setMaximumApplicationsPerQueue(new QueuePath("root.a.dyn1"), 17);
+    startScheduler();
+
+    assertEquals(17, createQueue("root.a.dyn1").getMaxApplications());
+  }
+
   protected AbstractLeafQueue createQueue(String queuePath) throws YarnException,
           IOException {
     return autoQueueHandler.createQueue(new QueuePath(queuePath));

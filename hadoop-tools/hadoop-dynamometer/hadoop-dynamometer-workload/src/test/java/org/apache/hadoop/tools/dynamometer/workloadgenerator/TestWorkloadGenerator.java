@@ -39,7 +39,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ImpersonationProvider;
-import org.jline.utils.Log;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -154,7 +153,7 @@ public class TestWorkloadGenerator {
         "part-r-00000"))) {
       String auditOutput = IOUtils.toString(auditOutputFile,
           StandardCharsets.UTF_8);
-      Log.info(auditOutput);
+      LOG.info(auditOutput);
       assertTrue(auditOutput.matches(
           ".*(hdfs,WRITE,[A-Z]+,[13]+,[0-9]+\\n){3}.*"));
       // Matches three lines of the format "hdfs,WRITE,name,count,time"

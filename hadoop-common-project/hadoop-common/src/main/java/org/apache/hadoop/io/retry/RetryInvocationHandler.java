@@ -132,7 +132,7 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
           callId, retryInfo, waitTime);
       if (waitTime != null && waitTime > 0) {
         try {
-          Thread.sleep(retryInfo.delay);
+          Thread.sleep(waitTime);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           if (LOG.isDebugEnabled()) {
@@ -163,11 +163,19 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
     }
 
     Object invokeMethod() throws Throwable {
-      if (isRpc && SET_CALL_ID_FOR_TEST.get()) {
+      final boolean setCallId = isRpc && SET_CALL_ID_FOR_TEST.get();
+      if (setCallId) {
         Client.setCallIdAndRetryCount(callId, counters.retries,
             retryInvocationHandler.asyncCallHandler);
       }
-      return retryInvocationHandler.invokeMethod(method, args);
+      try {
+        return retryInvocationHandler.invokeMethod(method, args);
+      } finally {
+        if (setCallId) {
+          // Clear what this attempt set, even if no RPC consumed it.
+          Client.setCallIdAndRetryCountUnprotected(null, 0, null);
+        }
+      }
     }
 
     @Override

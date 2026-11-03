@@ -55,7 +55,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.TestContainerId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -175,8 +174,8 @@ public class TestAggregatedLogFormat {
 
       final CountDownLatch latch = new CountDownLatch(1);
 
-      SubjectInheritingThread t = new SubjectInheritingThread() {
-        public void work() {
+      Thread t = new Thread() {
+        public void run() {
           try {
             for (int i = 0; i < length / 3; i++) {
               osw.write(ch);

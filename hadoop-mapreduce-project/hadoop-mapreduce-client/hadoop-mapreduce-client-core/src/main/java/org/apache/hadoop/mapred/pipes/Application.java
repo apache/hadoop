@@ -57,7 +57,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -281,7 +280,7 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
   }
 
   @VisibleForTesting
-  public static class PingSocketCleaner extends SubjectInheritingThread {
+  public static class PingSocketCleaner extends Thread {
     private final ServerSocket serverSocket;
     private final int soTimeout;
 
@@ -292,7 +291,7 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     }
 
     @Override
-    public void work() {
+    public void run() {
       LOG.info("PingSocketCleaner started...");
       while (!Thread.currentThread().isInterrupted()) {
         Socket clientSocket = null;

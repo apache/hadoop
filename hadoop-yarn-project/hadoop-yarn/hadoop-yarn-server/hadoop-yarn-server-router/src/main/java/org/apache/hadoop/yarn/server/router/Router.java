@@ -47,8 +47,8 @@ import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -125,6 +125,14 @@ public class Router extends CompositeService {
 
   private static final String UI2_WEBAPP_NAME = "/ui2";
 
+  /**
+   * How long serviceStop waits for the scheduled executor to drain before it
+   * interrupts what is still running, and then again for the interrupted tasks
+   * to exit, so stopping can take up to twice this. One SubClusterCleaner run
+   * is a scan of the state store, so this only has to cover a single pass.
+   */
+  private static final long SCHEDULED_EXECUTOR_SHUTDOWN_TIMEOUT_SECONDS = 5;
+
   private ScheduledThreadPoolExecutor scheduledExecutorService;
   private SubClusterCleaner subClusterCleaner;
 
@@ -197,13 +205,19 @@ public class Router extends CompositeService {
     if (isStopping.getAndSet(true)) {
       return;
     }
+    // serviceStart() may have scheduled the SubClusterCleaner on this executor.
+    // Shut it down before stopping the child services, allowing an in-flight
+    // cleaner run to finish within the timeout. This is best effort: a run that
+    // does not respond to interruption can outlive the stop.
+    HadoopExecutors.shutdown(scheduledExecutorService, LOG,
+        SCHEDULED_EXECUTOR_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     super.serviceStop();
     DefaultMetricsSystem.shutdown();
     WebServiceClient.destroy();
   }
 
   protected void shutDown() {
-    new SubjectInheritingThread(Router.this::stop).start();
+    new Thread(Router.this::stop).start();
   }
 
   protected RouterClientRMService createClientRMProxyService() {
@@ -338,6 +352,16 @@ public class Router extends CompositeService {
   @VisibleForTesting
   public RouterRMAdminService getRmAdminProxyService() {
     return rmAdminProxyService;
+  }
+
+  /**
+   * Returns the executor that runs the SubClusterCleaner.
+   *
+   * @return the executor that runs the SubClusterCleaner.
+   */
+  @VisibleForTesting
+  public ScheduledThreadPoolExecutor getScheduledExecutorService() {
+    return scheduledExecutorService;
   }
 
   /**

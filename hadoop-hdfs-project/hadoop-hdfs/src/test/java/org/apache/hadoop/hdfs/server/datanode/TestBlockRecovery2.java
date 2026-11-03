@@ -47,9 +47,9 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.TestName;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -90,6 +90,7 @@ import static org.mockito.Mockito.when;
 /**
  * Test part 2 for sync all replicas in block recovery.
  */
+@Tag("slow")
 public class TestBlockRecovery2 {
 
   private static final Logger LOG =
@@ -249,7 +250,7 @@ public class TestBlockRecovery2 {
       final DataNode dataNode = cluster.getDataNodes().get(0);
 
       final AtomicBoolean recoveryInitResult = new AtomicBoolean(true);
-      Thread recoveryThread = new SubjectInheritingThread(() -> {
+      Thread recoveryThread = new Thread(() -> {
         try {
           DatanodeInfo[] locations = block.getLocations();
           final BlockRecoveryCommand.RecoveringBlock recoveringBlock =
@@ -368,7 +369,7 @@ public class TestBlockRecovery2 {
       // write 5MB File
       AppendTestUtil.write(stm, 0, 1024 * 1024 * 5);
       final AtomicReference<Throwable> err = new AtomicReference<>();
-      Thread t = new SubjectInheritingThread(() -> {
+      Thread t = new Thread(() -> {
         try {
           stm.close();
         } catch (Throwable t1) {

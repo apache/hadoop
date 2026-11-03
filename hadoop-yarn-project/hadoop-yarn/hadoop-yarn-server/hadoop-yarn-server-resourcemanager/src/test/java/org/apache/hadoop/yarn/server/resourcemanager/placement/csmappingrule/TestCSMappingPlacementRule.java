@@ -652,6 +652,29 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
+  public void testUnknownMappingRuleFormat() {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT, "bogus");
+
+    IllegalArgumentException e =
+        assertThrows(IllegalArgumentException.class, conf::getMappingRules);
+    assertEquals("Illegal queue mapping format 'bogus' please use 'legacy' or 'json'",
+        e.getMessage());
+  }
+
+  @Test
+  public void testLegacyMappingToMissingQueueUnderDynamicParent() throws IOException {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    conf.set(CapacitySchedulerConfiguration.QUEUE_MAPPING,
+        "u:alice:root.dynamic.alice,u:bob:root.dynamic.bob.leaf");
+
+    CSMappingPlacementRule engine = setupEngine(true, conf.getMappingRules(), true);
+    ApplicationSubmissionContext app = createApp("app");
+    assertPlace(engine, app, "alice", "root.dynamic.alice");
+    assertPlace(engine, app, "bob", "root.dynamic.bob.leaf");
+  }
+
+  @Test
   public void testJSONConfiguration() throws IOException {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,

@@ -220,8 +220,15 @@ public class TestViewFsDefaultValue {
 
   @AfterAll
   public static void cleanup() throws IOException {
-    fHdfs.delete(new Path(testFileName), true);
-    fHdfs.delete(notInMountpointPath, true);
+    try {
+      fHdfs.delete(new Path(testFileName), true);
+      fHdfs.delete(notInMountpointPath, true);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+        cluster = null;
+      }
+    }
   }
 
 }

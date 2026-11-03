@@ -103,6 +103,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -126,6 +127,7 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
 
 /** Web-hdfs NameNode implementation. */
 @Path("")
@@ -295,9 +297,14 @@ public class NamenodeWebHdfsMethods {
     if (excludeDatanodes != null) {
       for (String host : StringUtils
           .getTrimmedStringCollection(excludeDatanodes)) {
+        HostAndPort ipv6 = DatanodeManager.parseIpv6Address(host);
         int idx = host.indexOf(':');
         Node excludeNode = null;
-        if (idx == -1) {
+        if (ipv6 != null) {
+          excludeNode = ipv6.hasPort()
+              ? bm.getDatanodeManager().getDatanodeByXferAddr(ipv6.getHost(), ipv6.getPort())
+              : bm.getDatanodeManager().getDatanodeByHost(ipv6.getHost());
+        } else if (idx == -1) {
           excludeNode = bm.getDatanodeManager().getDatanodeByHost(host);
         } else {
           excludeNode = bm.getDatanodeManager().getDatanodeByXferAddr(

@@ -20,11 +20,13 @@ package org.apache.hadoop.hdfs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.junit.jupiter.api.Tag;
 
 /**
  * This tests write operation of DFS striped file with a random erasure code
  * policy except for the default policy under Datanode failure conditions.
  */
+@Tag("slow")
 public class TestDFSStripedOutputStreamWithFailureWithRandomECPolicy extends
     TestDFSStripedOutputStreamWithFailure {
 

@@ -34,7 +34,6 @@ import static org.apache.hadoop.metrics2.util.Contracts.*;
 import org.apache.hadoop.metrics2.MetricsFilter;
 import org.apache.hadoop.metrics2.MetricsSink;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +48,7 @@ class MetricsSinkAdapter implements SinkQueue.Consumer<MetricsBuffer> {
   private final MetricsSink sink;
   private final MetricsFilter sourceFilter, recordFilter, metricFilter;
   private final SinkQueue<MetricsBuffer> queue;
-  private final SubjectInheritingThread sinkThread;
+  private final Thread sinkThread;
   private volatile boolean stopping = false;
   private volatile boolean inError = false;
   private final int periodMs, firstRetryDelay, retryCount;
@@ -85,8 +84,8 @@ class MetricsSinkAdapter implements SinkQueue.Consumer<MetricsBuffer> {
                                   "Dropped updates per sink", 0);
     qsize = registry.newGauge("Sink_"+ name + "Qsize", "Queue size", 0);
 
-    sinkThread = new SubjectInheritingThread() {
-      @Override public void work() {
+    sinkThread = new Thread() {
+      @Override public void run() {
         publishMetricsFromQueue();
       }
     };

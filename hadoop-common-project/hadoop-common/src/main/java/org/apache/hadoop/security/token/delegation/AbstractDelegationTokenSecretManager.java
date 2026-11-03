@@ -59,10 +59,11 @@ import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.functional.InvocationRaisingIOE;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -558,33 +559,61 @@ extends AbstractDelegationTokenIdentifier>
   
   @Override
   protected byte[] createPassword(TokenIdent identifier) {
+    DelegationTokenInformation tokenInfo;
     this.apiLock.writeLock().lock();
     try {
-      int sequenceNum;
-      long now = Time.now();
-      sequenceNum = incrementDelegationTokenSeqNum();
-      identifier.setIssueDate(now);
-      identifier.setMaxDate(now + tokenMaxLifetime);
-      identifier.setMasterKeyId(currentKey.getKeyId());
-      identifier.setSequenceNumber(sequenceNum);
-      LOG.info("Creating password for identifier: " + formatTokenId(identifier) +
-          ", currentKey: " + currentKey.getKeyId());
-      byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
-      DelegationTokenInformation tokenInfo =
-          new DelegationTokenInformation(now + tokenRenewInterval, password,
-              getTrackingIdIfEnabled(identifier));
+      tokenInfo = prepareToken(identifier,
+          incrementDelegationTokenSeqNum());
       try {
         METRICS.trackStoreToken(() -> storeToken(identifier, tokenInfo));
       } catch (IOException ioe) {
         LOG.error("Could not store token " + formatTokenId(identifier) + "!!", ioe);
       }
-      return password;
     } finally {
       this.apiLock.writeLock().unlock();
     }
+    logTokenCreation(identifier);
+    return tokenInfo.getPassword();
   }
 
+  /**
+   * Initialize an identifier and its password using a consistent signing key.
+   * Sequence allocation and persistence are the caller's responsibility and
+   * must not be performed inside this critical section by external stores.
+   * The caller must not modify the identifier after preparation.
+   *
+   * @param identifier identifier to initialize
+   * @param sequenceNumber previously allocated unique sequence number
+   * @return prepared token information
+   */
+  protected final DelegationTokenInformation prepareToken(TokenIdent identifier,
+      int sequenceNumber) {
+    DelegationTokenInformation tokenInfo;
+    this.apiLock.writeLock().lock();
+    try {
+      long now = Time.now();
+      identifier.setIssueDate(now);
+      identifier.setMaxDate(now + tokenMaxLifetime);
+      identifier.setMasterKeyId(currentKey.getKeyId());
+      identifier.setSequenceNumber(sequenceNumber);
+      byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
+      tokenInfo = new DelegationTokenInformation(now + tokenRenewInterval, password,
+          getTrackingIdIfEnabled(identifier));
+    } finally {
+      this.apiLock.writeLock().unlock();
+    }
+    return tokenInfo;
+  }
 
+  /**
+   * Log token creation after releasing the API write lock.
+   *
+   * @param identifier initialized token identifier
+   */
+  protected final void logTokenCreation(TokenIdent identifier) {
+    LOG.info("Creating password for identifier: " + formatTokenId(identifier)
+        + ", currentKey: " + identifier.getMasterKeyId());
+  }
 
   /**
    * Find the DelegationTokenInformation for the given token id, and verify that
@@ -912,12 +941,12 @@ extends AbstractDelegationTokenIdentifier>
     return running;
   }
 
-  private class ExpiredTokenRemover extends SubjectInheritingThread {
+  private class ExpiredTokenRemover extends Thread {
     private long lastMasterKeyUpdate;
     private long lastTokenCacheCleanup;
 
     @Override
-    public void work() {
+    public void run() {
       LOG.info("Starting expired delegation token remover thread, "
           + "tokenRemoverScanInterval=" + tokenRemoverScanInterval
           / (60 * 1000) + " min(s)");
@@ -943,8 +972,15 @@ extends AbstractDelegationTokenIdentifier>
           }
         }
       } catch (Throwable t) {
+        if (!running && !(t instanceof Error)) {
+          // stopThreads() interrupts this thread, which can surface as an
+          // exception from the backing store; don't kill the process for it.
+          LOG.info("ExpiredTokenRemover thread received exception while"
+              + " stopping: {}", t.toString());
+          return;
+        }
         LOG.error("ExpiredTokenRemover thread received unexpected exception", t);
-        Runtime.getRuntime().exit(-1);
+        ExitUtil.terminate(-1, t);
       }
     }
   }

@@ -331,6 +331,21 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file) {
   return ret;
 }
 
+hdfsFile hdfsCloneFile(hdfsFS fs, hdfsFile file) {
+  libhdfs_hdfsFile clonedRep =
+      libhdfs_hdfsCloneFile(fs->libhdfsRep, file->libhdfsRep);
+  if (!clonedRep) {
+    return NULL;
+  }
+  hdfsFile cloned = calloc(1, sizeof(struct hdfsFile_internal));
+  if (!cloned) {
+    return NULL;
+  }
+  cloned->libhdfsRep = clonedRep;
+  cloned->libhdfsppRep = NULL;
+  return cloned;
+}
+
 int hdfsExists(hdfsFS fs, const char *path) {
   return libhdfspp_hdfsExists(fs->libhdfsppRep, path);
 }

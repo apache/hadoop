@@ -87,6 +87,7 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -101,6 +102,8 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
@@ -115,6 +118,8 @@ import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireDefaultExternalDataFile;
 import static org.apache.hadoop.test.GenericTestUtils.buildPaths;
+import static org.apache.hadoop.test.GenericTestUtils.countThreadsMatching;
+import static org.apache.hadoop.test.GenericTestUtils.waitFor;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -2051,5 +2056,50 @@ public final class S3ATestUtils {
     }
     // error case
     return Pair.of(-1L, -1L);
+  }
+
+  /**
+   * Count live threads (by name prefix) that survive collection of the
+   * {@code S3AFileSystem} instances owning them. Creates {@code instances}
+   * uncached filesystems, lists on each to spawn its SDK scheduler threads,
+   * then abandons them and requests GC until a {@link WeakReference} to one
+   * clears — proving an owner was really collected, as {@link System#gc()} is
+   * only a hint. Per aws-sdk-java-v2 #1690 a leaked per-client scheduler's
+   * running threads root its executor, so it outlives its owner.
+   * @param uri filesystem URI
+   * @param conf base configuration (filesystem caching is forced off here)
+   * @param instances number of filesystem instances to create and abandon
+   * @param prefixes scheduler thread name prefixes to count
+   * @return number of matching live threads remaining after the owners are collected
+   * @throws IOException creating a filesystem or listing failed
+   * @throws InterruptedException interrupted while waiting for collection
+   * @throws TimeoutException an abandoned instance was not collected in time
+   */
+  public static int countSchedulerThreadsAfterAbandoningFilesystems(URI uri,
+      Configuration conf, int instances, String... prefixes)
+      throws IOException, InterruptedException, TimeoutException {
+    Configuration uncached = new Configuration(conf);
+    disableFilesystemCaching(uncached);
+    WeakReference<FileSystem> sentinel = null;
+    for (int i = 0; i < instances; i++) {
+      // Uncached instance; deliberately neither retained nor closed, so it
+      // becomes eligible for collection once this iteration ends.
+      FileSystem fs = FileSystem.get(uri, uncached);
+      fs.listStatus(new Path("/"));
+      if (sentinel == null) {
+        sentinel = new WeakReference<>(fs);
+      }
+    }
+    // System.gc() is only a hint, so prove a real collection happened: request
+    // GC until the weak reference to an abandoned instance clears.
+    final WeakReference<FileSystem> ref = sentinel;
+    waitFor(() -> {
+      System.gc();
+      return ref.get() == null;
+    }, 100, 30_000);
+    Pattern pattern = Pattern.compile(Arrays.stream(prefixes)
+        .map(p -> Pattern.quote(p) + ".*")
+        .collect(Collectors.joining("|")));
+    return countThreadsMatching(pattern);
   }
 }

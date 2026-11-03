@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -121,6 +122,29 @@ public class TestQueueState {
           "The parent queue:root.q1 cannot be STOPPED as the child" +
           " queue:root.q1.q2 is in RUNNING state."));
     }
+  }
+
+  @Test
+  @Timeout(value = 15)
+  public void testDrainingStateCannotBeConfigured() throws IOException {
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration();
+    csConf.setQueues(ROOT_PATH, new String[] {Q1});
+    csConf.setCapacity(Q1_PATH, 100);
+
+    conf = new YarnConfiguration(csConf);
+    cs = new CapacityScheduler();
+    RMContext rmContext = TestUtils.getMockRMContext();
+    cs.setConf(conf);
+    cs.setRMContext(rmContext);
+    cs.init(conf);
+
+    csConf.setState(Q1_PATH, QueueState.DRAINING);
+    YarnConfiguration drainingConf = new YarnConfiguration(csConf);
+    IOException e = assertThrows(IOException.class,
+        () -> cs.reinitialize(drainingConf, rmContext));
+    assertEquals("Invalid queue state configuration. We can only use RUNNING or STOPPED.",
+        e.getCause().getMessage());
   }
 
   @Test

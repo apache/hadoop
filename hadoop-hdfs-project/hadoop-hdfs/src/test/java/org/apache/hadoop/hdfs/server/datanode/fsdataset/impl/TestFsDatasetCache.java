@@ -88,6 +88,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.event.Level;
@@ -98,6 +99,7 @@ import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY;
 
 @NotThreadSafe
+@Tag("slow")
 public class TestFsDatasetCache {
   private static final org.slf4j.Logger LOG =
       LoggerFactory.getLogger(TestFsDatasetCache.class);

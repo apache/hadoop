@@ -36,7 +36,7 @@ public class FixedSASTokenProvider implements SASTokenProvider {
     this.fixedSASToken = fixedSASToken;
     if (fixedSASToken == null || fixedSASToken.isEmpty()) {
       throw new SASTokenProviderException(
-          String.format("Configured Fixed SAS Token is Invalid: %s", fixedSASToken));
+          "Configured Fixed SAS Token is empty or null.");
     }
   }
 

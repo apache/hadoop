@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -72,6 +73,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 /**
  * This class tests rolling upgrade.
  */
+@Tag("slow")
 public class TestRollingUpgrade {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRollingUpgrade.class);
@@ -219,7 +221,7 @@ public class TestRollingUpgrade {
         final Path baz = new Path("/baz");
 
         final RollingUpgradeInfo info1;
-        {
+        try {
           final DistributedFileSystem dfs = cluster.getFileSystem();
           dfs.mkdirs(foo);
 
@@ -233,6 +235,7 @@ public class TestRollingUpgrade {
           assertEquals(info1, dfs.rollingUpgrade(RollingUpgradeAction.QUERY));
 
           dfs.mkdirs(bar);
+        } finally {
           cluster.shutdown();
         }
 

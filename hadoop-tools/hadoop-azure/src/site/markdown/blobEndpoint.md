@@ -58,6 +58,48 @@ Rest API Documentation: [Get Container Properties](https://docs.microsoft.com/en
 The List Blobs operation returns a list of the blobs under the specified container.
 Rest API Documentation: [List Blobs](https://docs.microsoft.com/en-us/rest/api/storageservices/list-blobs)
 
+### Photon (Apache Arrow based) List Blobs
+By default the List Blobs response is parsed as XML. When Photon is enabled the
+driver additionally advertises the Apache Arrow IPC stream media type in the
+`Accept` header (`application/vnd.apache.arrow.stream,application/xml`) so the
+service may return a compact Apache Arrow response instead of XML. The response
+format is detected from the returned `Content-Type`: an Arrow response is parsed
+by the Arrow parser while any other (or missing) content type falls back to the
+existing XML parser. Both paths produce identical `FileStatus` results, so the
+public filesystem APIs are unchanged.
+
+Photon is controlled by a single configuration and is disabled by default:
+
+```xml
+<property>
+  <name>fs.azure.photon.enabled</name>
+  <value>false</value>
+</property>
+```
+
+Photon applies only to non-HNS (flat namespace) accounts; on hierarchical
+namespace (HNS) accounts the Arrow request is not sent and listing stays on the
+XML path.
+
+#### Java 17+ runtime requirement (`--add-opens`)
+
+Apache Arrow's off-heap allocator reflectively accesses `java.nio` internals,
+which the Java module system closes by default from Java 9 onwards. On Java 17+
+the JVM running the driver (the client application, e.g. Spark or Hive
+executors, not just the test harness) must therefore open the `java.nio`
+package to Arrow, otherwise Arrow fails to initialise and any listing that
+receives an Arrow response fails:
+
+```
+--add-opens=java.base/java.nio=ALL-UNNAMED
+```
+
+Add this flag to the launching JVM (for example via `spark.driver.extraJavaOptions`
+and `spark.executor.extraJavaOptions`, `HADOOP_OPTS`, or the container's
+`JAVA_TOOL_OPTIONS`). If you cannot guarantee the flag is present on every JVM
+that runs the driver, keep `fs.azure.photon.enabled` set to `false` so listing
+uses the always-available XML path.
+
 ## Put Blob
 The Put Blob operation creates a new block blob, or updates the content of an existing block blob.
 The Put Blob operation will overwrite all contents of an existing blob with the same name.

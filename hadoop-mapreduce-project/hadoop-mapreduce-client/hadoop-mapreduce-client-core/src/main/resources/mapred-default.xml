@@ -464,7 +464,7 @@
   <value>INFO</value>
   <description>The logging level for the MR ApplicationMaster. The allowed
   levels are: OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE and ALL.
-  The setting here could be overriden if "mapreduce.job.log4j-properties-file"
+  The setting here could be overridden if "mapreduce.job.log4j-properties-file"
   is set.
   </description>
 </property>
@@ -1453,7 +1453,7 @@
     <value></value>
     <description>Used to override the default settings of log4j in container-log4j.properties
     for NodeManager. Like container-log4j.properties, it requires certain
-    framework appenders properly defined in this overriden file. The file on the
+    framework appenders properly defined in this overridden file. The file on the
     path will be added to distributed cache and classpath. If no-scheme is given
     in the path, it defaults to point to a log4j file on the local FS.
     </description>

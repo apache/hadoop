@@ -70,6 +70,7 @@ import org.apache.hadoop.util.FakeTimer;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.event.Level;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -77,6 +78,7 @@ import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 @MethodSource("data")
 @ParameterizedClass
+@Tag("slow")
 public class TestFSEditLogLoader {
 
   public static Collection<Object[]> data() {

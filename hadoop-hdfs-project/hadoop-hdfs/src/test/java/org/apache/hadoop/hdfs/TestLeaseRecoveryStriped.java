@@ -41,6 +41,7 @@ import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 import org.slf4j.Logger;
@@ -61,6 +62,7 @@ import java.util.concurrent.TimeoutException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
+@Tag("slow")
 public class TestLeaseRecoveryStriped {
   public static final Logger LOG = LoggerFactory
       .getLogger(TestLeaseRecoveryStriped.class);

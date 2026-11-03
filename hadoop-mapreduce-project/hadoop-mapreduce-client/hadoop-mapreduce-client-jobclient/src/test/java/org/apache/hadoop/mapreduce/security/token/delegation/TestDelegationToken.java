@@ -26,6 +26,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,14 @@ public class TestDelegationToken {
     user2 = UserGroupInformation.createUserForTesting("bob", 
                                                       new String[]{"users"});
     cluster = new MiniMRCluster(0,0,1,"file:///",1);
+  }
+
+  @AfterEach
+  public void tearDown() {
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
   
   @SuppressWarnings("deprecation")

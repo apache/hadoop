@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.TreeSet;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
@@ -485,9 +484,9 @@ public class TestDominantResourceFairnessPolicy {
    * Thread to simulate concurrent schedulable changes while sorting
    */
   private Thread modificationThread(final List<FakeSchedulable> schedulableList) {
-    SubjectInheritingThread modThread  = new SubjectInheritingThread() {
+    Thread modThread  = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         try {
           // This sleep is needed to make sure the sort has started before the
           // modifications start and finish

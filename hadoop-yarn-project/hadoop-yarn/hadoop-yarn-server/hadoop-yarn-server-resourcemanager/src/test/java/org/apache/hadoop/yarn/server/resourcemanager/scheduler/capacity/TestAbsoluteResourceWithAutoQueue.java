@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -141,7 +143,7 @@ public class TestAbsoluteResourceWithAutoQueue
 
     // Set default capacities like normal configuration.
     if (isCapacityNeeded) {
-      csConf.setCapacity(A_QUEUE_PATH, 50f);
+      csConf.setCapacity(A_QUEUE_PATH, 25f);
       csConf.setCapacity(B_QUEUE_PATH, 25f);
       csConf.setCapacity(C_QUEUE_PATH, 25f);
       csConf.setCapacity(D_QUEUE_PATH, 25f);
@@ -292,7 +294,7 @@ public class TestAbsoluteResourceWithAutoQueue
 
   @Test
   public void testValidateLeafQueueTemplateConfigurations() {
-    assertThrows(Exception.class, () -> {
+    Exception e = assertThrows(Exception.class, () -> {
       CapacitySchedulerConfiguration csConf = setupSimpleQueueConfiguration(true);
 
       csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -302,6 +304,8 @@ public class TestAbsoluteResourceWithAutoQueue
       fail("Exception should be thrown as leaf queue template configuration is "
           + "not same as Parent configuration");
     });
+    assertEquals("Managed Parent Queue root.queueC config type is different from leaf "
+        + "queue template config type", ExceptionUtils.getRootCause(e).getMessage());
   }
 
   @Test
@@ -337,5 +341,64 @@ public class TestAbsoluteResourceWithAutoQueue
     assertNotNull(autoCreatedLeafQueue, "Auto Creation of Queue failed");
     ManagedParentQueue parentQueue = (ManagedParentQueue) cs.getQueue(QUEUED);
     assertEquals(parentQueue, autoCreatedLeafQueue.getParent());
+  }
+
+  @Test
+  @Timeout(value = 20)
+  public void testAutoCreatedLeafQueueRecoversCapacityAfterNodeRegisters()
+      throws Exception {
+    try {
+      CapacitySchedulerConfiguration csConf =
+          setupSimpleQueueConfiguration(false);
+      setupMinMaxResourceConfiguration(csConf);
+      csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+          ResourceScheduler.class);
+      csConf.setOverrideWithQueueMappings(true);
+      setupGroupQueueMappings(QUEUED, csConf, "%user");
+
+      mockRM = new MockRM(csConf);
+      cs = (CapacityScheduler) mockRM.getResourceScheduler();
+      mockRM.start();
+      cs.start();
+
+      submitApp(mockRM, cs.getQueue(QUEUED), TEST_GROUPUSER, TEST_GROUPUSER, 1,
+          1);
+
+      AutoCreatedLeafQueue autoCreatedLeafQueue =
+          (AutoCreatedLeafQueue) cs.getQueue(TEST_GROUPUSER);
+      ManagedParentQueue parentQueue = (ManagedParentQueue) cs.getQueue(QUEUED);
+      assertNotNull(autoCreatedLeafQueue, "Auto Creation of Queue failed");
+      assertEquals(parentQueue, autoCreatedLeafQueue.getParent());
+
+      GuaranteedOrZeroCapacityOverTimePolicy policy =
+          (GuaranteedOrZeroCapacityOverTimePolicy) parentQueue
+              .getAutoCreatedQueueManagementPolicy();
+
+      // With no cluster resource the queue must be created at zero capacity and
+      // must NOT be activated - activating it here is exactly what strands it at
+      // zero capacity for the lifetime of the queue.
+      assertEquals(0.0f, autoCreatedLeafQueue.getCapacity(), EPSILON);
+      assertEquals(0.0f, autoCreatedLeafQueue.getAbsoluteCapacity(), EPSILON);
+      assertFalse(policy.isActive(autoCreatedLeafQueue, NO_LABEL),
+              "Queue must not be activated while the cluster resource is zero");
+
+      // A NodeManager registers: the cluster resource becomes available.
+      mockRM.registerNode("127.0.0.1:1234", 250 * GB, 40);
+      mockRM.drainEvents();
+
+      // The queue management monitor runs, which is what
+      // QueueManagementDynamicEditPolicy does on its monitoring interval.
+      List<QueueManagementChange> changes =
+          policy.computeQueueManagementChanges();
+      parentQueue.validateAndApplyQueueManagementChanges(changes);
+
+      validateCapacities(autoCreatedLeafQueue, 0.4f, 0.04f, 1f, 0.6f);
+      assertTrue(policy.isActive(autoCreatedLeafQueue, NO_LABEL),
+              "Queue must be activated once the cluster resource is available");
+      assertEquals(0.04f,
+          policy.getAbsoluteActivatedChildQueueCapacity(NO_LABEL), EPSILON);
+    } finally {
+      cleanupQueue(TEST_GROUPUSER);
+    }
   }
 }

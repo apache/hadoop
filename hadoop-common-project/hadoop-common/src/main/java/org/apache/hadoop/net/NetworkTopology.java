@@ -51,7 +51,7 @@ public class NetworkTopology {
       LoggerFactory.getLogger(NetworkTopology.class);
 
   private static final char PATH_SEPARATOR = '/';
-  private static final String PATH_SEPARATOR_STR = "/";
+  protected static final String PATH_SEPARATOR_STR = "/";
   private static final String ROOT = "/";
   private static final AtomicReference<Random> RANDOM_REF =
       new AtomicReference<>();

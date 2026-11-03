@@ -29,7 +29,6 @@ import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
@@ -89,6 +88,7 @@ import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LightWeightGSet;
 import org.slf4j.event.Level;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
@@ -136,6 +136,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@Tag("slow")
 public class TestBlockManager {
   private DatanodeStorageInfo[] storages;
   private List<DatanodeDescriptor> nodes;
@@ -1525,7 +1526,7 @@ public class TestBlockManager {
       Thread[] writers = new Thread[numWriters];
       for (int i=0; i < writers.length; i++) {
         final Path p = new Path("/writer"+i);
-        writers[i] = new SubjectInheritingThread(new Runnable() {
+        writers[i] = new Thread(new Runnable() {
           @Override
           public void run() {
             try {

@@ -23,11 +23,10 @@ import org.apache.hadoop.mapred.MapTaskCompletionEventsUpdate;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class EventFetcher<K,V> extends SubjectInheritingThread {
+class EventFetcher<K,V> extends Thread {
   private static final long SLEEP_TIME = 1000;
   private static final int MAX_RETRIES = 10;
   private static final int RETRY_PERIOD = 5000;
@@ -57,7 +56,7 @@ class EventFetcher<K,V> extends SubjectInheritingThread {
   }
 
   @Override
-  public void work() {
+  public void run() {
     int failures = 0;
     LOG.info(reduce + " Thread started: " + getName());
     

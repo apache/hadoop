@@ -641,6 +641,62 @@ void test_delete_user() {
 }
 
 /**
+ * Test that delete_as_user with an empty relative path can remove a top
+ * level directory whose parent is owned by the run-as user and is not
+ * writable by the node manager user, as happens when the private file
+ * cache (usercache/<user>/filecache/<id>) is evicted. Run this test as
+ * root with two different users (test-container-executor <nm-user>
+ * <run-as-user>) to exercise the failure mode.
+ */
+void test_delete_dir_in_user_owned_parent() {
+  printf("\nTesting delete_dir_in_user_owned_parent\n");
+  if (seteuid(0) != 0) {
+    printf("Ignoring test_delete_dir_in_user_owned_parent; not running as root\n");
+    return;
+  }
+  char buffer[100000];
+  // the private filecache is created by the ContainerLocalizer with perms
+  // 0710 and is owned by the run-as user, so the node manager user cannot
+  // write to it.
+  sprintf(buffer, "mkdir -p " TEST_ROOT "/local-1/usercache/%s/filecache/10",
+          yarn_username);
+  run(buffer);
+  sprintf(buffer, "chown -R %s " TEST_ROOT "/local-1/usercache/%s",
+          yarn_username, yarn_username);
+  run(buffer);
+  sprintf(buffer, "chmod 710 " TEST_ROOT "/local-1/usercache/%s/filecache",
+          yarn_username);
+  run(buffer);
+
+  if (set_user(yarn_username) != 0) {
+    printf("FAIL: failed to set user to %s\n", yarn_username);
+    exit(1);
+  }
+  char child[PATH_MAX];
+  sprintf(child, TEST_ROOT "/local-1/usercache/%s/filecache/10",
+          yarn_username);
+  char * dirs[] = {child, 0};
+  int ret = delete_as_user(yarn_username, "", dirs);
+  if (seteuid(0) != 0) {
+    printf("FAIL: could not become root again\n");
+    exit(1);
+  }
+  if (ret != 0) {
+    printf("FAIL: return code from delete_as_user is %d\n", ret);
+    exit(1);
+  }
+  if (access(child, F_OK) == 0) {
+    printf("FAIL: failed to delete the directory - %s\n", child);
+    exit(1);
+  }
+  sprintf(buffer, TEST_ROOT "/local-1/usercache/%s/filecache", yarn_username);
+  if (access(buffer, F_OK) != 0) {
+    printf("FAIL: accidently deleted the parent directory - %s\n", buffer);
+    exit(1);
+  }
+}
+
+/**
  * Read a file and tokenize it on newlines.  Place up to max lines into lines.
  * The max+1st element of lines will be set to NULL.
  *
@@ -1779,6 +1835,7 @@ int main(int argc, char **argv) {
   ret++;
   // test_delete_user must run as root since that's how we use the delete_as_user
   test_delete_user();
+  test_delete_dir_in_user_owned_parent();
   free_executor_configurations();
 
   printf("\nTrying banned default user()\n");

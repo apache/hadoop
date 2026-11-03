@@ -53,6 +53,22 @@ Generic information includes application level data such as
 Generic data is published by the YARN Resource Manager to the timeline store
  and used by its web-UI to display information about completed applications.
 
+#### Custom Resource Allocations
+
+Container history includes custom resource allocations such as `yarn.io/gpu`.
+The `YARN_CONTAINER_ALLOCATED_RESOURCES` field in a container entity's `otherinfo`
+maps each custom resource name to its `value` and `units`. The existing memory
+and vcore fields remain unchanged. The field is absent when no nonzero custom
+resource allocations exist.
+
+To include these allocations in application history reports, configure the
+Application History Server and standalone history clients with the same
+[resource types](./ResourceModel.html) as the ResourceManager, using
+`resource-types.xml`. Values are converted to the configured units when read.
+Unknown resource types are skipped in reports with a debug log; their allocations
+remain available in the raw timeline entity. Older entities without this field
+remain readable, but allocations omitted by older publishers cannot be recovered.
+
 ### <a name="Current_Status"></a>Current Status and Future Plans
 
 

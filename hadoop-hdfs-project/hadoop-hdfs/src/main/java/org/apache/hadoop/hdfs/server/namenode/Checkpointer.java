@@ -128,7 +128,7 @@ class Checkpointer extends Daemon {
   // The main work loop
   //
   @Override
-  public void work() {
+  public void run() {
     // How often to check the size of the edit log (min of checkpointCheckPeriod and checkpointPeriod)
     long periodMSec = checkpointConf.getCheckPeriod() * 1000;
     // How often to checkpoint regardless of number of txns
@@ -143,7 +143,8 @@ class Checkpointer extends Daemon {
       try {
         long now = monotonicNow();
         boolean shouldCheckpoint = false;
-        if(now >= lastCheckpointTime + checkpointPeriodMSec) {
+        if(lastCheckpointTime == 0
+            || now >= lastCheckpointTime + checkpointPeriodMSec) {
           shouldCheckpoint = true;
         } else if(now >= lastEditLogCheckTime + periodMSec) {
           long txns = countUncheckpointedTxns();

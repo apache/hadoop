@@ -57,12 +57,14 @@ import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+@Tag("slow")
 public class TestDiskspaceQuotaUpdate {
   private static final int BLOCKSIZE = 1024;
   private static final short REPLICATION = 4;

@@ -22,8 +22,8 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERV
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
-import org.apache.hadoop.fs.BatchedRemoteIterator;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -1986,7 +1986,23 @@ public class RouterClientProtocol implements ClientProtocol {
             prevId, openFilesTypes, new RemoteParam());
     Map<RemoteLocation, BatchedEntries> results =
         rpcClient.invokeConcurrent(locations, method, true, false, -1, BatchedEntries.class);
+    return mergeAndSortOpenFileListResults(results);
+  }
 
+  /**
+   * Merges the invocation results of listOpenFiles from downstream namespaces.
+   * To ensure no entries are skipped for the next call iteration, trims off all entries with
+   * <pre>
+   *   id > min([max([entry.id for entry in entries]) for entries per namespace])
+   * </pre>
+   * then sorts the filtered results by id, in ascending order.
+   * @param results invocation results of listOpenFiles from downstream namespaces
+   * @return {@link BatchedListEntries} object of merged entries
+   * @throws IOException when one file appears in different namespaces,
+   *                     and the path cannot resolve to a mount point
+   */
+  protected BatchedListEntries<OpenFileEntry> mergeAndSortOpenFileListResults(
+      Map<RemoteLocation, BatchedEntries> results) throws IOException {
     // Get the largest inodeIds for each namespace, and the smallest inodeId of them
     // then ignore all entries above this id to keep a consistent prevId for the next listOpenFiles
     long minOfMax = Long.MAX_VALUE;
@@ -2040,7 +2056,7 @@ public class RouterClientProtocol implements ClientProtocol {
     }
     List<OpenFileEntry> entryList = new ArrayList<>(routerEntries.values());
     entryList.sort(Comparator.comparingLong(OpenFileEntry::getId));
-    return new BatchedRemoteIterator.BatchedListEntries<>(entryList, hasMore);
+    return new BatchedListEntries<>(entryList, hasMore);
   }
 
   @Override

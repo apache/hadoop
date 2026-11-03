@@ -41,7 +41,6 @@ import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.Clock;
@@ -185,9 +184,9 @@ public class TestHistoryFileManager {
     dfsCluster.getFileSystem().setSafeMode(
         SafeModeAction.ENTER);
     assertTrue(dfsCluster.getFileSystem().isInSafeMode());
-    new SubjectInheritingThread() {
+    new Thread() {
       @Override
-      public void work() {
+      public void run() {
         try {
           Thread.sleep(500);
           dfsCluster.getFileSystem().setSafeMode(
@@ -210,9 +209,9 @@ public class TestHistoryFileManager {
     assertTrue(dfsCluster.getFileSystem().isInSafeMode());
     final ControlledClock clock = new ControlledClock();
     clock.setTime(1);
-    new SubjectInheritingThread() {
+    new Thread() {
       @Override
-      public void work() {
+      public void run() {
         try {
           Thread.sleep(500);
           clock.setTime(3000);

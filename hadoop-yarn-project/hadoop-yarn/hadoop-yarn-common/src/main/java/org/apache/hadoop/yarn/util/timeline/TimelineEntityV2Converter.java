@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -60,8 +59,6 @@ public final class TimelineEntityV2Converter {
 
   public static ContainerReport convertToContainerReport(
       TimelineEntity entity, String serverAddress, String user) {
-    int allocatedMem = 0;
-    int allocatedVcore = 0;
     String allocatedHost = null;
     int allocatedPort = -1;
     int allocatedPriority = 0;
@@ -75,16 +72,6 @@ public final class TimelineEntityV2Converter {
 
     Map<String, Object> entityInfo = entity.getInfo();
     if (entityInfo != null) {
-      if (entityInfo
-          .containsKey(ContainerMetricsConstants.ALLOCATED_MEMORY_INFO)) {
-        allocatedMem = (Integer) entityInfo.get(
-            ContainerMetricsConstants.ALLOCATED_MEMORY_INFO);
-      }
-      if (entityInfo
-          .containsKey(ContainerMetricsConstants.ALLOCATED_VCORE_INFO)) {
-        allocatedVcore = (Integer) entityInfo.get(
-            ContainerMetricsConstants.ALLOCATED_VCORE_INFO);
-      }
       if (entityInfo
           .containsKey(ContainerMetricsConstants.ALLOCATED_HOST_INFO)) {
         allocatedHost =
@@ -154,7 +141,7 @@ public final class TimelineEntityV2Converter {
     }
     ContainerReport container = ContainerReport.newInstance(
         ContainerId.fromString(entity.getId()),
-        Resource.newInstance(allocatedMem, allocatedVcore), allocatedNode,
+        TimelineUtils.getContainerResource(entityInfo), allocatedNode,
         Priority.newInstance(allocatedPriority),
         createdTime, finishedTime, diagnosticsInfo, logUrl, exitStatus, state,
         nodeHttpAddress);

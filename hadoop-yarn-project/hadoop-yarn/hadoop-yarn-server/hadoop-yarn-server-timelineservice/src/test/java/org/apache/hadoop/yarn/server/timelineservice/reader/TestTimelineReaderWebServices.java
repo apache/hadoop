@@ -31,6 +31,7 @@ import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.junit.jupiter.api.AfterAll;
@@ -276,6 +277,27 @@ public class TestTimelineReaderWebServices {
       URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/app1/entities/app/id_10");
       verifyHttpResponse(client, uri, Response.Status.NOT_FOUND);
+    } finally {
+      client.close();
+    }
+  }
+
+  /**
+   * The JSON body is written by Jackson alone: Jettison, if registered as
+   * well, won at some server starts and wrapped it in "RemoteException".
+   */
+  @Test
+  void testErrorBodyIsWrittenByJackson() throws Exception {
+    Client client = createClient();
+    try {
+      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+          "timeline/clusters/cluster1/apps/app1/entities/app/id_10");
+      Response resp = client.target(uri).request(MediaType.APPLICATION_JSON)
+          .get(Response.class);
+      assertEquals(Response.Status.NOT_FOUND.getStatusCode(),
+          resp.getStatus());
+      String body = resp.readEntity(String.class);
+      assertTrue(new ObjectMapper().readTree(body).has("exception"), body);
     } finally {
       client.close();
     }

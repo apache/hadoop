@@ -19,6 +19,7 @@ package org.apache.hadoop.io.file.tfile;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
@@ -274,8 +275,36 @@ public final class Utils {
    * @throws IOException raised on errors performing I/O.
    */
   public static String readString(DataInput in) throws IOException {
+    return readString(in, -1);
+  }
+
+  /**
+   * Read a String as a VInt n, followed by n Bytes in Text format, rejecting
+   * lengths that are -2 or less. or larger than the supplied bound before any
+   * buffer is allocated.
+   * A length of -1 means "no data" and mapped to a null string.
+   *
+   * @param in The input stream.
+   * @param maxLength The largest permitted encoded length in bytes, negative for no limit.
+   * @return The string or null.
+   * @throws EOFException input data length exceeds {@code maxLength}.
+   * @throws IOException IO failure.
+   * @throws NegativeArraySizeException string length was minus two or less.
+   */
+  public static String readString(DataInput in, int maxLength)
+      throws IOException {
     int length = readVInt(in);
-    if (length == -1) return null;
+    if (length == -1) {
+      return null;
+    }
+    if (length < 0) {
+      throw new NegativeArraySizeException("Corrupted data: negative string length "
+          + length);
+    }
+    if (maxLength >= 0 && length > maxLength) {
+      throw new EOFException("String length " + length
+          + " exceeds the limit of " + maxLength);
+    }
     byte[] buffer = new byte[length];
     in.readFully(buffer);
     return Text.decode(buffer);

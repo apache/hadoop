@@ -30,8 +30,10 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+@Tag("slow")
 public class TestHDFSCLI extends CLITestHelperDFS {
 
   protected MiniDFSCluster dfsCluster = null;
@@ -47,6 +49,8 @@ public class TestHDFSCLI extends CLITestHelperDFS {
     
     // Many of the tests expect a replication value of 1 in the output
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
+    // Disable caching so that the configuration can be overridden
+    conf.setBoolean("fs.hdfs.impl.disable.cache", true);
 
     // Build racks and hosts configuration to test dfsAdmin -printTopology
     String [] racks =  {"/rack1", "/rack1", "/rack2", "/rack2",

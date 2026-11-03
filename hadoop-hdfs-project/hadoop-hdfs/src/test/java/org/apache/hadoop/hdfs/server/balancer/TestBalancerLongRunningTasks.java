@@ -51,6 +51,7 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -84,6 +85,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Some long running Balancer tasks.
  */
+@Tag("slow")
 public class TestBalancerLongRunningTasks {
 
   private static final Logger LOG =
@@ -104,9 +106,13 @@ public class TestBalancerLongRunningTasks {
 
   @AfterEach
   public void shutdown() throws Exception {
-    if (cluster != null) {
-      cluster.shutdown();
+    try {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    } finally {
       cluster = null;
+      DefaultMetricsSystem.shutdown();
     }
   }
 
@@ -820,18 +826,22 @@ public class TestBalancerLongRunningTasks {
       assertEquals(1, namenodes.size());
 
       // Throw an error when we double-initialize BalancerMetrics
+      boolean oldValue = DefaultMetricsSystem.inMiniClusterMode();
       DefaultMetricsSystem.setMiniClusterMode(false);
-      MetricsSystem instance = DefaultMetricsSystem.instance();
-      // Avoid the impact of cluster metric, remove cluster JvmMetrics
-      instance.unregisterSource("JvmMetrics");
+      try {
+        MetricsSystem instance = DefaultMetricsSystem.instance();
+        // Avoid the impact of cluster metric, remove cluster JvmMetrics
+        instance.unregisterSource("JvmMetrics");
 
-      final BalancerParameters balancerParameters = Balancer.Cli.parse(new String[] {
-          "-policy", BalancingPolicy.Node.INSTANCE.getName(),
-          "-threshold", "10",
-      });
-      int r = Balancer.run(namenodes, nsIds, balancerParameters, conf);
-      assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
-      DefaultMetricsSystem.setMiniClusterMode(true);
+        final BalancerParameters balancerParameters = Balancer.Cli.parse(new String[] {
+            "-policy", BalancingPolicy.Node.INSTANCE.getName(),
+            "-threshold", "10",
+        });
+        int r = Balancer.run(namenodes, nsIds, balancerParameters, conf);
+        assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
+      } finally {
+        DefaultMetricsSystem.setMiniClusterMode(oldValue);
+      }
     }
   }
 

@@ -1218,6 +1218,16 @@ public class AzureBlobFileSystem extends FileSystem
       throw new IllegalArgumentException("The permission can't be null");
     }
 
+    // RBAC-only short-circuit: when fs.azure.rbac.only=true on an HNS-enabled
+    // account, skip the backend SetAccessControl call. Framework-generated
+    // setPermission() invocations (Spark/Hadoop commit protocols, distcp, etc.)
+    // succeed as no-ops so RBAC-only deployments are not blocked by lack of
+    // ACL-management permissions. Explicit ACL APIs are unaffected.
+    if (getAbfsStore().getAbfsConfiguration().isRbacOnlyMode()) {
+      LOG.debug("RBAC-only mode enabled; skipping setPermission for path: {}", path);
+      return;
+    }
+
     Path qualifiedPath = makeQualified(path);
 
     try {

@@ -97,7 +97,7 @@ public class TestHAConfiguration {
     // 0.0.0.0, it should substitute the address from the RPC configuration
     // above.
     StandbyCheckpointer checkpointer = new StandbyCheckpointer(conf, fsn);
-    assertAddressMatches("1.2.3.2", checkpointer.getActiveNNAddresses().get(0));
+    assertAddressMatches("1.2.3.2", checkpointer.getRemoteNNAddresses().get(0));
 
     //test when there are three NNs
     // Use non-local addresses to avoid host address matching
@@ -107,12 +107,12 @@ public class TestHAConfiguration {
     NameNode.initializeGenericKeys(conf, "ns1", "nn1");
 
     checkpointer = new StandbyCheckpointer(conf, fsn);
-    assertEquals(2, checkpointer.getActiveNNAddresses().size(),
-        "Got an unexpected number of possible active NNs");
+    assertEquals(2, checkpointer.getRemoteNNAddresses().size(),
+        "Got an unexpected number of possible remote NNs");
     assertEquals(new URL("http", "1.2.3.2", DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT, ""),
-        checkpointer.getActiveNNAddresses().get(0));
-    assertAddressMatches("1.2.3.2", checkpointer.getActiveNNAddresses().get(0));
-    assertAddressMatches("1.2.3.3", checkpointer.getActiveNNAddresses().get(1));
+        checkpointer.getRemoteNNAddresses().get(0));
+    assertAddressMatches("1.2.3.2", checkpointer.getRemoteNNAddresses().get(0));
+    assertAddressMatches("1.2.3.3", checkpointer.getRemoteNNAddresses().get(1));
   }
 
   private void assertAddressMatches(String address, URL url) throws MalformedURLException {

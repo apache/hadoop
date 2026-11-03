@@ -1126,11 +1126,15 @@ public class BlockPoolSlice {
   }
 
   /**
-   * Return the size of fork pool used for adding replica in map.
+   * Return the configured parallelism of the fork pool used for adding
+   * replica in map.  Deliberately not {@link ForkJoinPool#getPoolSize()}:
+   * that reports the worker threads currently started, which the pool
+   * grows lazily and shrinks again when idle, so asserting on it races
+   * against the pool's own thread management.
    */
   @VisibleForTesting
   public static int getAddReplicaForkPoolSize() {
-    return addReplicaThreadPool.getPoolSize();
+    return addReplicaThreadPool.getParallelism();
   }
 
   @VisibleForTesting

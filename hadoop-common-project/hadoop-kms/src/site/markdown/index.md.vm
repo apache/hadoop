@@ -709,6 +709,11 @@ on the same port.
       </description>
     </property>
 
+An IPv6 literal address must be enclosed in square brackets, for example
+`kms://https@[2001:db8::1]:9600/kms`. When more than one KMS instance is
+specified, the brackets must be percent-encoded, for example
+`kms://https@%5B2001:db8::1%5D;%5B2001:db8::2%5D:9600/kms`.
+
 If a request to a KMS instance fails, clients retry with the next instance. The
 request is returned as failure only if all instances fail.
 

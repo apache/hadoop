@@ -222,34 +222,38 @@ public class TestProtectedDirectories {
     MiniDFSCluster cluster = setupTestCase(conf, protectedPaths,
         unprotectedPaths);
 
-    SortedSet<String> protectedPathsNew = new TreeSet<>(
-        FSDirectory.normalizePaths(Arrays.asList("/aa", "/bb", "/cc"),
-            FS_PROTECTED_DIRECTORIES));
+    try {
+      SortedSet<String> protectedPathsNew = new TreeSet<>(
+          FSDirectory.normalizePaths(Arrays.asList("/aa", "/bb", "/cc"),
+              FS_PROTECTED_DIRECTORIES));
 
-    String protectedPathsStrNew = "/aa,/bb,/cc";
+      String protectedPathsStrNew = "/aa,/bb,/cc";
 
-    NameNode nn = cluster.getNameNode();
+      NameNode nn = cluster.getNameNode();
 
-    // change properties
-    nn.reconfigureProperty(FS_PROTECTED_DIRECTORIES, protectedPathsStrNew);
+      // change properties
+      nn.reconfigureProperty(FS_PROTECTED_DIRECTORIES, protectedPathsStrNew);
 
-    FSDirectory fsDirectory = nn.getNamesystem().getFSDirectory();
-    // verify change
-    assertEquals(protectedPathsNew, fsDirectory.getProtectedDirectories(),
-        String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES));
+      FSDirectory fsDirectory = nn.getNamesystem().getFSDirectory();
+      // verify change
+      assertEquals(protectedPathsNew, fsDirectory.getProtectedDirectories(),
+          String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES));
 
-    assertEquals(protectedPathsStrNew, nn.getConf().get(FS_PROTECTED_DIRECTORIES),
-        String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES));
+      assertEquals(protectedPathsStrNew, nn.getConf().get(FS_PROTECTED_DIRECTORIES),
+          String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES));
 
-    // revert to default
-    nn.reconfigureProperty(FS_PROTECTED_DIRECTORIES, null);
+      // revert to default
+      nn.reconfigureProperty(FS_PROTECTED_DIRECTORIES, null);
 
-    // verify default
-    assertEquals(new TreeSet<String>(), fsDirectory.getProtectedDirectories(),
-        String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES));
+      // verify default
+      assertEquals(new TreeSet<String>(), fsDirectory.getProtectedDirectories(),
+          String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES));
 
-    assertEquals(null, nn.getConf().get(FS_PROTECTED_DIRECTORIES),
-        String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES));
+      assertEquals(null, nn.getConf().get(FS_PROTECTED_DIRECTORIES),
+          String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES));
+    } finally {
+      cluster.shutdown();
+    }
   }
 
   @Test

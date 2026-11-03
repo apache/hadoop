@@ -57,7 +57,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.hadoop.util.VersionInfo;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -1141,7 +1140,7 @@ public class ResourceManager extends CompositeService
     SchedulerEventDispatcher(String name, int samplesPerMin) {
       super(scheduler, name);
       this.eventProcessorMonitor =
-          new SubjectInheritingThread(new EventProcessorMonitor(getEventProcessorId(),
+          new Thread(new EventProcessorMonitor(getEventProcessorId(),
               samplesPerMin));
       this.eventProcessorMonitor
           .setName("ResourceManager Event Processor Monitor");
@@ -1230,7 +1229,7 @@ public class ResourceManager extends CompositeService
       return;
     }
     Thread standByTransitionThread =
-        new SubjectInheritingThread(activeServices.standByTransitionRunnable);
+        new Thread(activeServices.standByTransitionRunnable);
     standByTransitionThread.setName("StandByTransitionThread");
     standByTransitionThread.start();
   }

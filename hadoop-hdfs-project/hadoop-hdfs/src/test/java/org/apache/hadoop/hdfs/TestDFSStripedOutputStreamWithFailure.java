@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -41,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Test striped file write operation with data node failures with fixed
  * parameter test cases.
  */
+@Tag("slow")
 public class TestDFSStripedOutputStreamWithFailure extends
     TestDFSStripedOutputStreamWithFailureBase{
   public static final Logger LOG = LoggerFactory.getLogger(

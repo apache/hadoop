@@ -45,7 +45,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -416,7 +415,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       final AtomicBoolean assertionFailedInThread = new AtomicBoolean(false);
       cluster.shutdownNameNodes();
 
-      Thread clientThread = new SubjectInheritingThread(() -> {
+      Thread clientThread = new Thread(() -> {
         try {
           store.storeApplicationStateInternal(
               ApplicationId.newInstance(100L, 1),

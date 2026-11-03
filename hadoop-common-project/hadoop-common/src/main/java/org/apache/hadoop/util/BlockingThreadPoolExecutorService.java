@@ -29,7 +29,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 /**
  * This ExecutorService blocks the submission of new tasks when its queue is
@@ -72,7 +71,7 @@ public final class BlockingThreadPoolExecutorService
       public Thread newThread(Runnable r) {
         final String name =
             prefix + "-pool" + poolNum + "-t" + threadNumber.getAndIncrement();
-        return new SubjectInheritingThread(group, r, name);
+        return new Thread(group, r, name);
       }
     };
   }

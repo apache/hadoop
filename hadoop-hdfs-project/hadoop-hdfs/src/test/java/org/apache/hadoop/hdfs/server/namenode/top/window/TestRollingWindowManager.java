@@ -21,6 +21,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -33,6 +39,7 @@ import static org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowMan
 import static org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.TopWindow;
 import static org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.User;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestRollingWindowManager {
@@ -216,6 +223,69 @@ public class TestRollingWindowManager {
     // ensure all the top users for each op are present in the total op.
     for (int i = 1; i < numOps; i++) {
       assertTrue(topUsers.containsAll(window.getOps().get(i).getTopUsers()));
+    }
+  }
+
+  @Test
+  public void testConcurrentRecordDuringSnapshotCleanup() throws Exception {
+    String metric = "op";
+    String user = users[0];
+    BlockingRollingWindow rollingWindow = new BlockingRollingWindow(
+        WINDOW_LEN_MS, BUCKET_CNT);
+    manager.setRollingWindowForTesting(metric, user, rollingWindow);
+
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      Future<TopWindow> snapshot = executor.submit(
+          () -> manager.snapshot(WINDOW_LEN_MS));
+      assertTrue(rollingWindow.awaitGetSumStarted(5, TimeUnit.SECONDS));
+
+      Future<?> record = executor.submit(
+          () -> manager.recordMetric(WINDOW_LEN_MS, metric, user, 1));
+      assertThrows(TimeoutException.class,
+          () -> record.get(1, TimeUnit.SECONDS));
+
+      rollingWindow.allowGetSum();
+      snapshot.get(5, TimeUnit.SECONDS);
+      record.get(5, TimeUnit.SECONDS);
+
+      TopWindow topWindow = manager.snapshot(WINDOW_LEN_MS);
+      assertEquals(2, topWindow.getOps().size());
+      Op op = topWindow.getOps().get(1);
+      assertEquals(metric, op.getOpType());
+      assertEquals(1, op.getTotalCount());
+    } finally {
+      rollingWindow.allowGetSum();
+      executor.shutdownNow();
+    }
+  }
+
+  private static class BlockingRollingWindow extends RollingWindow {
+    private final CountDownLatch getSumStarted = new CountDownLatch(1);
+    private final CountDownLatch allowGetSum = new CountDownLatch(1);
+
+    BlockingRollingWindow(int windowLenMs, int bucketsPerWindow) {
+      super(windowLenMs, bucketsPerWindow);
+    }
+
+    @Override
+    public long getSum(long time) {
+      getSumStarted.countDown();
+      try {
+        allowGetSum.await();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      return 0;
+    }
+
+    boolean awaitGetSumStarted(long timeout, TimeUnit unit)
+        throws InterruptedException {
+      return getSumStarted.await(timeout, unit);
+    }
+
+    void allowGetSum() {
+      allowGetSum.countDown();
     }
   }
 

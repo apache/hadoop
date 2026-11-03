@@ -45,7 +45,6 @@ import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +52,7 @@ import org.slf4j.LoggerFactory;
  * VolumeScanner scans a single volume.  Each VolumeScanner has its own thread.
  * <p>They are all managed by the DataNode's BlockScanner.
  */
-public class VolumeScanner extends SubjectInheritingThread {
+public class VolumeScanner extends Thread {
   public static final Logger LOG =
       LoggerFactory.getLogger(VolumeScanner.class);
 
@@ -634,7 +633,7 @@ public class VolumeScanner extends SubjectInheritingThread {
   }
 
   @Override
-  public void work() {
+  public void run() {
     // Record the minute on which the scanner started.
     this.startMinute =
         TimeUnit.MINUTES.convert(Time.monotonicNow(), TimeUnit.MILLISECONDS);

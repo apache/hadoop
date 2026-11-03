@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.FakeTimer;
 import org.slf4j.event.Level;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -69,6 +70,7 @@ import org.mockito.Mockito;
 
 @MethodSource("data")
 @ParameterizedClass
+@Tag("slow")
 public class TestEditLogTailer {
   static {
     GenericTestUtils.setLogLevel(FSEditLog.LOG, Level.DEBUG);

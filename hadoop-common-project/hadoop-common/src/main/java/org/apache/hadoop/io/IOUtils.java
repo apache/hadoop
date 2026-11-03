@@ -20,6 +20,7 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 import java.lang.reflect.Constructor;
+import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -304,6 +305,66 @@ public class IOUtils {
         LOG.debug("Ignoring exception while closing socket", ignored);
       }
     }
+  }
+
+  /**
+   * Upper bound on how much of a response body {@link #drainAndClose} will
+   * read in order to keep a connection reusable. A body larger than this is
+   * not worth holding the connection for.
+   */
+  private static final long MAX_DRAIN_BYTES = 8L * 1024 * 1024;
+
+  /**
+   * Fully consumes a stream before closing it, so that the JDK is able to
+   * return the underlying connection to its keep-alive cache.
+   * Reads block until the remaining bytes arrive, bounded by the read timeout
+   * configured on the connection.
+   *
+   * @param is the stream to drain and close; may be null.
+   */
+  public static void drainAndClose(InputStream is) {
+    if (is == null) {
+      return;
+    }
+    try {
+      final byte[] buf = new byte[4096];
+      long drained = 0;
+      while (drained < MAX_DRAIN_BYTES) {
+        final int n = is.read(buf);
+        if (n < 0) {
+          break;
+        }
+        drained += n;
+      }
+    } catch (IOException ex) {
+      LOG.debug("Failed to drain stream, connection will not be reused.", ex);
+    } finally {
+      closeStream(is);
+    }
+  }
+
+  /**
+   * Drains and closes the response body of a connection whose payload the
+   * caller does not need, so that the connection stays reusable. The error
+   * stream is preferred because on a 4xx/5xx response that is where the body
+   * is exposed and {@link HttpURLConnection#getInputStream()} throws.
+   *
+   * @param conn the connection whose response body should be discarded.
+   */
+  public static void drainAndClose(HttpURLConnection conn) {
+    if (conn == null) {
+      return;
+    }
+    InputStream is = conn.getErrorStream();
+    if (is == null) {
+      try {
+        is = conn.getInputStream();
+      } catch (IOException ex) {
+        LOG.debug("Failed to open response body to drain it.", ex);
+        return;
+      }
+    }
+    drainAndClose(is);
   }
   
   /**

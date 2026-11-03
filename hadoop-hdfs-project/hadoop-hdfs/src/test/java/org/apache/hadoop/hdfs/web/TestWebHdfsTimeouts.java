@@ -51,7 +51,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Timeout;
 import org.opentest4j.TestAbortedException;
@@ -326,9 +325,9 @@ public class TestWebHdfsTimeouts {
   private void startSingleTemporaryRedirectResponseThread(
       final boolean consumeConnectionBacklog) {
     fs.connectionFactory = URLConnectionFactory.DEFAULT_SYSTEM_CONNECTION_FACTORY;
-    serverThread = new SubjectInheritingThread() {
+    serverThread = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         Socket clientSocket = null;
         OutputStream out = null;
         InputStream in = null;

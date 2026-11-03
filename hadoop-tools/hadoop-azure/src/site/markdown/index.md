@@ -1102,6 +1102,36 @@ Config `fs.azure.account.hns.enabled` provides an option to specify whether
 Config `fs.azure.enable.check.access` needs to be set true to enable
  the AzureBlobFileSystem.access().
 
+### <a name="rbaconlymode"></a> RBAC-Only Mode
+
+Config `fs.azure.rbac.only`, when set to `true`, treats
+`AzureBlobFileSystem#setPermission()` as a **pure no-op** on HNS-enabled
+accounts — no backend `SetAccessControl` request is issued, regardless of
+whether the path exists. Default: `false`.
+
+This unblocks Spark/Hadoop workloads running under Azure RBAC roles like
+`Storage Blob Data Contributor`, which grant full data-plane access but
+lack ACL-management permissions and would otherwise fail
+framework-generated `setPermission()` calls with
+`AuthorizationPermissionMismatch` (HTTP 403) on HNS accounts.
+
+**Not gated by this flag** (continue to require ACL-management permissions):
+`setAcl`, `modifyAclEntries`, `removeAclEntries`, `removeDefaultAcl`,
+`removeAcl`. The flag is a workload-compatibility switch, not a permission
+bypass. `setPermission(path, null)` still throws `IllegalArgumentException`.
+On non-HNS accounts the flag has no effect.
+
+```xml
+<property>
+  <name>fs.azure.rbac.only</name>
+  <value>true</value>
+  <description>
+    Treats setPermission() as a no-op on HNS-enabled accounts for
+    RBAC-only deployments. Explicit ACL APIs are unaffected. Default: false.
+  </description>
+</property>
+```
+
 ### <a name="idempotency"></a> Operation Idempotency
 
 Requests failing due to server timeouts and network failures will be retried.

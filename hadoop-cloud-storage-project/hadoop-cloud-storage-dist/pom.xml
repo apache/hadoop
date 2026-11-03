@@ -56,6 +56,7 @@
     hadoop-aliyun-package
     hadoop-aws-package
     hadoop-azure-datalake-package
+    hadoop-bos-package
     hadoop-cos-package
     hadoop-gcp-package
     hadoop-huaweicloud-package
@@ -67,6 +68,7 @@ mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true \
  -Dhadoop-aliyun-package \
  -Dhadoop-aws-package \
  -Dhadoop-azure-datalake-package \
+ -Dhadoop-bos-package \
  -Dhadoop-cos-package \
  -Dhadoop-gcp-package \
  -Dhadoop-huaweicloud-package \
@@ -122,6 +124,17 @@ mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true \
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-cos</artifactId>
+      <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-bos</artifactId>
       <scope>compile</scope>
       <exclusions>
         <exclusion>
@@ -279,6 +292,21 @@ mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true \
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-cos</artifactId>
+          <scope>compile</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <!-- Pull in Baidu BOS -->
+    <profile>
+      <id>hadoop-bos-package</id>
+      <activation>
+        <property><name>hadoop-bos-package</name></property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-bos</artifactId>
           <scope>compile</scope>
         </dependency>
       </dependencies>

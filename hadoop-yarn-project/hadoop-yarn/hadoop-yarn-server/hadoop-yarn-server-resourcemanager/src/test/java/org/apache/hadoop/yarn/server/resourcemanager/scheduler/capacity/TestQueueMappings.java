@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -115,6 +116,15 @@ public class TestQueueMappings {
   }
 
   @Test
+  public void testQueueMappingsSeparatedByNewlines() throws IOException {
+    conf.set(CapacitySchedulerConfiguration.QUEUE_MAPPING,
+        "u:alice:" + Q1 + "\nu:bob:" + Q2 + ",\ng:devs:" + Q2);
+    cs.reinitialize(conf, null);
+
+    assertEquals(3, cs.getConfiguration().getMappingRules().size());
+  }
+
+  @Test
   public void testQueueMappingPathParsing() {
     QueueMapping leafOnly = QueueMapping.QueueMappingBuilder.create()
         .parsePathString("leaf")
@@ -145,8 +155,10 @@ public class TestQueueMappings {
   @Timeout(value = 60)
   public void testQueueMappingParsingInvalidCases() throws Exception {
     // configuration parsing tests - negative test cases
-    checkInvalidQMapping(conf, cs, "x:a:b", "invalid specifier");
-    checkInvalidQMapping(conf, cs, "u:a", "no queue specified");
+    IOException e = checkInvalidQMapping(conf, cs, "x:a:b", "invalid specifier");
+    assertEquals("Failed to re-init queues : unknown mapping prefix x", e.getMessage());
+    e = checkInvalidQMapping(conf, cs, "u:a", "no queue specified");
+    assertEquals("Failed to re-init queues : Illegal queue mapping u:a", e.getMessage());
     checkInvalidQMapping(conf, cs, "g:a", "no queue specified");
     checkInvalidQMapping(conf, cs, "u:a:b,g:a",
         "multiple mappings with invalid mapping");
@@ -156,18 +168,12 @@ public class TestQueueMappings {
     checkInvalidQMapping(conf, cs, "u:a:", "empty source missing q");
   }
 
-  private void checkInvalidQMapping(YarnConfiguration conf,
+  private IOException checkInvalidQMapping(YarnConfiguration conf,
       CapacityScheduler cs,
       String mapping, String reason)
       throws IOException {
-    boolean fail = false;
-    try {
-      conf.set(CapacitySchedulerConfiguration.QUEUE_MAPPING, mapping);
-      cs.reinitialize(conf, null);
-    } catch (IOException ex) {
-      fail = true;
-    }
-    assertTrue(fail,
+    conf.set(CapacitySchedulerConfiguration.QUEUE_MAPPING, mapping);
+    return assertThrows(IOException.class, () -> cs.reinitialize(conf, null),
         "invalid mapping did not throw exception for " + reason);
   }
 }

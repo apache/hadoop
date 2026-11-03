@@ -40,7 +40,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -243,9 +242,9 @@ public class UnmanagedAMLauncher {
     
     // read error and input streams as this would free up the buffers
     // free the error stream buffer
-    Thread errThread = new SubjectInheritingThread() {
+    Thread errThread = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         try {
           String line = errReader.readLine();
           while((line != null) && !isInterrupted()) {
@@ -257,9 +256,9 @@ public class UnmanagedAMLauncher {
         }
       }
     };
-    Thread outThread = new SubjectInheritingThread() {
+    Thread outThread = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         try {
           String line = inReader.readLine();
           while((line != null) && !isInterrupted()) {

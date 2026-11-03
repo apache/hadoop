@@ -76,7 +76,6 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -142,6 +141,7 @@ class BPServiceActor implements Runnable {
     this.dnConf = dn.getDnConf();
     this.ibrManager = new IncrementalBlockReportManager(
         dnConf.ibrInterval,
+        dnConf.ibrMaxPendingBlocks,
         dn.getMetrics());
     prevBlockReportId = ThreadLocalRandom.current().nextLong();
     fullBlockReportLeaseId = 0;
@@ -601,7 +601,7 @@ class BPServiceActor implements Runnable {
       //Thread is started already
       return;
     }
-    bpThread = new SubjectInheritingThread(this);
+    bpThread = new Thread(this);
     bpThread.setDaemon(true); // needed for JUnit testing
 
     if (lifelineSender != null) {
@@ -761,6 +761,14 @@ class BPServiceActor implements Runnable {
             (ibrManager.sendImmediately()|| sendHeartbeat)) {
           ibrManager.sendIBRs(bpNamenode, bpRegistration,
               bpos.getBlockPoolId(), getRpcMetricSuffix());
+        }
+
+        // Guard against unbounded IBR growth when this NameNode is
+        // unreachable: if the queue was cleared to prevent OOM, schedule a
+        // full block report so the NameNode gets a consistent view once it
+        // becomes reachable again.
+        if (ibrManager.clearIBRsIfNeeded()) {
+          scheduler.forceFullBlockReportNow();
         }
 
         List<DatanodeCommand> cmds = null;
@@ -1091,7 +1099,7 @@ class BPServiceActor implements Runnable {
     }
 
     public void start() {
-      lifelineThread = new SubjectInheritingThread(this,
+      lifelineThread = new Thread(this,
           formatThreadName("lifeline", lifelineNnAddr));
       lifelineThread.setDaemon(true);
       lifelineThread.setUncaughtExceptionHandler(
@@ -1397,7 +1405,7 @@ class BPServiceActor implements Runnable {
   /**
    * CommandProcessingThread that process commands asynchronously.
    */
-  class CommandProcessingThread extends SubjectInheritingThread {
+  class CommandProcessingThread extends Thread {
     private final BPServiceActor actor;
     private final BlockingQueue<Runnable> queue;
 
@@ -1409,7 +1417,7 @@ class BPServiceActor implements Runnable {
     }
 
     @Override
-    public void work() {
+    public void run() {
       try {
         processQueue();
       } catch (Throwable t) {

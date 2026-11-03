@@ -100,9 +100,8 @@ function warnIfLowMemory {
 Your system is running on very little memory.
 This means it may work but it wil most likely be slower than needed.
 
-If you are running this via boot2docker you can simply increase
-the available memory to at least ${MINIMAL_MEMORY}KiB
-(you have ${INSTALLED_MEMORY}KiB )
+Suggest increasing the available memory to at least ${MINIMAL_MEMORY}KiB
+(you have ${INSTALLED_MEMORY}KiB)
 
 End-of-message
     fi

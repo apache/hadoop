@@ -469,6 +469,24 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_ENABLE_PAGINATED_DELETE = "fs.azure.enable.paginated.delete";
 
+  /**
+   * Specify whether Photon (Apache Arrow based ListBlob) responses should be
+   * requested for listing operations on the Blob endpoint. When enabled, ABFS
+   * requests Arrow responses (with XML fallback) and parses whichever format the
+   * service returns based on the response Content-Type: {@value}.
+   */
+  public static final String FS_AZURE_ENABLE_PHOTON = "fs.azure.photon.enabled";
+
+  /**
+   * Maximum off-heap (direct) memory in bytes that the Apache Arrow allocator
+   * may use while parsing a single Photon (Arrow) ListBlobs response. Bounds the
+   * memory a large or malformed Arrow response can consume so that failures are
+   * surfaced as a driver exception instead of a JVM direct-memory error:
+   * {@value}.
+   */
+  public static final String FS_AZURE_PHOTON_ARROW_MEMORY_LIMIT =
+      "fs.azure.photon.arrow.memory.limit";
+
   /** Add extra layer of verification of the integrity of the request content during transport: {@value}. */
   public static final String FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION = "fs.azure.enable.checksum.validation";
 
@@ -628,10 +646,44 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_TAIL_LATENCY_MAX_RETRY_COUNT = "fs.azure.tail.latency.max.retry.count";
 
   /**
+   * Configuration key to control the vectored read strategy used by ABFS: {@value}
+   */
+  public static final String FS_AZURE_VECTORED_READ_STRATEGY = "fs.azure.vectored.read.strategy";
+
+  /**
+   * Configuration key that defines the minimum gap between adjacent read ranges
+   * for merging ranges during vectored reads in ABFS: {@value}.
+   */
+  public static final String FS_AZURE_MIN_SEEK_FOR_VECTORED_READS =
+      "fs.azure.min.seek.for.vectored.reads";
+
+  /**
+   * Configuration key that defines the maximum gap between adjacent read ranges
+   * for merging ranges during vectored reads in ABFS: {@value}.
+   */
+  public static final String FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS =
+      "fs.azure.vectored.read.max.merged.size";
+
+  /**
+   * Configuration key that defines the maximum gap between adjacent read ranges
+   * for merging ranges during vectored reads in ABFS throughput optimized: {@value}.
+   */
+  public static final String FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS_THROUGHPUT =
+      "fs.azure.vectored.read.max.merged.size.throughput";
+
+  /**
    * If true, restricts GPS (getPathStatus) calls on openFileforRead
    * Default: false
    */
   public static final String FS_AZURE_RESTRICT_GPS_ON_OPENFILE = "fs.azure.restrict.gps.on.openfile";
+
+  /**
+   * If true, skips the backend SetAccessControl call in setPermission()
+   * on HNS-enabled accounts. Intended for RBAC-only deployments.
+   * Explicit ACL APIs (setAcl, modifyAclEntries, etc.) are unaffected.
+   * Default: false
+   */
+  public static final String FS_AZURE_RBAC_ONLY_MODE = "fs.azure.rbac.only";
 
   private ConfigurationKeys() {}
 }

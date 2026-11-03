@@ -118,9 +118,16 @@ public class TestViewFsFileStatusHdfs {
 
   @AfterAll
   public static void cleanup() throws IOException {
-    fHdfs.delete(new Path(testfilename), true);
-    fHdfs.delete(new Path(someFile), true);
-    fHdfs.delete(new Path(someFile + "other"), true);
+    try {
+      fHdfs.delete(new Path(testfilename), true);
+      fHdfs.delete(new Path(someFile), true);
+      fHdfs.delete(new Path(someFile + "other"), true);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+        cluster = null;
+      }
+    }
   }
 
 }

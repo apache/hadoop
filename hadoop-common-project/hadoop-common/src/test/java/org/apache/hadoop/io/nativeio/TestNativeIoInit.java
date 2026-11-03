@@ -22,7 +22,6 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -45,15 +44,15 @@ public class TestNativeIoInit {
   @Test
   @Timeout(value = 10)
   public void testDeadlockLinux() throws Exception {
-    Thread one = new SubjectInheritingThread() {
+    Thread one = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         NativeIO.isAvailable();
       }
     };
-    Thread two = new SubjectInheritingThread() {
+    Thread two = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         NativeIO.POSIX.isAvailable();
       }
     };
@@ -67,15 +66,15 @@ public class TestNativeIoInit {
   @Timeout(value = 10)
   public void testDeadlockWindows() throws Exception {
     assumeTrue(Path.WINDOWS, "Expected windows");
-    SubjectInheritingThread one = new SubjectInheritingThread() {
+    Thread one = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         NativeIO.isAvailable();
       }
     };
-    SubjectInheritingThread two = new SubjectInheritingThread() {
+    Thread two = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         try {
           NativeIO.Windows.extendWorkingSetSize(100);
         } catch (IOException e) {

@@ -23,15 +23,13 @@ import java.lang.management.ManagementFactory;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
-
 /**
  * This class monitors the percentage of time the JVM is paused in GC within
  * the specified observation window, say 1 minute. The user can provide a
  * hook which will be called whenever this percentage exceeds the specified
  * threshold.
  */
-public class GcTimeMonitor extends SubjectInheritingThread {
+public class GcTimeMonitor extends Thread {
 
   private final long maxGcTimePercentage;
   private final long observationWindowMs, sleepIntervalMs;
@@ -153,7 +151,7 @@ public class GcTimeMonitor extends SubjectInheritingThread {
   }
 
   @Override
-  public void work() {
+  public void run() {
     startTime = System.currentTimeMillis();
     curData.timestamp = startTime;
     gcDataBuf[startIdx].setValues(startTime, 0);

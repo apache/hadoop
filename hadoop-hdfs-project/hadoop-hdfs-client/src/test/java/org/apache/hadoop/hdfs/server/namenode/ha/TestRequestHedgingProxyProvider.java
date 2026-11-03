@@ -45,7 +45,6 @@ import org.apache.hadoop.util.Time;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -678,9 +677,9 @@ public class TestRequestHedgingProxyProvider {
     assertEquals(1, stats[0]);
     assertEquals(1, counter.get());
 
-    Thread t = new SubjectInheritingThread() {
+    Thread t = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         try {
           // Fail over between calling delayProxy.getStats() and throw
           // exception.

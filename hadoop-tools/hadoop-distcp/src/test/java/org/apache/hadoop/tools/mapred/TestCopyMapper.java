@@ -60,6 +60,7 @@ import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -92,6 +93,14 @@ public class TestCopyMapper {
                 .numDataNodes(1)
                 .format(true)
                 .build());
+  }
+
+  @AfterAll
+  public static void cleanup() {
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   /**

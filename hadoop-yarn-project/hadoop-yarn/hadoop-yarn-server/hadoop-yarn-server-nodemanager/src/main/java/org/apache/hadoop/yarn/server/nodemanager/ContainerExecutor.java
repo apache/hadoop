@@ -68,7 +68,6 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch.CONTAINER_PRE_LAUNCH_STDERR;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch.CONTAINER_PRE_LAUNCH_STDOUT;
@@ -852,7 +851,7 @@ public abstract class ContainerExecutor implements Configurable {
    * This class will signal a target container after a specified delay.
    * @see #signalContainer
    */
-  public static class DelayedProcessKiller extends SubjectInheritingThread {
+  public static class DelayedProcessKiller extends Thread {
     private final Container container;
     private final String user;
     private final String pid;
@@ -884,7 +883,7 @@ public abstract class ContainerExecutor implements Configurable {
     }
 
     @Override
-    public void work() {
+    public void run() {
       try {
         Thread.sleep(delay);
         containerExecutor.signalContainer(new ContainerSignalContext.Builder()

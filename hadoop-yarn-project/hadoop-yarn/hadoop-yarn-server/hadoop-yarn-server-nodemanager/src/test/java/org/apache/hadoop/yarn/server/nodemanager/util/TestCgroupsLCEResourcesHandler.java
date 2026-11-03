@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.nodemanager.util;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor;
@@ -115,9 +114,9 @@ public class TestCgroupsLCEResourcesHandler {
     fos.close();
 
     final CountDownLatch latch = new CountDownLatch(1);
-    new SubjectInheritingThread() {
+    new Thread() {
       @Override
-      public void work() {
+      public void run() {
         latch.countDown();
         try {
           Thread.sleep(200);

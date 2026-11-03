@@ -605,42 +605,43 @@ public class TestProvidedImpl {
   public void testProvidedReplicaWithPathHandle() throws Exception {
 
     Configuration conf = new Configuration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    cluster.waitActive();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
 
-    DistributedFileSystem fs = cluster.getFileSystem();
+      DistributedFileSystem fs = cluster.getFileSystem();
 
-    // generate random data
-    int chunkSize = 512;
-    Random r = new Random(12345L);
-    byte[] data = new byte[chunkSize];
-    r.nextBytes(data);
+      // generate random data
+      int chunkSize = 512;
+      Random r = new Random(12345L);
+      byte[] data = new byte[chunkSize];
+      r.nextBytes(data);
 
-    Path file = new Path("/testfile");
-    try (FSDataOutputStream fout = fs.create(file)) {
-      fout.write(data);
-    }
+      Path file = new Path("/testfile");
+      try (FSDataOutputStream fout = fs.create(file)) {
+        fout.write(data);
+      }
 
-    PathHandle pathHandle = fs.getPathHandle(fs.getFileStatus(file),
-        Options.HandleOpt.changed(true), Options.HandleOpt.moved(true));
-    FinalizedProvidedReplica replica = new FinalizedProvidedReplica(0,
-        file.toUri(), 0, chunkSize, 0, pathHandle, null, conf, fs);
-    byte[] content = new byte[chunkSize];
-    IOUtils.readFully(replica.getDataInputStream(0), content, 0, chunkSize);
-    assertArrayEquals(data, content);
+      PathHandle pathHandle = fs.getPathHandle(fs.getFileStatus(file),
+          Options.HandleOpt.changed(true), Options.HandleOpt.moved(true));
+      FinalizedProvidedReplica replica = new FinalizedProvidedReplica(0,
+          file.toUri(), 0, chunkSize, 0, pathHandle, null, conf, fs);
+      byte[] content = new byte[chunkSize];
+      IOUtils.readFully(replica.getDataInputStream(0), content, 0, chunkSize);
+      assertArrayEquals(data, content);
 
-    fs.rename(file, new Path("/testfile.1"));
-    // read should continue succeeding after the rename operation
-    IOUtils.readFully(replica.getDataInputStream(0), content, 0, chunkSize);
-    assertArrayEquals(data, content);
+      fs.rename(file, new Path("/testfile.1"));
+      // read should continue succeeding after the rename operation
+      IOUtils.readFully(replica.getDataInputStream(0), content, 0, chunkSize);
+      assertArrayEquals(data, content);
 
-    replica.setPathHandle(null);
-    try {
-      // expected to fail as URI of the provided replica is no longer valid.
-      replica.getDataInputStream(0);
-      fail("Expected an exception");
-    } catch (IOException e) {
-      LOG.info("Expected exception " + e);
+      replica.setPathHandle(null);
+      try {
+        // expected to fail as URI of the provided replica is no longer valid.
+        replica.getDataInputStream(0);
+        fail("Expected an exception");
+      } catch (IOException e) {
+        LOG.info("Expected exception " + e);
+      }
     }
   }
 }

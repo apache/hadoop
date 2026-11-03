@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.hdfs.server.common.AutoCloseDataSetLock;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -86,7 +85,7 @@ public class TestDataSetLockManager {
   @Test
   @Timeout(value = 5)
   public void testAcquireWriteLockError() throws InterruptedException {
-    Thread t = new SubjectInheritingThread(() -> {
+    Thread t = new Thread(() -> {
       manager.readLock(LockLevel.BLOCK_POOl, "test");
       manager.writeLock(LockLevel.BLOCK_POOl, "test");
     });

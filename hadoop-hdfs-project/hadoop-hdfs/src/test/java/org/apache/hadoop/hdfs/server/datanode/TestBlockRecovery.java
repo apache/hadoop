@@ -96,7 +96,6 @@ import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.event.Level;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -918,7 +917,7 @@ public class TestBlockRecovery {
     final RecoveringBlock recoveringBlock =
         Iterators.get(recoveringBlocks.iterator(), 0);
     final ExtendedBlock block = recoveringBlock.getBlock();
-    Thread slowWriterThread = new SubjectInheritingThread(new Runnable() {
+    Thread slowWriterThread = new Thread(new Runnable() {
       @Override
       public void run() {
         try {
@@ -945,7 +944,7 @@ public class TestBlockRecovery {
     progressParent.uninterruptiblyAcquire(60000);
 
     // Start a worker thread which will attempt to stop the writer.
-    Thread stopWriterThread = new SubjectInheritingThread(new Runnable() {
+    Thread stopWriterThread = new Thread(new Runnable() {
       @Override
       public void run() {
         try {

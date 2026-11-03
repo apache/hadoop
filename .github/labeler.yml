@@ -53,5 +53,7 @@ ABFS:
   - hadoop-tools/hadoop-azure/**
 DYNAMOMETER:
   - hadoop-tools/hadoop-dynamometer/**
+BOS:
+  - hadoop-cloud-storage-project/hadoop-bos/**
 MAVEN-PLUGINS:
   - hadoop-maven-plugins/**

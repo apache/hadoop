@@ -53,7 +53,6 @@ import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -334,7 +333,7 @@ public abstract class DistributedShellBaseTest {
     assertTrue(initSuccess);
     LOG.info("Running DS Client");
     final AtomicBoolean result = new AtomicBoolean(false);
-    Thread t = new SubjectInheritingThread(() -> {
+    Thread t = new Thread(() -> {
       try {
         result.set(dsClient.run());
       } catch (Exception e) {
@@ -525,13 +524,21 @@ public abstract class DistributedShellBaseTest {
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
     conf.set("mapreduce.jobhistory.address",
         "0.0.0.0:" + ServerSocketUtil.getPort(10021, 10));
-    // Enable ContainersMonitorImpl
+    // Enable ContainersMonitorImpl so that resource utilization is tracked
+    // (needed by opportunistic container allocation below). Do NOT enable the
+    // polling-based pmem/vmem checks: these tests are not exercising memory
+    // enforcement, and their containers can legitimately exceed the tiny
+    // MIN_ALLOCATION_MB limit. Before YARN-11967 these checks were silently
+    // skipped because strictMemoryEnforcement defaulted to true; now that
+    // strictMemoryEnforcement requires yarn.nodemanager.resource.memory.enabled
+    // as well (default false), the polling check would actually run and kill
+    // the containers, breaking these tests. Keep the checks disabled here.
     conf.set(YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR,
         LinuxResourceCalculatorPlugin.class.getName());
     conf.set(YarnConfiguration.NM_CONTAINER_MON_PROCESS_TREE,
         ProcfsBasedProcessTree.class.getName());
-    conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, true);
-    conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, false);
+    conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, false);
     conf.setBoolean(
         YarnConfiguration.YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING, true);
     conf.setBoolean(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED,

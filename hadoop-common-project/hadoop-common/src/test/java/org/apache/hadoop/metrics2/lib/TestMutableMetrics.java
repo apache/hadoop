@@ -40,7 +40,6 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.util.Quantile;
 import org.apache.hadoop.thirdparty.com.google.common.math.Stats;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -210,7 +209,7 @@ public class TestMutableMetrics {
       rates.add("metric" + i, 0);
     }
 
-    SubjectInheritingThread[] threads = new SubjectInheritingThread[n];
+    Thread[] threads = new Thread[n];
     final CountDownLatch firstAddsFinished = new CountDownLatch(threads.length);
     final CountDownLatch firstSnapshotsFinished = new CountDownLatch(1);
     final CountDownLatch secondAddsFinished =
@@ -221,9 +220,9 @@ public class TestMutableMetrics {
     final Random sleepRandom = new Random(seed);
     for (int tIdx = 0; tIdx < threads.length; tIdx++) {
       final int threadIdx = tIdx;
-      threads[threadIdx] = new SubjectInheritingThread() {
+      threads[threadIdx] = new Thread() {
         @Override
-        public void work() {
+        public void run() {
           try {
             for (int i = 0; i < 1000; i++) {
               rates.add("metric" + (i % n), (i / n) % 2 == 0 ? 1 : 2);

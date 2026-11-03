@@ -30,11 +30,13 @@ import java.util.Collection;
 
 import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.initializeCluster;
 import static org.apache.hadoop.hdfs.ReadStripedFileWithDecodingHelper.tearDownCluster;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Test online recovery with corrupt files. This test is parameterized.
  */
 @Timeout(300)
+@Tag("slow")
 public class TestReadStripedFileWithDecodingCorruptData {
   static final Logger LOG =
       LoggerFactory.getLogger(TestReadStripedFileWithDecodingCorruptData.class);

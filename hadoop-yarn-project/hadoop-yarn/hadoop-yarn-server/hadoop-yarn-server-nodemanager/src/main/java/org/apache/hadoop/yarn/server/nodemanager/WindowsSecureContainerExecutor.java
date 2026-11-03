@@ -52,7 +52,6 @@ import org.apache.hadoop.io.nativeio.NativeIOException;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.CommandExecutor;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
@@ -498,10 +497,10 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
     
     private Thread startStreamReader(final InputStream stream) 
         throws IOException {
-      Thread streamReaderThread = new SubjectInheritingThread() {
+      Thread streamReaderThread = new Thread() {
         
         @Override
-        public void work() {
+        public void run() {
           try (BufferedReader lines = new BufferedReader(
                    new InputStreamReader(stream, StandardCharsets.UTF_8))) {
             char[] buf = new char[512];

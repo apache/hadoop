@@ -48,12 +48,10 @@ public class SimpleKeyProvider implements KeyProvider {
       // Validating the key.
       validateStorageAccountKey(key);
     } catch (IllegalAccessException | InvalidConfigurationValueException e) {
-      LOG.debug("Failure to retrieve storage account key for {}", accountName,
-          e);
+      LOG.debug("Failure to retrieve storage account key for {}", accountName, e);
       throw new KeyProviderException("Failure to initialize configuration for "
           + accountName
-          + " key =\"" + key + "\""
-          + ": " + e, e);
+          + ". Invalid base64 value in " + ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, e);
     } catch(IOException ioe) {
       LOG.warn("Unable to get key for {} from credential providers. {}",
           accountName, ioe, ioe);

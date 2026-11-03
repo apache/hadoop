@@ -90,10 +90,10 @@ import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.spi.LoggingEvent;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -112,6 +112,7 @@ import org.slf4j.LoggerFactory;
  */
 @MethodSource("data")
 @ParameterizedClass
+@Tag("slow")
 public class TestEditLog {
 
   static {
@@ -502,7 +503,7 @@ public class TestEditLog {
       for (int i = 0; i < NUM_THREADS; i++) {
         Transactions trans =
           new Transactions(namesystem, NUM_TRANSACTIONS, i*NUM_TRANSACTIONS);
-        threadId[i] = new SubjectInheritingThread(trans, "TransactionThread-" + i);
+        threadId[i] = new Thread(trans, "TransactionThread-" + i);
         threadId[i].start();
       }
   

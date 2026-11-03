@@ -43,7 +43,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 
 import org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditReplayMapper.REPLAYCOUNTERS;
 import org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditReplayMapper.ReplayCommand;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +57,7 @@ import static org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditR
  * are inserted by the {@link AuditReplayMapper}. Once an item is ready, this
  * thread will fetch the command from the queue and attempt to replay it.
  */
-public class AuditReplayThread extends SubjectInheritingThread {
+public class AuditReplayThread extends Thread {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AuditReplayThread.class);
@@ -155,7 +154,7 @@ public class AuditReplayThread extends SubjectInheritingThread {
   }
 
   @Override
-  public void work() {
+  public void run() {
     long currentEpoch = System.currentTimeMillis();
     long delay = startTimestampMs - currentEpoch;
     try {

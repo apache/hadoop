@@ -56,7 +56,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Test retry behavior of the Router RPC Client.
  */
-@Timeout(100000)
+@Timeout(100)
 public class TestRouterRPCClientRetries {
 
   private static StateStoreDFSCluster cluster;

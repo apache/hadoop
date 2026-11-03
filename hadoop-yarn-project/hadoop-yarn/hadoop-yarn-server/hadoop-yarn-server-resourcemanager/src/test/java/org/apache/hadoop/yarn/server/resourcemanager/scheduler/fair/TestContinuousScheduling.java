@@ -22,7 +22,6 @@ import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -339,9 +338,9 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     }
 
     // To simulate unallocated resource changes
-    new SubjectInheritingThread() {
+    new Thread() {
       @Override
-      public void work() {
+      public void run() {
         for (int j = 0; j < 100; j++) {
           for (FSSchedulerNode node : clusterNodeTracker.getAllNodes()) {
             int i = ThreadLocalRandom.current().nextInt(-30, 30);

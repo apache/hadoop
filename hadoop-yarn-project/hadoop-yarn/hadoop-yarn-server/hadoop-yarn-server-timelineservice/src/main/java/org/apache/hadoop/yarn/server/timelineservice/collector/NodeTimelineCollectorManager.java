@@ -58,7 +58,6 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -340,7 +339,7 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
     config.register(TimelineEntitiesWriter.class);
     config.register(TimelineEntitiesReader.class);
     config.register(TimelineDomainReader.class);
-    config.register(new JettisonFeature()).register(YarnJacksonJaxbJsonProvider.class);
+    config.register(YarnJacksonJaxbJsonProvider.class);
     return config;
   }
 

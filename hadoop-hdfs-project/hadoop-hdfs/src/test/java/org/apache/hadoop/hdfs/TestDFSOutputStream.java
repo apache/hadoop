@@ -60,7 +60,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -340,7 +339,7 @@ public class TestDFSOutputStream {
     AtomicBoolean isDelay = new AtomicBoolean(true);
 
     // ResponseProcessor needs the dataQueue for the next step.
-    new SubjectInheritingThread(() -> {
+    new Thread(() -> {
       for (int i = 0; i < 10; i++) {
         // In order to ensure that other threads run for a period of time to prevent affecting
         // the results.
@@ -377,7 +376,7 @@ public class TestDFSOutputStream {
 
     // The purpose of adding packets to the dataQueue is to make the DataStreamer run
     // normally and judge whether to enter the sleep state according to the congestion.
-    new SubjectInheritingThread(() -> {
+    new Thread(() -> {
       for (int i = 0; i < 100; i++) {
         packet[i] = mock(DFSPacket.class);
         dataQueue.add(packet[i]);

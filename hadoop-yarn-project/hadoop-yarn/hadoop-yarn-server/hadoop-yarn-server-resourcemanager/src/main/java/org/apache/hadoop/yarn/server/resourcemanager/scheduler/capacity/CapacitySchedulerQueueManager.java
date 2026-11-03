@@ -251,8 +251,9 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     boolean isAutoQueueCreationEnabledParent = isDynamicParent || conf.isAutoQueueCreationV2Enabled(
         queueToParse) || isAutoCreateEnabled;
 
-    if (childQueueNames.size() == 0 && !isAutoQueueCreationEnabledParent) {
-      validateParent(parent, queueName);
+    int childCount = childQueueNames.size();
+    if (!QueueStructureChecks.isParent(childCount, isAutoQueueCreationEnabledParent)) {
+      validateParent(queueName, parent == null, childCount, isAutoQueueCreationEnabledParent);
       // Check if the queue will be dynamically managed by the Reservation system
       if (isReservableQueue) {
         queue = new PlanQueue(queueContext, queueName, parent,
@@ -266,9 +267,10 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
 
       queue = hook.hook(queue);
     } else {
-      if (isReservableQueue) {
-        throw new IllegalStateException("Only Leaf Queues can be reservable for " +
-            queueToParse.getFullPath());
+      String reservableError = QueueStructureChecks.checkReservable(queueToParse.getFullPath(),
+          childCount, isReservableQueue, isAutoQueueCreationEnabledParent);
+      if (reservableError != null) {
+        throw new IllegalStateException(reservableError);
       }
 
       AbstractParentQueue parentQueue;
@@ -736,10 +738,12 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     return !isDynamicQueue(parent);
   }
 
-  private static void validateParent(CSQueue parent, String queueName) {
-    if (parent == null) {
-      throw new IllegalStateException("Queue configuration missing child queue names for "
-          + queueName);
+  private static void validateParent(String queueName, boolean root, int childCount,
+      boolean autoQueueCreationEnabledParent) {
+    String error = QueueStructureChecks.checkRootHasChildQueues(queueName, root, childCount,
+        autoQueueCreationEnabledParent);
+    if (error != null) {
+      throw new IllegalStateException(error);
     }
   }
 }

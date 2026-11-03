@@ -45,7 +45,6 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JarFinder;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
@@ -267,8 +266,8 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
         }
         historyServer = new JobHistoryServer();
         historyServer.init(getConfig());
-        new SubjectInheritingThread() {
-          public void work() {
+        new Thread() {
+          public void run() {
             historyServer.start();
           };
         }.start();

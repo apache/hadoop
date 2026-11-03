@@ -38,7 +38,6 @@ import org.apache.hadoop.streaming.io.TextInputWriter;
 import org.apache.hadoop.streaming.io.TextOutputReader;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import org.apache.hadoop.io.Text;
 
@@ -367,7 +366,7 @@ public abstract class PipeMapRed {
   }
   
   
-  class MROutputThread extends SubjectInheritingThread {
+  class MROutputThread extends Thread {
 
     MROutputThread(OutputReader outReader, OutputCollector outCollector,
       Reporter reporter) {
@@ -377,7 +376,7 @@ public abstract class PipeMapRed {
       this.reporter = reporter;
     }
 
-    public void work() {
+    public void run() {
       try {
         // 3/4 Tool to Hadoop
         while (outReader.readKeyValue()) {
@@ -419,7 +418,7 @@ public abstract class PipeMapRed {
     
   }
 
-  class MRErrorThread extends SubjectInheritingThread {
+  class MRErrorThread extends Thread {
 
     public MRErrorThread() {
       this.reporterPrefix = job_.get("stream.stderr.reporter.prefix", "reporter:");
@@ -432,7 +431,7 @@ public abstract class PipeMapRed {
       this.reporter = reporter;
     }
       
-    public void work() {
+    public void run() {
       Text line = new Text();
       LineReader lineReader = null;
       try {

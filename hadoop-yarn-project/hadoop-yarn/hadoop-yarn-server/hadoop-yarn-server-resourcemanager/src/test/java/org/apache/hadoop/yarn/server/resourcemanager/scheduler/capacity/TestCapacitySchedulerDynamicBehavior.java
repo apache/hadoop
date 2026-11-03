@@ -35,8 +35,10 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.checkQueueStructureCapacities;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.getDefaultCapacities;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import java.io.IOException;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -288,6 +290,20 @@ public class TestCapacitySchedulerDynamicBehavior {
 
     appsInB = scheduler.getAppsInQueue("b");
     assertTrue(appsInB.isEmpty());
+  }
+
+  @Test
+  public void testReservableParentQueueIsRejected() throws Exception {
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    setupPlanQueueConfiguration(conf);
+    conf.setQueues(A, new String[] {"a1"});
+    conf.setCapacity(A.createNewLeaf("a1"), 100f);
+
+    IOException e = assertThrows(IOException.class,
+        () -> cs.reinitialize(conf, rm.getRMContext()));
+    assertEquals("Failed to re-init queues : Only Leaf Queues can be reservable for root.a",
+        e.getMessage());
   }
 
   private void setupPlanQueueConfiguration(CapacitySchedulerConfiguration conf) {

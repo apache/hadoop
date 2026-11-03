@@ -517,10 +517,10 @@ at [ECS Test Drive](https://portal.ecstestdrive.com/) were
 
 ## Google Cloud Storage through the S3A connector
 
-It *is* possible to connect to google cloud storage through the S3A connector.
-However, Google provide their own [Cloud Storage connector](https://cloud.google.com/dataproc/docs/concepts/connectors/cloud-storage).
-That is a well maintained Hadoop filesystem client which uses their XML API,
-And except for some very unusual cases, that is the connector to use.
+It *is* possible to connect to Google Cloud Storage through the S3A connector.
+However, Hadoop provides its own
+[Google Cloud Storage connector](../../../hadoop-gcp/tools/hadoop-gcp/Configuration.html)
+in the `hadoop-gcp` module. Except for unusual cases, use this `gs:` connector.
 
 When interacting with a GCS container through the S3A connector may make sense
 * The installation doesn't have the gcs-connector JAR.

@@ -22,7 +22,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.function.ToIntFunction;
+import java.util.function.LongToIntFunction;
 import java.util.zip.CRC32;
 import java.util.zip.CRC32C;
 import java.util.zip.Checksum;
@@ -97,7 +97,7 @@ public class DataChecksum implements Checksum {
    * @return the int representation of the polynomial associated with the
    *     CRC {@code type}, suitable for use with further CRC arithmetic.
    */
-  static ToIntFunction<Long> getModFunction(Type type) {
+  static LongToIntFunction getModFunction(Type type) {
     switch (type) {
     case CRC32:
       return PureJavaCrc32::mod;

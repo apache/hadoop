@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.log4j.Level;
 import org.junit.jupiter.api.Assertions;
 
@@ -97,12 +96,12 @@ public class TestRead {
     try {
       final Configuration conf = testContext.newConfiguration();
       conf.setLong(HdfsClientConfigKeys.DFS_CLIENT_CACHE_READAHEAD, BLOCK_SIZE);
-      MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
-          .format(true).build();
-      testEOF(cluster, 1);
-      testEOF(cluster, 14);
-      testEOF(cluster, 10000);
-      cluster.shutdown();
+      try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(1).format(true).build()) {
+        testEOF(cluster, 1);
+        testEOF(cluster, 14);
+        testEOF(cluster, 10000);
+      }
     } finally {
       testContext.close();
     }
@@ -113,12 +112,12 @@ public class TestRead {
   public void testEOFWithRemoteBlockReader() throws Exception {
     final Configuration conf = new Configuration();
     conf.setLong(HdfsClientConfigKeys.DFS_CLIENT_CACHE_READAHEAD, BLOCK_SIZE);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
-        .format(true).build();
-    testEOF(cluster, 1);
-    testEOF(cluster, 14);
-    testEOF(cluster, 10000);   
-    cluster.shutdown();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).format(true).build()) {
+      testEOF(cluster, 1);
+      testEOF(cluster, 14);
+      testEOF(cluster, 10000);
+    }
   }
 
   /**
@@ -160,7 +159,7 @@ public class TestRead {
 
       final FSDataInputStream in = fs.open(file);
       AtomicBoolean readInterrupted = new AtomicBoolean(false);
-      final Thread reader = new SubjectInheritingThread(new Runnable() {
+      final Thread reader = new Thread(new Runnable() {
         @Override
         public void run() {
           try {

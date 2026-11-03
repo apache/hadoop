@@ -24,8 +24,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
@@ -42,6 +45,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.P
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
@@ -1028,6 +1035,142 @@ public class TestQueueParsing {
             ((LeafQueue)capacityScheduler.getQueue(B_PATH)).getUserLimit(), DELTA);
     assertEquals(1,
             ((LeafQueue)capacityScheduler.getQueue(B_PATH)).getUserLimitFactor(), DELTA);
+  }
+
+  @ParameterizedTest
+  @CsvSource(delimiter = '|', value = {
+      "*|Parent's accessible queue is not ANY(*), but child's accessible queue is *",
+      "y|Some labels of child queue is not a subset of parent queue, these labels=[y]"})
+  public void testChildLabelsMustBeAccessibleByParent(String childLabel,
+      String expectedMessage) throws Exception {
+    CapacitySchedulerConfiguration csConf = createTwoQueueConfiguration();
+    csConf.setAccessibleNodeLabels(A, ImmutableSet.of("x"));
+    csConf.setQueues(A, new String[] {"a1"});
+    csConf.setCapacity(A1, 100);
+    csConf.setAccessibleNodeLabels(A1, ImmutableSet.of(childLabel));
+
+    assertStartupFails(csConf, ImmutableSet.of("x", "y"), IOException.class,
+        expectedMessage);
+  }
+
+  @Test
+  public void testDefaultLabelExpressionMustBeAccessible() throws Exception {
+    CapacitySchedulerConfiguration csConf = createTwoQueueConfiguration();
+    csConf.setAccessibleNodeLabels(B, ImmutableSet.of("y"));
+    csConf.setDefaultNodeLabelExpression(B, "x");
+
+    assertStartupFails(csConf, ImmutableSet.of("x", "y"), IOException.class,
+        "Invalid default label expression of  queue=root.b doesn't have permission"
+        + " to access all labels in default label expression. labelExpression of resource"
+        + " request=x. Queue labels=y");
+  }
+
+  @Test
+  public void testBlankAccessibleNodeLabelsMeanNoLabels() throws Exception {
+    CapacitySchedulerConfiguration csConf = createTwoQueueConfiguration();
+    csConf.set(QueuePrefixes.getQueuePrefix(B)
+        + CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS, " ");
+
+    MockRM rm = createMockRMWithLabels(new YarnConfiguration(csConf), ImmutableSet.of("x"));
+    CapacityScheduler capacityScheduler = (CapacityScheduler) rm.getResourceScheduler();
+    assertEquals(emptySet(), capacityScheduler.getQueue(B_PATH).getAccessibleNodeLabels());
+    ServiceOperations.stopQuietly(rm);
+  }
+
+  @Test
+  public void testRootWithoutChildQueuesIsRejected() throws Exception {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
+    csConf.set(QueuePrefixes.getQueuePrefix(ROOT) + CapacitySchedulerConfiguration.QUEUES, "");
+
+    assertStartupFails(csConf, emptySet(), IllegalStateException.class,
+        "Queue configuration missing child queue names for root");
+  }
+
+  @Test
+  public void testEmptyQueueListEntriesAreDropped() throws Exception {
+    CapacitySchedulerConfiguration csConf = createTwoQueueConfiguration();
+    csConf.set(QueuePrefixes.getQueuePrefix(ROOT) + CapacitySchedulerConfiguration.QUEUES,
+        "a,,b,");
+    csConf.set(QueuePrefixes.getQueuePrefix(B) + CapacitySchedulerConfiguration.QUEUES, "b1,");
+    csConf.setCapacity(B1, 100);
+
+    MockRM rm = createMockRMWithoutLabels(new YarnConfiguration(csConf));
+    CapacityScheduler capacityScheduler = (CapacityScheduler) rm.getResourceScheduler();
+    checkEqualsToQueueSet(capacityScheduler.getQueue(CapacitySchedulerConfiguration.ROOT)
+        .getChildQueues(), new String[] {"a", "b"});
+    checkEqualsToQueueSet(capacityScheduler.getQueue(B_PATH).getChildQueues(),
+        new String[] {"b1"});
+    assertEquals(0.5, capacityScheduler.getQueue(B1_PATH).getAbsoluteCapacity(), DELTA);
+    ServiceOperations.stopQuietly(rm);
+  }
+
+  @Test
+  public void testLowerCaseQueueStateIsAccepted() throws Exception {
+    CapacitySchedulerConfiguration csConf = createTwoQueueConfiguration();
+    csConf.set(QueuePrefixes.getQueuePrefix(B) + CapacitySchedulerConfiguration.STATE,
+        "stopped");
+
+    MockRM rm = createMockRMWithoutLabels(new YarnConfiguration(csConf));
+    CapacityScheduler capacityScheduler = (CapacityScheduler) rm.getResourceScheduler();
+    assertEquals(QueueState.STOPPED, capacityScheduler.getQueue(B_PATH).getState());
+    ServiceOperations.stopQuietly(rm);
+  }
+
+  @Test
+  public void testNaNCapacityIsAccepted() throws Exception {
+    CapacitySchedulerConfiguration csConf = createTwoQueueConfiguration();
+    // NaN passes both the capacity range check and the children capacity sum check.
+    csConf.set(QueuePrefixes.getQueuePrefix(A) + CapacitySchedulerConfiguration.CAPACITY, "NaN");
+    csConf.setCapacity(B, 100);
+
+    MockRM rm = createMockRMWithoutLabels(new YarnConfiguration(csConf));
+    CapacityScheduler capacityScheduler = (CapacityScheduler) rm.getResourceScheduler();
+    CSQueue a = capacityScheduler.getQueue(A_PATH);
+    assertTrue(Float.isNaN(a.getCapacity()));
+    assertEquals(0, a.getAbsoluteCapacity(), DELTA);
+    assertEquals(1, capacityScheduler.getQueue(B_PATH).getAbsoluteCapacity(), DELTA);
+    ServiceOperations.stopQuietly(rm);
+  }
+
+  private static Stream<Arguments> invalidNumberFormats() {
+    return Stream.of(
+        Arguments.of(Map.of("root.a.capacity", "50%"), "50%"),
+        Arguments.of(Map.of("root.a.capacity", "1W", "root.b.capacity", "1w"), "1W"),
+        Arguments.of(Map.of("root.a.capacity", "1w", "root.b.capacity", "1w",
+            "root.a.maximum-capacity", "2w"), "2w"),
+        Arguments.of(Map.of("root.a.capacity", "1w", "root.b.capacity", "1w",
+            "root.a.maximum-capacity", "2w", "legacy-queue-mode.enabled", "false"), "2w"),
+        Arguments.of(Map.of("root.a.max-parallel-apps", " 5"), " 5"));
+  }
+
+  @ParameterizedTest
+  @MethodSource("invalidNumberFormats")
+  public void testInvalidNumberFormatsFailStartup(Map<String, String> properties,
+      String invalidValue) throws Exception {
+    CapacitySchedulerConfiguration csConf = createTwoQueueConfiguration();
+    properties.forEach(
+        (key, value) -> csConf.set(CapacitySchedulerConfiguration.PREFIX + key, value));
+
+    assertStartupFails(csConf, emptySet(), NumberFormatException.class,
+        "For input string: \"" + invalidValue + "\"");
+  }
+
+  private CapacitySchedulerConfiguration createTwoQueueConfiguration() {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
+    csConf.setCapacity(A, 50);
+    csConf.setCapacity(B, 50);
+    return csConf;
+  }
+
+  private void assertStartupFails(CapacitySchedulerConfiguration csConf,
+      Set<String> nodeLabels, Class<? extends Throwable> expectedType,
+      String expectedMessage) {
+    ServiceStateException e = assertThrows(ServiceStateException.class,
+        () -> createMockRMWithLabels(new YarnConfiguration(csConf), nodeLabels));
+    Throwable cause = ExceptionUtils.getRootCause(e);
+    assertEquals(expectedType, cause.getClass());
+    assertEquals(expectedMessage, cause.getMessage());
   }
 
   private void verifyQueueAbsCapacity(MockRM rm, String queuePath, String label,

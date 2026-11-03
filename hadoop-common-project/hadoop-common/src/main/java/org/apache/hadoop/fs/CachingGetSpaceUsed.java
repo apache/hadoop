@@ -20,7 +20,6 @@ package org.apache.hadoop.fs;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,7 +107,7 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
    */
   private void initRefreshThread(boolean runImmediately) {
     if (refreshInterval > 0) {
-      refreshUsed = new SubjectInheritingThread(new RefreshThread(this, runImmediately),
+      refreshUsed = new Thread(new RefreshThread(this, runImmediately),
           "refreshUsed-" + dirPath);
       refreshUsed.setDaemon(true);
       refreshUsed.start();

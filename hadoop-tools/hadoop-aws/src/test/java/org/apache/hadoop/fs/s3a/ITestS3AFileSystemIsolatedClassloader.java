@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
+
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
@@ -34,8 +35,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
 
 /**
  * Checks that classloader isolation for loading extension classes is applied
@@ -47,9 +46,9 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
 
   private static String customClassName = "custom.class.name";
 
-  private static class CustomCredentialsProvider implements AwsCredentialsProvider {
+  public static class CustomCredentialsProvider implements AwsCredentialsProvider {
 
-    CustomCredentialsProvider() {
+    public CustomCredentialsProvider() {
     }
 
     @Override
@@ -60,18 +59,22 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
   }
 
   private static class CustomClassLoader extends ClassLoader {
-  }
 
-  private final ClassLoader customClassLoader = spy(new CustomClassLoader());
-  {
-    try {
-      doReturn(CustomCredentialsProvider.class)
-          .when(customClassLoader)
-          .loadClass(customClassName);
-    } catch (ClassNotFoundException ex) {
-      throw new RuntimeException(ex);
+    CustomClassLoader(ClassLoader parent) {
+      super(parent);
+    }
+
+    @Override
+    public Class<?> loadClass(String name) throws ClassNotFoundException {
+      if (customClassName.equals(name)) {
+        return CustomCredentialsProvider.class;
+      }
+      return super.loadClass(name);
     }
   }
+
+  private final ClassLoader customClassLoader =
+      new CustomClassLoader(ITestS3AFileSystemIsolatedClassloader.class.getClassLoader());
 
   private S3AFileSystem createNewTestFs(Configuration conf) throws IOException {
     S3AFileSystem fs = new S3AFileSystem();
@@ -203,6 +206,31 @@ public class ITestS3AFileSystemIsolatedClassloader extends AbstractS3ATestBase {
       Assertions.assertThat(providers.get(0))
               .describedAs("provider")
               .isInstanceOf(CustomCredentialsProvider.class);
+    });
+  }
+
+  /**
+   * HADOOP-19833: When isolation=false, getInstanceFromReflection must use
+   * the context classloader (or conf's classloader) so that classes from the
+   * application classpath can be loaded. This test calls getInstanceFromReflection
+   * directly with isolation=false and verifies the custom class is instantiated.
+   */
+  @Test
+  public void testGetInstanceFromReflectionWithIsolationFalse() throws Exception {
+    Map<String, String> confToSet =
+        mapOf(Constants.AWS_S3_CLASSLOADER_ISOLATION, "false");
+    assertInNewFilesystem(confToSet, (fs) -> {
+      try {
+        Configuration conf = fs.getConf();
+        AwsCredentialsProvider provider = S3AUtils.getInstanceFromReflection(
+            customClassName, conf, null, AwsCredentialsProvider.class, "create",
+            Constants.AWS_CREDENTIALS_PROVIDER);
+        Assertions.assertThat(provider)
+            .describedAs("getInstanceFromReflection with isolation=false")
+            .isInstanceOf(CustomCredentialsProvider.class);
+      } catch (IOException e) {
+        throw new AssertionError("getInstanceFromReflection threw", e);
+      }
     });
   }
 }

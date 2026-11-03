@@ -42,7 +42,6 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.IndexedSortable;
 import org.apache.hadoop.util.QuickSort;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.util.functional.FutureIO;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
@@ -145,12 +144,12 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
     // take N samples from different parts of the input
     for(int i=0; i < samples; ++i) {
       final int idx = i;
-      samplerReader[i] = 
-        new SubjectInheritingThread (threadGroup, "Sampler Reader " + idx) {
+      samplerReader[i] =
+        new Thread (threadGroup,"Sampler Reader " + idx) {
         {
           setDaemon(true);
         }
-        public void work() {
+        public void run() {
           long records = 0;
           try {
             TaskAttemptContext context = new TaskAttemptContextImpl(

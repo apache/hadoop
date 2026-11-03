@@ -136,17 +136,24 @@ public class TestDataNodeLifeline {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
           @Override
           public Boolean get() {
-            if (bpsa.getLifelineNameNodeProxy() != null) {
-              lifelineNamenode = spy(bpsa.getLifelineNameNodeProxy());
-              bpsa.setLifelineNameNode(lifelineNamenode);
-            }
-            return lifelineNamenode != null;
+            return bpsa.getLifelineNameNodeProxy() != null;
           }
         }, 100, 10000);
 
+    // The spies are handed to the actor by installSpies(), once stubbed.
+    lifelineNamenode = spy(bpsa.getLifelineNameNodeProxy());
     assertNotNull(bpsa.getNameNodeProxy());
     namenode = spy(bpsa.getNameNodeProxy());
+  }
+
+  /**
+   * Hands the spies to the BPServiceActor. Call this only after stubbing
+   * them: Mockito stubbing is not safe while the heartbeat and lifeline
+   * threads are calling the same spy, and a racing call kills the actor.
+   */
+  private void installSpies() {
     bpsa.setNameNode(namenode);
+    bpsa.setLifelineNameNode(lifelineNamenode);
   }
 
   @AfterEach
@@ -190,6 +197,7 @@ public class TestDataNodeLifeline {
             anyInt(),
             anyInt(),
             any());
+    installSpies();
 
     // While waiting on the latch for the expected number of lifeline messages,
     // poll DataNode tracking information.  Thanks to the lifeline, we expect
@@ -247,6 +255,7 @@ public class TestDataNodeLifeline {
             anyBoolean(),
             any(SlowPeerReports.class),
             any(SlowDiskReports.class));
+    installSpies();
 
     // While waiting on the latch for the expected number of heartbeat messages,
     // poll DataNode tracking information.  We expect that the DataNode always
@@ -365,26 +374,34 @@ public class TestDataNodeLifeline {
       long capacityTotalBefore = datanodeStatistics.getCapacityTotal();
 
       // Mock an exception in HeartbeatManager#updateHeartbeat and HeartbeatManager#updateLifeline.
+      BlockManagerFaultInjector oldInjector = BlockManagerFaultInjector.getInstance();
       BlockManagerFaultInjector.instance = injector;
-      DataNode dataNode = cluster.getDataNodes().get(0);
-      BlockPoolManager blockPoolManager = dataNode.getBlockPoolManager();
-      for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
-        if (bpos != null) {
-          for (BPServiceActor actor : bpos.getBPServiceActors()) {
-            try {
-              actor.triggerHeartbeatForTests();
-              actor.sendLifelineForTests();
-            } catch (Throwable e) {
-              assertTrue(e.getMessage().contains("Unknown exception"));
+      try {
+        DataNode dataNode = cluster.getDataNodes().get(0);
+        BlockPoolManager blockPoolManager = dataNode.getBlockPoolManager();
+        for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
+          if (bpos != null) {
+            for (BPServiceActor actor : bpos.getBPServiceActors()) {
+              try {
+                actor.triggerHeartbeatForTests();
+                actor.sendLifelineForTests();
+              } catch (Throwable e) {
+                assertTrue(e.getMessage().contains("Unknown exception"));
+              }
             }
           }
         }
-      }
 
-      // Get capacityTotal after triggering heartbeat and lifeline.
-      long capacityTotalAfter = datanodeStatistics.getCapacityTotal();
-      // The capacityTotal should be same.
-      assertEquals(capacityTotalBefore, capacityTotalAfter);
+        // Get capacityTotal after triggering heartbeat and lifeline.
+        long capacityTotalAfter = datanodeStatistics.getCapacityTotal();
+        // The capacityTotal should be same.
+        assertEquals(capacityTotalBefore, capacityTotalAfter);
+      } finally {
+        // The injector is static: left in place, it fails every later heartbeat
+        // in this JVM, so a surefire rerun of another test here never sees its
+        // DataNode come up and hangs in MiniDFSCluster#waitActive.
+        BlockManagerFaultInjector.instance = oldInjector;
+      }
     }
   }
 }

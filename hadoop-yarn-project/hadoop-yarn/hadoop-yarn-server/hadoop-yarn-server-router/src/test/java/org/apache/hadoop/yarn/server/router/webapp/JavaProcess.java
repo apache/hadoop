@@ -75,6 +75,16 @@ public class JavaProcess {
     process = builder.start();
   }
 
+  /**
+   * Asks the process to terminate without waiting for it to exit, so several
+   * processes can run their shutdown hooks at the same time.
+   */
+  public void destroy() {
+    if (process != null) {
+      process.destroy();
+    }
+  }
+
   public void stop() throws InterruptedException {
     if (process != null) {
       process.destroy();

@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.net.NetUtils;
 
 import java.net.InetSocketAddress;
 
@@ -135,7 +136,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
     this.ipAddr = ipAddr;
     this.ipAddrBytes = ipAddrBytes;
     this.xferPort = xferPort;
-    this.xferAddr = ipAddr + ":" + xferPort;
+    this.xferAddr = NetUtils.getHostPortString(ipAddr, xferPort);
   }
 
   public void setPeerHostName(String peerHostName) {
@@ -201,35 +202,35 @@ public class DatanodeID implements Comparable<DatanodeID> {
    * @return IP:ipcPort string
    */
   private String getIpcAddr() {
-    return ipAddr + ":" + ipcPort;
+    return NetUtils.getHostPortString(ipAddr, ipcPort);
   }
 
   /**
    * @return IP:infoPort string
    */
   public String getInfoAddr() {
-    return ipAddr + ":" + infoPort;
+    return NetUtils.getHostPortString(ipAddr, infoPort);
   }
 
   /**
    * @return IP:infoPort string
    */
   public String getInfoSecureAddr() {
-    return ipAddr + ":" + infoSecurePort;
+    return NetUtils.getHostPortString(ipAddr, infoSecurePort);
   }
 
   /**
    * @return hostname:xferPort
    */
   public String getXferAddrWithHostname() {
-    return hostName + ":" + xferPort;
+    return NetUtils.getHostPortString(hostName, xferPort);
   }
 
   /**
    * @return hostname:ipcPort
    */
   private String getIpcAddrWithHostname() {
-    return hostName + ":" + ipcPort;
+    return NetUtils.getHostPortString(hostName, ipcPort);
   }
 
   /**
@@ -302,6 +303,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
     setIpAndXferPort(nodeReg.getIpAddr(), nodeReg.getIpAddrBytes(),
         nodeReg.getXferPort());
     hostName = nodeReg.getHostName();
+    hostNameBytes = nodeReg.getHostNameBytes();
     peerHostName = nodeReg.getPeerHostName();
     infoPort = nodeReg.getInfoPort();
     infoSecurePort = nodeReg.getInfoSecurePort();

@@ -30,7 +30,6 @@ import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -137,7 +136,7 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
   * Worker thread responsible for reading descriptions, assigning sequence
   * numbers, and normalizing time.
   */
-  private class StressReaderThread extends SubjectInheritingThread {
+  private class StressReaderThread extends Thread {
 
     public StressReaderThread(String name) {
       super(name);
@@ -153,7 +152,7 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
      * load the JT.
      * That is submit  (Sigma(no of maps/Job)) > (2 * no of slots available)
      */
-    public void work() {
+    public void run() {
       try {
         startFlag.await();
         if (Thread.currentThread().isInterrupted()) {

@@ -49,6 +49,12 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
   // Number of nanoseconds in one millisecond.
   private static final long NANOS_PER_MILLISECOND = 1_000_000L;
 
+  // System property naming the home directory of the running JDK.
+  private static final String JAVA_HOME_PROPERTY = "java.home";
+
+  // Sub-directory of a JDK home that holds its executable tools.
+  private static final String JDK_BIN_DIR = "bin";
+
   // The manager under test
   private final AggregateMetricsManager manager;
 
@@ -618,7 +624,7 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
       Files.move(tempFile, javaFile, StandardCopyOption.REPLACE_EXISTING);
 
       Process javac = new ProcessBuilder(
-          "javac",
+          jdkTool("javac"),
           "-classpath", System.getProperty("java.class.path"),
           javaFile.toAbsolutePath().toString())
           .redirectErrorStream(true)
@@ -639,7 +645,7 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
           + File.pathSeparator
           + System.getProperty("java.class.path");
 
-      Process javaProc = new ProcessBuilder("java",
+      Process javaProc = new ProcessBuilder(jdkTool("java"),
           "-XX:ErrorFile=/tmp/no_hs_err_%p.log",
           "-classpath", classpath,
           "ShutdownTestProg")
@@ -665,6 +671,31 @@ public class TestAggregateMetricsManager extends AbstractAbfsIntegrationTest {
     } finally {
       Files.deleteIfExists(tempFile);
     }
+  }
+
+  /**
+   * Resolves a JDK tool (e.g. {@code javac}, {@code java}) from the JDK that is
+   * currently running this test, rather than relying on whichever version is
+   * first on the {@code PATH}. The spawned {@code javac} must read the compiled
+   * classes of this project (and its dependencies) off the classpath; those are
+   * emitted by the same JDK that runs the tests. If a mismatched compiler is
+   * picked from the {@code PATH} (e.g. a Java 8 {@code javac} against Java 17
+   * bytecode), compilation fails with "class file has wrong version". Anchoring
+   * on {@code java.home} keeps the toolchain consistent. Falls back to the bare
+   * tool name when the JDK layout cannot be resolved.
+   *
+   * @param name the tool name, e.g. {@code javac} or {@code java}.
+   * @return an absolute path to the tool inside the running JDK, or {@code name}.
+   */
+  private static String jdkTool(String name) {
+    String javaHome = System.getProperty(JAVA_HOME_PROPERTY);
+    if (javaHome != null && !javaHome.isEmpty()) {
+      File tool = new File(new File(javaHome, JDK_BIN_DIR), name);
+      if (tool.exists()) {
+        return tool.getAbsolutePath();
+      }
+    }
+    return name;
   }
 
   /**

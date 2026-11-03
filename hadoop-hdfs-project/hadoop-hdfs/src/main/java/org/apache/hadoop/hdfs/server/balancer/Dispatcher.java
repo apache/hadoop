@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockPinningException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil;
@@ -372,29 +373,49 @@ public class Dispatcher {
         LOG.info("Start moving " + this);
         assert !(reportedBlock instanceof DBlockStriped);
 
-        sock.connect(
-            NetUtils.createSocketAddr(target.getDatanodeInfo().
-                getXferAddr(Dispatcher.this.connectToDnViaHostname)),
-                HdfsConstants.READ_TIMEOUT);
-
-        // Set read timeout so that it doesn't hang forever against
-        // unresponsive nodes. Datanode normally sends IN_PROGRESS response
-        // twice within the client read timeout period (every 30 seconds by
-        // default). Here, we make it give up after 5 minutes of no response.
-        sock.setSoTimeout(HdfsConstants.READ_TIMEOUT * 5);
-        sock.setKeepAlive(true);
-
-        OutputStream unbufOut = sock.getOutputStream();
-        InputStream unbufIn = sock.getInputStream();
         ExtendedBlock eb = new ExtendedBlock(nnc.getBlockpoolID(),
             reportedBlock.getBlock());
-        final KeyManager km = nnc.getKeyManager(); 
-        Token<BlockTokenIdentifier> accessToken = km.getAccessToken(eb,
-            new StorageType[]{target.storageType}, new String[0]);
-        IOStreamPair saslStreams = saslClient.socketSend(sock, unbufOut,
-            unbufIn, km, accessToken, target.getDatanodeInfo());
-        unbufOut = saslStreams.out;
-        unbufIn = saslStreams.in;
+        final KeyManager km = nnc.getKeyManager();
+        Token<BlockTokenIdentifier> accessToken = null;
+        OutputStream unbufOut;
+        InputStream unbufIn;
+        int encryptionKeyRetryCount = 0;
+        while (true) {
+          try {
+            accessToken = km.getAccessToken(eb,
+                new StorageType[]{target.storageType}, new String[0]);
+            sock.connect(
+                NetUtils.createSocketAddr(target.getDatanodeInfo().
+                    getXferAddr(Dispatcher.this.connectToDnViaHostname)),
+                    HdfsConstants.READ_TIMEOUT);
+
+            // Set read timeout so that it doesn't hang forever against
+            // unresponsive nodes. Datanode normally sends IN_PROGRESS
+            // response twice within the client read timeout period (every
+            // 30 seconds by default). Here, we make it give up after 5
+            // minutes of no response.
+            sock.setSoTimeout(HdfsConstants.READ_TIMEOUT * 5);
+            sock.setKeepAlive(true);
+
+            unbufOut = sock.getOutputStream();
+            unbufIn = sock.getInputStream();
+            IOStreamPair saslStreams = saslClient.socketSend(sock, unbufOut,
+                unbufIn, km, accessToken, target.getDatanodeInfo());
+            unbufOut = saslStreams.out;
+            unbufIn = saslStreams.in;
+            break;
+          } catch (InvalidEncryptionKeyException e) {
+            IOUtils.closeSocket(sock);
+            if (!prepareRetryAfterInvalidEncryptionKey(km,
+                ++encryptionKeyRetryCount)) {
+              throw e;
+            }
+            LOG.info("Retrying connection to {} for block {} after "
+                + "InvalidEncryptionKeyException",
+                target.getDatanodeInfo(), reportedBlock.getBlock(), e);
+            sock = new Socket();
+          }
+        }
         out = new DataOutputStream(new BufferedOutputStream(unbufOut,
             ioFileBufferSize));
         in = new DataInputStream(new BufferedInputStream(unbufIn,
@@ -482,6 +503,16 @@ public class Dispatcher {
       proxySource = null;
       target = null;
     }
+  }
+
+  private static boolean prepareRetryAfterInvalidEncryptionKey(KeyManager km,
+      int retryCount) throws IOException {
+    if (retryCount > 1) {
+      return false;
+    }
+    km.updateBlockKeys();
+    km.clearDataEncryptionKey();
+    return true;
   }
 
   /** A class for keeping track of block locations in the dispatcher. */

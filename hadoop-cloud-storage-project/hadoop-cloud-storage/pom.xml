@@ -122,6 +122,21 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-bos</artifactId>
+      <scope>compile</scope>
+      <!--
+      Exclude transitive dependencies to prevent dependency convergence
+      problems. hadoop-bos is a self-contained shaded jar.
+      -->
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-huaweicloud</artifactId>
       <scope>compile</scope>
     </dependency>

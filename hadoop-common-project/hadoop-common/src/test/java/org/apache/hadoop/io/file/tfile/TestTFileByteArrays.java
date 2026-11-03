@@ -89,6 +89,9 @@ public class TestTFileByteArrays {
   public void init(String compression, String comparator) {
     this.compression = compression;
     this.comparator = comparator;
+    if (comparator.startsWith(TFile.COMPARATOR_JCLASS)) {
+      conf.setBoolean(TFile.TFILE_COMPARATOR_JCLASS_ENABLED, true);
+    }
   }
 
   @BeforeEach

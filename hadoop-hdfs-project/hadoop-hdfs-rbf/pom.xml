@@ -31,6 +31,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <properties>
     <hadoop.component>hdfs</hadoop.component>
+    <surefire.fork.timeout>3600</surefire.fork.timeout>
   </properties>
 
   <dependencies>
@@ -80,11 +81,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-reload4j</artifactId>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-util-ajax</artifactId>
-      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -202,6 +198,15 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
         <configuration>
           <systemPropertyVariables>
             <derby.stream.error.file>${project.build.directory}/derby.log</derby.stream.error.file>
+            <!-- Fail hung tests as named, per-method timeouts well before
+                 Surefire's forkedProcessTimeoutInSeconds kills the fork
+                 and loses the class's results.  See hadoop-hdfs/pom.xml.
+                 1800s rather than hadoop-hdfs's 600s: this module's fork
+                 budget is 3600s precisely because RBF methods and
+                 lifecycle setups legitimately run long, and a default
+                 below their honest runtime would convert slow tests into
+                 new named flakes. -->
+            <junit.jupiter.execution.timeout.default>1800 s</junit.jupiter.execution.timeout.default>
           </systemPropertyVariables>
         </configuration>
       </plugin>
@@ -327,6 +332,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>.gitattributes</exclude>
             <exclude>.idea/**</exclude>
             <exclude>dev-support/findbugsExcludeFile.xml</exclude>
+            <exclude>src/main/java/org/apache/hadoop/hdfs/server/federation/metrics/JSON.java</exclude>
             <exclude>src/main/webapps/router/robots.txt</exclude>
             <exclude>src/site/resources/images/*</exclude>
           </excludes>
@@ -371,7 +377,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
             <configuration>
               <forkCount>${testsThreadCount}</forkCount>
               <reuseForks>false</reuseForks>
-              <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
+              <argLine>${maven-surefire-plugin.argLine} @{argLine} -DminiClusterDedicatedDirs=true</argLine>
               <systemPropertyVariables>
                 <testsThreadCount>${testsThreadCount}</testsThreadCount>
                 <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>

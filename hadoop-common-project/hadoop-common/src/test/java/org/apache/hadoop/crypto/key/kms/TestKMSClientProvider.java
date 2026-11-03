@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -39,7 +40,11 @@ import java.net.URL;
 import static org.apache.hadoop.crypto.key.kms.KMSDelegationToken.TOKEN_KIND;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit test for {@link KMSClientProvider} class.
@@ -131,5 +136,21 @@ public class TestKMSClientProvider {
     creds.addToken(tok.getService(), tok);
     final Token chosen = url.selectDelegationToken(new URL(urlString), creds);
     assertEquals(tok, chosen);
+  }
+
+  @Test
+  public void testIsChunkedHttpResponse() {
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getHeaderField("Transfer-Encoding")).thenReturn("chunked");
+    assertTrue(KMSClientProvider.isChunkedHttpResponse(conn));
+
+    when(conn.getHeaderField("Transfer-Encoding")).thenReturn("CHUNKED");
+    assertTrue(KMSClientProvider.isChunkedHttpResponse(conn));
+
+    when(conn.getHeaderField("Transfer-Encoding")).thenReturn(null);
+    assertFalse(KMSClientProvider.isChunkedHttpResponse(conn));
+
+    when(conn.getHeaderField("Transfer-Encoding")).thenReturn("gzip");
+    assertFalse(KMSClientProvider.isChunkedHttpResponse(conn));
   }
 }

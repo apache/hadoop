@@ -53,10 +53,10 @@ import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ThreadUtil;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.log4j.spi.LoggingEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
@@ -73,6 +73,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 
+@Tag("slow")
 public class TestStandbyCheckpoints {
   private static final int NUM_DIRS_IN_LOG = 200000;
   protected static int NUM_NNS = 3;
@@ -422,8 +423,12 @@ public class TestStandbyCheckpoints {
    * mid-checkpoint during image upload from standby to active NN.
    */
   @Test
-  @Timeout(value = 60)
+  @Timeout(value = 300)
   public void testCheckpointCancellationDuringUpload() throws Exception {
+    // 300s, not 60s: the internal waits alone (30s TransferFsImageUpload
+    // thread-death wait, two waitForStandbyToCatchUp/waitForCheckpoint
+    // rounds, three NameNode restarts, an upload throttled to 100 B/s)
+    // can exceed 60s on a loaded CI agent.  Sibling tests use 300s.
     // Set dfs.namenode.checkpoint.txns differently on the first NN to avoid it
     // doing checkpoint when it becomes a standby
     cluster.getConfiguration(0).setInt(
@@ -620,9 +625,9 @@ public class TestStandbyCheckpoints {
     ThreadUtil.sleepAtLeastIgnoreInterrupts(1000);
     
     // Perform an RPC that needs to take the write lock.
-    SubjectInheritingThread t = new SubjectInheritingThread() {
+    Thread t = new Thread() {
       @Override
-      public void work() {
+      public void run() {
         try {
           nns[1].getRpcServer().restoreFailedStorage("false");
         } catch (IOException e) {

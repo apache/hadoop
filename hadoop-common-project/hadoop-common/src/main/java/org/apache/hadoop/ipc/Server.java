@@ -68,6 +68,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
@@ -81,6 +82,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -106,6 +108,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto.SaslState;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RPCTraceInfoProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.AuthorizationContext;
 import org.apache.hadoop.security.SaslMechanismFactory;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SaslRpcServer;
@@ -124,24 +127,19 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
-
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.tracing.Span;
 import org.apache.hadoop.tracing.SpanContext;
 import org.apache.hadoop.tracing.TraceScope;
 import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.tracing.TraceUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.classification.VisibleForTesting;
-
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
 import org.apache.hadoop.thirdparty.protobuf.Message;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.security.AuthorizationContext;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -1473,7 +1471,7 @@ public abstract class Server {
   }
 
   /** Listens on the socket. Creates jobs for the handler threads*/
-  private class Listener extends SubjectInheritingThread {
+  private class Listener extends Thread {
     
     private ServerSocketChannel acceptChannel = null; //the accept channel
     private Selector selector = null; //the selector that we use for the server
@@ -1522,7 +1520,7 @@ public abstract class Server {
       this.isOnAuxiliaryPort = true;
     }
     
-    private class Reader extends SubjectInheritingThread {
+    private class Reader extends Thread {
       final private BlockingQueue<Connection> pendingConnections;
       private final Selector readSelector;
 
@@ -1535,7 +1533,7 @@ public abstract class Server {
       }
       
       @Override
-      public void work() {
+      public void run() {
         LOG.info("Starting " + Thread.currentThread().getName());
         try {
           doRunLoop();
@@ -1614,7 +1612,7 @@ public abstract class Server {
     }
 
     @Override
-    public void work() {
+    public void run() {
       LOG.info(Thread.currentThread().getName() + ": starting");
       SERVER.set(Server.this);
       connectionManager.startIdleScan();
@@ -1762,7 +1760,7 @@ public abstract class Server {
   }
 
   // Sends responses of RPC back to clients.
-  private class Responder extends SubjectInheritingThread {
+  private class Responder extends Thread {
     private final Selector writeSelector;
     private int pending;         // connections waiting to register
 
@@ -1774,7 +1772,7 @@ public abstract class Server {
     }
 
     @Override
-    public void work() {
+    public void run() {
       LOG.info(Thread.currentThread().getName() + ": starting");
       SERVER.set(Server.this);
       try {
@@ -2946,15 +2944,27 @@ public abstract class Server {
         throw new FatalRpcServerException(
             RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER, err);
       }
-      Class<? extends Writable> rpcRequestClass = 
+      // Reject requests for RPC kinds with no registered protocols on this
+      // server instance. This prevents deserialization of untrusted payloads
+      // for unsupported kinds. See HADOOP-19864.
+      if (Server.this instanceof RPC.Server server) {
+        final RPC.RpcKind kind = ProtoUtil.convert(header.getRpcKind());
+        if (!server.hasRegisteredProtocols(kind)) {
+          final String err = "No protocols registered on this server for RpcKind "
+              + header.getRpcKind()
+              + ". Rejecting request without deserialization.";
+          LOG.info("{} Client: {}", err, getHostAddress());
+          throw new FatalRpcServerException(
+              RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER, err);
+        }
+      }
+      Class<? extends Writable> rpcRequestClass =
           getRpcRequestWrapper(header.getRpcKind());
       if (rpcRequestClass == null) {
-        LOG.warn("Unknown rpc kind "  + header.getRpcKind() + 
-            " from client " + getHostAddress());
-        final String err = "Unknown rpc kind in rpc header"  + 
-            header.getRpcKind();
+        LOG.warn("Unknown rpc kind {} from client {}", header.getRpcKind(), getHostAddress());
         throw new FatalRpcServerException(
-            RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER, err);
+            RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
+            "Unknown rpc kind in rpc header " + header.getRpcKind());
       }
       Writable rpcRequest;
       try { //Read the rpc request
@@ -2962,12 +2972,12 @@ public abstract class Server {
       } catch (RpcServerException rse) { // lets tests inject failures.
         throw rse;
       } catch (Throwable t) { // includes runtime exception from newInstance
-        LOG.warn("Unable to read call parameters for client " +
-                 getHostAddress() + "on connection protocol " +
-            this.protocolName + " for rpcKind " + header.getRpcKind(),  t);
-        String err = "IPC server unable to read call parameters: "+ t.getMessage();
+        LOG.warn(
+            "Unable to read call parameters for client {} on connection protocol {} for rpcKind {}",
+            getHostAddress(), this.protocolName, header.getRpcKind(), t);
         throw new FatalRpcServerException(
-            RpcErrorCodeProto.FATAL_DESERIALIZING_REQUEST, err);
+            RpcErrorCodeProto.FATAL_DESERIALIZING_REQUEST,
+            "IPC server unable to read call parameters: " + t.getMessage());
       }
 
       Span span = null;
@@ -3228,7 +3238,7 @@ public abstract class Server {
   }
 
   /** Handles queued calls . */
-  private class Handler extends SubjectInheritingThread {
+  private class Handler extends Thread {
     public Handler(int instanceNumber) {
       this.setDaemon(true);
       this.setName("IPC Server handler "+ instanceNumber +
@@ -3236,7 +3246,7 @@ public abstract class Server {
     }
 
     @Override
-    public void work() {
+    public void run() {
       LOG.debug("{}: starting", Thread.currentThread().getName());
       SERVER.set(Server.this);
       while (running) {

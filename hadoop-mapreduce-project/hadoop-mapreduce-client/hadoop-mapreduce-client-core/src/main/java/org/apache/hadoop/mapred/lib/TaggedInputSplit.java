@@ -106,18 +106,20 @@ class TaggedInputSplit implements Configurable, InputSplit {
 
   @SuppressWarnings("unchecked")
   public void readFields(DataInput in) throws IOException {
-    inputSplitClass = (Class<? extends InputSplit>) readClass(in);
+    inputSplitClass = (Class<? extends InputSplit>) readClass(in,
+        InputSplit.class);
     inputSplit = (InputSplit) ReflectionUtils
        .newInstance(inputSplitClass, conf);
     inputSplit.readFields(in);
-    inputFormatClass = (Class<? extends InputFormat>) readClass(in);
-    mapperClass = (Class<? extends Mapper>) readClass(in);
+    inputFormatClass = (Class<? extends InputFormat>) readClass(in,
+        InputFormat.class);
+    mapperClass = (Class<? extends Mapper>) readClass(in, Mapper.class);
   }
 
-  private Class<?> readClass(DataInput in) throws IOException {
+  private Class<?> readClass(DataInput in, Class<?> xface) throws IOException {
     String className = StringInterner.weakIntern(Text.readString(in));
     try {
-      return conf.getClassByName(className);
+      return ReflectionUtils.loadUninitedClass(conf, className, xface);
     } catch (ClassNotFoundException e) {
       throw new RuntimeException("readObject can't find class", e);
     }

@@ -58,6 +58,7 @@ import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
@@ -68,6 +69,7 @@ import java.util.function.Supplier;
 /**
  * Test cases regarding pipeline recovery during NN failover.
  */
+@Tag("slow")
 public class TestPipelinesFailover {
   static {
     GenericTestUtils.setLogLevel(LoggerFactory.getLogger(

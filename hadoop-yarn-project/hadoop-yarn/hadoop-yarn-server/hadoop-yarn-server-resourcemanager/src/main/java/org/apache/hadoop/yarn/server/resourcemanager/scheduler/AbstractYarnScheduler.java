@@ -117,7 +117,6 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 
 
 @SuppressWarnings("unchecked")
@@ -1717,9 +1716,9 @@ public abstract class AbstractYarnScheduler
    * Thread which calls {@link #update()} every
    * <code>updateInterval</code> milliseconds.
    */
-  private class UpdateThread extends SubjectInheritingThread {
+  private class UpdateThread extends Thread {
     @Override
-    public void work() {
+    public void run() {
       while (!Thread.currentThread().isInterrupted()) {
         try {
           synchronized (updateThreadMonitor) {

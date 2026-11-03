@@ -449,7 +449,7 @@ public class InMemoryPlan implements Plan {
     }
     reservationTable.remove(reservation.getReservationId());
     decrementAllocation(reservation);
-    LOG.info("Sucessfully deleted reservation: {} in plan.",
+    LOG.info("Successfully deleted reservation: {} in plan.",
         reservation.getReservationId());
     return true;
   }

@@ -65,7 +65,6 @@ import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
@@ -352,7 +351,7 @@ public class JobHistoryEventHandler extends AbstractService
     } else if (timelineV2Client != null) {
       timelineV2Client.start();
     }
-    eventHandlingThread = new SubjectInheritingThread(new Runnable() {
+    eventHandlingThread = new Thread(new Runnable() {
       @Override
       public void run() {
         JobHistoryEvent event = null;

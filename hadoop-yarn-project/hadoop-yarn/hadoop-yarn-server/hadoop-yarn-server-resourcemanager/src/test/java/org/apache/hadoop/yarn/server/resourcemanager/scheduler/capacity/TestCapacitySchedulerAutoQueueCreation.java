@@ -93,6 +93,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
@@ -137,6 +138,10 @@ public class TestCapacitySchedulerAutoQueueCreation
       ManagedParentQueue parentQueue = (ManagedParentQueue) cs.getQueue(
           PARENT_QUEUE);
       assertEquals(parentQueue, autoCreatedLeafQueue.getParent());
+      assertEquals("[memory-mb=50.0%,vcores=50.0%]",
+          autoCreatedLeafQueue.getConfiguredCapacityVector(NO_LABEL).toString());
+      assertEquals("[memory-mb=100.0%,vcores=100.0%]",
+          autoCreatedLeafQueue.getConfiguredMaxCapacityVector(NO_LABEL).toString());
 
       Map<String, Float> expectedChildQueueAbsCapacity =
       populateExpectedAbsCapacityByLabelForParentQueue(1);
@@ -362,9 +367,11 @@ public class TestCapacitySchedulerAutoQueueCreation
               new RMContainerTokenSecretManager(newConf),
               new NMTokenSecretManagerInRM(newConf),
               new ClientToAMTokenSecretManagerInRM(), null));
-
+      fail("Expected exception while converting a managed parent queue to a leaf queue");
     } catch (IOException e) {
-      //expected exception
+      assertEquals("Failed to re-init queues : Cannot convert auto create enabled parent "
+          + "queue: root.c to leaf queue. Please check  parent queue's configuration "
+          + "auto-create-child-queue.enabled is set to true", e.getMessage());
     } finally {
       newCS.stop();
     }
@@ -426,7 +433,9 @@ public class TestCapacitySchedulerAutoQueueCreation
       fail("Expected exception while converting a parent queue to"
           + " an auto create enabled parent queue");
     } catch (IOException e) {
-      //expected exception
+      assertEquals("Failed to re-init queues : Can not convert parent queue: root.a to auto "
+          + "create enabled parent queue since it could have other pre-configured queues "
+          + "which is not supported", e.getMessage());
     } finally {
       newCS.stop();
     }
@@ -764,7 +773,8 @@ public class TestCapacitySchedulerAutoQueueCreation
         newCS.addQueue(c3);
         fail("Expected exception for auto queue creation failure");
       } catch (SchedulerDynamicEditException e) {
-        //expected exception
+        assertEquals("Cannot auto create leaf queue root.c.c3. Child queues capacities have "
+            + "reached parent queue : root.c's guaranteed capacity", e.getMessage());
       }
     } finally {
       if (newMockRM != null) {
@@ -1142,5 +1152,91 @@ public class TestCapacitySchedulerAutoQueueCreation
       ((CapacityScheduler) newMockRM.getResourceScheduler()).stop();
       newMockRM.stop();
     }
+  }
+
+  @Test
+  public void testAutoCreateLeafQueueFailsWhenMaxQueuesReached() throws Exception {
+    CapacitySchedulerConfiguration conf =
+        new CapacitySchedulerConfiguration(cs.getConfiguration(), false);
+    conf.setInt(QueuePrefixes.getQueuePrefix(C)
+        + CapacitySchedulerConfiguration.AUTO_CREATE_QUEUE_MAX_QUEUES, 1);
+    cs.reinitialize(conf, mockRM.getRMContext());
+    CapacitySchedulerQueueManager queueManager = cs.getCapacitySchedulerQueueManager();
+
+    queueManager.createQueue(new QueuePath("root.c.u1"));
+    SchedulerDynamicEditException e = assertThrows(SchedulerDynamicEditException.class,
+        () -> queueManager.createQueue(new QueuePath("root.c.u2")));
+    assertEquals("Cannot auto create leaf queue root.c.u2.Max Child Queue limit exceeded "
+        + "which is configured as : 1 and number of child queues is : 1", e.getMessage());
+  }
+
+  @Test
+  public void testReinitializeFailsOnTemplateMaximumCapacityAboveHundred() throws Exception {
+    cs.getCapacitySchedulerQueueManager().createQueue(new QueuePath("root.c.u1"));
+    CapacitySchedulerConfiguration conf =
+        new CapacitySchedulerConfiguration(cs.getConfiguration(), false);
+    conf.set(CapacitySchedulerConfiguration.PREFIX + C_PATH
+        + ".leaf-queue-template.maximum-capacity", "150");
+
+    IOException e = assertThrows(IOException.class,
+        () -> cs.reinitialize(conf, mockRM.getRMContext()));
+    assertEquals("Failed to re-init queues : Illegal value  of maximumCapacity 1.5 used in "
+        + "call to setMaxCapacity for queue root.c.u1", e.getMessage());
+  }
+
+  @Test
+  public void testLeafQueueTemplateLabelMustBeAccessibleByParent() throws Exception {
+    CapacitySchedulerConfiguration conf =
+        new CapacitySchedulerConfiguration(cs.getConfiguration(), false);
+    conf.setAutoCreatedLeafQueueTemplateCapacityByLabel(D, NODEL_LABEL_GPU, 10f);
+
+    IOException e = assertThrows(IOException.class,
+        () -> cs.reinitialize(conf, mockRM.getRMContext()));
+    assertEquals("Failed to re-init queues : Invalid node label GPU on configured leaf "
+        + "template on parent queue root.d", e.getMessage());
+  }
+
+  @Test
+  public void testLeafQueueTemplateOverridesOtherLeafQueueSettings() throws Exception {
+    QueuePath leafPath = new QueuePath("root.c.u1");
+    CapacitySchedulerConfiguration conf =
+        new CapacitySchedulerConfiguration(cs.getConfiguration(), false);
+    conf.setUserLimitFactor(leafPath, 7f);
+    conf.setQueuePriority(leafPath, 4);
+    String flexibleLeafTemplate = QueuePrefixes.getQueuePrefix(C)
+        + AutoCreatedQueueTemplate.AUTO_QUEUE_LEAF_TEMPLATE_PREFIX;
+    conf.set(flexibleLeafTemplate + "capacity", "20%");
+    conf.set(flexibleLeafTemplate + "user-limit-factor", "9");
+    cs.reinitialize(conf, mockRM.getRMContext());
+
+    // Explicit leaf settings, except the priority, and the flexible auto queue
+    // creation template are ignored for a leaf of a managed parent queue.
+    AbstractLeafQueue leaf = cs.getCapacitySchedulerQueueManager().createQueue(leafPath);
+    assertEquals(0.5f, leaf.getCapacity(), EPSILON);
+    assertEquals(3.0f, leaf.getUserLimitFactor(), EPSILON);
+    assertEquals(4, leaf.getPriority().getPriority());
+  }
+
+  @Test
+  public void testReinitializeWithUnchangedConfigurationResetsIdleLeafQueue()
+      throws Exception {
+    CapacitySchedulerConfiguration conf =
+        new CapacitySchedulerConfiguration(cs.getConfiguration(), false);
+    conf.setAutoCreatedLeafQueueConfigMaxCapacity(C, 80f);
+    conf.setAutoCreatedLeafQueueTemplateMaxCapacity(C, NODEL_LABEL_GPU, 60f);
+    conf.setAutoCreatedLeafQueueTemplateMaxCapacity(C, NODEL_LABEL_SSD, 60f);
+    cs.reinitialize(conf, mockRM.getRMContext());
+    AbstractLeafQueue leaf = cs.getCapacitySchedulerQueueManager()
+        .createQueue(new QueuePath("root.c.idle"));
+    assertEquals(0.5f, leaf.getCapacity(), EPSILON);
+    assertEquals(0.8f, leaf.getMaximumCapacity(), EPSILON);
+
+    cs.reinitialize(conf, mockRM.getRMContext());
+
+    // Current behavior: the refresh deactivates the leaf, which has no applications, and
+    // overwrites its unlabeled maximum capacity with a labeled template maximum.
+    assertEquals(0f, leaf.getCapacity(), EPSILON);
+    assertEquals(0.6f, leaf.getMaximumCapacity(), EPSILON);
+    assertEquals(0.6f, leaf.getQueueCapacities().getMaximumCapacity(NODEL_LABEL_GPU), EPSILON);
   }
 }

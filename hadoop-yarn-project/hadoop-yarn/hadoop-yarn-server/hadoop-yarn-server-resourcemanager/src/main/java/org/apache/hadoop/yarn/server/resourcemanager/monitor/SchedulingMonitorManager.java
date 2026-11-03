@@ -142,7 +142,7 @@ public class SchedulingMonitorManager {
     SchedulingMonitor mon = runningSchedulingMonitors.get(name);
     try {
       mon.stop();
-      LOG.info("Sucessfully stopped monitor=" + mon.getName());
+      LOG.info("Successfully stopped monitor=" + mon.getName());
     } catch (Exception e) {
       LOG.warn("Exception while stopping monitor=" + mon.getName(), e);
     }

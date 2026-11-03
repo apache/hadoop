@@ -88,11 +88,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-util-ajax</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-common</artifactId>
       <scope>compile</scope>
@@ -266,6 +261,15 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
         <configuration>
           <systemPropertyVariables>
             <runningWithNative>${runningWithNative}</runningWithNative>
+            <!-- Fail hung tests as named, per-method timeouts well before
+                 Surefire's forkedProcessTimeoutInSeconds kills the fork
+                 and loses the class's results.  The default SAME_THREAD
+                 mode interrupts the test thread at the deadline, which
+                 aborts any interruptible hang; an uninterruptible hang
+                 (socket accept, native call) still falls through to the
+                 fork timeout.  An explicit @Timeout overrides the
+                 default. -->
+            <junit.jupiter.execution.timeout.default>600 s</junit.jupiter.execution.timeout.default>
           </systemPropertyVariables>
           <properties>
             <property>
@@ -508,7 +512,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
             <configuration>
               <forkCount>${testsThreadCount}</forkCount>
               <reuseForks>false</reuseForks>
-              <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
+              <argLine>${maven-surefire-plugin.argLine} @{argLine} -DminiClusterDedicatedDirs=true</argLine>
               <systemPropertyVariables>
                 <testsThreadCount>${testsThreadCount}</testsThreadCount>
                 <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>

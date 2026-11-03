@@ -37,6 +37,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -44,6 +45,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.UUID;
 
+@Tag("slow")
 public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
 
   private MiniKMS miniKMS;

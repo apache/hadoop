@@ -30,7 +30,6 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
@@ -114,7 +113,7 @@ public class TestFileCreationClient {
     }
   }
 
-  static class SlowWriter extends SubjectInheritingThread {
+  static class SlowWriter extends Thread {
     final FileSystem fs;
     final Path filepath;
     boolean running = true;
@@ -126,7 +125,7 @@ public class TestFileCreationClient {
     }
 
     @Override
-    public void work() {
+    public void run() {
       FSDataOutputStream out = null;
       int i = 0;
       try {

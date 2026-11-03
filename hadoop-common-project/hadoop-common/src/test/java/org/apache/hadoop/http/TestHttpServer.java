@@ -29,11 +29,12 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.util.JsonUtils;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
-import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -287,6 +288,38 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     assertThat(conn.getResponseCode()).isEqualTo(200);
     final int after = metrics.responses2xx();
     assertThat(after).isGreaterThan(before);
+  }
+
+  @Test
+  public void testHttpServer2ThreadPoolMetrics() throws Exception {
+    final int maxThreads = 32;
+    final int acceptorCount = 2;
+    final int selectorCount = 4;
+    final Configuration conf = new Configuration();
+    conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, maxThreads);
+    conf.setInt(HttpServer2.HTTP_ACCEPTOR_COUNT_KEY, acceptorCount);
+    conf.setInt(HttpServer2.HTTP_SELECTOR_COUNT_KEY, selectorCount);
+    conf.setBoolean(
+        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED, true);
+    final HttpServer2 testServer = createTestServer(conf);
+    try {
+      testServer.start();
+      final HttpServer2Metrics metrics = testServer.getMetrics();
+
+      assertThat(metrics.maxThreads()).isEqualTo(maxThreads);
+      assertThat(metrics.acceptorThreads()).isEqualTo(acceptorCount);
+      assertThat(metrics.selectorThreads()).isEqualTo(selectorCount);
+
+      // Worker gauges are defined as the pool counts minus acceptors+selectors.
+      assertThat(metrics.maxWorkerThreads())
+          .isEqualTo(maxThreads - acceptorCount - selectorCount);
+      assertThat(metrics.workerThreads())
+          .isEqualTo(metrics.threads() - acceptorCount - selectorCount);
+      assertThat(metrics.busyWorkerThreads())
+          .isEqualTo(metrics.busyThreads() - acceptorCount - selectorCount);
+    } finally {
+      testServer.stop();
+    }
   }
 
   /**
@@ -563,7 +596,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   @SuppressWarnings("unchecked")
   private static Map<String, Object> parse(String jsonString) {
-    return (Map<String, Object>) JSON.parse(jsonString);
+    return JsonUtils.parse(jsonString,
+        new TypeReference<Map<String, Object>>() {});
   }
 
   @Test public void testJersey() throws Exception {

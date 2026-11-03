@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.azurebfs.diagnostics.IntegerConfigurationBasicValida
 import org.apache.hadoop.fs.azurebfs.diagnostics.LongConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.StringConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
+import org.apache.hadoop.fs.azurebfs.enums.VectoredReadStrategy;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
@@ -509,6 +510,16 @@ public class AbfsConfiguration{
       FS_AZURE_ENABLE_PAGINATED_DELETE, DefaultValue = DEFAULT_ENABLE_PAGINATED_DELETE)
   private boolean isPaginatedDeleteEnabled;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_PHOTON, DefaultValue = DEFAULT_ENABLE_PHOTON)
+  private boolean isPhotonEnabled;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_PHOTON_ARROW_MEMORY_LIMIT,
+      MinValue = 1,
+      DefaultValue = DEFAULT_PHOTON_ARROW_MEMORY_LIMIT)
+  private long photonArrowMemoryLimit;
+
   @LongConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS, DefaultValue = DEFAULT_AZURE_BLOB_COPY_PROGRESS_WAIT_MILLIS)
   private long blobCopyProgressPollWaitMillis;
@@ -623,6 +634,22 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_LOWEST_REQUEST_PRIORITY_VALUE)
   private int prefetchRequestPriorityValue;
 
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_VECTORED_READ_STRATEGY,
+      DefaultValue = DEFAULT_FS_AZURE_VECTORED_READ_STRATEGY)
+  private String vectoredReadStrategy;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MIN_SEEK_FOR_VECTORED_READS,
+  DefaultValue = DEFAULT_FS_AZURE_MIN_SEEK_FOR_VECTORED_READS)
+  private int minSeekForVectoredReads;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS,
+      DefaultValue = DEFAULT_FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS)
+  private int maxReadSizeForVectoredReads;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS_THROUGHPUT,
+      DefaultValue = DEFAULT_FS_AZURE_MAX_MERGED_READ_SIZE_FOR_VECTORED_READS_THROUGHPUT)
+  private int maxReadSizeForVectoredReadsThroughput;
+
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_READ_POLICY,
           DefaultValue = DEFAULT_AZURE_READ_POLICY)
   private String abfsReadPolicy;
@@ -630,6 +657,11 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_RESTRICT_GPS_ON_OPENFILE,
   DefaultValue = DEFAULT_FS_AZURE_RESTRICT_GPS_ON_OPENFILE)
   private boolean restrictGpsOnOpenFile;
+
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_RBAC_ONLY_MODE,
+      DefaultValue = DEFAULT_FS_AZURE_RBAC_ONLY_MODE)
+  private boolean rbacOnlyMode;
 
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
@@ -1065,7 +1097,7 @@ public class AbfsConfiguration{
         Class<?> clazz = rawConfig.getClassByName(keyProviderClass);
         keyProviderObject = clazz.newInstance();
       } catch (Exception e) {
-        throw new KeyProviderException("Unable to load key provider class.", e);
+        throw new KeyProviderException("Unable to load key provider class " + keyProviderClass, e);
       }
       if (!(keyProviderObject instanceof KeyProvider)) {
         throw new KeyProviderException(keyProviderClass
@@ -2054,6 +2086,23 @@ public class AbfsConfiguration{
     return isPaginatedDeleteEnabled;
   }
 
+  /**
+   * Whether Photon (Apache Arrow based ListBlob) listing is enabled.
+   * @return true if Photon is enabled, false otherwise.
+   */
+  public boolean isPhotonEnabled() {
+    return isPhotonEnabled;
+  }
+
+  /**
+   * Maximum off-heap memory in bytes the Apache Arrow allocator may use while
+   * parsing a single Photon (Arrow) ListBlobs response.
+   * @return the configured Arrow allocator memory limit in bytes.
+   */
+  public long getPhotonArrowMemoryLimit() {
+    return photonArrowMemoryLimit;
+  }
+
   public boolean getIsChecksumValidationEnabled() {
     return isChecksumValidationEnabled;
   }
@@ -2178,5 +2227,69 @@ public class AbfsConfiguration{
    */
   public int getTailLatencyMaxRetryCount() {
     return tailLatencyMaxRetryCount;
+  }
+
+  /**
+   * Returns the configured vectored read strategy.
+   *
+   * <p>
+   * The configuration value is parsed in a case-insensitive manner and may be
+   * specified either using the enum name (for example,
+   * {@code TPS_OPTIMIZED}) or the short name (for example, {@code TPS}).
+   * </p>
+   *
+   * @return the resolved {@link VectoredReadStrategy}
+   *
+   * @throws IllegalArgumentException if the configured value is invalid
+   */
+  public VectoredReadStrategy getVectoredReadStrategy() {
+    try {
+      return VectoredReadStrategy.fromString(vectoredReadStrategy);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(
+          "Invalid value for " + FS_AZURE_VECTORED_READ_STRATEGY
+              + ": " + vectoredReadStrategy
+              + ". Expected one of: TPS, THROUGHPUT, TPS_OPTIMIZED, THROUGHPUT_OPTIMIZED",  e);
+    }
+  }
+
+  /**
+   * Returns the minimum gap between adjacent read ranges that qualifies them
+   * for merging during vectored reads.
+   *
+   * @return minimum gap threshold for range merging
+   */
+  public int getMinSeekForVectoredReads() {
+    return minSeekForVectoredReads;
+  }
+
+  /**
+   * Returns the maximum gap between adjacent read ranges allowed when
+   * considering them for merging during vectored reads.
+   *
+   * @return maximum gap threshold for range merging
+   */
+  public int getMaxReadSizeForVectoredReads() {
+    return maxReadSizeForVectoredReads;
+  }
+
+  /**
+   * Returns the maximum gap between adjacent read ranges allowed when
+   * considering them for merging during vectored reads throughput optimized..
+   *
+   * @return maximum gap threshold for range merging
+   */
+  public int getMaxReadSizeForVectoredReadsThroughput() {
+    return maxReadSizeForVectoredReadsThroughput;
+  }
+
+  /**
+   * Returns whether the filesystem is configured to operate in RBAC-only mode.
+   * When true, setPermission call will be a no-op on HNS-enabled accounts.
+   *
+   * @return true if RBAC-only mode is enabled; false otherwise.
+   */
+  public boolean isRbacOnlyMode() {
+    return this.rbacOnlyMode;
   }
 }

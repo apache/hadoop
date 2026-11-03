@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.nfs.nfs3;
 
+import java.net.InetSocketAddress;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.oncrpc.RpcProgram;
 import org.apache.hadoop.oncrpc.SimpleTcpServer;
@@ -35,6 +37,7 @@ public abstract class Nfs3Base {
   public static final Logger LOG = LoggerFactory.getLogger(Nfs3Base.class);
   private final RpcProgram rpcProgram;
   private int nfsBoundPort; // Will set after server starts
+  private boolean registered = false;
   private SimpleTcpServer tcpServer = null;
 
   public RpcProgram getRpcProgram() {
@@ -47,6 +50,7 @@ public abstract class Nfs3Base {
   }
 
   public void start(boolean register) {
+    registered = register;
     startTCPServer(); // Start TCP server
 
     if (register) {
@@ -63,7 +67,7 @@ public abstract class Nfs3Base {
 
   private void startTCPServer() {
     tcpServer = new SimpleTcpServer(rpcProgram.getPort(),
-        rpcProgram, 0);
+        rpcProgram.getBindHost(), rpcProgram, 0);
     rpcProgram.startDaemons();
     try {
       tcpServer.run();
@@ -79,8 +83,16 @@ public abstract class Nfs3Base {
     nfsBoundPort = tcpServer.getBoundPort();
   }
 
+  /**
+   * Returns the local TCP listen address of the NFSv3 service.
+   * @return local TCP listen address, or null if the server is not running
+   */
+  public InetSocketAddress getBoundAddress() {
+    return tcpServer != null ? tcpServer.getBoundAddress() : null;
+  }
+
   public void stop() {
-    if (nfsBoundPort > 0) {
+    if (registered && nfsBoundPort > 0) {
       rpcProgram.unregister(PortmapMapping.TRANSPORT_TCP, nfsBoundPort);
       nfsBoundPort = 0;
     }

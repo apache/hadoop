@@ -50,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import org.junit.jupiter.api.Tag;
 
 /**
  * This test serves a prototype to demo the idea proposed so far. It creates two
@@ -57,6 +58,7 @@ import static org.mockito.Mockito.mock;
  * layout. For simple, it assumes 6 data blocks in both files and the block size
  * are the same.
  */
+@Tag("slow")
 public class TestFileChecksum {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestFileChecksum.class);

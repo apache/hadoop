@@ -63,6 +63,7 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.event.Level;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -71,6 +72,7 @@ import org.junit.jupiter.api.Timeout;
  * created. The snapshotted directory is changed and verification is done to
  * ensure snapshots remain unchanges.
  */
+@Tag("slow")
 public class TestSnapshot {
   {
     GenericTestUtils.setLogLevel(INode.LOG, Level.TRACE);

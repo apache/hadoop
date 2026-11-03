@@ -71,6 +71,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -111,7 +112,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -267,6 +267,18 @@ public class TestCapacityScheduler {
       assertTrue(e.getMessage().startsWith("Invalid resource scheduler vcores"),
           "The thrown exception is not the expected one.");
     }
+  }
+
+  @Test
+  public void testInvalidConfigurationStoreClass() {
+    CapacityScheduler scheduler = new CapacityScheduler();
+    scheduler.setRMContext(resourceManager.getRMContext());
+    Configuration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS, "bogus");
+
+    ServiceStateException e = assertThrows(ServiceStateException.class,
+        () -> scheduler.init(conf));
+    assertEquals("Invalid configuration store class: bogus", e.getCause().getMessage());
   }
 
   @Test
@@ -1065,7 +1077,7 @@ public class TestCapacityScheduler {
     // grab the scheduler lock from another thread
     // and verify an allocate call in this thread doesn't block on it
     final CyclicBarrier barrier = new CyclicBarrier(2);
-    Thread otherThread = new SubjectInheritingThread(new Runnable() {
+    Thread otherThread = new Thread(new Runnable() {
       @Override
       public void run() {
         synchronized(cs) {
@@ -3089,7 +3101,7 @@ public class TestCapacityScheduler {
 
       // The scheduler thread holds the queue's read-lock for 5 seconds
       // then the preemption's read-lock is used
-      Thread schedulerThread = new SubjectInheritingThread(() -> {
+      Thread schedulerThread = new Thread(() -> {
         queue.readLock.lock();
         try {
           Thread.sleep(5 * 1000);
@@ -3102,7 +3114,7 @@ public class TestCapacityScheduler {
       }, "SCHEDULE");
 
       // The complete thread locks/unlocks the queue's write-lock after 1 seconds
-      Thread completeThread = new SubjectInheritingThread(() -> {
+      Thread completeThread = new Thread(() -> {
         try {
           Thread.sleep(1000);
         } catch (InterruptedException e) {
@@ -3116,7 +3128,7 @@ public class TestCapacityScheduler {
       // The refresh thread holds the preemption's write-lock after 2 seconds
       // while it calls the getChildQueues(ByTryLock) that
       // locks(tryLocks) the queue's read-lock
-      Thread refreshThread = new SubjectInheritingThread(() -> {
+      Thread refreshThread = new Thread(() -> {
         try {
           Thread.sleep(2 * 1000);
         } catch (InterruptedException e) {

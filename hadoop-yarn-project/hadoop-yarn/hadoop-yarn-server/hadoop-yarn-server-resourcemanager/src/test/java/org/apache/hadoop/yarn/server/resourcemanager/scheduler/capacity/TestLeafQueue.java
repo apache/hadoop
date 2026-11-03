@@ -29,6 +29,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -62,7 +63,6 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -1130,7 +1130,7 @@ public class TestLeafQueue {
     // Set up allocation threads
     Thread[] threads = new Thread[numAllocationThreads];
     for (int i = 0; i < numAllocationThreads; i++) {
-      threads[i] = new SubjectInheritingThread(new Runnable() {
+      threads[i] = new Thread(new Runnable() {
         @Override
         public void run() {
           try {
@@ -1920,6 +1920,23 @@ public class TestLeafQueue {
   }
 
   @Test
+  public void testUserWeightAboveUserLimitIsRejected() throws Exception {
+    LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
+    csConf.setUserLimit(a.getQueuePathObject(), 50);
+    csConf.setFloat("yarn.scheduler.capacity." + a.getQueuePath()
+        + ".user-settings.alice." + CapacitySchedulerConfiguration.USER_WEIGHT, 3f);
+    queueContext.reinitialize();
+    when(csContext.getClusterResource())
+        .thenReturn(Resources.createResource(16 * GB, 32));
+
+    IOException e = assertThrows(IOException.class,
+        () -> a.reinitialize(a, csContext.getClusterResource()));
+    assertEquals("Weight (3.0) for user \"alice\" must be between 0 and 100 / 50.0"
+        + " (= 2.0, the number of concurrent active users in " + a.getQueuePath() + ")",
+        e.getMessage());
+  }
+
+  @Test
   public void testUserSpecificUserLimits() throws Exception {
     // Mock the queue
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
@@ -1936,7 +1953,6 @@ public class TestLeafQueue {
         + ".user-settings.firstname.lastname."
         + CapacitySchedulerConfiguration.USER_WEIGHT,
         0.7f);
-    csConf.reinitializeConfigurationProperties();
     queueContext.reinitialize();
 
     when(csContext.getClusterResource())
@@ -4387,7 +4403,7 @@ public class TestLeafQueue {
     final List<ConcurrentModificationException> conException =
         new ArrayList<ConcurrentModificationException>();
 
-    Thread submitAndRemove = new SubjectInheritingThread(new Runnable() {
+    Thread submitAndRemove = new Thread(new Runnable() {
 
       @Override
       public void run() {
@@ -4406,7 +4422,7 @@ public class TestLeafQueue {
       }
     }, "SubmitAndRemoveApplicationAttempt Thread");
 
-    Thread getAppsInQueue = new SubjectInheritingThread(new Runnable() {
+    Thread getAppsInQueue = new Thread(new Runnable() {
       List<ApplicationAttemptId> apps = new ArrayList<ApplicationAttemptId>();
 
       @Override
@@ -5246,8 +5262,8 @@ public class TestLeafQueue {
   public void testMaxApplicationsWithNodeLabels() throws IOException {
     CapacitySchedulerConfiguration conf = csConf;
     String rootChild = root.getChildQueues().get(0).getQueuePath();
-    when(cs.getClusterResource()).thenReturn(
-        Resources.createResource(2 * 16 * GB, 2 * 32));
+    cs.getNodeTracker().addNode(
+        TestUtils.getMockNode("host0", DEFAULT_RACK, 0, 2 * 16 * GB, 2 * 32));
 
     conf.setCapacityByLabel(ROOT, "test", 100);
     conf.setCapacityByLabel(new QueuePath(rootChild), "test", 100);

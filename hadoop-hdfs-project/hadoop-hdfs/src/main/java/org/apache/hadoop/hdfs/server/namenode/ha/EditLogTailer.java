@@ -37,7 +37,6 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Timer;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -174,6 +173,12 @@ public class EditLogTailer {
   private final long maxTxnsPerLock;
 
   /**
+   * Directly controls whether {@link #triggerActiveLogRoll} is allowed to run
+   * or not under the current {@link HAState}.
+   */
+  private final boolean triggerRollEnabled;
+
+  /**
    * Timer instance to be set only using constructor.
    * Only tests can reassign this by using setTimerForTests().
    * For source code, this timer instance should be treated as final.
@@ -252,6 +257,11 @@ public class EditLogTailer {
           DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_DEFAULT);
       maxRetries = DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_DEFAULT;
     }
+
+    this.triggerRollEnabled = conf.getBoolean(DFSConfigKeys.DFS_HA_LOG_ROLL_ENABLED_KEY,
+        DFSConfigKeys.DFS_HA_LOG_ROLL_ENABLED_DEFAULT);
+    LOG.info("Rolling is {} on this NN state {}", triggerRollEnabled ? "enabled" : "disabled",
+        namesystem.getState());
 
     inProgressOk = conf.getBoolean(
         DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY,
@@ -476,7 +486,7 @@ public class EditLogTailer {
    * The thread which does the actual work of tailing edits journals and
    * applying the transactions to the FSNS.
    */
-  private class EditLogTailerThread extends SubjectInheritingThread {
+  private class EditLogTailerThread extends Thread {
     private volatile boolean shouldRun = true;
     
     private EditLogTailerThread() {
@@ -488,7 +498,7 @@ public class EditLogTailer {
     }
     
     @Override
-    public void work() {
+    public void run() {
       SecurityUtil.doAsLoginUserOrFatal(
           new PrivilegedAction<Object>() {
           @Override
@@ -508,7 +518,7 @@ public class EditLogTailer {
           // read any more transactions since the last time a roll was
           // triggered.
           boolean triggeredLogRoll = false;
-          if (tooLongSinceLastLoad() &&
+          if (triggerRollEnabled && tooLongSinceLastLoad() &&
               lastRollTriggerTxId < lastLoadedTxnId) {
             triggerActiveLogRoll();
             triggeredLogRoll = true;

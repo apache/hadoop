@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
@@ -46,6 +47,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -71,6 +74,11 @@ public class TestCapacitySchedulerWeightMode {
   private static final QueuePath A1 = new QueuePath(A1_PATH);
   private static final QueuePath B1 = new QueuePath(B1_PATH);
   private static final QueuePath B2 = new QueuePath(B2_PATH);
+  private static final QueuePath C = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".c");
+  private static final QueuePath D = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".d");
+  private static final String MIXED_MODES_PREFIX = "Parent queue 'root' have children queue "
+      + "used mixed of  weight mode, percentage and absolute mode, it is not allowed, please "
+      + "double check, details:";
 
   private YarnConfiguration conf;
 
@@ -466,6 +474,127 @@ public class TestCapacitySchedulerWeightMode {
         b.getQueueInfo(false,
         false).getWeight(), 1e-6);
     rm.close();
+  }
+
+  @Test
+  public void testSiblingsMixingWeightAndPercentageRejected() {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(conf);
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
+    csConf.setCapacity(A, 50f);
+    csConf.setNonLabeledQueueWeight(B, 1);
+
+    assertEquals(MIXED_MODES_PREFIX + "{Queue=root.a, label= uses percentage mode}. "
+        + "{Queue=root.b, label= uses weight mode}. "
+        + "{Queue=root.b, label= uses percentage mode}. ", getStartupError(csConf));
+  }
+
+  @Test
+  public void testAbsoluteAndPercentageSiblingsDependOnDeclarationOrder()
+      throws IOException {
+    CapacitySchedulerConfiguration absoluteFirst = new CapacitySchedulerConfiguration(conf);
+    absoluteFirst.setQueues(ROOT, new String[] {"a", "b"});
+    absoluteFirst.setCapacity(A, "[memory=1024,vcores=1]");
+    absoluteFirst.setCapacity(B, 50f);
+    assertEquals(MIXED_MODES_PREFIX + "{Queue=root.a, label= uses absolute mode}. "
+        + "{Queue=root.b, label= uses percentage mode}. ", getStartupError(absoluteFirst));
+
+    // The mixed mode check only remembers a percentage sibling seen after the
+    // last absolute one, so listing the percentage queue first is accepted.
+    CapacitySchedulerConfiguration percentageFirst =
+        new CapacitySchedulerConfiguration(conf);
+    percentageFirst.setQueues(ROOT, new String[] {"b", "a"});
+    percentageFirst.setCapacity(A, "[memory=1024,vcores=1]");
+    percentageFirst.setCapacity(B, 50f);
+    try (MockRM rm = new MockRM(percentageFirst)) {
+      rm.start();
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+      assertEquals(Resource.newInstance(1024, 1), cs.getQueue(A.getFullPath())
+          .getQueueResourceQuotas().getConfiguredMinResource());
+    }
+  }
+
+  @Test
+  public void testAbsoluteVectorWithWeightUnitsRejectedNextToAbsoluteSibling() {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(conf);
+    csConf.setQueues(ROOT, new String[] {"a", "c"});
+    csConf.setCapacity(A, "[memory=40960,vcores=40]");
+    csConf.setCapacity(C, "[memory=1w,vcores=1w]");
+
+    assertEquals(MIXED_MODES_PREFIX + "{Queue=root.a, label= uses absolute mode}. "
+        + "{Queue=root.c, label= uses weight mode}. "
+        + "{Queue=root.c, label= uses absolute mode}. ", getStartupError(csConf));
+  }
+
+  @Test
+  public void testPerLabelMixingOfWeightAndPercentageRejected() {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(conf);
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
+    csConf.setCapacityByLabel(A, "x", 50f);
+    csConf.setLabeledQueueWeight(B, "x", 1);
+
+    // The percentage flag is not reset per queue, so root.b is also listed as
+    // using percentage mode.
+    assertEquals(MIXED_MODES_PREFIX + "{Queue=root.a, label=x uses percentage mode}. "
+        + "{Queue=root.b, label= uses percentage mode}. "
+        + "{Queue=root.b, label=x uses weight mode}. "
+        + "{Queue=root.b, label=x uses percentage mode}. ", getStartupError(csConf));
+  }
+
+  @ParameterizedTest
+  @CsvSource({"150, 100, 150.0", "100, -1, -1.0"})
+  public void testLabeledCapacityOutOfRangeRejected(float capacity, float maximumCapacity,
+      String illegalValue) {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(conf);
+    csConf.setQueues(ROOT, new String[] {"a"});
+    csConf.setCapacity(A, 100f);
+    csConf.setAccessibleNodeLabels(A, toSet("x"));
+    csConf.setCapacityByLabel(A, "x", capacity);
+    csConf.setMaximumCapacityByLabel(A, "x", maximumCapacity);
+
+    assertEquals("Illegal capacity of " + illegalValue + " for node-label=x in queue=root.a, "
+        + "valid capacity should in range of [0, 100].", getStartupError(csConf));
+  }
+
+  @Test
+  public void testWeightAbove10000Rejected() {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(conf);
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
+    csConf.setNonLabeledQueueWeight(A, 20000);
+    csConf.setNonLabeledQueueWeight(B, 1);
+
+    assertEquals("Illegal weight=20000.0 for queue=root.alabel=. "
+        + "Acceptable values: [0, 10000], -1 is same as not set", getStartupError(csConf));
+  }
+
+  @Test
+  public void testZeroWeightAndZeroPercentSiblingsAccepted() throws IOException {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(conf);
+    csConf.setQueues(ROOT, new String[] {"a", "b", "c", "d"});
+    csConf.setCapacity(A, 0f);
+    csConf.setNonLabeledQueueWeight(B, 2);
+    csConf.setNonLabeledQueueWeight(C, 1);
+    csConf.setNonLabeledQueueWeight(D, 0);
+
+    try (MockRM rm = new MockRM(csConf)) {
+      rm.start();
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+      assertEquals(0f, cs.getQueue(A.getFullPath()).getAbsoluteCapacity(), 1e-6);
+      assertEquals(2f / 3, cs.getQueue(B.getFullPath()).getAbsoluteCapacity(), 1e-6);
+      assertEquals(1f / 3, cs.getQueue(C.getFullPath()).getAbsoluteCapacity(), 1e-6);
+      QueueCapacities d = cs.getQueue(D.getFullPath()).getQueueCapacities();
+      assertEquals(0f, d.getWeight());
+      assertEquals(0f, d.getNormalizedWeight());
+      assertEquals(0f, d.getAbsoluteCapacity());
+    }
+  }
+
+  private static String getStartupError(CapacitySchedulerConfiguration csConf) {
+    try (MockRM rm = new MockRM(csConf)) {
+      rm.start();
+    } catch (Exception e) {
+      return ExceptionUtils.getRootCause(e).getMessage();
+    }
+    return fail("Expected the scheduler configuration to be rejected");
   }
 
   private void internalTestContainerAllocationWithNodeLabel(

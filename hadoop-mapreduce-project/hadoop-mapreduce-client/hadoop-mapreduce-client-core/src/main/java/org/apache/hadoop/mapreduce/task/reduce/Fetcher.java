@@ -48,7 +48,6 @@ import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.CryptoUtils;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.concurrent.SubjectInheritingThread;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +55,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 @VisibleForTesting
-public class Fetcher<K, V> extends SubjectInheritingThread {
+public class Fetcher<K, V> extends Thread {
   
   private static final Logger LOG = LoggerFactory.getLogger(Fetcher.class);
   
@@ -188,7 +187,7 @@ public class Fetcher<K, V> extends SubjectInheritingThread {
     }
   }
   
-  public void work() {
+  public void run() {
     try {
       while (!stopped && !Thread.currentThread().isInterrupted()) {
         MapHost host = null;
