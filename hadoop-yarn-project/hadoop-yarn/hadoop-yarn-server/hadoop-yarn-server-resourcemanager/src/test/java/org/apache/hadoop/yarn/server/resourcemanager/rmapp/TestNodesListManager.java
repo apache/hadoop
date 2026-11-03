@@ -66,8 +66,14 @@ public class TestNodesListManager {
         rm.stop();
       }
     } finally {
-      if (resolver != null) {
-        resolver.stop();
+      try {
+        if (rm != null) {
+          rm.getNodesListManager().stop();
+        }
+      } finally {
+        if (resolver != null) {
+          resolver.stop();
+        }
       }
     }
   }
