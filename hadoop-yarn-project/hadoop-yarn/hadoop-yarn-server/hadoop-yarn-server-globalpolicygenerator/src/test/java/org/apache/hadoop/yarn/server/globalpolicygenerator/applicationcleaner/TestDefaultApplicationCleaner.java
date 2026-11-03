@@ -28,6 +28,7 @@ import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.registry.client.impl.FSRegistryOperationsService;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -47,6 +48,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 /**
  * Unit test for DefaultApplicationCleaner in GPG.
@@ -130,6 +132,26 @@ public class TestDefaultApplicationCleaner {
     if (registry != null) {
       registry.stop();
       registry = null;
+    }
+  }
+
+  @Test
+  public void testLogRegistryAppCountWhenDifferentFromStateStore() {
+    registryClient.removeAppFromRegistry(appIds.get(1), true);
+    registryClient.removeAppFromRegistry(appIds.get(2), true);
+    routerAppIds.addAll(appIds);
+
+    LogCapturer logs = LogCapturer.captureLogs(
+        LoggerFactory.getLogger(DefaultApplicationCleaner.class));
+    try {
+      appCleaner.run();
+
+      Assertions.assertTrue(logs.getOutput().contains(
+          "3 app entries in FederationStateStore"));
+      Assertions.assertTrue(logs.getOutput().contains(
+          "1 app entries in FederationRegistry"));
+    } finally {
+      logs.stopCapturing();
     }
   }
 

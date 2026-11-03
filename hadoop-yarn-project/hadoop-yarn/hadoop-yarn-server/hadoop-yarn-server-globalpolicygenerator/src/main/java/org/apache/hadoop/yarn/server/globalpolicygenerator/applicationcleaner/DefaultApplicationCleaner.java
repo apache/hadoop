@@ -58,7 +58,7 @@ public class DefaultApplicationCleaner extends ApplicationCleaner {
 
       // Get the candidate list from Registry before calling router
       List<String> allRegistryApps = getRegistryClient().getAllApplications();
-      LOG.info("{} app entries in FederationRegistry", allStateStoreApps.size());
+      LOG.info("{} app entries in FederationRegistry", allRegistryApps.size());
 
       // Get the list of known apps from Router
       Set<ApplicationId> routerApps = getRouterKnownApplications();
