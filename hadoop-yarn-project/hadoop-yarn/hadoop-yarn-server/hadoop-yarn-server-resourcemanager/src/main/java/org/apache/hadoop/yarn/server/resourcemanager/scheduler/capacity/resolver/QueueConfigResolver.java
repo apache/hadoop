@@ -495,8 +495,8 @@ public final class QueueConfigResolver {
   }
 
   /**
-   * @param labels the configured node labels of the queue; a failure to
-   *               index them leaves only the empty label
+   * @param labeled the configured node labels of the queue; a failure to
+   *                index them leaves only the empty label
    */
   private static ResolvedQueueConfig resolveQueue(ResolvedQueueTree tree,
       ResolvedQueueConfig parent, QueuePath path, Kind kind, boolean dynamic,

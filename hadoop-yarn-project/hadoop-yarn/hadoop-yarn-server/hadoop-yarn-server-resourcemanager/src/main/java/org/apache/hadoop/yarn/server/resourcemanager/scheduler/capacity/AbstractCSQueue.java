@@ -425,15 +425,11 @@ public abstract class AbstractCSQueue implements CSQueue {
             QueueProperties.CAPACITY_VECTOR, label,
             () -> configuration.parseConfiguredResourceVector(queuePath,
                 Collections.singleton(label)).get(label)));
-      }
-      for (final String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
         configuredMaxCapacityVectors.put(label, CSQueueUtils.getResolvedValue(resolved,
             QueueProperties.MAXIMUM_CAPACITY_VECTOR, label,
             () -> configuration.parseConfiguredMaximumCapacityVector(queuePath,
                 Collections.singleton(label), QueueCapacityVector.newInstance()).get(label)));
-      }
 
-      for (final String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
         // Manually sets the capacity vector for:
         // 1. Dynamic queues that have no configured capacity vectors defined by templates
         // 2. ReservationQueue and PlanQueue instances which have their capacities set by entitlements and need to be

@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -135,7 +136,7 @@ public class TestCapacitySchedulerResolvedConstruction {
     ResolvedQueueTree tree = queueContext.getResolvedQueueTree();
     QueuePath parentPath = new QueuePath("root.a.p");
     QueuePath leafPath = new QueuePath("root.a.p.l");
-    assertEquals(null, tree.get(parentPath));
+    assertNull(tree.get(parentPath));
 
     cs.getCapacitySchedulerQueueManager().createQueue(leafPath);
     AbstractLeafQueue leaf = (AbstractLeafQueue) cs.getQueue("root.a.p.l");
