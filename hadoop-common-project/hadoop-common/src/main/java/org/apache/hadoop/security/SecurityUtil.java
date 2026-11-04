@@ -633,7 +633,10 @@ public final class SecurityUtil {
 
     @Override
     public InetAddress getByName(String host) throws UnknownHostException {
-      if (cache != null) {
+      // IP literals need no lookup, and a shared cached InetAddress would leak
+      // one caller's getHostName() reverse lookup into every other caller.
+      if (cache != null && !InetAddresses.isInetAddress(host)
+          && !InetAddresses.isUriInetAddress(host)) {
         try {
           return cache.get(host);
         } catch (Exception e) {
