@@ -143,22 +143,16 @@ public class TestPBHelper {
 
   @Test
   public void testConvertAddBlockFlags() {
-    EnumSet<AddBlockFlag> flags =
-        EnumSet.of(AddBlockFlag.NO_LOCAL_WRITE, AddBlockFlag.NO_LOCAL_RACK,
-            AddBlockFlag.IGNORE_CLIENT_LOCALITY);
-    // client -> NN direction: all flags, incl. NO_LOCAL_RACK, must be kept.
-    List<AddBlockFlagProto> flagProtos =
-        PBHelperClient.convertAddBlockFlags(flags);
-    assertEquals(3, flagProtos.size());
-    assertTrue(flagProtos.contains(AddBlockFlagProto.NO_LOCAL_WRITE));
-    assertTrue(
-        flagProtos.contains(AddBlockFlagProto.forNumber(
-            AddBlockFlag.NO_LOCAL_RACK.getMode())));
-    assertTrue(flagProtos.contains(AddBlockFlagProto.IGNORE_CLIENT_LOCALITY));
-    // reverse direction must yield the same set of flags.
-    EnumSet<AddBlockFlag> convertedFlags =
-        PBHelperClient.convertAddBlockFlags(flagProtos);
-    assertEquals(flags, convertedFlags);
+    // every AddBlockFlag needs an AddBlockFlagProto value with the same
+    // number, or the flag is silently dropped on the client -> NN RPC
+    for (AddBlockFlag flag : AddBlockFlag.values()) {
+      AddBlockFlagProto proto = AddBlockFlagProto.forNumber(flag.getMode());
+      assertNotNull(proto, flag + " has no AddBlockFlagProto value");
+      assertEquals(flag.name(), proto.name());
+    }
+    EnumSet<AddBlockFlag> flags = EnumSet.allOf(AddBlockFlag.class);
+    assertEquals(flags, PBHelperClient.convertAddBlockFlags(
+        PBHelperClient.convertAddBlockFlags(flags)));
   }
 
   @Test
