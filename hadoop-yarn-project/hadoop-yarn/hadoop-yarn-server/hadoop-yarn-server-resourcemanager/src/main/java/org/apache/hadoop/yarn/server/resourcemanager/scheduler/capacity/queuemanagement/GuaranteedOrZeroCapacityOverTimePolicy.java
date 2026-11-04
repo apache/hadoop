@@ -788,6 +788,11 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     return parentQueueState.getAbsoluteActivatedChildQueueCapacity(nodeLabel);
   }
 
+  @VisibleForTesting
+  ReentrantReadWriteLock.WriteLock getWriteLock() {
+    return writeLock;
+  }
+
   private List<FiCaSchedulerApp> getSortedPendingApplications() {
     List<FiCaSchedulerApp> apps = new ArrayList<>(
         managedParentQueue.getAllApplications());
