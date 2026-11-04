@@ -116,6 +116,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -1877,7 +1878,8 @@ public abstract class TaskAttemptImpl implements
     Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}");
   
   protected boolean isIP(String src) {
-    return ipPattern.matcher(src).matches();
+    // The regex keeps the existing IPv4 behavior; InetAddresses adds IPv6 literals.
+    return ipPattern.matcher(src).matches() || InetAddresses.isInetAddress(src);
   }
 
   private static class ContainerAssignedTransition implements
