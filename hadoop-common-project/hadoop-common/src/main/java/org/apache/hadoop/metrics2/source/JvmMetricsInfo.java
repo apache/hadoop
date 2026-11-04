@@ -24,7 +24,7 @@ import org.apache.hadoop.metrics2.MetricsInfo;
 import java.util.StringJoiner;
 
 /**
- * JVM and logging related metrics info instances
+ * JVM related metrics info instances
  */
 @InterfaceAudience.Private
 public enum JvmMetricsInfo implements MetricsInfo {
