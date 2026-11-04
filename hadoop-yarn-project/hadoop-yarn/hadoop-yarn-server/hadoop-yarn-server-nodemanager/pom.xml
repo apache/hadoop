@@ -82,6 +82,10 @@
       <artifactId>jetty-util</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlet</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.eclipse.jetty.websocket</groupId>
       <artifactId>javax-websocket-server-impl</artifactId>
     </dependency>
