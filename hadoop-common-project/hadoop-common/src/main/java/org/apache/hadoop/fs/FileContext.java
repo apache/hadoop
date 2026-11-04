@@ -2299,10 +2299,8 @@ public class FileContext implements PathCapabilities {
   }
   
   /**
-   * Are qualPath1 and qualPath2 on the same file system? Two paths are on
-   * the same file system when their schemes match and their authorities are
-   * equal; two null authorities (e.g. the local file system
-   * <code>file:///</code>) are considered equal.
+   * Are qualPath1 and qualPath2 on the same file system, i.e. do they have
+   * the same scheme and authority?
    * @param qualPath1 - fully qualified path
    * @param qualPath2 - fully qualified path
    * @return true if the two paths are on the same file system, else false.
