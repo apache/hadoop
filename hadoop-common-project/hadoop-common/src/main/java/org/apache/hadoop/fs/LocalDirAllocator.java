@@ -495,7 +495,8 @@ public class LocalDirAllocator {
 
         // Keep rolling the wheel till we get a valid path
         Random r = new java.util.Random();
-        while (numDirsSearched < numDirs && returnPath == null) {
+        while (numDirsSearched < numDirs && returnPath == null
+            && totalAvailable > 0) {
           long randomPosition = (r.nextLong() >>> 1) % totalAvailable;
           int dir = 0;
           while (randomPosition > availableOnDisk[dir]) {
@@ -509,12 +510,6 @@ public class LocalDirAllocator {
             totalAvailable -= availableOnDisk[dir];
             availableOnDisk[dir] = 0; // skip this disk
             numDirsSearched++;
-            if (totalAvailable <= 0) {
-              // every directory with capacity has failed: fall through
-              // to the DiskErrorException below instead of letting the
-              // next spin take a modulo of zero
-              break;
-            }
             note(history, "No capacity in %s", localDir);
           } else {
             note(history, "Allocated file %s in %s", returnPath, localDir);

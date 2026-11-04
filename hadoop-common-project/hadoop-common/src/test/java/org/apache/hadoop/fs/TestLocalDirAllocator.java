@@ -597,9 +597,8 @@ public class TestLocalDirAllocator {
   /**
    * Test that the SIZE_UNKNOWN roulette-wheel allocation raises a
    * DiskErrorException instead of an ArithmeticException when every
-   * directory with positive reported capacity fails the createPath
-   * check: totalAvailable reaches zero while the search loop condition
-   * can still hold, so the modulo on the next spin divides by zero.
+   * directory with positive reported capacity fails the createPath check
+   * while a directory with zero capacity is still left unsearched.
    */
   @Timeout(value = 30)
   @MethodSource("params")
@@ -608,8 +607,8 @@ public class TestLocalDirAllocator {
       String paramPrefix) throws Exception {
     assumeNotWindows();
     initTestLocalDirAllocator(paramRoot, paramPrefix);
-    String dir0 = buildBufferDir(root, 0);
-    String dir1 = buildBufferDir(root, 1);
+    String dir0 = buildBufferDir(root, 7);
+    String dir1 = buildBufferDir(root, 8);
     File dir0File = new File(new Path(dir0).toUri().getPath());
     File dir1File = new File(new Path(dir1).toUri().getPath());
     try {
