@@ -221,13 +221,6 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
           LOG.warn("Problem opening checksum file: "+ file +
               ".  Ignoring exception: " , e);
         }
-        // the checksum file exists but is unusable (e.g. corrupt header),
-        // so treat it as absent: close and drop the stream so that
-        // vectored reads also take the non-checksum path.
-        if (sums != null) {
-          sums.close();
-          sums = null;
-        }
         set(fs.verifyChecksum, null, 1, 0);
       }
     }
@@ -530,7 +523,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
      * the data stream.
      */
     private boolean dataStreamToHandleVectorIO() {
-      return sums == null;
+      return sums == null || !needChecksum();
     }
 
     /**
