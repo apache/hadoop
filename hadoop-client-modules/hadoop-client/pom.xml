@@ -42,6 +42,10 @@
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>org.eclipse.jetty.toolchain</groupId>
+          <artifactId>jetty-schemas</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>commons-logging</groupId>
           <artifactId>commons-logging-api</artifactId>
         </exclusion>
