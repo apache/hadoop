@@ -37,6 +37,7 @@
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     <jetty.version>9.4.58.v20250814</jetty.version>
+    <javax.servlet-api.version>4.0.1</javax.servlet-api.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -904,12 +905,6 @@
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-server</artifactId>
         <version>${jetty.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
@@ -966,10 +961,20 @@
         <artifactId>jakarta.servlet.jsp-api</artifactId>
         <version>2.3.6</version>
       </dependency>
+      <!--
+        The one servlet API (javax.servlet 4.0); it also replaces the
+        javax.servlet-api 3.1.0 that Jetty 9.4 depends on. This coordinate only
+        ever carries the javax.servlet namespace, so Maven mediates it safely
+        against a downstream project's own javax.servlet-api. Keep other
+        coordinates of the same classes out (jakarta.servlet-api 4.x,
+        org.eclipse.jetty.toolchain:jetty-servlet-api): Maven cannot mediate
+        between different coordinates, and jakarta.servlet-api 5.0 and later
+        carry the jakarta.servlet namespace instead.
+      -->
       <dependency>
-        <groupId>jakarta.servlet</groupId>
-        <artifactId>jakarta.servlet-api</artifactId>
-        <version>4.0.4</version>
+        <groupId>javax.servlet</groupId>
+        <artifactId>javax.servlet-api</artifactId>
+        <version>${javax.servlet-api.version}</version>
       </dependency>
 
       <dependency>
@@ -2189,6 +2194,20 @@
         <groupId>org.glassfish.jersey.test-framework</groupId>
         <artifactId>jersey-test-framework-core</artifactId>
         <version>${jersey2.version}</version>
+        <exclusions>
+          <!--
+            It declares the servlet API under the jakarta.servlet coordinate.
+            Those are the same javax.servlet classes javax.servlet-api carries,
+            so letting it through puts two of them on the test classpath.
+            Managed exclusions also apply where it arrives transitively (the
+            Jersey test provider) or is declared with exclusions of its own
+            (hadoop-client-minicluster), so it is excluded only here.
+          -->
+          <exclusion>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.glassfish.jersey.test-framework.providers</groupId>
