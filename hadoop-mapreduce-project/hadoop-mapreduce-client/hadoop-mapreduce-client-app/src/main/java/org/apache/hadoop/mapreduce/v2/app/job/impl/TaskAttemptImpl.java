@@ -1878,7 +1878,9 @@ public abstract class TaskAttemptImpl implements
     Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}");
   
   protected boolean isIP(String src) {
-    // The regex keeps the existing IPv4 behavior; InetAddresses adds IPv6 literals.
+    // InetAddresses alone also covers IPv4, but it rejects leading zero octets such as
+    // "010.1.1.1", which the regex accepts and resolveHost() resolves. Keep the regex so
+    // IPv4 behavior does not change; InetAddresses adds IPv6 literals.
     return ipPattern.matcher(src).matches() || InetAddresses.isInetAddress(src);
   }
 
