@@ -98,6 +98,37 @@ public class TestCertificateUtil {
   }
 
   /**
+   * A valid certificate whose public key is not an RSA key is a parse failure
+   * for this method, not an unchecked ClassCastException. The deprecated entry
+   * point reports it as a ServletException, like every other parse failure.
+   */
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testNonRSACertificate() {
+    String pem = "MIIBNzCB3qADAgECAgkA6dW0itJPZwIwCgYIKoZIzj0EAwIwDzENMAsGA1UEAxME"
+        + "dGVzdDAgFw0yNjExMDQxNDA5MTdaGA8yMTI2MTAxMTE0MDkxN1owDzENMAsGA1UE"
+        + "AxMEdGVzdDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABFbUEbtmYR6QbY9QyGpI"
+        + "aXZV3rEDQrF6vZc7of/rZ0lwvpVgIBlca9Ye/k1aaaYbkor+sK3PuL7RR57Q40Nq"
+        + "wVqjITAfMB0GA1UdDgQWBBS6D/WIdoY78T7wj6TMdPayIHrOvzAKBggqhkjOPQQD"
+        + "AgNIADBFAiEArWDXwfFpNCAF9zwN7ZaqPia1BRSX7hC4abSCJO6q88UCIEOyI8Up"
+        + "u73RBCJNTags/HzsKhUtwsVOGurpxVAodPG3";
+    try {
+      CertificateUtil.toRSAPublicKey(pem);
+      fail("Should have thrown CertificateException");
+    } catch (CertificateException se) {
+      assertTrue(se.getMessage().contains("RSA"),
+          "expected the message to name RSA, got " + se.getMessage());
+    }
+    try {
+      CertificateUtil.parseRSAPublicKey(pem);
+      fail("Should have thrown ServletException");
+    } catch (ServletException se) {
+      assertTrue(se.getMessage().contains("RSA"),
+          "expected the message to name RSA, got " + se.getMessage());
+    }
+  }
+
+  /**
    * The deprecated entry point still reports a ServletException, so callers
    * written against it keep compiling and keep catching what they caught
    * before.

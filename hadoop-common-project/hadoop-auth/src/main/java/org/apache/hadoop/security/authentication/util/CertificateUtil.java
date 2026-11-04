@@ -37,7 +37,8 @@ public class CertificateUtil {
    * @param pem
    *          - the pem encoding from config without the header and footer
    * @return RSAPublicKey the RSA public key
-   * @throws ServletException thrown if a processing error occurred
+   * @throws ServletException thrown if a processing error occurred, or if the
+   *           PEM does not contain an RSA public key
    * @deprecated use {@link #toRSAPublicKey(String)}, which reports the
    *             {@link CertificateException} it is really raising instead of
    *             wrapping it in a servlet type. This method is kept so that
@@ -63,7 +64,9 @@ public class CertificateUtil {
    * @param pem
    *          - the pem encoding from config without the header and footer
    * @return RSAPublicKey the RSA public key
-   * @throws CertificateException thrown if the PEM could not be parsed
+   * @throws CertificateException thrown if the PEM could not be parsed, or if
+   *           it contains a valid certificate whose public key is not an RSA
+   *           key
    */
   public static RSAPublicKey toRSAPublicKey(String pem)
       throws CertificateException {
@@ -85,6 +88,10 @@ public class CertificateUtil {
         message = "CertificateException - PEM may be corrupt";
       }
       throw new CertificateException(message, ce);
+    }
+    if (!(key instanceof RSAPublicKey)) {
+      throw new CertificateException(
+          "PEM does not contain an RSA public key: " + key.getAlgorithm());
     }
     return (RSAPublicKey) key;
   }
