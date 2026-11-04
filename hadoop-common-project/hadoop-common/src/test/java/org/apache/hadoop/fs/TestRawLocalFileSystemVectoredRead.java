@@ -25,6 +25,7 @@ import java.nio.channels.CompletionHandler;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
@@ -36,6 +37,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -47,7 +49,6 @@ import org.apache.hadoop.test.LambdaTestUtils.VoidCallable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -120,21 +121,33 @@ public class TestRawLocalFileSystemVectoredRead {
   @ValueSource(booleans = {false, true})
   public void testRejectedSubmissionPreservesEarlierReads(boolean completeImmediately)
       throws Exception {
-    verifyPartialSubmissionFailure(false, completeImmediately);
+    verifyPartialSubmissionFailure(false, completeImmediately,
+        new RejectedExecutionException("Partial submission failed"));
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   public void testAllocationFailurePreservesEarlierReads(boolean completeImmediately)
       throws Exception {
-    verifyPartialSubmissionFailure(true, completeImmediately);
+    verifyPartialSubmissionFailure(true, completeImmediately,
+        new RejectedExecutionException("Partial allocation failed"));
   }
 
   @ParameterizedTest
-  @ValueSource(booleans = {false, true})
-  public void testRejectedPartialReadResubmission(boolean completeInline) throws Exception {
+  @CsvSource({"false, false", "false, true", "true, false", "true, true"})
+  public void testErrorPreservesEarlierReads(boolean allocationFails, boolean completeImmediately)
+      throws Exception {
+    verifyPartialSubmissionFailure(allocationFails, completeImmediately,
+        new OutOfMemoryError("Direct buffer memory"));
+  }
+
+  @ParameterizedTest
+  @CsvSource({"false, false", "false, true", "true, false", "true, true"})
+  public void testRejectedPartialReadResubmission(boolean completeInline, boolean fatal)
+      throws Exception {
     AsynchronousFileChannel channel = mock(AsynchronousFileChannel.class);
-    RejectedExecutionException failure = new RejectedExecutionException("Rejected remaining read");
+    Throwable failure = fatal ? new OutOfMemoryError("Injected resubmission error")
+        : new RejectedExecutionException("Rejected remaining read");
     List<PendingRead> pending = new ArrayList<>();
     doAnswer(invocation -> {
       long position = invocation.getArgument(1);
@@ -172,16 +185,27 @@ public class TestRawLocalFileSystemVectoredRead {
 
   @Test
   public void testChannelOpenFailureSettlesRanges() throws Exception {
-    IOException failure = new IOException("Cannot open asynchronous channel");
+    verifyChannelOpenFailure(new IOException("Cannot open asynchronous channel"));
+  }
+
+  @Test
+  public void testChannelOpenErrorSettlesRanges() throws Exception {
+    verifyChannelOpenFailure(new OutOfMemoryError("Cannot open asynchronous channel"));
+  }
+
+  private void verifyChannelOpenFailure(Throwable failure) throws Exception {
     try (TrackingByteBufferPool tracker = newTrackingPool();
          FSDataInputStream in = new FSDataInputStream(fs.new LocalFSFileInputStream(path) {
            @Override
            AsynchronousFileChannel getAsyncChannel() throws IOException {
-             throw failure;
+             if (failure instanceof Error) {
+               throw (Error) failure;
+             }
+             throw (IOException) failure;
            }
          })) {
       List<FileRange> ranges = ranges();
-      assertThat(intercept(IOException.class, () -> in.readVectored(ranges,
+      assertThat(intercept(failure.getClass(), () -> in.readVectored(ranges,
           size -> tracker.getBuffer(direct, size), tracker::putBuffer))).isSameAs(failure);
       for (FileRange range : ranges) {
         assertFailed(range, failure);
@@ -208,12 +232,14 @@ public class TestRawLocalFileSystemVectoredRead {
   }
 
   @ParameterizedTest
-  @ValueSource(booleans = {false, true})
-  public void testReleaseFailureDoesNotStrandFutures(boolean rejectSubmission) throws Exception {
+  @CsvSource({"false, false", "false, true", "true, false", "true, true"})
+  public void testReleaseFailureDoesNotStrandFutures(boolean rejectSubmission, boolean fatal)
+      throws Exception {
     AsynchronousFileChannel channel = mock(AsynchronousFileChannel.class);
     Exception failure = rejectSubmission
         ? new RejectedExecutionException("Rejected initial read") : new IOException("Read failed");
-    IllegalStateException releaseFailure = new IllegalStateException("Release failed");
+    Throwable releaseFailure = fatal ? new OutOfMemoryError("Release failed")
+        : new IllegalStateException("Release failed");
     List<PendingRead> pending = new ArrayList<>();
     doAnswer(invocation -> {
       if (rejectSubmission) {
@@ -229,7 +255,10 @@ public class TestRawLocalFileSystemVectoredRead {
       VoidCallable read = () -> in.readVectored(ranges,
           size -> tracker.getBuffer(direct, size), buffer -> {
             tracker.putBuffer(buffer);
-            throw releaseFailure;
+            if (fatal) {
+              throw (Error) releaseFailure;
+            }
+            throw (RuntimeException) releaseFailure;
           });
       if (rejectSubmission) {
         assertThat(intercept(RejectedExecutionException.class, read)).isSameAs(failure);
@@ -273,21 +302,17 @@ public class TestRawLocalFileSystemVectoredRead {
         List<FileRange> ranges = ranges();
         assertThat(intercept(RejectedExecutionException.class, () -> in.readVectored(ranges,
             size -> tracker.getBuffer(direct, size), tracker::putBuffer))).isSameAs(failure);
-        if (!checksummed) {
-          for (FileRange range : ranges) {
-            assertFailed(range, failure);
-          }
+        for (FileRange range : ranges) {
+          assertFailed(range, failure);
         }
-        assertAllReleased(tracker, 1);
+        assertAllReleased(tracker, checksummed ? 4 : 1);
       }
     }
   }
 
-  private void verifyPartialSubmissionFailure(boolean allocationFails, boolean completeImmediately)
-      throws Exception {
+  private void verifyPartialSubmissionFailure(boolean allocationFails, boolean completeImmediately,
+      Throwable failure) throws Exception {
     AsynchronousFileChannel channel = mock(AsynchronousFileChannel.class);
-    RejectedExecutionException failure =
-        new RejectedExecutionException("Partial submission failed");
     List<PendingRead> pending = new ArrayList<>();
     doAnswer(invocation -> {
       int index = invocation.getArgument(2);
@@ -307,11 +332,14 @@ public class TestRawLocalFileSystemVectoredRead {
       List<FileRange> ranges = ranges();
       IntFunction<ByteBuffer> allocate = size -> {
         if (allocationFails && tracker.getBufferAllocations() == 1) {
-          throw failure;
+          if (failure instanceof Error) {
+            throw (Error) failure;
+          }
+          throw (RuntimeException) failure;
         }
         return tracker.getBuffer(direct, size);
       };
-      assertThat(intercept(RejectedExecutionException.class,
+      assertThat(intercept(failure.getClass(),
           () -> in.readVectored(ranges, allocate, tracker::putBuffer))).isSameAs(failure);
       assertFailed(ranges.get(1), failure);
       assertFailed(ranges.get(2), failure);
@@ -351,8 +379,9 @@ public class TestRawLocalFileSystemVectoredRead {
     assertThat(tracker.size()).isZero();
   }
 
-  private static void assertFailed(FileRange range, Exception failure) throws Exception {
-    assertThat(interceptFuture(failure.getClass(), "", 5, TimeUnit.SECONDS, range.getData()))
+  private static void assertFailed(FileRange range, Throwable failure) throws Exception {
+    assertThat(intercept(ExecutionException.class,
+        () -> range.getData().get(5, TimeUnit.SECONDS)).getCause())
         .isSameAs(failure);
   }
 

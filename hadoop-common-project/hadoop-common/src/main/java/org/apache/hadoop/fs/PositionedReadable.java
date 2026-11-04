@@ -149,7 +149,11 @@ public interface PositionedReadable {
    * reporting a failure in the future. Buffers used only internally, such as
    * checksum buffers, should be released once they are no longer needed, whether
    * the read succeeds or fails. For each allocation, a buffer must not be released
-   * more than once, or if it or a slice of it has been returned to the caller.
+   * more than once, or if it has been returned to the caller.
+   * <p>
+   * {@code release} may be invoked asynchronously, including after this method
+   * has thrown. Callers must keep the release target valid until all submitted
+   * reads complete.
    * <p>
    * The default implementation calls {@link #readVectored(List, IntFunction)}.
    * <p>

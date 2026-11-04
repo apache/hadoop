@@ -477,11 +477,6 @@ While a `readVectored()` operation is in progress, normal read API calls MAY blo
 the value of `getPos(`) is also undefined. Applications SHOULD NOT make such requests
 while waiting for the results of a vectored read.
 
-Note: Don't use direct buffers for reading from `ChecksumFileSystem` as that may
-lead to memory fragmentation explained in
-[HADOOP-18296](https://issues.apache.org/jira/browse/HADOOP-18296)
-_Memory fragmentation in ChecksumFileSystem Vectored IO implementation_
-
 #### Preconditions
 
 No empty lists.
@@ -669,13 +664,20 @@ Stream.hasCapability("in:readvectored")
 
 [HADOOP-18296](https://issues.apache.org/jira/browse/HADOOP-18296),
 _Memory fragmentation in ChecksumFileSystem Vectored IO implementation_
-highlights that `ChecksumFileSystem` (which the default implementation of `file://`
-subclasses), may return buffers which are sliced subsets of buffers allocated
-through the `allocate()` function passed in.
+highlights that older versions of `ChecksumFileSystem` (which the default implementation
+of `file://` subclasses) return sliced subsets of buffers allocated through the
+`allocate()` function passed in. These slices cannot be recycled by allocators which
+track buffer identity and can retain oversized backing allocations.
 
-This will happen during reads with and without range coalescing.
+With [HADOOP-19901](https://issues.apache.org/jira/browse/HADOOP-19901),
+`ChecksumFileSystem` verifies data in internal buffers and copies
+each requested range into its own buffer, allocated synchronously through `allocate()`.
+It returns exactly that buffer, not a slice, and reports `false` for
+`fs.capability.vectoredio.sliced` on both the filesystem and the stream.
+This applies with and without checksum verification, so direct buffers and
+identity-tracking allocators can be used without a slicing workaround.
 
-Checksum verification may be disabled by setting the option
+For older releases, checksum verification may be disabled by setting the option
 `fs.file.checksum.verify` to false (Hadoop 3.4.2 and later).
 
 ```xml
@@ -695,7 +697,7 @@ to the path capabilities probe `fs.capability.vectoredio.sliced`,
 and for the open stream in its `hasCapability()` method.
 
 
-The local filesystem will not slice buffers if the checksum file
+Older versions of the local filesystem will not slice buffers if the checksum file
 of `filename + ".crc"` is not found. This is not declared in the
 filesystem `hasPathCapability(filename, "fs.capability.vectoredio.sliced")`
 call, as no checks for the checksum file are made then.
@@ -704,8 +706,7 @@ testing for buffer recycling with Hadoop releases 3.4.1 and earlier.
 
 *Implementors Notes*
 
-* Don't slice buffers. `ChecksumFileSystem` has to be considered an outlier which
-  needs to be addressed in future.
+* Don't slice buffers. Return the exact buffers obtained through `allocate()`.
 * Always free buffers in error handling code paths.
 * When handling errors in coalesced ranges, don't release buffers for any sub-ranges
   which have already completed.
@@ -735,8 +736,17 @@ if release = null raise NullPointerException
   when a failure has occurred and the future is about to have `CompletableFuture.completeExceptionally()` invoked.
 * Implementations SHOULD release buffers used only internally, such as checksum buffers, once all
   operations using them have completed, whether successfully or exceptionally.
-* Implementations MUST NOT release a buffer if it, or a slice of it, has been returned to the caller.
+* Implementations MUST NOT release a buffer if it has been returned to the caller.
 * For each call to `allocate()`, implementations MUST NOT call `release()` more than once with the allocated buffer.
+* `release` MAY be invoked asynchronously, including after `readVectored()` has thrown.
+  Callers MUST keep the release target valid until all submitted reads complete.
+
+The two-argument overload has no release callback. Callers whose allocators require
+explicit recycling of internal buffers SHOULD use the three-argument overload on
+implementations which support it. When migrating from a capturing-allocator workaround,
+callers must not also release every captured allocation: internal and failed buffers
+are already released through the callback. Only successfully returned range buffers
+remain caller-owned.
 
 It is an extension to the original Vector Read API -not all versions of Hadoop with the original `readVectored()` call define it.
 If used directly in application code, that application is restricting itself to later versions
