@@ -1,0 +1,51 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+# Keeps the SHA-pinned actions in .github/ current. ASF Infra requires this for
+# every repository that uses GitHub Actions, and it is what stops pins from
+# silently expiring off the ASF allowlist: once a pin is removed from
+# https://github.com/apache/infrastructure-actions/blob/main/actions.yml, every
+# workflow using it fails with "startup_failure" in apache/hadoop.
+# See https://infra.apache.org/dependabot.html and .github/workflow-security.md.
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    # "/" covers .github/workflows; the glob covers the composite actions
+    # under .github/actions/.
+    directories:
+      - "/"
+      - "/.github/actions/*"
+    schedule:
+      interval: "weekly"
+    # SECURITY.md requires a cooldown before adopting new non-ASF dependency
+    # versions. Seven days (zizmor's minimum) also leaves ASF Infra time to
+    # allowlist a new release before Dependabot proposes it. The cooldown
+    # applies to version updates only, never to security updates.
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
+      github-actions-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
