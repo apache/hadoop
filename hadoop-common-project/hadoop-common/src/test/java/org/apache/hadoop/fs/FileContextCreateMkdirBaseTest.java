@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -235,6 +236,7 @@ public abstract class FileContextCreateMkdirBaseTest {
             " checksum size should have failed",
         () -> fc.create(f, EnumSet.of(CreateFlag.CREATE),
             Options.CreateOpts.blockSize(1000)));
+    assertFalse(exists(fc, f));
   }
 
   private Path getTestRootPath(FileContext fc) {
