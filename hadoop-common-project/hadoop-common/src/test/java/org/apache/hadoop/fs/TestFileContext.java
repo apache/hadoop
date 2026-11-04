@@ -19,6 +19,7 @@ package org.apache.hadoop.fs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -118,7 +119,7 @@ public class TestFileContext {
     AbstractFileSystem afs = mockFileSystem();
     Path link = new Path(MOCK_FS_URI.toString(), "/link");
     Path target = new Path(MOCK_FS_URI.toString(), "/target");
-    when(afs.getLinkTarget(link)).thenReturn(target);
+    when(afs.getLinkTarget(any(Path.class))).thenReturn(target);
     doThrow(new UnresolvedLinkException()).when(afs)
         .setStoragePolicy(link, "COLD");
     doThrow(new UnresolvedLinkException()).when(afs).unsetStoragePolicy(link);
