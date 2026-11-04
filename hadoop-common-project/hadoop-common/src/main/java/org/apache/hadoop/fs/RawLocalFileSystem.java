@@ -213,10 +213,8 @@ public class RawLocalFileSystem extends FileSystem {
     public void close() throws IOException {
       try {
         fis.close();
-        synchronized (this) {
-          if (asyncChannel != null) {
-            asyncChannel.close();
-          }
+        if (asyncChannel != null) {
+          asyncChannel.close();
         }
       } finally {
         ioStatisticsAggregator.aggregate(ioStatistics);
