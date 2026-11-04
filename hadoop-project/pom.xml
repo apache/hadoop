@@ -42,7 +42,14 @@
       tree depends on.
     -->
     <jetty.version>12.1.14</jetty.version>
+    <!-- The one servlet API, javax.servlet 4.0 (HADOOP-19970). -->
     <javax.servlet-api.version>4.0.1</javax.servlet-api.version>
+    <!--
+      The web.xml DTDs and schemas Jetty 12's ee8 environment needs, which
+      javax.servlet-api does not ship. It tracks the servlet spec, not the
+      Jetty release, so it has its own version.
+    -->
+    <jetty-schemas.version>4.0.3</jetty-schemas.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -937,11 +944,27 @@
         pluggable EE environment. ee8 is the environment that serves
         javax.servlet, so a module that embedded a Jetty 9 servlet container
         moves to the ee8 artifact of the same name rather than to the core one.
+
+        jetty-ee8-nested and jetty-ee8-websocket-jetty-server bring Jetty's own
+        build of the servlet API, org.eclipse.jetty.toolchain:jetty-servlet-api.
+        It carries the same javax.servlet classes as javax.servlet-api under
+        another coordinate, which Maven cannot mediate, so both entries exclude
+        it and javax.servlet-api stays the one servlet API (HADOOP-19970).
+        Managed exclusions also apply where jetty-ee8-nested arrives
+        transitively (through jetty-ee8-servlet and jetty-ee8-webapp).
+        jetty-servlet-api also carried the web.xml schemas ee8 needs; they now
+        come from jetty-schemas, see its entry below.
       -->
       <dependency>
         <groupId>org.eclipse.jetty.ee8</groupId>
         <artifactId>jetty-ee8-nested</artifactId>
         <version>${jetty.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.eclipse.jetty.toolchain</groupId>
+            <artifactId>jetty-servlet-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty.ee8</groupId>
@@ -982,6 +1005,10 @@
         <version>${jetty.version}</version>
         <exclusions>
           <exclusion>
+            <groupId>org.eclipse.jetty.toolchain</groupId>
+            <artifactId>jetty-servlet-api</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>org.eclipse.jetty.ee8</groupId>
             <artifactId>jetty-ee8-annotations</artifactId>
           </exclusion>
@@ -998,19 +1025,29 @@
         <version>2.3.6</version>
       </dependency>
       <!--
-        The one servlet API (javax.servlet 4.0); it also replaces the
-        javax.servlet-api 3.1.0 that Jetty 9.4 depends on. This coordinate only
-        ever carries the javax.servlet namespace, so Maven mediates it safely
-        against a downstream project's own javax.servlet-api. Keep other
-        coordinates of the same classes out (jakarta.servlet-api 4.x,
-        org.eclipse.jetty.toolchain:jetty-servlet-api): Maven cannot mediate
-        between different coordinates, and jakarta.servlet-api 5.0 and later
-        carry the jakarta.servlet namespace instead.
+        The one servlet API (javax.servlet 4.0). This coordinate only ever
+        carries the javax.servlet namespace, so Maven mediates it against the
+        javax.servlet-api that downstream projects declare.
       -->
       <dependency>
         <groupId>javax.servlet</groupId>
         <artifactId>javax.servlet-api</artifactId>
         <version>${javax.servlet-api.version}</version>
+      </dependency>
+      <!--
+        Jetty 12 ee8's WebDescriptor loads catalog-ee8.xml at class init and
+        resolves its entries with
+        javax.servlet.Servlet.class.getResource("resources/..."), so the
+        web.xml DTDs and schemas have to be on the classpath under
+        javax/servlet/resources/. javax.servlet-api ships none of them;
+        without this jar WebDescriptor fails with "Unable to find ref
+        [javax/servlet/resources/web-app_2_2.dtd]" and no web app starts.
+        Resources only, no classes.
+      -->
+      <dependency>
+        <groupId>org.eclipse.jetty.toolchain</groupId>
+        <artifactId>jetty-schemas</artifactId>
+        <version>${jetty-schemas.version}</version>
       </dependency>
 
       <dependency>

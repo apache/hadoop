@@ -246,6 +246,13 @@
                       </excludes>
                     </filter>
                     <filter>
+                      <!-- skip jetty license info already incorporated into LICENSE/NOTICE -->
+                      <artifact>org.eclipse.jetty.toolchain:*</artifact>
+                      <excludes>
+                        <exclude>about.html</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
                       <!-- skip docs on formats used in kerby -->
                       <artifact>org.apache.kerby:kerb-util</artifact>
                       <excludes>
