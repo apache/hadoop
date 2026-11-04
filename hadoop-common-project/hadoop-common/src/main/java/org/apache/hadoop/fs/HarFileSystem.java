@@ -726,13 +726,6 @@ public class HarFileSystem extends FileSystem {
   }
 
   @Override
-  public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
-      EnumSet<CreateFlag> flags, int bufferSize, short replication,
-      long blockSize, Progressable progress) throws IOException {
-    throw new IOException("Har: create not allowed.");
-  }
-
-  @Override
   public FSDataOutputStream append(Path f, int bufferSize, Progressable progress) throws IOException {
     throw new IOException("Har: append not allowed.");
   }

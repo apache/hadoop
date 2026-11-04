@@ -406,16 +406,20 @@ public class TestHarFileSystemBasics {
 
   @Test
   public void testNegativeHarFsCreateFileAndAppendFileBuilders() throws Exception {
-    // The builder API must honor the read-only contract of HarFS:
-    // createFile().build() and appendFile().build() route to the
-    // unsupported create()/append() operations and must throw IOE.
+    // the builders must not write through to the underlying file system
     final Path fooPath = new Path(rootPath, "foo/bar");
-    localFileSystem.createNewFile(fooPath);
+    final byte[] data = {1, 2, 3};
+    try (FSDataOutputStream out = localFileSystem.create(fooPath)) {
+      out.write(data);
+    }
 
-    LambdaTestUtils.intercept(IOException.class, "not allowed",
+    LambdaTestUtils.intercept(IOException.class,
         () -> harFileSystem.createFile(fooPath).build());
     LambdaTestUtils.intercept(IOException.class, "not allowed",
+        () -> harFileSystem.createFile(fooPath).recursive().build());
+    LambdaTestUtils.intercept(IOException.class, "not allowed",
         () -> harFileSystem.appendFile(fooPath).build());
+    assertEquals(data.length, localFileSystem.getFileStatus(fooPath).getLen());
   }
 
   @Test

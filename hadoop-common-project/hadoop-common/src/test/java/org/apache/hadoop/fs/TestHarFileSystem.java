@@ -251,6 +251,10 @@ public class TestHarFileSystem {
     MultipartUploaderBuilder createMultipartUploader(Path basePath)
         throws IOException;
 
+    FSDataOutputStreamBuilder createFile(Path path);
+
+    FSDataOutputStreamBuilder appendFile(Path path);
+
     FSDataOutputStream append(Path f, boolean appendToNewBlock) throws IOException;
 
     FSDataOutputStream append(Path f, int bufferSize,
