@@ -19,6 +19,10 @@ package org.apache.hadoop.fs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.URI;
 
@@ -31,6 +35,10 @@ import org.slf4j.LoggerFactory;
 public class TestFileContext {
   private static final Logger LOG = LoggerFactory.getLogger(TestFileContext
       .class);
+
+  private static final URI MOCK_FS_URI = URI.create("hdfs://nn:8020");
+  private static final Path MOCK_FS_WORKING_DIR =
+      new Path("hdfs://nn:8020/user/test");
 
   @Test
   public void testDefaultURIWithoutScheme() throws Exception {
@@ -78,5 +86,58 @@ public class TestFileContext {
     fc2.setUMask(FsPermission.createImmutable((short) 00044));
     assertEquals(033, fc1.getUMask().toShort(), "Umask for fc1 is incorrect");
     assertEquals(044, fc2.getUMask().toShort(), "Umask for fc2 is incorrect");
+  }
+
+  /**
+   * The storage policy operations must pass the file system the path
+   * qualified against the working directory, not the caller's relative path.
+   */
+  @Test
+  public void testStoragePolicyOpsQualifyRelativePath() throws Exception {
+    AbstractFileSystem afs = mockFileSystem();
+    FileContext fc = FileContext.getFileContext(afs, new Configuration(false));
+    Path relative = new Path("dir");
+    Path qualified = new Path(MOCK_FS_WORKING_DIR, "dir");
+
+    fc.setStoragePolicy(relative, "COLD");
+    fc.unsetStoragePolicy(relative);
+    fc.satisfyStoragePolicy(relative);
+
+    verify(afs).setStoragePolicy(qualified, "COLD");
+    verify(afs).unsetStoragePolicy(qualified);
+    verify(afs).satisfyStoragePolicy(qualified);
+  }
+
+  /**
+   * The storage policy operations must be applied to the target of a
+   * symlink rather than retried on the link.
+   */
+  @Test
+  public void testStoragePolicyOpsFollowSymlink() throws Exception {
+    FileSystem.enableSymlinks();
+    AbstractFileSystem afs = mockFileSystem();
+    Path link = new Path(MOCK_FS_URI.toString(), "/link");
+    Path target = new Path(MOCK_FS_URI.toString(), "/target");
+    when(afs.getLinkTarget(link)).thenReturn(target);
+    doThrow(new UnresolvedLinkException()).when(afs)
+        .setStoragePolicy(link, "COLD");
+    doThrow(new UnresolvedLinkException()).when(afs).unsetStoragePolicy(link);
+    doThrow(new UnresolvedLinkException()).when(afs).satisfyStoragePolicy(link);
+    FileContext fc = FileContext.getFileContext(afs, new Configuration(false));
+
+    fc.setStoragePolicy(link, "COLD");
+    fc.unsetStoragePolicy(link);
+    fc.satisfyStoragePolicy(link);
+
+    verify(afs).setStoragePolicy(target, "COLD");
+    verify(afs).unsetStoragePolicy(target);
+    verify(afs).satisfyStoragePolicy(target);
+  }
+
+  private static AbstractFileSystem mockFileSystem() {
+    AbstractFileSystem afs = mock(AbstractFileSystem.class);
+    when(afs.getUri()).thenReturn(MOCK_FS_URI);
+    when(afs.getInitialWorkingDirectory()).thenReturn(MOCK_FS_WORKING_DIR);
+    return afs;
   }
 }
