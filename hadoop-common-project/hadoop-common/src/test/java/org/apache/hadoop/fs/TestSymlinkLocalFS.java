@@ -215,41 +215,28 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
     }
   }
 
+  @Test
+  @Timeout(value = 10)
   /**
-   * lstat a symlink via a fully qualified path (eg file:///tmp/link) and
-   * verify the symlink and its target are reported correctly.
+   * lstat a symlink and read its target using a fully qualified path
+   * (eg file:///tmp/link), forcing the deprecated (non-Stat) implementation
+   * of getFileLinkStatus.
    */
-  private void verifyGetLinkStatusQualPath() throws IOException {
+  public void testGetLinkStatusQualPathDeprecated() throws IOException {
     Path fileAbs  = new Path(testBaseDir1()+"/file");
     Path fileQual = new Path(testURI().toString(), fileAbs.toString());
     Path link     = new Path(testBaseDir1()+"/linkToFile");
     Path linkQual = new Path(testURI().toString(), link.toString());
     createAndWriteFile(fileAbs);
     wrapper.createSymlink(fileAbs, link, false);
-    FileStatus fsl = wrapper.getFileLinkStatus(linkQual);
-    assertTrue(fsl.isSymlink());
-    assertFalse(fsl.isDirectory());
-    assertEquals(fileQual, fsl.getSymlink());
-    assertEquals(linkQual, fsl.getPath());
-  }
-
-  @Test
-  @Timeout(value = 10)
-  /** lstat a symlink using a fully qualified path */
-  public void testGetLinkStatusQualPath() throws IOException {
-    verifyGetLinkStatusQualPath();
-  }
-
-  @Test
-  @Timeout(value = 10)
-  /**
-   * lstat a symlink using a fully qualified path, forcing the deprecated
-   * (non-Stat) implementation of getFileLinkStatus.
-   */
-  public void testGetLinkStatusQualPathDeprecated() throws IOException {
     RawLocalFileSystem.setUseDeprecatedFileStatus(true);
     try {
-      verifyGetLinkStatusQualPath();
+      FileStatus fsl = wrapper.getFileLinkStatus(linkQual);
+      assertTrue(fsl.isSymlink());
+      assertFalse(fsl.isDirectory());
+      assertEquals(fileQual, fsl.getSymlink());
+      assertEquals(linkQual, fsl.getPath());
+      assertEquals(fileAbs, wrapper.getLinkTarget(linkQual));
     } finally {
       RawLocalFileSystem.useStatIfAvailable();
     }
