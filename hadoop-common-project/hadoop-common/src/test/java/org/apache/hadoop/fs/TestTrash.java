@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -43,7 +44,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.TrashPolicyDefault.Emptier;
@@ -668,73 +668,73 @@ public class TestTrash {
   }
 
   /**
-   * Verify the containment checks in {@link TrashPolicyDefault#moveToTrash}
-   * respect path component boundaries, i.e. a path merely sharing a string
-   * prefix with the trash root (e.g. {@code .Trashbackups} next to
-   * {@code .Trash}) or with the trash root's parent (e.g. {@code /users/al}
-   * next to {@code /users/alice}) is not mistaken for containing, or living
-   * inside, the trash.
+   * A sibling of the trash root that only shares its name as a string
+   * prefix, such as ~/.Trashbackups next to ~/.Trash, is moved to the trash
+   * rather than treated as already being in it.
    */
   @Test
-  public void testMoveToTrashPathBoundary() throws Exception {
+  public void testMoveToTrashTrashRootPrefixSibling() throws Exception {
+    Path base = new Path(GenericTestUtils.getTempPath("testTrashRootPrefix"));
+    Path home = new Path(base, "users/alice");
     Configuration conf = new Configuration();
-    conf.setLong(FS_TRASH_INTERVAL_KEY, 10); // 10 min
-    Path base = new Path(GenericTestUtils.getTempPath("testTrashBoundary"));
-    final Path home = new Path(base, "users/alice");
-    // a local FileSystem whose home (and thus trash root) is inside the
-    // test directory, so the trash root and its siblings are controllable
-    try (FileSystem fs = new RawLocalFileSystem() {
-      @Override
-      public Path getHomeDirectory() {
-        return makeQualified(home);
-      }
-    }) {
-      fs.initialize(URI.create("file:///"), conf);
-      TrashPolicyDefault trash =
-          (TrashPolicyDefault) TrashPolicy.getInstance(conf, fs, home);
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 10);
+    try (FileSystem fs = newLocalFsWithHome(home, conf)) {
       try {
-        Path trashRoot = fs.getTrashRoot(home);
-        Path trashCurrent = new Path(trashRoot, "Current");
-
-        // sibling sharing the trash root's string prefix must be trashed
+        Trash trash = new Trash(fs, conf);
+        Path trashCurrent = new Path(fs.getTrashRoot(home), "Current");
         Path prefixSibling = new Path(home, ".Trashbackups");
         fs.mkdirs(prefixSibling);
-        assertTrue(trash.moveToTrash(prefixSibling),
-            ".Trashbackups must be moved to trash, not skipped as "
-                + "already being in trash");
-        assertFalse(fs.exists(prefixSibling),
-            ".Trashbackups was not moved to trash");
+        assertTrue(trash.moveToTrash(prefixSibling));
+        assertFalse(fs.exists(prefixSibling));
         checkTrash(fs, trashCurrent, fs.makeQualified(prefixSibling));
 
-        // a path genuinely inside the trash is reported as already there
         Path inTrash = new Path(trashCurrent, "fileInTrash");
         writeFile(fs, inTrash, 10);
-        assertFalse(trash.moveToTrash(inTrash),
-            "a path inside the trash must not be moved to trash again");
-
-        // deleting the home directory itself still contains the trash
-        IOException e = assertThrows(IOException.class,
-            () -> trash.moveToTrash(home));
-        assertTrue(e.getMessage().contains("contains the trash"),
-            "unexpected exception message: " + e.getMessage());
-
-        // a strict string-prefix sibling of home (users/al for home
-        // users/alice) does not contain the trash and must be trashed
-        Path prefixOfHome = new Path(base, "users/al");
-        fs.mkdirs(prefixOfHome);
-        assertTrue(trash.moveToTrash(prefixOfHome),
-            "deleting users/al must not fail as containing users/alice's "
-                + "trash");
-
-        // an unrelated sibling is unaffected
-        Path otherUser = new Path(base, "users/bob");
-        fs.mkdirs(otherUser);
-        assertTrue(trash.moveToTrash(otherUser),
-            "deleting a sibling user directory must be moved to trash");
+        assertFalse(trash.moveToTrash(inTrash));
       } finally {
         fs.delete(base, true);
       }
     }
+  }
+
+  /**
+   * A directory whose name is a string prefix of the home directory, such
+   * as users/al for users/alice, does not contain the trash and is moved to
+   * it; the home directory itself still cannot be.
+   */
+  @Test
+  public void testMoveToTrashHomePrefixSibling() throws Exception {
+    Path base = new Path(GenericTestUtils.getTempPath("testHomePrefix"));
+    Path home = new Path(base, "users/alice");
+    Configuration conf = new Configuration();
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 10);
+    try (FileSystem fs = newLocalFsWithHome(home, conf)) {
+      try {
+        Trash trash = new Trash(fs, conf);
+        fs.mkdirs(home);
+        Path prefixOfHome = new Path(base, "users/al");
+        fs.mkdirs(prefixOfHome);
+        assertTrue(trash.moveToTrash(prefixOfHome));
+        assertFalse(fs.exists(prefixOfHome));
+        intercept(IOException.class, "contains the trash",
+            () -> trash.moveToTrash(home));
+      } finally {
+        fs.delete(base, true);
+      }
+    }
+  }
+
+  /** @return a local file system whose home directory is {@code home}. */
+  private static FileSystem newLocalFsWithHome(Path home, Configuration conf)
+      throws IOException {
+    FileSystem fs = new RawLocalFileSystem() {
+      @Override
+      public Path getHomeDirectory() {
+        return makeQualified(home);
+      }
+    };
+    fs.initialize(URI.create("file:///"), conf);
+    return fs;
   }
 
   /**

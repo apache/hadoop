@@ -122,10 +122,9 @@ public class TrashPolicyDefault extends TrashPolicy {
   }
 
   /**
-   * @return true if {@code ancestor} is equal to {@code path} or an
-   *         ancestor of it.  Whole path components are compared, so a mere
-   *         string-prefix sibling (e.g. "/user/al" for "/user/alice") is
-   *         not considered an ancestor.
+   * @return true if {@code ancestor} is {@code path} or one of its ancestors,
+   *         comparing whole path components: "/user/al" is not an ancestor
+   *         of "/user/alice".
    */
   private static boolean isAncestorOf(Path ancestor, Path path) {
     String a = ancestor.toString();
@@ -154,16 +153,10 @@ public class TrashPolicyDefault extends TrashPolicy {
 
     Path trashRoot = fs.getTrashRoot(path);
     Path trashCurrent = new Path(trashRoot, CURRENT);
-    // check that path is not in the trash, respecting path component
-    // boundaries so that e.g. a ".Trashbackups" sibling of the trash root
-    // is not mistaken for the trash itself
     if (isAncestorOf(trashRoot, qpath)) {
       return false;                               // already in trash
     }
 
-    // check that path does not contain the trash root's parent, again
-    // respecting component boundaries so that a mere string-prefix sibling
-    // (e.g. /user/al for /user/alice) is not treated as containing the trash
     if (isAncestorOf(qpath, trashRoot.getParent())) {
       throw new IOException("Cannot move \"" + path +
                             "\" to the trash, as it contains the trash");
