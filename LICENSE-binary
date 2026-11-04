@@ -432,6 +432,7 @@ org.eclipse.jetty.ee8.websocket:jetty-ee8-websocket-jetty-client:12.1.14
 org.eclipse.jetty.ee8.websocket:jetty-ee8-websocket-jetty-common:12.1.14
 org.eclipse.jetty.ee8.websocket:jetty-ee8-websocket-jetty-server:12.1.14
 org.eclipse.jetty.ee8.websocket:jetty-ee8-websocket-servlet:12.1.14
+org.eclipse.jetty.toolchain:jetty-schemas:4.0.3
 org.eclipse.jetty.websocket:jetty-websocket-core-client:12.1.14
 org.eclipse.jetty.websocket:jetty-websocket-core-common:12.1.14
 org.eclipse.jetty.websocket:jetty-websocket-core-server:12.1.14
