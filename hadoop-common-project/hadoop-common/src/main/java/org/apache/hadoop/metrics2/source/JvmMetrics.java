@@ -46,7 +46,7 @@ import org.apache.hadoop.util.GcTimeMonitor;
 import org.apache.hadoop.util.JvmPauseMonitor;
 
 /**
- * JVM and logging related metrics.
+ * JVM related metrics.
  * Mostly used by various servers as a part of the metrics they export.
  */
 @InterfaceAudience.Private
