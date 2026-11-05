@@ -49,10 +49,6 @@ Each metrics record contains tags such as ProcessName, SessionID and Hostname as
 | `GcInfo` | Total GC count and GC time in msec, grouped by the kind of GC.  ex.) GcCountPS Scavenge=6, GCTimeMillisPS Scavenge=40, GCCountPS MarkSweep=0, GCTimeMillisPS MarkSweep=0 |
 | `GcCount` | Total GC count |
 | `GcTimeMillis` | Total GC time in msec |
-| `LogFatal` | Total number of FATAL logs |
-| `LogError` | Total number of ERROR logs |
-| `LogWarn` | Total number of WARN logs |
-| `LogInfo` | Total number of INFO logs |
 | `GcNumWarnThresholdExceeded` | Number of times that the GC warn threshold is exceeded |
 | `GcNumInfoThresholdExceeded` | Number of times that the GC info threshold is exceeded |
 | `GcTotalExtraSleepTime` | Total GC extra sleep time in msec |
