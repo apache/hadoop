@@ -49,28 +49,36 @@ public class TestLocalFSCopyFromLocal extends AbstractContractCopyFromLocalTest 
   @Test
   public void testDestinationDirectoryToSelf() throws Throwable {
     describe("Source is a directory and it is copied into itself with " +
-        "delSrc flag set, destination must not exist");
+        "delSrc flag set. The copy recurses until creating a directory " +
+        "fails, so the source must not be deleted");
 
     File source = createTempDirectory("srcDir");
     Path dest = new Path(source.toURI());
-    getFileSystem().copyFromLocalFile( true, true, dest, dest);
-
-    assertPathDoesNotExist("Source found", dest);
+    try {
+      getFileSystem().copyFromLocalFile(true, true, dest, dest);
+      assertPathExists("Source not found", dest);
+    } finally {
+      FileUtil.fullyDelete(source);
+    }
   }
 
   @Test
   public void testSourceIntoDestinationSubDirectoryWithDelSrc() throws Throwable {
     describe("Copying a parent folder inside a child folder with" +
-        " delSrc=TRUE");
+        " delSrc=TRUE. The copy recurses until creating a directory fails," +
+        " so the source must not be deleted");
     File parent = createTempDirectory("parent");
     File child = createTempDirectory(parent, "child");
 
     Path src = new Path(parent.toURI());
     Path dest = new Path(child.toURI());
-    getFileSystem().copyFromLocalFile(true, true, src, dest);
-
-    assertPathDoesNotExist("Source found", src);
-    assertPathDoesNotExist("Destination found", dest);
+    try {
+      getFileSystem().copyFromLocalFile(true, true, src, dest);
+      assertPathExists("Source not found", src);
+      assertPathExists("Destination not found", dest);
+    } finally {
+      FileUtil.fullyDelete(parent);
+    }
   }
 
   @Test
