@@ -1781,6 +1781,57 @@ public class TestFsDatasetImpl {
     }
   }
 
+  /**
+   * DirectoryScanner#reconcile must not notify the NameNode about more than
+   * dfs.datanode.directoryscan.max.notify.count blocks per round, for both
+   * missing blocks and new blocks found on disk.
+   */
+  @Test
+  @Timeout(value = 60)
+  public void testDirScannerNotifyCountLimitForNewBlock() throws Exception {
+    final long blockSize = 1024;
+    final int numBlocks = 3;
+    final long maxNotifyCount = 1;
+    HdfsConfiguration c = new HdfsConfiguration();
+    c.setLong(DFS_BLOCK_SIZE_KEY, blockSize);
+    c.setLong(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_MAX_NOTIFY_COUNT_KEY,
+        maxNotifyCount);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(c)
+        .numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      DFSTestUtil.createFile(cluster.getFileSystem(), new Path("/f1"),
+          blockSize * numBlocks, (short) 1, 0);
+      String bpid = cluster.getNameNode().getNamesystem().getBlockPoolId();
+      DataNode dn = cluster.getDataNodes().get(0);
+      FsDatasetImpl fsdataset = (FsDatasetImpl) dn.getFSDataset();
+      List<ReplicaInfo> replicaInfos = fsdataset.getFinalizedBlocks(bpid);
+      assertEquals(numBlocks, replicaInfos.size());
+      assertEquals(maxNotifyCount, fsdataset.getMaxDirScannerNotifyCount());
+
+      // Drop the replicas from memory but keep the files on disk, so that
+      // checkAndUpdate treats each of them as a new block found on disk.
+      for (ReplicaInfo replicaInfo : replicaInfos) {
+        fsdataset.volumeMap.remove(bpid, replicaInfo.getBlockId());
+        File blockFile = new File(replicaInfo.getBlockURI().getPath());
+        File metaFile = new File(replicaInfo.getMetadataURI().getPath());
+        FsVolumeSpi.ScanInfo info = new FsVolumeSpi.ScanInfo(
+            replicaInfo.getBlockId(),
+            blockFile.getParentFile().getAbsoluteFile(),
+            blockFile.getName(), metaFile.getName(), replicaInfo.getVolume());
+        fsdataset.checkAndUpdate(bpid, info);
+        assertNotNull(fsdataset.getStoredBlock(bpid, replicaInfo.getBlockId()));
+      }
+
+      // The configured limit must not be modified, and only maxNotifyCount
+      // notifications are sent within one block report interval.
+      assertEquals(maxNotifyCount, fsdataset.getMaxDirScannerNotifyCount());
+      assertEquals(maxNotifyCount, fsdataset.getCurDirScannerNotifyCount());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   @Test
   @Timeout(value = 20)
   public void testReleaseVolumeRefIfExceptionThrown() throws IOException {

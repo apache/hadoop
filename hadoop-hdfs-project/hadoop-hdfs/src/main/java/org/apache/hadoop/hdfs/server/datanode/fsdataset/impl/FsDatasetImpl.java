@@ -2895,7 +2895,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             .build();
         volumeMap.add(bpid, diskBlockInfo);
         if (curDirScannerNotifyCount < maxDirScannerNotifyCount) {
-          maxDirScannerNotifyCount++;
+          curDirScannerNotifyCount++;
           datanode.notifyNamenodeReceivedBlock(
               new ExtendedBlock(bpid, diskBlockInfo), null,
               storageUuid, vol.isTransientStorage());
@@ -3923,6 +3923,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override
   public void setLastDirScannerFinishTime(long time) {
     this.lastDirScannerFinishTime = time;
+  }
+
+  @VisibleForTesting
+  long getMaxDirScannerNotifyCount() {
+    return maxDirScannerNotifyCount;
+  }
+
+  @VisibleForTesting
+  long getCurDirScannerNotifyCount() {
+    return curDirScannerNotifyCount;
   }
 
   @Override
