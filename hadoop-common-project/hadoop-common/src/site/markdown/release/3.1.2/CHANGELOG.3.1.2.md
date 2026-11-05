@@ -89,7 +89,7 @@
 | [YARN-9122](https://issues.apache.org/jira/browse/YARN-9122) | Add table of contents to YARN Service API document |  Minor | documentation | Akira Ajisaka | Zhankun Tang |
 | [HDFS-14171](https://issues.apache.org/jira/browse/HDFS-14171) | Performance improvement in Tailing EditLog |  Major | namenode | Kenneth Yang | Kenneth Yang |
 | [HADOOP-15959](https://issues.apache.org/jira/browse/HADOOP-15959) | revert HADOOP-12751 |  Minor | security | Steve Loughran | Steve Loughran |
-| [HADOOP-16019](https://issues.apache.org/jira/browse/HADOOP-16019) | ZKDelegationTokenSecretManager won't log exception message occured in function setJaasConfiguration |  Minor | common | luhuachao | luhuachao |
+| [HADOOP-16019](https://issues.apache.org/jira/browse/HADOOP-16019) | ZKDelegationTokenSecretManager won't log exception message occurred in function setJaasConfiguration |  Minor | common | luhuachao | luhuachao |
 
 
 ### BUG FIXES:
