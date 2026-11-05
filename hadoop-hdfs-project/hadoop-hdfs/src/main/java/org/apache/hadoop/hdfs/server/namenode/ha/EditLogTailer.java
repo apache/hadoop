@@ -165,6 +165,17 @@ public class EditLogTailer {
    * implies using the RPC-based mechanism to tail edits).
    */
   private final boolean inProgressOk;
+  private volatile long rollbackCheckpointTxId = HdfsServerConstants.INVALID_TXID;
+
+  /**
+   * Check under the checkpoint lock whether replay is at the pinned boundary.
+   * @return true when the exact rollback checkpoint namespace is available
+   */
+  public boolean isRollbackCheckpointReady() {
+    return rollbackCheckpointTxId != HdfsServerConstants.INVALID_TXID
+        && namesystem.getFSImage().getLastAppliedTxId() == rollbackCheckpointTxId;
+  }
+
 
   /**
    * Release the namesystem lock after loading this many transactions.
@@ -324,7 +335,7 @@ public class EditLogTailer {
             // It is already under the name system lock and the checkpointer
             // thread is already stopped. No need to acquire any other lock.
             // HDFS-16689. Disable inProgress to use the streaming mechanism
-            editsTailed = doTailEdits(false);
+            editsTailed = doTailEdits(false, false);
           } catch (InterruptedException e) {
             throw new IOException(e);
           } finally {
@@ -339,12 +350,22 @@ public class EditLogTailer {
 
   @VisibleForTesting
   public long doTailEdits() throws IOException, InterruptedException {
-    return doTailEdits(inProgressOk);
+    return doTailEdits(inProgressOk, true);
   }
 
-  private long doTailEdits(boolean enableInProgress) throws IOException, InterruptedException {
+  private long doTailEdits(boolean enableInProgress, boolean preserveRollbackBoundary)
+      throws IOException, InterruptedException {
     Collection<EditLogInputStream> streams;
     FSImage image = namesystem.getFSImage();
+    boolean preserve = preserveRollbackBoundary && namesystem.isStandbyCheckpointEnabled()
+        && !image.hasRollbackFSImage();
+    if (!preserve || !namesystem.isNeedRollbackFsImage()) {
+      rollbackCheckpointTxId = HdfsServerConstants.INVALID_TXID;
+    } else if (rollbackCheckpointTxId != HdfsServerConstants.INVALID_TXID) {
+      // The checkpointer shares cpLock with periodic tailing. Keep this exact
+      // namespace until its rollback image exists. Failover catch-up bypasses it.
+      return 0;
+    }
 
     long lastTxnId = image.getLastAppliedTxId();
     LOG.debug("lastTxnId: {}", lastTxnId);
@@ -383,11 +404,15 @@ public class EditLogTailer {
       long editsLoaded = 0;
       try {
         editsLoaded = image.loadEdits(
-            streams, namesystem, maxTxnsPerLock, null, null);
+            streams, namesystem, maxTxnsPerLock, null, null,
+            preserve ? txid -> rollbackCheckpointTxId = txid : null);
       } catch (EditLogInputException elie) {
         editsLoaded = elie.getNumEditsLoaded();
         throw elie;
       } finally {
+        if (image.getLastAppliedTxId() < rollbackCheckpointTxId) {
+          rollbackCheckpointTxId = HdfsServerConstants.INVALID_TXID;
+        }
         LOG.debug("Loaded {} edits starting from txid {}.", editsLoaded, lastTxnId);
         NameNode.getNameNodeMetrics().addNumEditLogLoaded(editsLoaded);
       }
@@ -518,6 +543,13 @@ public class EditLogTailer {
           // read any more transactions since the last time a roll was
           // triggered.
           boolean triggeredLogRoll = false;
+          if (namesystem.isStandbyCheckpointEnabled() && namesystem.isNeedRollbackFsImage()
+              && !namesystem.getFSImage().hasRollbackFSImage()
+              && !isRollbackCheckpointReady()) {
+            // Also handles a restart which already replayed part of an open
+            // segment: obtain a future END before permitting a rollback image.
+            triggerActiveLogRoll();
+          }
           if (triggerRollEnabled && tooLongSinceLastLoad() &&
               lastRollTriggerTxId < lastLoadedTxnId) {
             triggerActiveLogRoll();
