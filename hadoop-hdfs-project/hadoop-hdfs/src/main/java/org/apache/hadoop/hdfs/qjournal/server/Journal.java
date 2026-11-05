@@ -745,12 +745,19 @@ public class Journal implements Closeable {
    */
   public GetJournaledEditsResponseProto getJournaledEdits(long sinceTxId,
       int maxTxns) throws IOException {
-    if (cache == null) {
+    final JournaledEditsCache readCache;
+    final long highestTxId;
+    synchronized (this) {
+      // Snapshot both together with journal/discard. Copying response bytes
+      // below need not hold the Journal monitor and delay writer fsyncs.
+      readCache = cache;
+      highestTxId = highestWrittenTxId;
+    }
+    if (readCache == null) {
       throw new IOException("The journal edits cache is not enabled, which " +
           "is a requirement to fetch journaled edits via RPC. Please enable " +
           "it via " + DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY);
     }
-    long highestTxId = getHighestWrittenTxId();
     if (sinceTxId == highestTxId + 1) {
       // Requested edits that don't exist yet, but this is expected,
       // because namenode always get the journaled edits with the sinceTxId
@@ -770,7 +777,7 @@ public class Journal implements Closeable {
     }
     try {
       List<ByteBuffer> buffers = new ArrayList<>();
-      int txnCount = cache.retrieveEdits(sinceTxId, maxTxns, buffers);
+      int txnCount = readCache.retrieveEdits(sinceTxId, maxTxns, buffers);
       int totalSize = 0;
       for (ByteBuffer buf : buffers) {
         totalSize += buf.remaining();
@@ -1197,6 +1204,14 @@ public class Journal implements Closeable {
 
   synchronized void discardSegments(long startTxId) throws IOException {
     storage.getJournalManager().discardSegments(startTxId);
+    // A rollback removes on-disk edits, including their RPC visibility. Keeping
+    // the old cache can replay discarded operations into the rolled-back NN.
+    // Retained older edits can be fetched from disk after a cache miss.
+    cache = createCache();
+    updateHighestWrittenTxId(Math.min(highestWrittenTxId, startTxId - 1));
+    if (curSegment != null && curSegmentTxId >= startTxId) {
+      abortCurSegment();
+    }
     // we delete all the segments after the startTxId. let's reset committedTxnId 
     committedTxnId.set(startTxId - 1);
   }
