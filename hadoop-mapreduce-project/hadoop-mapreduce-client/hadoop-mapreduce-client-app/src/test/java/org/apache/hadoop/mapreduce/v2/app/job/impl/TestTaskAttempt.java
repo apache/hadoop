@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -337,6 +338,19 @@ public class TestTaskAttempt{
       expected.remove(h);
     }
     assertEquals(0, expected.size());
+  }
+
+  @Test
+  public void testResolveHostsIPv6Literal() throws Exception {
+    String[] hosts = {"192.168.1.1", "2001:db8::21", "host3"};
+    TaskSplitMetaInfo splitInfo = new TaskSplitMetaInfo(hosts, 0, 128 * 1024 * 1024L);
+    TaskAttemptImpl spyTa =
+        spy(createMapTaskAttemptImplForTest(mock(EventHandler.class), splitInfo));
+    when(spyTa.resolveHost(hosts[0])).thenReturn("host1");
+    when(spyTa.resolveHost(hosts[1])).thenReturn("host2");
+
+    assertThat(spyTa.resolveHosts(hosts)).containsExactlyInAnyOrder("host1", "host2", "host3");
+    verify(spyTa, never()).resolveHost(hosts[2]);
   }
 
   @Test
