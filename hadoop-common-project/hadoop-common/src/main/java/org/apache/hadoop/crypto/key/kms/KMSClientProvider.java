@@ -699,10 +699,10 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
    * The filter reports why through
    * {@link javax.servlet.http.HttpServletResponse#sendError}. On Jetty 12 the
    * HTTP reason phrase is always the canonical text for the status code and
-   * that detail is only in the body, so read it from there. An authorization denial arrives instead as the JSON
-   * envelope {@link HttpExceptionUtils} writes, which
-   * {@link ResponseDetail#of} leaves untouched - so a
-   * denial neither matches here nor has its body consumed before
+   * that detail is only in the body, so read it from there. An authorization
+   * denial arrives instead as the JSON envelope {@link HttpExceptionUtils}
+   * writes, which {@link ResponseDetail#of} leaves untouched - so a denial
+   * neither matches here nor has its body consumed before
    * {@link HttpExceptionUtils#validateResponse} below rebuilds the exception
    * from it.
    * <p>
