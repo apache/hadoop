@@ -36,8 +36,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 
-import org.eclipse.jetty.server.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -271,11 +271,17 @@ public class RestCsrfPreventionFilter implements Filter {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public void sendError(int code, String message) throws IOException {
-      if (httpResponse instanceof Response) {
-        ((Response)httpResponse).setStatusWithReason(code, message);
-      }
-
+      // The message travels in the reason phrase where the container sends
+      // one, as Jetty 9.4 does for setStatus(int, String). It also travels in
+      // the error page sendError writes, and marking it asks HttpServer2's
+      // error handler to write that page for a PUT or a DELETE too, where
+      // Jetty otherwise sends no body at all.
+      httpResponse.setStatus(code, message);
+      httpRequest.setAttribute(
+          AuthenticationFilter.ERROR_MESSAGE_FOR_ANY_METHOD_ATTRIBUTE,
+          Boolean.TRUE);
       httpResponse.sendError(code, message);
     }
   }
