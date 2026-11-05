@@ -41,7 +41,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -1874,14 +1873,8 @@ public abstract class TaskAttemptImpl implements
     return result;
   }
 
-  private static final Pattern ipPattern = // Pattern for matching ip
-    Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}");
-  
   protected boolean isIP(String src) {
-    // InetAddresses alone also covers IPv4, but it rejects leading zero octets such as
-    // "010.1.1.1", which the regex accepts and resolveHost() resolves. Keep the regex so
-    // IPv4 behavior does not change; InetAddresses adds IPv6 literals.
-    return ipPattern.matcher(src).matches() || InetAddresses.isInetAddress(src);
+    return InetAddresses.isInetAddress(src);
   }
 
   private static class ContainerAssignedTransition implements
