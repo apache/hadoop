@@ -190,6 +190,8 @@ This section deals with important parameters to be specified in the given config
 | `mapreduce.task.io.sort.factor` | 100 | More streams merged at once while sorting files. |
 | `mapreduce.reduce.shuffle.parallelcopies` | 50 | Higher number of parallel copies run by reduces to fetch outputs from very large number of maps. |
 
+  By default, map and reduce task JVMs run with `-Djava.net.preferIPv4Stack=true` from `mapreduce.admin.map.child.java.opts` and `mapreduce.admin.reduce.child.java.opts` (default `-Djava.net.preferIPv4Stack=true -Dhadoop.metrics.log.level=WARN`). `HADOOP_OPTS` does not apply to them. On a cluster that uses IPv6, set both properties without `-Djava.net.preferIPv4Stack=true`, for example to `-Dhadoop.metrics.log.level=WARN`, or tasks cannot connect to IPv6 addresses.
+
   * Configurations for MapReduce JobHistory Server:
 
 | Parameter | Value | Notes |

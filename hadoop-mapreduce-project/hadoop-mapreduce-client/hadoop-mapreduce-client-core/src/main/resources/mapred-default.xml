@@ -382,6 +382,36 @@
 </property>
 -->
 
+<!-- This is commented out so that job.xml won't override the value set on
+     the cluster nodes. The default is MRJobConfig.DEFAULT_MAPRED_ADMIN_JAVA_OPTS.
+<property>
+  <name>mapreduce.admin.map.child.java.opts</name>
+  <value>-Djava.net.preferIPv4Stack=true -Dhadoop.metrics.log.level=WARN </value>
+  <description>Expert: Java opts set by the administrator for map task
+  processes. They are placed before mapreduce.map.java.opts on the command
+  line. The default pins the task JVM to IPv4, which HADOOP_OPTS does not
+  affect. On a cluster whose nodes talk over IPv6, remove
+  -Djava.net.preferIPv4Stack=true from this value, or tasks will fail to
+  connect to IPv6 addresses.
+  </description>
+</property>
+-->
+
+<!-- This is commented out so that job.xml won't override the value set on
+     the cluster nodes. The default is MRJobConfig.DEFAULT_MAPRED_ADMIN_JAVA_OPTS.
+<property>
+  <name>mapreduce.admin.reduce.child.java.opts</name>
+  <value>-Djava.net.preferIPv4Stack=true -Dhadoop.metrics.log.level=WARN </value>
+  <description>Expert: Java opts set by the administrator for reduce task
+  processes. They are placed before mapreduce.reduce.java.opts on the command
+  line. The default pins the task JVM to IPv4, which HADOOP_OPTS does not
+  affect. On a cluster whose nodes talk over IPv6, remove
+  -Djava.net.preferIPv4Stack=true from this value, or tasks will fail to
+  connect to IPv6 addresses.
+  </description>
+</property>
+-->
+
 <property>
   <name>mapred.child.env</name>
   <value></value>
