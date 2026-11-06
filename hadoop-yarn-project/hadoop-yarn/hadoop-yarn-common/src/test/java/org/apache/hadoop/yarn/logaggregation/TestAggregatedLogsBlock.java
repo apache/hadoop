@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.webapp.view.BlockForTest;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlockForTest;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -117,6 +118,22 @@ public class TestAggregatedLogsBlock {
     block.getWriter().flush();
     String out = data.toString();
     assertTrue(out.contains(nodeName));
+  }
+
+  @Test
+  void testApplicationLogUrlBracketsIPv6Host() {
+    FileUtil.fullyDelete(new File("target/logs"));
+    AggregatedLogsBlockForTest aggregatedBlock = getAggregatedLogsBlockForTest(
+        getConfiguration(), "admin", "container_0_0001_01_000001",
+        "2001:db8:0:0:0:0:0:21:1234");
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    PrintWriter printWriter = new PrintWriter(data);
+    HtmlBlock.Block block = new BlockForTest(new HtmlBlockForTest(), printWriter, 10, false);
+    aggregatedBlock.render(block);
+
+    block.getWriter().flush();
+    assertThat(data.toString()).contains(
+        "Or see application log at http://[2001:db8:0:0:0:0:0:21]:8042/node/application/");
   }
 
   /**

@@ -25,6 +25,7 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.NM_NODENAME;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -135,8 +136,10 @@ public class AggregatedLogsBlock extends HtmlBlock {
     String webAppURLWithoutScheme =
         WebAppUtils.getNMWebAppURLWithoutScheme(conf);
     if (webAppURLWithoutScheme.contains(":")) {
-      String httpPort = webAppURLWithoutScheme.split(":")[1];
-      nodeId = NodeId.fromString(nodeId).getHost() + ":" + httpPort;
+      String httpPort =
+          webAppURLWithoutScheme.substring(webAppURLWithoutScheme.lastIndexOf(':') + 1);
+      nodeId = NetUtils.getHostPortString(NodeId.fromString(nodeId).getHost(),
+          Integer.parseInt(httpPort));
     }
 
     sb.append(scheme).append(nodeId).append("/node/application/").append(appId);
