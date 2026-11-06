@@ -1496,7 +1496,9 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
       }
     }
     if (!failures.isEmpty()) {
-      throw new MultipleFailuresError("checkEvents", failures);
+      MultipleFailuresError error = new MultipleFailuresError("checkEvents", failures);
+      failures.forEach(error::addSuppressed);
+      throw error;
     }
   }
   
