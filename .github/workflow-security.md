@@ -174,9 +174,9 @@ earlier `pull_request_target` bridge (`notify_test_workflow.yml` and
 `update_build_status.yml`):
 
 - It runs only on `schedule` (every 10 minutes) and `workflow_dispatch`. It
-  deliberately has no `workflow_run` trigger, which Zizmor flags as a
-  dangerous trigger. The cost is that a new pull request's check appears on
-  the next scheduled run rather than immediately.
+  does not use the `workflow_run` signal that ASF policy recommends for this
+  pattern: Zizmor flags that trigger as dangerous, and for builds that take
+  hours, a check that appears on the next scheduled run is soon enough.
 - Its token has only `actions: read`, `checks: write` and
   `pull-requests: read`. It reads GitHub API metadata only, and never checks
   out, builds or downloads anything from the pull request or the fork.
@@ -186,6 +186,10 @@ earlier `pull_request_target` bridge (`notify_test_workflow.yml` and
 - To mirror another fork workflow, add another fork-ci step with a distinct
   check name to `fork_ci_status.yml`. Keep all such steps in that one
   serialized workflow.
+
+Contributor setup and rerun steps are in
+[The "Build" Check on Pull Requests](pr-build-check.md), which the check
+links to when it finds no run.
 
 ## Recent Supply Chain Attacks
 
