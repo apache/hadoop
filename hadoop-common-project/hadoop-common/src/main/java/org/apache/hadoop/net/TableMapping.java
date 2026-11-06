@@ -35,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,7 +111,7 @@ public class TableMapping extends CachedDNSToSwitchMapping {
           if (line.length() != 0 && line.charAt(0) != '#') {
             String[] columns = line.split("\\s+");
             if (columns.length == 2) {
-              loadMap.put(columns[0], columns[1]);
+              loadMap.put(normalizeIpLiteral(columns[0]), columns[1]);
             } else {
               LOG.warn("Line does not have two columns. Ignoring. " + line);
             }
@@ -124,6 +125,14 @@ public class TableMapping extends CachedDNSToSwitchMapping {
       return loadMap;
     }
   
+    /**
+     * Rewrite an IP literal to the form {@link NetUtils#normalizeHostName} gives lookups,
+     * e.g. 2001:db8::10 to 2001:db8:0:0:0:0:0:10. Other keys are kept as written.
+     */
+    private static String normalizeIpLiteral(String key) {
+      return InetAddresses.isInetAddress(key) ? InetAddresses.forString(key).getHostAddress() : key;
+    }
+
     @Override
     public synchronized List<String> resolve(List<String> names) {
       if (map == null) {

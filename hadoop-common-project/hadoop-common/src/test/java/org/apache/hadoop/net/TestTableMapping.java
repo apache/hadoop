@@ -19,6 +19,7 @@ package org.apache.hadoop.net;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
@@ -27,6 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -59,6 +61,25 @@ public class TestTableMapping {
     assertEquals(names.size(), result.size());
     assertEquals("/rack1", result.get(0));
     assertEquals("/rack2", result.get(1));
+  }
+
+  @Test
+  public void testResolveIPv6() throws IOException {
+    File mapFile = File.createTempFile(getClass().getSimpleName() +
+        ".testResolveIPv6", ".txt");
+    Files.asCharSink(mapFile, StandardCharsets.UTF_8).write(
+        "2001:db8::10 /rack1\n2001:DB8:0:0:0:0:0:20 /rack2\n" + hostName1 + " /rack3\n");
+    mapFile.deleteOnExit();
+    TableMapping mapping = new TableMapping();
+
+    Configuration conf = new Configuration();
+    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mapFile.getCanonicalPath());
+    mapping.setConf(conf);
+
+    List<String> result = mapping.resolve(Arrays.asList("2001:db8::10", "2001:db8:0:0:0:0:0:10",
+        "2001:db8::20", "2001:db8::30", hostName1));
+    assertThat(result).containsExactly("/rack1", "/rack1", "/rack2",
+        NetworkTopology.DEFAULT_RACK, "/rack3");
   }
 
   @Test
