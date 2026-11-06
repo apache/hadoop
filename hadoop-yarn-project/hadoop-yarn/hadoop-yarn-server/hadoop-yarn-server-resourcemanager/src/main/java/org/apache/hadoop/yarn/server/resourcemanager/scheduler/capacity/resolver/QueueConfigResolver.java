@@ -1232,9 +1232,14 @@ public final class QueueConfigResolver {
         failed.getSourceDetail());
   }
 
+  /**
+   * Like CapacitySchedulerQueueManager.parseQueue, root is a managed parent
+   * too when it enables AQC v1.
+   */
   private static boolean isManagedParent(ResolvedQueueConfig queue) {
     Resolved<Boolean> enabled = queue.get(AUTO_CREATE_CHILD_QUEUE_ENABLED);
-    return queue.getKind() == Kind.PARENT && enabled != null
+    Kind kind = queue.getKind();
+    return (kind == Kind.PARENT || kind == Kind.ROOT) && enabled != null
         && !enabled.isFailed() && enabled.getValue();
   }
 

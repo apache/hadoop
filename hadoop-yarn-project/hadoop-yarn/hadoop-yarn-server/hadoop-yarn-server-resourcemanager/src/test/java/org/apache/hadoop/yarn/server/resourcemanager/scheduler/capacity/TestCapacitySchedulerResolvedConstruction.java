@@ -194,6 +194,31 @@ public class TestCapacitySchedulerResolvedConstruction {
   }
 
   @Test
+  public void testLegacyAutoCreatedLeafUnderManagedRoot() throws Exception {
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration();
+    csConf.set(PREFIX + "root.queues", "default");
+    csConf.set(PREFIX + "root.default.capacity", "100");
+    csConf.setBoolean(PREFIX + "root.auto-create-child-queue.enabled", true);
+    CapacityScheduler cs = start(csConf);
+    CapacitySchedulerQueueContext queueContext = cs.getQueueContext();
+    assertTrue(cs.getRootQueue() instanceof ManagedParentQueue);
+    QueuePath path = new QueuePath("root.u1");
+
+    // A v1 auto-created leaf of root, like one of any other managed parent,
+    // does not take the 1w default of v2 dynamic queues, which would mix
+    // weights with the percentages of its siblings
+    cs.getCapacitySchedulerQueueManager().createQueue(path);
+    AbstractCSQueue u1 = (AbstractCSQueue) cs.getQueue("root.u1");
+    assertTrue(u1 instanceof AutoCreatedLeafQueue);
+    ResolvedQueueConfig resolved =
+        queueContext.getResolvedQueueTree().get(path);
+    assertNull(QueueCapacityChecks.uniformWeightOf(
+        resolved.get(QueueProperties.CAPACITY_VECTOR).getValue()));
+    assertEquals(-1f, u1.getQueueCapacities().getWeight(""), 0f);
+  }
+
+  @Test
   public void testReservationQueueTakesPlanLimits() throws Exception {
     CapacityScheduler cs = start(configuration());
     CapacitySchedulerQueueContext queueContext = cs.getQueueContext();
