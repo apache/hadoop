@@ -54,13 +54,13 @@ public class PlanQueue extends AbstractManagedParentQueue {
 
     // Set the reservation queue attributes for the Plan
     ResolvedQueueConfig resolved = getResolvedQueueConfig();
-    int maxAppsForReservation =
+    int configuredMaxAppsForReservation =
         resolved.get(QueueProperties.MAXIMUM_APPLICATIONS).getValue();
     showReservationsAsQueues =
         resolved.get(QueueProperties.SHOW_RESERVATIONS_AS_QUEUES).getValue();
-    if (maxAppsForReservation < 0) {
+    if (configuredMaxAppsForReservation < 0) {
       // The literal system default, not the configured maximum applications
-      maxAppsForReservation = QueueApplicationLimits.scaleByAbsoluteCapacity(
+      configuredMaxAppsForReservation = QueueApplicationLimits.scaleByAbsoluteCapacity(
           CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS,
           super.getAbsoluteCapacity());
     }
@@ -69,16 +69,16 @@ public class PlanQueue extends AbstractManagedParentQueue {
     float configuredUserLimitFactor =
         resolved.get(QueueProperties.USER_LIMIT_FACTOR).getValue();
     int configuredMaxAppsPerUserForReservation =
-        QueueApplicationLimits.maximumApplicationsPerUser(maxAppsForReservation,
+        QueueApplicationLimits.maximumApplicationsPerUser(configuredMaxAppsForReservation,
             configuredUserLimit, configuredUserLimitFactor, false);
     updateQuotas(configuredUserLimit, configuredUserLimitFactor,
-        maxAppsForReservation, configuredMaxAppsPerUserForReservation);
+        configuredMaxAppsForReservation, configuredMaxAppsPerUserForReservation);
 
     StringBuilder queueInfo = new StringBuilder();
     queueInfo.append("Created Plan Queue: ").append(queueName)
         .append("\nwith capacity: [").append(super.getCapacity())
         .append("]\nwith max capacity: [").append(super.getMaximumCapacity())
-        .append("\nwith max reservation apps: [").append(maxAppsForReservation)
+        .append("\nwith max reservation apps: [").append(configuredMaxAppsForReservation)
         .append("]\nwith max reservation apps per user: [")
         .append(configuredMaxAppsPerUserForReservation)
         .append("]\nwith user limit: [")

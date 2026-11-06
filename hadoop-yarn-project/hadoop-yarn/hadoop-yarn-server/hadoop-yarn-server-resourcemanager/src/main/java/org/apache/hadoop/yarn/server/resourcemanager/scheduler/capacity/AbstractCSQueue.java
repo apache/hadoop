@@ -525,40 +525,40 @@ public abstract class AbstractCSQueue implements CSQueue {
   // The values of the queue's own path come from its resolved configuration;
   // the auto-created leaf queues read the template path of their parent.
 
-  protected Resource getMinimumAbsoluteResource(final QueuePath queuePath,
+  protected Resource getMinimumAbsoluteResource(final QueuePath path,
       final String label) {
-    if (queuePath.equals(this.queuePath)) {
+    if (path.equals(this.queuePath)) {
       return CSQueueUtils.getResolvedValue(getResolvedQueueConfig(),
           QueueProperties.MINIMUM_RESOURCE, label,
           () -> queueContext.getConfiguration()
-              .getMinimumResourceRequirement(label, queuePath, resourceTypes));
+              .getMinimumResourceRequirement(label, path, resourceTypes));
     }
     return queueContext.getConfiguration()
-        .getMinimumResourceRequirement(label, queuePath, resourceTypes);
+        .getMinimumResourceRequirement(label, path, resourceTypes);
   }
 
-  protected Resource getMaximumAbsoluteResource(final QueuePath queuePath,
+  protected Resource getMaximumAbsoluteResource(final QueuePath path,
       final String label) {
-    if (queuePath.equals(this.queuePath)) {
+    if (path.equals(this.queuePath)) {
       return CSQueueUtils.getResolvedValue(getResolvedQueueConfig(),
           QueueProperties.MAXIMUM_RESOURCE, label,
           () -> queueContext.getConfiguration()
-              .getMaximumResourceRequirement(label, queuePath, resourceTypes));
+              .getMaximumResourceRequirement(label, path, resourceTypes));
     }
     return queueContext.getConfiguration()
-        .getMaximumResourceRequirement(label, queuePath, resourceTypes);
+        .getMaximumResourceRequirement(label, path, resourceTypes);
   }
 
-  protected boolean checkConfigTypeIsAbsoluteResource(final QueuePath queuePath,
+  protected boolean checkConfigTypeIsAbsoluteResource(final QueuePath path,
       final String label) {
-    if (queuePath.equals(this.queuePath)) {
+    if (path.equals(this.queuePath)) {
       return CSQueueUtils.getResolvedValue(getResolvedQueueConfig(),
           QueueProperties.CAPACITY_IS_ABSOLUTE_RESOURCE, label,
           () -> queueContext.getConfiguration()
-              .checkConfigTypeIsAbsoluteResource(label, queuePath, resourceTypes));
+              .checkConfigTypeIsAbsoluteResource(label, path, resourceTypes));
     }
     return queueContext.getConfiguration().checkConfigTypeIsAbsoluteResource(label,
-        queuePath, resourceTypes);
+        path, resourceTypes);
   }
 
   protected void updateCapacityConfigType() {
