@@ -138,6 +138,7 @@ public class Journal implements Closeable {
   
   private final FileJournalManager fjm;
 
+  // Guarded by this, except during construction.
   private JournaledEditsCache cache;
 
   private final JournalMetrics metrics;
@@ -248,7 +249,7 @@ public class Journal implements Closeable {
   /**
    * Format the local storage with the given namespace.
    */
-  void format(NamespaceInfo nsInfo, boolean force) throws IOException {
+  synchronized void format(NamespaceInfo nsInfo, boolean force) throws IOException {
     Preconditions.checkState(nsInfo.getNamespaceID() != 0,
         "can't format with uninitialized namespace info: %s",
         nsInfo);
@@ -1249,7 +1250,7 @@ public class Journal implements Closeable {
   }
 
   @VisibleForTesting
-  JournaledEditsCache getJournaledEditsCache() {
+  synchronized JournaledEditsCache getJournaledEditsCache() {
     return cache;
   }
 
