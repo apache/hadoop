@@ -425,10 +425,6 @@ public class TestMiniDFSCluster {
   public void testBindHostIPv6Loopback() throws Exception {
     assumeFalse(Boolean.getBoolean("java.net.preferIPv4Stack"), "JVM is pinned to IPv4");
     InetAddress loopback = InetAddress.getByName("::1");
-    // The NameNode binds to the host name of its address, so it only listens on ::1
-    // if that name resolves back to ::1 (for example with java.net.preferIPv6Addresses=true).
-    assumeTrue(loopback.equals(InetAddress.getByName(loopback.getHostName())),
-        "::1 does not round trip through " + loopback.getHostName());
 
     Configuration conf = new HdfsConfiguration();
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).bindHost("::1").build()) {
