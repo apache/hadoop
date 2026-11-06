@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -27,6 +33,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerHealth;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ConfigSnapshot;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueConfigResolver;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperty;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolutionInputs;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolutionInputs.DynamicQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolvedQueueConfig;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolvedQueueTree;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -50,6 +62,11 @@ public class CapacitySchedulerQueueContext {
   private CapacitySchedulerConfiguration configuration;
 
   private Resource minimumAllocation;
+
+  // The resolved configuration of the queues, resolved from the snapshot of
+  // the installed configuration; guarded by this
+  private ResolvedQueueTree resolvedQueueTree;
+  private Set<QueuePath> existingDynamicParents;
 
   public CapacitySchedulerQueueContext(CapacitySchedulerContext csContext) {
     this.csContext = csContext;
@@ -76,7 +93,39 @@ public class CapacitySchedulerQueueContext {
     // Take the snapshot when the configuration is installed. Queue setup is
     // its first reader and nothing writes into the configuration before that,
     // so dynamic queue template writes during setup stay outside of it.
-    conf.getConfigSnapshot();
+    ConfigSnapshot snapshot = conf.getConfigSnapshot();
+    // Resolve the queues once, before the queues are parsed and set up from
+    // it. The dynamic queues of the live hierarchy are resolved too, because
+    // a refresh sets them up again.
+    List<DynamicQueue> dynamicQueues = getExistingDynamicQueues();
+    Set<QueuePath> dynamicParents = new HashSet<>();
+    for (DynamicQueue queue : dynamicQueues) {
+      if (!queue.isLeaf()) {
+        dynamicParents.add(queue.getPath());
+      }
+    }
+    ResolvedQueueTree tree = QueueConfigResolver.resolve(snapshot,
+        ResolutionInputs.from(conf, dynamicQueues));
+    synchronized (this) {
+      this.resolvedQueueTree = tree;
+      this.existingDynamicParents = Collections.unmodifiableSet(dynamicParents);
+    }
+  }
+
+  private List<DynamicQueue> getExistingDynamicQueues() {
+    List<DynamicQueue> dynamicQueues = new ArrayList<>();
+    if (queueManager == null) {
+      return dynamicQueues;
+    }
+    for (CSQueue queue : queueManager.getQueues().values()) {
+      DynamicQueue dynamicQueue = DynamicQueue.of(queue.getQueuePathObject(),
+          queue instanceof AutoCreatedLeafQueue, queue.isDynamicQueue(),
+          queue instanceof AbstractLeafQueue);
+      if (dynamicQueue != null) {
+        dynamicQueues.add(dynamicQueue);
+      }
+    }
+    return dynamicQueues;
   }
 
   public CapacitySchedulerQueueManager getQueueManager() {
@@ -112,6 +161,58 @@ public class CapacitySchedulerQueueContext {
    */
   public ConfigSnapshot getConfigSnapshot() {
     return configuration.getConfigSnapshot();
+  }
+
+  /**
+   * Get the resolved configuration of the queues, resolved from
+   * {@link #getConfigSnapshot()} by the last (re)initialization. Dynamic
+   * queues created since then are added when they are set up.
+   * @return the resolved queue tree
+   */
+  public synchronized ResolvedQueueTree getResolvedQueueTree() {
+    return resolvedQueueTree;
+  }
+
+  /**
+   * Get the resolved configuration a queue is set up from. A queue the tree
+   * does not hold with the same kind and dynamic nature, for example a
+   * dynamic queue created since the last (re)initialization, is resolved
+   * against its parent's resolved configuration and added to the tree.
+   * @param queuePath the queue path
+   * @param kind the kind of the queue
+   * @param dynamic whether the queue receives template entries
+   * @return the resolved configuration of the queue
+   */
+  synchronized ResolvedQueueConfig getResolvedQueueConfig(QueuePath queuePath,
+      QueueProperty.Kind kind, boolean dynamic) {
+    ResolvedQueueConfig resolved = resolvedQueueTree.get(queuePath);
+    if (resolved == null || resolved.getKind() != kind
+        || resolved.isDynamic() != dynamic) {
+      resolved = QueueConfigResolver.resolveQueue(resolvedQueueTree, queuePath,
+          kind, dynamic);
+    }
+    return resolved;
+  }
+
+  /**
+   * Get the resolved configuration of a queue that is already set up, for
+   * example the parent of a queue being set up.
+   * @param queuePath the queue path
+   * @return the resolved configuration, or null if the queue is not resolved
+   */
+  synchronized ResolvedQueueConfig getResolvedQueueConfig(QueuePath queuePath) {
+    return resolvedQueueTree.get(queuePath);
+  }
+
+  /**
+   * Whether a queue was a dynamic parent queue in the queue hierarchy when
+   * the configuration was installed; such a queue stays a parent queue even
+   * if it is configured without children.
+   * @param queuePath the queue path
+   * @return true for an existing dynamic parent queue
+   */
+  synchronized boolean isExistingDynamicParent(QueuePath queuePath) {
+    return existingDynamicParents.contains(queuePath);
   }
 
   public void setConfigurationEntry(String name, String value) {

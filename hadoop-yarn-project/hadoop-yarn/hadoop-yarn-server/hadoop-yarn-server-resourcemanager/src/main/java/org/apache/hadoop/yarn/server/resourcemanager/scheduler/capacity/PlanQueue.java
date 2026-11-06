@@ -25,6 +25,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationCons
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolvedQueueConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,28 +53,32 @@ public class PlanQueue extends AbstractManagedParentQueue {
     updateAbsoluteCapacities();
 
     // Set the reservation queue attributes for the Plan
-    CapacitySchedulerConfiguration conf = queueContext.getConfiguration();
-    QueuePath queuePath = super.getQueuePathObject();
-    int maxAppsForReservation = conf.getMaximumApplicationsPerQueue(queuePath);
-    showReservationsAsQueues = conf.getShowReservationAsQueues(queuePath);
-    if (maxAppsForReservation < 0) {
-      maxAppsForReservation = QueueApplicationLimits.scaleByAbsoluteCapacity(
+    ResolvedQueueConfig resolved = getResolvedQueueConfig();
+    int configuredMaxAppsForReservation =
+        resolved.get(QueueProperties.MAXIMUM_APPLICATIONS).getValue();
+    showReservationsAsQueues =
+        resolved.get(QueueProperties.SHOW_RESERVATIONS_AS_QUEUES).getValue();
+    if (configuredMaxAppsForReservation < 0) {
+      // The literal system default, not the configured maximum applications
+      configuredMaxAppsForReservation = QueueApplicationLimits.scaleByAbsoluteCapacity(
           CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS,
           super.getAbsoluteCapacity());
     }
-    float configuredUserLimit = conf.getUserLimit(queuePath);
-    float configuredUserLimitFactor = conf.getUserLimitFactor(queuePath);
+    float configuredUserLimit =
+        resolved.get(QueueProperties.USER_LIMIT).getValue();
+    float configuredUserLimitFactor =
+        resolved.get(QueueProperties.USER_LIMIT_FACTOR).getValue();
     int configuredMaxAppsPerUserForReservation =
-        QueueApplicationLimits.maximumApplicationsPerUser(maxAppsForReservation,
+        QueueApplicationLimits.maximumApplicationsPerUser(configuredMaxAppsForReservation,
             configuredUserLimit, configuredUserLimitFactor, false);
     updateQuotas(configuredUserLimit, configuredUserLimitFactor,
-        maxAppsForReservation, configuredMaxAppsPerUserForReservation);
+        configuredMaxAppsForReservation, configuredMaxAppsPerUserForReservation);
 
     StringBuilder queueInfo = new StringBuilder();
     queueInfo.append("Created Plan Queue: ").append(queueName)
         .append("\nwith capacity: [").append(super.getCapacity())
         .append("]\nwith max capacity: [").append(super.getMaximumCapacity())
-        .append("\nwith max reservation apps: [").append(maxAppsForReservation)
+        .append("\nwith max reservation apps: [").append(configuredMaxAppsForReservation)
         .append("]\nwith max reservation apps per user: [")
         .append(configuredMaxAppsPerUserForReservation)
         .append("]\nwith user limit: [")

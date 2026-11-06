@@ -240,14 +240,13 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     QueuePath queueToParse = (parent == null) ? new QueuePath(queueName) :
         (QueuePath.createFromQueues(parent.getQueuePath(), queueName));
     List<String> childQueueNames = conf.getQueues(queueToParse);
-    CSQueue oldQueue = oldQueues.get(queueToParse.getFullPath());
 
     boolean isReservableQueue = conf.isReservable(queueToParse);
     boolean isAutoCreateEnabled = conf.isAutoCreateChildQueueEnabled(queueToParse);
     // if a queue is eligible for auto queue creation v2 it must be a ParentQueue
     // (even if it is empty)
-    final boolean isDynamicParent = oldQueue instanceof AbstractParentQueue &&
-            oldQueue.isDynamicQueue();
+    final boolean isDynamicParent =
+        queueContext.isExistingDynamicParent(queueToParse);
     boolean isAutoQueueCreationEnabledParent = isDynamicParent || conf.isAutoQueueCreationV2Enabled(
         queueToParse) || isAutoCreateEnabled;
 

@@ -17,57 +17,44 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolvedQueueConfig;
+
 import java.io.IOException;
 import java.util.Set;
 
 /**
- * This class determines accessible node labels, configured node labels and the default node
- * label expression based on the {@link CapacitySchedulerConfiguration} object and other queue
- * properties.
+ * This class holds the accessible node labels, configured node labels and the default node
+ * label expression of a queue, taken from its resolved configuration, in which the queue
+ * inherits the accessible labels and the default label expression of its parent.
  */
 public class QueueNodeLabelsSettings {
-  private final CSQueue parent;
   private final QueuePath queuePath;
   private Set<String> accessibleLabels;
   private Set<String> configuredNodeLabels;
   private String defaultLabelExpression;
 
-  public QueueNodeLabelsSettings(CapacitySchedulerConfiguration configuration,
-      CSQueue parent,
+  /**
+   * @param resolved the resolved configuration of the queue
+   * @param parentResolved the resolved configuration of the parent, null for root
+   * @param configuration the queue configuration, read for the configured node labels
+   *                      when no index of them is given
+   * @param queuePath the queue path
+   * @param configuredNodeLabels the configured node labels of all queues
+   * @throws IOException if the accessible labels are not a subset of the parent's
+   */
+  public QueueNodeLabelsSettings(ResolvedQueueConfig resolved,
+      ResolvedQueueConfig parentResolved,
+      CapacitySchedulerConfiguration configuration,
       QueuePath queuePath,
       ConfiguredNodeLabels configuredNodeLabels) throws IOException {
-    this.parent = parent;
     this.queuePath = queuePath;
-    initializeNodeLabels(configuration, configuredNodeLabels);
-  }
-
-  private void initializeNodeLabels(CapacitySchedulerConfiguration configuration,
-      ConfiguredNodeLabels configuredNodeLabels)
-      throws IOException {
-    initializeAccessibleLabels(configuration);
-    initializeDefaultLabelExpression(configuration);
+    this.accessibleLabels =
+        resolved.get(QueueProperties.ACCESSIBLE_NODE_LABELS).getValue();
+    this.defaultLabelExpression =
+        resolved.get(QueueProperties.DEFAULT_NODE_LABEL_EXPRESSION).getValue();
     initializeConfiguredNodeLabels(configuration, configuredNodeLabels);
-    validateNodeLabels();
-  }
-
-  private void initializeAccessibleLabels(CapacitySchedulerConfiguration configuration) {
-    this.accessibleLabels = configuration.getAccessibleNodeLabels(queuePath);
-    // Inherit labels from parent if not set
-    if (this.accessibleLabels == null && parent != null) {
-      this.accessibleLabels = parent.getAccessibleNodeLabels();
-    }
-  }
-
-  private void initializeDefaultLabelExpression(CapacitySchedulerConfiguration configuration) {
-    this.defaultLabelExpression = configuration.getDefaultNodeLabelExpression(
-        queuePath);
-    // If the accessible labels is not null and the queue has a parent with a
-    // similar set of labels copy the defaultNodeLabelExpression from the parent
-    if (this.accessibleLabels != null && parent != null
-        && this.defaultLabelExpression == null &&
-        this.accessibleLabels.containsAll(parent.getAccessibleNodeLabels())) {
-      this.defaultLabelExpression = parent.getDefaultNodeLabelExpression();
-    }
+    validateNodeLabels(parentResolved);
   }
 
   private void initializeConfiguredNodeLabels(CapacitySchedulerConfiguration configuration,
@@ -85,12 +72,13 @@ public class QueueNodeLabelsSettings {
     }
   }
 
-  private void validateNodeLabels() throws IOException {
+  private void validateNodeLabels(ResolvedQueueConfig parentResolved) throws IOException {
     // Check if labels of this queue is a subset of parent queue, only do this
     // when the queue in question is not root
     if (!queuePath.isRoot()) {
       String error = QueueLabelChecks.checkAccessibleLabelsSubset(false,
-          this.getAccessibleNodeLabels(), parent.getAccessibleNodeLabels());
+          this.getAccessibleNodeLabels(),
+          parentResolved.get(QueueProperties.ACCESSIBLE_NODE_LABELS).getValue());
       if (error != null) {
         throw new IOException(error);
       }
