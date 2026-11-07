@@ -18,10 +18,12 @@
 package org.apache.hadoop.security.authentication.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPublicKey;
 
 import javax.servlet.ServletException;
@@ -45,9 +47,9 @@ public class TestCertificateUtil {
         + "9aTyR+HGHCfvwoCegc9rAVw/DLaRriSO/jnEXzYK6XLVKH+hx5UXrJ7Oyc7JjZUc3g9kCWORThCX"
         + "Mzc1xA==" + "\n-----END CERTIFICATE-----";
     try {
-      CertificateUtil.parseRSAPublicKey(pem);
-      fail("Should not have thrown ServletException");
-    } catch (ServletException se) {
+      CertificateUtil.toRSAPublicKey(pem);
+      fail("Should not have thrown CertificateException");
+    } catch (CertificateException se) {
       assertTrue(se.getMessage().contains("PEM header"));
     }
   }
@@ -66,9 +68,9 @@ public class TestCertificateUtil {
         + "9aTyR+HGHCfvwoCegc9rAVw/DLaRriSO/jnEXzYK6XLVKH+hx5UXrJ7Oyc7JjZUc3g9kCWORThCX"
         + "Mzc1xA++";
     try {
-      CertificateUtil.parseRSAPublicKey(pem);
-      fail("Should not have thrown ServletException");
-    } catch (ServletException se) {
+      CertificateUtil.toRSAPublicKey(pem);
+      fail("Should not have thrown CertificateException");
+    } catch (CertificateException se) {
       assertTrue(se.getMessage().contains("corrupt"));
     }
   }
@@ -87,12 +89,93 @@ public class TestCertificateUtil {
         + "9aTyR+HGHCfvwoCegc9rAVw/DLaRriSO/jnEXzYK6XLVKH+hx5UXrJ7Oyc7JjZUc3g9kCWORThCX"
         + "Mzc1xA==";
     try {
-      RSAPublicKey pk = CertificateUtil.parseRSAPublicKey(pem);
+      RSAPublicKey pk = CertificateUtil.toRSAPublicKey(pem);
       assertNotNull(pk);
       assertEquals("RSA", pk.getAlgorithm());
-    } catch (ServletException se) {
-      fail("Should not have thrown ServletException");
+    } catch (CertificateException se) {
+      fail("Should not have thrown CertificateException");
     }
   }
 
+  /**
+   * A valid certificate whose public key is not an RSA key is a parse failure
+   * for this method, not an unchecked ClassCastException. The deprecated entry
+   * point reports it as a ServletException, like every other parse failure.
+   */
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testNonRSACertificate() {
+    String pem = "MIIBNzCB3qADAgECAgkA6dW0itJPZwIwCgYIKoZIzj0EAwIwDzENMAsGA1UEAxME"
+        + "dGVzdDAgFw0yNjExMDQxNDA5MTdaGA8yMTI2MTAxMTE0MDkxN1owDzENMAsGA1UE"
+        + "AxMEdGVzdDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABFbUEbtmYR6QbY9QyGpI"
+        + "aXZV3rEDQrF6vZc7of/rZ0lwvpVgIBlca9Ye/k1aaaYbkor+sK3PuL7RR57Q40Nq"
+        + "wVqjITAfMB0GA1UdDgQWBBS6D/WIdoY78T7wj6TMdPayIHrOvzAKBggqhkjOPQQD"
+        + "AgNIADBFAiEArWDXwfFpNCAF9zwN7ZaqPia1BRSX7hC4abSCJO6q88UCIEOyI8Up"
+        + "u73RBCJNTags/HzsKhUtwsVOGurpxVAodPG3";
+    try {
+      CertificateUtil.toRSAPublicKey(pem);
+      fail("Should have thrown CertificateException");
+    } catch (CertificateException se) {
+      assertTrue(se.getMessage().contains("RSA"),
+          "expected the message to name RSA, got " + se.getMessage());
+    }
+    try {
+      CertificateUtil.parseRSAPublicKey(pem);
+      fail("Should have thrown ServletException");
+    } catch (ServletException se) {
+      assertTrue(se.getMessage().contains("RSA"),
+          "expected the message to name RSA, got " + se.getMessage());
+    }
+  }
+
+  /**
+   * The deprecated entry point still reports a ServletException, so callers
+   * written against it keep compiling and keep catching what they caught
+   * before.
+   */
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testDeprecatedEntryPointStillThrowsServletException() {
+    String pem = "not a certificate";
+    try {
+      CertificateUtil.parseRSAPublicKey(pem);
+      fail("Should have thrown ServletException");
+    } catch (ServletException se) {
+      assertTrue(se.getMessage().contains("corrupt"));
+      assertTrue(se.getCause() instanceof CertificateException);
+    }
+  }
+
+  /**
+   * The deprecated entry point reports the CertificateException the parse
+   * raised, not the one toRSAPublicKey wraps it in. Routing through the new
+   * method must not lengthen the chain a caller walks.
+   */
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testDeprecatedEntryPointDoesNotDeepenTheCauseChain() {
+    try {
+      CertificateUtil.parseRSAPublicKey("not a certificate");
+      fail("Should have thrown ServletException");
+    } catch (ServletException se) {
+      Throwable cause = se.getCause();
+      assertNotNull(cause, "the ServletException should carry a cause");
+      assertTrue(cause instanceof CertificateException,
+          "expected a CertificateException, got " + cause.getClass());
+      assertFalse(cause.getCause() instanceof CertificateException,
+          "the wrapper toRSAPublicKey adds must not appear in the chain;"
+              + " chain was " + chainOf(se));
+    }
+  }
+
+  private static String chainOf(Throwable t) {
+    StringBuilder sb = new StringBuilder();
+    for (Throwable c = t; c != null; c = c.getCause()) {
+      if (sb.length() > 0) {
+        sb.append(" -> ");
+      }
+      sb.append(c.getClass().getSimpleName());
+    }
+    return sb.toString();
+  }
 }
