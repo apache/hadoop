@@ -113,6 +113,17 @@ public interface RMWebServiceProtocol {
   ClusterMetricsInfo getClusterMetricsInfo();
 
   /**
+   * This method collects thread dumps of the ResourceManager JVM, and it is
+   * reachable by using {@link RMWSConsts#JSTACK}.
+   *
+   * @param req the servlet request
+   * @param numberOfJStack number of jstack iterations to collect
+   * @return plain-text thread dumps, or an error response
+   */
+  Response getResourceManagerThreadDump(HttpServletRequest req,
+      int numberOfJStack);
+
+  /**
    * This method retrieves the current scheduler status, and it is reachable by
    * using {@link RMWSConsts#SCHEDULER}.
    *

@@ -123,6 +123,12 @@ public class PassThroughRESTRequestInterceptor
   }
 
   @Override
+  public Response getResourceManagerThreadDump(HttpServletRequest req,
+      int numberOfJStack) {
+    return getNextInterceptor().getResourceManagerThreadDump(req, numberOfJStack);
+  }
+
+  @Override
   public SchedulerTypeInfo getSchedulerInfo() {
     return getNextInterceptor().getSchedulerInfo();
   }

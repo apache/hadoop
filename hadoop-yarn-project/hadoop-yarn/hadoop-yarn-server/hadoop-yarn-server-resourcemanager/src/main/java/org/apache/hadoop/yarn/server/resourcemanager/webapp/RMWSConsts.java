@@ -42,6 +42,9 @@ public final class RMWSConsts {
   /** Path for {@code RMWebServiceProtocol#getClusterMetricsInfo}. */
   public static final String METRICS = "/metrics";
 
+  /** Path for {@code RMWebServices#getResourceManagerThreadDump}. */
+  public static final String JSTACK = "/jstack/{numberOfJStack}";
+
   /** Path for {@code RMWebServiceProtocol#getSchedulerInfo}. */
   public static final String SCHEDULER = "/scheduler";
 

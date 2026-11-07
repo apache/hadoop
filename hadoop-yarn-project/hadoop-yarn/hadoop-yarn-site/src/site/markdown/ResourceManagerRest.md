@@ -9121,3 +9121,40 @@ Response Body:
   </allocations>
 </appActivitiesInfo>
 ```
+
+JStack ResourceManager API
+--------------------------
+
+With the JStack ResourceManager API, you can get the JStack of the ResourceManager process ID.
+
+### URI
+
+Use the following URI to obtain a thread dump from the ResourceManager:
+
+      * http://rm-http-address:port/ws/v1/cluster/jstack/{numberOfJStack}
+
+### HTTP Operations Supported
+
+      * GET
+
+### Query Parameters Supported
+
+      None
+
+### GET Response Examples
+
+**PLAIN TEXT response**
+
+HTTP Request:
+
+      GET http://rm-http-address:port/ws/v1/cluster/jstack/{numberOfJStack}
+
+Response Header:
+
+      Cache-Control: no-cache
+      Content-Type: text/plain
+
+```text
+--- JStack iteration 0 for PID: 322091 ---
+Full thread dump OpenJDK 64-Bit Server VM ...
+```
