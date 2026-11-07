@@ -71,6 +71,18 @@ final class McpJsonRpcResponses {
     return McpHttpResponse.ok(response, Collections.emptyMap());
   }
 
+  /**
+   * Builds an HTTP-level rejection with a plain {@code {"message": ...}} body, not a
+   * JSON-RPC envelope. Used when there is no request to answer: a request rejected before
+   * it reached a valid session, a notification the server cannot accept, or a JSON-RPC
+   * response from the client.
+   */
+  McpHttpResponse transportError(int httpStatus, String message) {
+    ObjectNode body = objectMapper.createObjectNode();
+    body.put("message", message);
+    return McpHttpResponse.createResponse(httpStatus, body, Collections.emptyMap());
+  }
+
   private void setErrorResponseId(ObjectNode response, JsonNode idNode) {
     if (idNode != null && !idNode.isNull()) {
       response.set("id", idNode);
