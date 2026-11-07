@@ -5281,6 +5281,8 @@
     <value>30s</value>
     <description>
       This configurable is used to set the keepAliveTime of the thread pool of the interceptor.
+      Specify a duration with a time unit suffix, such as 30s or 500ms.
+      Values without a suffix are interpreted as seconds.
       Default is 30s.
     </description>
   </property>
