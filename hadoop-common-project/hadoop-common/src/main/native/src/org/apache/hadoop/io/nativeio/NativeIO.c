@@ -352,10 +352,12 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_initNative(
   }
   return;
 error:
-  // these are all idempotent and safe to call even if the
-  // class wasn't inited yet
+  // These are all idempotent and safe to call even if the class wasn't
+  // inited yet. The FileDescriptor cache (fd_*) is deliberately NOT
+  // torn down here: it is shared with DomainSocket, which may have
+  // initialized it successfully before this failure. fd_create() and
+  // fd_get() check the cache themselves.
   nioe_deinit(env);
-  fd_deinit(env);
 #ifdef UNIX
   errno_enum_deinit(env);
 #endif
@@ -395,14 +397,16 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_initNativePosix(
 #endif
   return;
 error:
-  // these are all idempodent and safe to call even if the
-  // class wasn't initted yet
+  // These are all idempotent and safe to call even if the class wasn't
+  // inited yet. The FileDescriptor cache (fd_*) is deliberately NOT
+  // torn down here: it is shared with DomainSocket, which may have
+  // initialized it successfully before this failure. fd_create() and
+  // fd_get() check the cache themselves.
   stat_deinit(env);
 #ifdef HADOOP_PMDK_LIBRARY
   pmem_region_deinit(env);
 #endif
   nioe_deinit(env);
-  fd_deinit(env);
 #ifdef UNIX
   errno_enum_deinit(env);
 #endif
@@ -427,10 +431,12 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024Windows_initNativeWindows(
   }
   return;
 error:
-  // these are all idempodent and safe to call even if the
-  // class wasn't initted yet
+  // These are all idempotent and safe to call even if the class wasn't
+  // inited yet. The FileDescriptor cache (fd_*) is deliberately NOT
+  // torn down here: it is shared with DomainSocket, which may have
+  // initialized it successfully before this failure. fd_create() and
+  // fd_get() check the cache themselves.
   nioe_deinit(env);
-  fd_deinit(env);
   if (doThreadsafeWorkaround) {
     workaround_non_threadsafe_calls_deinit(env);
   }
