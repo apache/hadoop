@@ -82,6 +82,38 @@ public final class FedBalanceOptions {
           + " used. If the trash is disabled in the server side, the default"
           + " trash interval 60 minutes is used.");
 
+  /**
+   * Do not preserve ACLs in the DistCp jobs submitted by FedBalance.
+   */
+  public final static Option SKIP_ACL_PRESERVE =
+      new Option("skipAclPreserve", false,
+          "Do not preserve ACLs in the DistCp jobs submitted by FedBalance.");
+
+  /**
+   * Preserve file timestamps in the DistCp jobs submitted by FedBalance.
+   */
+  public final static Option PRESERVE_TIMES =
+      new Option("preserveTimes", false,
+          "Preserve file timestamps in the DistCp jobs submitted by "
+              + "FedBalance.");
+
+  /**
+   * Set the DistCp copy strategy for FedBalance submitted jobs.
+   */
+  public final static Option DISTCP_STRATEGY =
+      new Option("distcpStrategy", true,
+          "Set the DistCp copy strategy for FedBalance submitted jobs.");
+
+  /**
+   * Set DistCp listStatus threads for FedBalance submitted jobs.
+   */
+  public final static Option LIST_STATUS_THREADS =
+      new Option("numListstatusThreads", true,
+          "Set DistCp listStatus threads for FedBalance submitted jobs.");
+
+  /**
+   * FedBalance command line options.
+   */
   public final static Options CLI_OPTIONS = new Options();
 
   static {
@@ -90,5 +122,10 @@ public final class FedBalanceOptions {
     CLI_OPTIONS.addOption(BANDWIDTH);
     CLI_OPTIONS.addOption(DELAY_DURATION);
     CLI_OPTIONS.addOption(TRASH);
+    CLI_OPTIONS.addOption(DIFF_THRESHOLD);
+    CLI_OPTIONS.addOption(SKIP_ACL_PRESERVE);
+    CLI_OPTIONS.addOption(PRESERVE_TIMES);
+    CLI_OPTIONS.addOption(DISTCP_STRATEGY);
+    CLI_OPTIONS.addOption(LIST_STATUS_THREADS);
   }
 }

@@ -51,12 +51,18 @@ import java.util.concurrent.TimeUnit;
 import static org.apache.hadoop.tools.fedbalance.FedBalance.FED_BALANCE_DEFAULT_XML;
 import static org.apache.hadoop.tools.fedbalance.FedBalance.FED_BALANCE_SITE_XML;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.CLI_OPTIONS;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.DISTCP_STRATEGY;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.FORCE_CLOSE_OPEN;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.LIST_STATUS_THREADS;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.MAP;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.PRESERVE_TIMES;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.SKIP_ACL_PRESERVE;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.BANDWIDTH;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.DELAY_DURATION;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.DIFF_THRESHOLD;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.TRASH;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.PRESERVE_ACL_ENABLED;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.PRESERVE_ACL_ENABLED_DEFAULT;
 
 /**
  * Balance data in router-based federation cluster. From src sub-namespace to
@@ -92,6 +98,14 @@ public class RouterFedBalance extends Configured implements Tool {
     private long delayDuration = TimeUnit.SECONDS.toMillis(1);
     /* Specify the threshold of diff entries. */
     private int diffThreshold = 0;
+    /* Whether to preserve ACLs in submitted DistCp jobs. */
+    private boolean preserveAcl = true;
+    /* Whether to preserve modification/access times in submitted DistCp jobs. */
+    private boolean preserveTimes = false;
+    /* DistCp copy strategy. */
+    private String distCpStrategy;
+    /* Number of DistCp listStatus threads. */
+    private int numListstatusThreads = 0;
     /* The source input. This specifies the source path. */
     private final String inputSrc;
     /* The dst input. This specifies the dst path. */
@@ -157,6 +171,42 @@ public class RouterFedBalance extends Configured implements Tool {
     }
 
     /**
+     * Specify whether ACLs should be preserved by DistCp.
+     * @param value true if preserving ACLs.
+     */
+    public Builder setPreserveAcl(boolean value) {
+      this.preserveAcl = value;
+      return this;
+    }
+
+    /**
+     * Specify whether file times should be preserved by DistCp.
+     * @param value true if preserving file times.
+     */
+    public Builder setPreserveTimes(boolean value) {
+      this.preserveTimes = value;
+      return this;
+    }
+
+    /**
+     * Specify the DistCp copy strategy.
+     * @param value the DistCp copy strategy.
+     */
+    public Builder setDistCpStrategy(String value) {
+      this.distCpStrategy = value;
+      return this;
+    }
+
+    /**
+     * Specify the DistCp listStatus thread count.
+     * @param value the DistCp listStatus thread count.
+     */
+    public Builder setNumListstatusThreads(int value) {
+      this.numListstatusThreads = value;
+      return this;
+    }
+
+    /**
      * Build the balance job.
      */
     public BalanceJob build() throws IOException {
@@ -172,6 +222,11 @@ public class RouterFedBalance extends Configured implements Tool {
           .setForceCloseOpenFiles(forceCloseOpen).setUseMountReadOnly(true)
           .setMapNum(map).setBandwidthLimit(bandwidth).setTrash(trashOpt)
           .setDelayDuration(delayDuration).setDiffThreshold(diffThreshold)
+          .setPreserveAcl(preserveAcl && getConf().getBoolean(
+              PRESERVE_ACL_ENABLED, PRESERVE_ACL_ENABLED_DEFAULT))
+          .setPreserveTimes(preserveTimes)
+          .setDistCpStrategy(distCpStrategy)
+          .setNumListstatusThreads(numListstatusThreads)
           .build();
 
       LOG.info(context.toString());
@@ -280,6 +335,20 @@ public class RouterFedBalance extends Configured implements Tool {
     if (command.hasOption(DIFF_THRESHOLD.getOpt())) {
       builder.setDiffThreshold(Integer.parseInt(
           command.getOptionValue(DIFF_THRESHOLD.getOpt())));
+    }
+    if (command.hasOption(SKIP_ACL_PRESERVE.getOpt())) {
+      builder.setPreserveAcl(false);
+    }
+    if (command.hasOption(PRESERVE_TIMES.getOpt())) {
+      builder.setPreserveTimes(true);
+    }
+    if (command.hasOption(DISTCP_STRATEGY.getOpt())) {
+      builder.setDistCpStrategy(command.getOptionValue(
+          DISTCP_STRATEGY.getOpt()));
+    }
+    if (command.hasOption(LIST_STATUS_THREADS.getOpt())) {
+      builder.setNumListstatusThreads(Integer.parseInt(
+          command.getOptionValue(LIST_STATUS_THREADS.getOpt())));
     }
     if (command.hasOption(TRASH.getOpt())) {
       String val = command.getOptionValue(TRASH.getOpt());
