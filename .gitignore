@@ -62,3 +62,4 @@ output.xml
 report.html
 
 .mvn/wrapper/maven-wrapper.jar
+/.claude/

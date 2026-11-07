@@ -14,14 +14,26 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
+child.project.url.inherit.append.path="false">
   <modelVersion>4.0.0</modelVersion>
+
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-main</artifactId>
   <version>3.6.0-SNAPSHOT</version>
   <description>Apache Hadoop Main</description>
   <name>Apache Hadoop Main</name>
   <packaging>pom</packaging>
+  <url>https://hadoop.apache.org/</url>
+
+  <scm child.scm.connection.inherit.append.path="false"
+       child.scm.developerConnection.inherit.append.path="false"
+       child.scm.url.inherit.append.path="false">
+    <connection>scm:git:https://gitbox.apache.org/repos/asf/hadoop.git</connection>
+    <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/hadoop.git</developerConnection>
+    <url>https://github.com/apache/hadoop/tree/${project.scm.tag}</url>
+    <tag>trunk</tag>
+  </scm>
 
   <distributionManagement>
     <repository>
@@ -95,18 +107,15 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!-- maven plugin versions -->
-    <maven-deploy-plugin.version>2.8.1</maven-deploy-plugin.version>
-    <maven-site-plugin.version>3.9.1</maven-site-plugin.version>
+    <maven-site-plugin.version>3.22.0</maven-site-plugin.version>
     <maven-stylus-skin.version>1.5</maven-stylus-skin.version>
     <maven-antrun-plugin.version>1.7</maven-antrun-plugin.version>
-    <maven-assembly-plugin.version>2.4</maven-assembly-plugin.version>
     <maven-dependency-plugin.version>3.8.1</maven-dependency-plugin.version>
     <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
     <restrict-imports.enforcer.version>2.0.0</restrict-imports.enforcer.version>
     <maven-javadoc-plugin.version>3.8.0</maven-javadoc-plugin.version>
     <maven-gpg-plugin.version>1.5</maven-gpg-plugin.version>
     <maven-remote-resources-plugin.version>1.5</maven-remote-resources-plugin.version>
-    <maven-resources-plugin.version>3.0.1</maven-resources-plugin.version>
     <apache-rat-plugin.version>0.12</apache-rat-plugin.version>
     <wagon-ssh.version>2.4</wagon-ssh.version>
     <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
@@ -119,9 +128,19 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <spotbugs-maven-plugin.version>4.9.7.0</spotbugs-maven-plugin.version>
     <jsonschema2pojo-maven-plugin.version>1.1.1</jsonschema2pojo-maven-plugin.version>
     <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
-    <cyclonedx.version>2.9.1</cyclonedx.version>
+    <cyclonedx.version>2.9.3</cyclonedx.version>
     <docker-maven-plugin.version>0.29.0</docker-maven-plugin.version>
 
+    <!-- Versions previously supplied by the org.apache:apache:39 parent's
+         pluginManagement; pinned directly because apache 39 cannot be used
+         (it breaks javadoc plugin use). -->
+    <maven-assembly-plugin.version>3.8.0</maven-assembly-plugin.version>
+    <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
+    <maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
+    <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
+    <maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
+    <maven-install-plugin.version>3.1.4</maven-install-plugin.version>
+    <version.tooling.atr>1.0.0-alpha-1</version.tooling.atr>
     <shell-executable>bash</shell-executable>
 
     <leveldbjni.group>org.fusesource.leveldbjni</leveldbjni.group>
@@ -144,6 +163,34 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     -->
     <enforced.java.version>[${javac.version},)</enforced.java.version>
     <enforced.maven.version>[3.9.15,)</enforced.maven.version>
+
+    <!-- Historically inherited from the apache parent's posix default; kept as
+         gnu to match what the dist descriptors already expect. -->
+    <assembly.tarLongFileMode>gnu</assembly.tarLongFileMode>
+
+    <!-- Fixed instant recorded in artifacts built with -Prepeatable; the
+         release manager bumps this when cutting a release branch. -->
+    <hadoop.build.timestamp>2026-01-01T00:00:00Z</hadoop.build.timestamp>
+
+    <!-- repeatability flag is override in the repeatable profile -->
+    <hadoop.build.repeatable>false</hadoop.build.repeatable>
+
+    <!-- Recorded in the version resources. Declared here rather than in the
+         module that consumes each one, so that the repeatable profile can
+         replace them: a module's own properties outrank inherited values.
+         Interpolated in the consuming module, where the os-maven-plugin
+         extension is in scope. -->
+    <hadoop.build.user>${user.name}</hadoop.build.user>
+    <hadoop.build.platform>${os.detected.classifier}</hadoop.build.platform>
+    <!-- The format belongs with the one property that consumes it. It is
+         project-wide, but httpfs is the only reference to the Maven build
+         timestamp anywhere in the tree. -->
+    <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ssZ</maven.build.timestamp.format>
+    <httpfs.build.timestamp>${maven.build.timestamp}</httpfs.build.timestamp>
+
+    <!-- Off by default; -Prepeatable sets it to ${hadoop.build.timestamp}.
+         A single character disables it, per the maven-archiver convention. -->
+    <project.build.outputTimestamp>-</project.build.outputTimestamp>
   </properties>
 
   <modules>
@@ -175,6 +222,64 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
           <version>${docker-maven-plugin.version}</version>
+        </plugin>
+        <!-- The following six plugins were previously version-managed by the
+             org.apache:apache:39 parent pom. Configuration is
+             carried over unchanged from that parent. -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>${maven-assembly-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>${maven-source-plugin.version}</version>
+          <configuration>
+            <archive>
+              <manifest>
+                <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+              </manifest>
+            </archive>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>${maven-jar-plugin.version}</version>
+          <configuration>
+            <archive>
+              <manifest>
+                <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+              </manifest>
+            </archive>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>${maven-resources-plugin.version}</version>
+          <configuration>
+            <!-- see https://maven.apache.org/plugins/maven-resources-plugin/examples/filtering-properties-files.html -->
+            <propertiesEncoding>UTF-8 </propertiesEncoding>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>${maven-deploy-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-install-plugin</artifactId>
+          <version>${maven-install-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.tooling</groupId>
+          <artifactId>atr-maven-plugin</artifactId>
+          <version>${version.tooling.atr}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -344,16 +449,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
               </configuration>
             </execution>
           </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>${maven-assembly-plugin.version}</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-deploy-plugin</artifactId>
-          <version>${maven-deploy-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.rat</groupId>
@@ -909,6 +1004,41 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
       <properties>
         <docker.image>${user.name}/hadoop:${project.version}</docker.image>
       </properties>
+    </profile>
+
+    <!-- Replaces every value derived from the building host, user, clock or git
+         checkout with a fixed one, so that two builds of the same source with
+         the same JDK produce the same bytes. See BUILDING.txt. -->
+    <profile>
+      <id>repeatable</id>
+      <properties>
+        <!-- Picked up by maven-archiver, maven-assembly-plugin and cyclonedx to
+             fix archive entry times and drop generation timestamps. -->
+        <project.build.outputTimestamp>${hadoop.build.timestamp}</project.build.outputTimestamp>
+
+        <!-- Recorded in the version resources in place of the git checkout, the
+             OS user and the wall clock. TestYarnVersionInfo requires a user
+             other than Unknown. -->
+        <version-info.scm.static>true</version-info.scm.static>
+        <!-- declare the build is repeatable -->
+        <hadoop.build.repeatable>true</hadoop.build.repeatable>
+        <hadoop.build.user>hadoop</hadoop.build.user>
+        <hadoop.build.platform>Unknown</hadoop.build.platform>
+        <httpfs.build.timestamp>${hadoop.build.timestamp}</httpfs.build.timestamp>
+      </properties>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-javadoc-plugin</artifactId>
+              <configuration>
+                <notimestamp>true</notimestamp>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
     </profile>
   </profiles>
 </project>

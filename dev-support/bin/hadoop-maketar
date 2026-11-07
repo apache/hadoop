@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Create a gzipped tar, optionally with every entry normalised so that the
+# same input tree always produces the same bytes.
+#
+#   hadoop-maketar <timestamp> <output.tar.gz> <path> [<path>...]
+#
+# <timestamp> is project.build.outputTimestamp: an ISO-8601 instant, seconds
+# since the epoch, or a value of one character or less meaning "not set", in
+# which case the archive is built exactly as it always was. Paths are relative
+# to the working directory. Symlinks are preserved.
+
+set -o pipefail
+
+if [[ $# -lt 3 ]]; then
+  echo "usage: $(basename "$0") <timestamp> <output.tar.gz> <path>..." >&2
+  exit 1
+fi
+
+timestamp=$1
+output=$2
+shift 2
+
+tarflags=()
+gzipflags=()
+
+if [[ ${#timestamp} -gt 1 ]]; then
+  if tar --version 2>/dev/null | head -1 | grep -q 'GNU tar'; then
+    # All digits means epoch seconds, which GNU tar wants prefixed with '@'.
+    if [[ ${timestamp} =~ ^[0-9]+$ ]]; then
+      mtime="@${timestamp}"
+    else
+      mtime=${timestamp}
+    fi
+    # --format=gnu because the pax default writes atime and ctime headers.
+    # --mode drops the group and other write bits, so the result does not
+    # depend on the umask the tree was built under.
+    tarflags=(--sort=name "--mtime=${mtime}"
+              --owner=0 --group=0 --numeric-owner
+              --format=gnu --mode=go-w)
+    # Keep the source name and time out of the gzip header.
+    gzipflags=(-n)
+  else
+    echo "$(basename "$0"): GNU tar not found; ${output} will not be reproducible" >&2
+  fi
+fi
+
+tar "${tarflags[@]}" -cf - "$@" | gzip "${gzipflags[@]}" > "${output}"
