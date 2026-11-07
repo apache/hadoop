@@ -24,12 +24,15 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.DiskValidator;
 import org.apache.hadoop.util.Shell;
 
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -638,6 +641,33 @@ public class TestLocalDirAllocator {
     dirAllocator.getLocalPathForWrite("file2", -1, conf);
   }
 
+  /**
+   * Test for HADOOP-19387. LocalDirAllocator must retry initialization after
+   * a transient directory validation failure.
+   */
+  @Timeout(value = 30)
+  @Test
+  public void testInterruptionRecovery() throws Throwable {
+    initTestLocalDirAllocator(ABSOLUTE_DIR_ROOT, ABSOLUTE);
+    String interruptionContext = CONTEXT + ".interruption";
+    String dir0 = buildBufferDir(root, 7);
+    conf.set(interruptionContext, dir0);
+    localFs.delete(new Path(dir0), true);
+    AtomicBoolean failValidation = new AtomicBoolean(true);
+    DiskValidator validator = dir -> {
+      if (failValidation.getAndSet(false)) {
+        throw new DiskErrorException("interrupted");
+      }
+    };
+    LocalDirAllocator interruptedAllocator =
+        new LocalDirAllocator(interruptionContext, validator);
+
+    intercept(DiskErrorException.class,
+        () -> interruptedAllocator.getLocalPathForWrite("file", conf));
+
+    // A failed initialization must not prevent a subsequent retry.
+    interruptedAllocator.getLocalPathForWrite("file", conf);
+  }
+
 
 }
-
