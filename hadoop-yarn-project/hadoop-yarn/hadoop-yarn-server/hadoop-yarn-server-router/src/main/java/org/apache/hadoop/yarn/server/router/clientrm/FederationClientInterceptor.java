@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.clientrm;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -124,6 +125,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
@@ -926,8 +928,14 @@ public class FederationClientInterceptor
     // otherwise an exception will be thrown.
     if (exceptions != null && !exceptions.isEmpty()) {
       if (!allowPartialResult || exceptions.keySet().size() == subClusterIds.size()) {
-        throw new YarnException("invokeConcurrent Failed = " +
-            StringUtils.join(exceptions.values(), ","));
+        String msg = "invokeConcurrent Failed = " + StringUtils.join(exceptions.values(), ",");
+        // Clients rely on YARNFeatureNotEnabledException (e.g. for resource profiles),
+        // so report it as such when every failed sub-cluster reported it.
+        if (exceptions.values().stream().allMatch(e ->
+            ExceptionUtils.indexOfType(e, YARNFeatureNotEnabledException.class) != -1)) {
+          throw new YARNFeatureNotEnabledException(msg);
+        }
+        throw new YarnException(msg);
       }
     }
 
@@ -2030,6 +2038,9 @@ public class FederationClientInterceptor
       String msg = "Unable to get resource profiles due to exception.";
       RouterAuditLogger.logFailure(user.getShortUserName(), GET_RESOURCEPROFILES, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, msg);
+      if (ex instanceof YARNFeatureNotEnabledException) {
+        throw (YARNFeatureNotEnabledException) ex;
+      }
       RouterServerUtil.logAndThrowException("Unable to get resource profiles due to exception.",
           ex);
     }
@@ -2061,6 +2072,9 @@ public class FederationClientInterceptor
       String msg = "Unable to get resource profile due to exception.";
       RouterAuditLogger.logFailure(user.getShortUserName(), GET_RESOURCEPROFILE, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, msg);
+      if (ex instanceof YARNFeatureNotEnabledException) {
+        throw (YARNFeatureNotEnabledException) ex;
+      }
       RouterServerUtil.logAndThrowException(msg, ex);
     }
     long stopTime = clock.getTime();
