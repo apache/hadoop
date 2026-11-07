@@ -133,10 +133,10 @@ public class DelegationTokenSecretManager
     try {
       return super.retrievePassword(identifier);
     } catch (InvalidToken it) {
-      if (namesystem.inTransitionToActive()) {
-        // if the namesystem is currently in the middle of transition to 
-        // active state, let client retry since the corresponding editlog may 
-        // have not been applied yet
+      if (namesystem.inTransitionToActive() || namesystem.isObserver()) {
+        // the corresponding editlog may not have been applied yet: the
+        // namesystem is either in the middle of transitioning to active
+        // state, or is an observer tailing the active. let client retry.
         throw new RetriableException(it);
       } else {
         throw it;
