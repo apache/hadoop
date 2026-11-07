@@ -55,6 +55,12 @@
       <groupId>${leveldbjni.group}</groupId>
       <artifactId>leveldbjni-all</artifactId>
     </dependency>
+    <!-- Optional: see hadoop-common; dependents get it through jetty-server. -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-http</artifactId>
+      <optional>true</optional>
+    </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
