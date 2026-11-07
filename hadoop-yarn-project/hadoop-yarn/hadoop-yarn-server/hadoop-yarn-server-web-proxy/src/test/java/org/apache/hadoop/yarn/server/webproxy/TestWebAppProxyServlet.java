@@ -97,6 +97,10 @@ public class TestWebAppProxyServlet {
   private static int numberOfHeaders = 0;
   private static final String UNKNOWN_HEADER = "Unknown-Header";
   private static boolean hasUnknownHeader = false;
+  // Value of the Connection header received by the proxied server (the
+  // embedded TestServlet backend). Used to verify the proxy sends
+  // 'Connection: close' (YARN-11845).
+  private static volatile String proxiedConnectionHeader = null;
   Configuration configuration = new Configuration();
 
 
@@ -129,6 +133,7 @@ public class TestWebAppProxyServlet {
         throws ServletException, IOException {
       int numHeaders = 0;
       hasUnknownHeader = false;
+      proxiedConnectionHeader = req.getHeader("Connection");
       @SuppressWarnings("unchecked")
       Enumeration<String> names = req.getHeaderNames();
       while(names.hasMoreElements()) {
@@ -145,6 +150,23 @@ public class TestWebAppProxyServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
         throws ServletException, IOException {
+      proxiedConnectionHeader = req.getHeader("Connection");
+      InputStream is = req.getInputStream();
+      OutputStream os = resp.getOutputStream();
+      int c = is.read();
+      while (c > -1) {
+        os.write(c);
+        c = is.read();
+      }
+      is.close();
+      os.close();
+      resp.setStatus(HttpServletResponse.SC_OK);
+    }
+
+    @Override
+    protected void doPut(HttpServletRequest req, HttpServletResponse resp)
+        throws ServletException, IOException {
+      proxiedConnectionHeader = req.getHeader("Connection");
       InputStream is = req.getInputStream();
       OutputStream os = resp.getOutputStream();
       int c = is.read();
@@ -476,6 +498,82 @@ public class TestWebAppProxyServlet {
       // by proxy as it is not in the list of allowed headers.
       assertEquals(numberOfHeaders, 9);
       assertFalse(hasUnknownHeader);
+    } finally {
+      proxy.close();
+    }
+  }
+
+  /**
+   * Test that the proxy tells the proxied server (AM / history server) to
+   * close the connection after each response. The proxy builds a new
+   * HttpClient per request, so if the backend connection is kept alive the
+   * socket is left in CLOSE_WAIT state on the proxy host until GC reclaims
+   * it. Setting the 'Connection: close' request header makes the backend
+   * close the connection as soon as the response is sent (YARN-11845).
+   */
+  @Test
+  @Timeout(5000)
+  void testWebAppProxyConnectionCloseHeader() throws Exception {
+    Configuration configuration = new Configuration();
+    configuration.set(YarnConfiguration.PROXY_ADDRESS, "localhost:9093");
+    configuration.setInt("hadoop.http.max.threads", 10);
+    WebAppProxyServerForTest proxy = new WebAppProxyServerForTest();
+    proxy.init(configuration);
+    proxy.start();
+
+    int proxyPort = proxy.proxy.proxyServer.getConnectorAddress(0).getPort();
+    proxy.proxy.appReportFetcher.answer = 0;
+
+    try {
+      // GET: the proxied request must carry 'Connection: close'
+      proxiedConnectionHeader = null;
+      URL url = new URL("http://localhost:" + proxyPort
+          + "/proxy/application_00_0");
+      HttpURLConnection proxyConn = (HttpURLConnection) url.openConnection();
+      proxyConn.setRequestProperty("Cookie",
+          "checked_application_0_0000=true");
+      proxyConn.connect();
+      assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
+      assertNotNull(proxiedConnectionHeader,
+          "The proxied server did not receive a Connection header at all");
+      assertEquals("close", StringUtils.toLowerCase(proxiedConnectionHeader.trim()),
+          "The proxy must send 'Connection: close' to the proxied server "
+              + "so the backend closes the connection instead of leaving it "
+              + "in CLOSE_WAIT state (YARN-11845)");
+
+      // even if the incoming client request asked for keep-alive, the proxy
+      // must still ask the backend to close the connection
+      proxiedConnectionHeader = null;
+      proxyConn = (HttpURLConnection) url.openConnection();
+      proxyConn.setRequestProperty("Cookie",
+          "checked_application_0_0000=true");
+      proxyConn.setRequestProperty("Connection", "keep-alive");
+      proxyConn.connect();
+      assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
+      assertNotNull(proxiedConnectionHeader,
+          "The proxied server did not receive a Connection header at all");
+      assertEquals("close", StringUtils.toLowerCase(proxiedConnectionHeader.trim()),
+          "The proxy must override a client 'Connection: keep-alive' "
+              + "request header with 'close' (YARN-11845)");
+
+      // PUT: the header must be set on PUT requests as well
+      proxiedConnectionHeader = null;
+      proxyConn = (HttpURLConnection) url.openConnection();
+      proxyConn.setRequestMethod("PUT");
+      proxyConn.setDoOutput(true);
+      proxyConn.setRequestProperty("Cookie",
+          "checked_application_0_0000=true");
+      proxyConn.connect();
+      byte[] body = "test-body".getBytes(StandardCharsets.UTF_8);
+      try (OutputStream os = proxyConn.getOutputStream()) {
+        os.write(body);
+      }
+      assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
+      assertNotNull(proxiedConnectionHeader,
+          "The proxied server did not receive a Connection header at all");
+      assertEquals("close", StringUtils.toLowerCase(proxiedConnectionHeader.trim()),
+          "The proxy must send 'Connection: close' on PUT requests too "
+              + "(YARN-11845)");
     } finally {
       proxy.close();
     }
