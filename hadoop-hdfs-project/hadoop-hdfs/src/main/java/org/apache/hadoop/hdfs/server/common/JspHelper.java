@@ -43,6 +43,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.Principal;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
@@ -112,10 +113,16 @@ public class JspHelper {
     UserGroupInformation ugi = null;
     final String usernameFromQuery = getUsernameFromQuery(request, tryUgiParameter);
     final String doAsUserFromQuery = request.getParameter(DoAsParam.NAME);
-    final String remoteUser;
+    String remoteUser;
    
     if (UserGroupInformation.isSecurityEnabled()) {
       remoteUser = request.getRemoteUser();
+      final Principal userPrincipal = request.getUserPrincipal();
+      if (userPrincipal != null && userPrincipal.getName() != null) {
+        // SPNEGO may expose a short name as remoteUser and the full Kerberos
+        // principal as userPrincipal.
+        remoteUser = userPrincipal.getName();
+      }
       final String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
       if (tokenString != null) {
 
