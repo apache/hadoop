@@ -529,36 +529,41 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     StorageType storageType = location.getStorageType();
     final FsVolumeImpl fsVolume =
         createFsVolume(sd.getStorageUuid(), sd, location);
-    // no need to add lock
-    final ReplicaMap tempVolumeMap = new ReplicaMap();
-    ArrayList<IOException> exceptions = Lists.newArrayList();
+    try {
+      // no need to add lock
+      final ReplicaMap tempVolumeMap = new ReplicaMap();
+      ArrayList<IOException> exceptions = Lists.newArrayList();
 
-    for (final NamespaceInfo nsInfo : nsInfos) {
-      String bpid = nsInfo.getBlockPoolID();
-      try {
-        fsVolume.addBlockPool(bpid, this.conf, this.timer);
-        fsVolume.getVolumeMap(bpid, tempVolumeMap, ramDiskReplicaTracker);
-      } catch (IOException e) {
-        LOG.warn("Caught exception when adding " + fsVolume +
-            ". Will throw later.", e);
-        exceptions.add(e);
+      for (final NamespaceInfo nsInfo : nsInfos) {
+        String bpid = nsInfo.getBlockPoolID();
+        try {
+          fsVolume.addBlockPool(bpid, this.conf, this.timer);
+          fsVolume.getVolumeMap(bpid, tempVolumeMap, ramDiskReplicaTracker);
+        } catch (IOException e) {
+          LOG.warn("Caught exception when adding " + fsVolume +
+              ". Will throw later.", e);
+          exceptions.add(e);
+        }
       }
-    }
-    if (!exceptions.isEmpty()) {
-      try {
-        sd.unlock();
-      } catch (IOException e) {
-        exceptions.add(e);
+      if (!exceptions.isEmpty()) {
+        try {
+          sd.unlock();
+        } catch (IOException e) {
+          exceptions.add(e);
+        }
+        throw MultipleIOException.createIOException(exceptions);
       }
-      throw MultipleIOException.createIOException(exceptions);
+
+      final FsVolumeReference ref = fsVolume.obtainReference();
+      setupAsyncLazyPersistThread(fsVolume);
+
+      builder.build();
+      activateVolume(tempVolumeMap, sd, storageType, ref);
+      LOG.info("Added volume - " + location + ", StorageType: " + storageType);
+    } catch (Throwable t) {
+      fsVolume.shutdown();
+      throw t;
     }
-
-    final FsVolumeReference ref = fsVolume.obtainReference();
-    setupAsyncLazyPersistThread(fsVolume);
-
-    builder.build();
-    activateVolume(tempVolumeMap, sd, storageType, ref);
-    LOG.info("Added volume - " + location + ", StorageType: " + storageType);
   }
 
   /**
