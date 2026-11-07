@@ -766,8 +766,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
    * Return the current CacheEntry.
    */
   private CacheEntry getCacheEntry() {
-    Pair<byte[], Integer> clientInfo =
-        NameNode.getClientIdAndCallId(this.ipProxyUsers);
+    Pair<byte[], Integer> clientInfo = NameNode.getClientIdAndCallId();
     return RetryCache.waitForCompletion(
         retryCache, clientInfo.getLeft(), clientInfo.getRight());
   }
@@ -776,8 +775,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
    * Return the current CacheEntryWithPayload.
    */
   private CacheEntryWithPayload getCacheEntryWithPayload(Object payload) {
-    Pair<byte[], Integer> clientInfo =
-        NameNode.getClientIdAndCallId(this.ipProxyUsers);
+    Pair<byte[], Integer> clientInfo = NameNode.getClientIdAndCallId();
     return RetryCache.waitForCompletion(retryCache, payload,
         clientInfo.getLeft(), clientInfo.getRight());
   }
@@ -1969,7 +1967,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
    * Get the actual client's machine.
    */
   private String getClientMachine() {
-    return NameNode.getClientMachine(this.ipProxyUsers);
+    return NameNode.getClientMachine();
   }
 
   @Override
