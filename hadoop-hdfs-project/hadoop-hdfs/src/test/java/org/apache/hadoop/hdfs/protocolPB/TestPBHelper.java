@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 
@@ -47,6 +48,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
@@ -60,6 +62,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockECReconstructionCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
@@ -136,6 +139,20 @@ public class TestPBHelper {
   @Test
   public void testGetByteString() {
     assertSame(ByteString.EMPTY, PBHelperClient.getByteString(new byte[0]));
+  }
+
+  @Test
+  public void testConvertAddBlockFlags() {
+    // every AddBlockFlag needs an AddBlockFlagProto value with the same
+    // number, or the flag is silently dropped on the client -> NN RPC
+    for (AddBlockFlag flag : AddBlockFlag.values()) {
+      AddBlockFlagProto proto = AddBlockFlagProto.forNumber(flag.getMode());
+      assertNotNull(proto, flag + " has no AddBlockFlagProto value");
+      assertEquals(flag.name(), proto.name());
+    }
+    EnumSet<AddBlockFlag> flags = EnumSet.allOf(AddBlockFlag.class);
+    assertEquals(flags, PBHelperClient.convertAddBlockFlags(
+        PBHelperClient.convertAddBlockFlags(flags)));
   }
 
   @Test
