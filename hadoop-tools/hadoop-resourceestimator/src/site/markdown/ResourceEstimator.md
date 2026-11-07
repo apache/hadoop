@@ -135,7 +135,7 @@ This section will guide you through the configuration for Resource Estimator Ser
 
 * `resourceestimator.solver.lp.beta`
 
-  This parameter controls the generalization of the Linear Programming model. This parameter varies from 0 to 1. Deafult value is 0.1.
+  This parameter controls the generalization of the Linear Programming model. This parameter varies from 0 to 1. Default value is 0.1.
 
 * `resourceestimator.solver.lp.minJobRuns`
 
