@@ -2411,6 +2411,29 @@
 </property>
 
 <property>
+  <name>dfs.namenode.deprioritize.slow.disk.datanode.for.read</name>
+  <value>false</value>
+  <description>
+    If true, the NameNode will deprioritize slow disk replicas when returning block
+    locations to clients. This tracks slow storage at the disk (StorageID) level rather
+    than the DataNode level, allowing fine-grained read optimization. Slow disks are
+    detected via DataNode heartbeat reports and cached for efficient read path lookup.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.slow.disk.cache.rebuild.interval</name>
+  <value>30s</value>
+  <description>
+    Interval at which the slow disk cache is rebuilt on the NameNode. This setting supports
+    multiple time unit suffixes as described in dfs.heartbeat.interval. If no suffix is
+    specified then milliseconds is assumed. This is independent of the Top-N slow disk report
+    generation interval, allowing separate tuning for cache performance vs. reporting frequency.
+    It is ignored if dfs.namenode.deprioritize.slow.disk.datanode.for.read is false.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.metrics.logger.period.seconds</name>
   <value>600</value>
   <description>
