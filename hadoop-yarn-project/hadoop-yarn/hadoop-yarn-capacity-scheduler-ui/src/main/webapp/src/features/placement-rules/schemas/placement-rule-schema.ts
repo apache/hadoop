@@ -90,6 +90,19 @@ export const placementRuleFormSchema = z
       message: 'Wildcard "*" is not supported for group rules',
       path: ['matches'],
     },
+  )
+  .refine(
+    (data) => {
+      if (data.type !== 'user' || data.matches.trim() === '*') {
+        return true;
+      }
+      const users = data.matches.split(',');
+      return users.every((user) => user.trim().length > 0);
+    },
+    {
+      message: 'User match pattern must not contain empty usernames between commas',
+      path: ['matches'],
+    },
   );
 
 export type PlacementRuleFormData = z.infer<typeof placementRuleFormSchema>;
