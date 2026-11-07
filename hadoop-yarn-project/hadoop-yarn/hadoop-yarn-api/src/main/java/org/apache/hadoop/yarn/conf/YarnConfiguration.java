@@ -3881,6 +3881,13 @@ public class YarnConfiguration extends Configuration {
   public static final boolean
       DEFAULT_TIMELINE_SERVICE_CLIENT_BEST_EFFORT = false;
 
+  /** Timeout in milliseconds for TimelineClient HTTP connect and read operations. */
+  public static final String TIMELINE_SERVICE_CLIENT_TIMEOUT_MS =
+      TIMELINE_SERVICE_CLIENT_PREFIX + "timeout-ms";
+
+  public static final int
+      DEFAULT_TIMELINE_SERVICE_CLIENT_TIMEOUT_MS = 60_000;
+
   /** Flag to enable recovery of timeline service */
   public static final String TIMELINE_SERVICE_RECOVERY_ENABLED =
       TIMELINE_SERVICE_PREFIX + "recovery.enabled";
