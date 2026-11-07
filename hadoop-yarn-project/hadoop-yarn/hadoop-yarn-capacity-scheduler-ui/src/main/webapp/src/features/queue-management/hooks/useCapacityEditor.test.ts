@@ -67,8 +67,6 @@ describe('useCapacityEditor', () => {
         originQueuePath: 'root.department.new',
         originQueueName: 'new',
         selectedNodeLabel: 'sales',
-        capacityValue: '10',
-        maxCapacityValue: '50',
         markOriginAsNew: true,
         queueState: 'RUNNING',
       });
@@ -80,10 +78,58 @@ describe('useCapacityEditor', () => {
       originQueuePath: 'root.department.new',
       originQueueName: 'new',
       originQueueState: 'RUNNING',
-      originInitialCapacity: '10',
-      originInitialMaxCapacity: '50',
+      originInitialCapacity: null,
+      originInitialMaxCapacity: null,
       originIsNew: true,
       selectedNodeLabel: 'sales',
     });
+  });
+
+  it('ignores capacity prefill when a labeled partition is selected', () => {
+    const { result } = renderHook(() => useCapacityEditor());
+
+    act(() => {
+      result.current.openCapacityEditor({
+        origin: 'add-queue',
+        parentQueuePath: 'root.department',
+        originQueuePath: 'root.department.new',
+        originQueueName: 'new',
+        selectedNodeLabel: 'sales',
+        capacityValue: '10',
+        maxCapacityValue: '50',
+      });
+    });
+
+    expect(openCapacityEditor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        originInitialCapacity: null,
+        originInitialMaxCapacity: null,
+        selectedNodeLabel: 'sales',
+      }),
+    );
+  });
+
+  it('forwards capacity prefill for the default partition', () => {
+    mockStore.selectedNodeLabelFilter = '';
+    const { result } = renderHook(() => useCapacityEditor());
+
+    act(() => {
+      result.current.openCapacityEditor({
+        origin: 'add-queue',
+        parentQueuePath: 'root.department',
+        originQueuePath: 'root.department.new',
+        originQueueName: 'new',
+        capacityValue: '10',
+        maxCapacityValue: '50',
+      });
+    });
+
+    expect(openCapacityEditor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        originInitialCapacity: '10',
+        originInitialMaxCapacity: '50',
+        selectedNodeLabel: '',
+      }),
+    );
   });
 });

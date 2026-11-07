@@ -766,7 +766,13 @@ describe('capacityEditorSlice', () => {
       vi.mocked(buildCapacityEditorDrafts).mockReturnValue(mockDrafts);
 
       store.setState({
-        getQueuePropertyValue: vi.fn(() => ({ value: '50', isStaged: false })),
+        hasQueueProperty: vi.fn((_queuePath, property) => property === 'accessible-node-labels'),
+        getQueuePropertyValue: vi.fn((queuePath, property) => {
+          if (property === 'accessible-node-labels') {
+            return { value: 'gpu', isStaged: false };
+          }
+          return { value: '50', isStaged: false };
+        }),
         stageQueueChange: vi.fn(),
         stageLabelQueueChange: vi.fn(),
       });
@@ -845,7 +851,13 @@ describe('capacityEditorSlice', () => {
       const stageLabelQueueChange = vi.fn();
 
       store.setState({
-        getQueuePropertyValue: vi.fn(() => ({ value: '50', isStaged: false })),
+        hasQueueProperty: vi.fn((_queuePath, property) => property === 'accessible-node-labels'),
+        getQueuePropertyValue: vi.fn((queuePath, property) => {
+          if (property === 'accessible-node-labels') {
+            return { value: 'gpu', isStaged: false };
+          }
+          return { value: '50', isStaged: false };
+        }),
         stageQueueChange: vi.fn(),
         stageLabelQueueChange,
       });
