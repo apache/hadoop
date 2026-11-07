@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -73,6 +74,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -138,11 +140,13 @@ public class TestDelegationTokenRenewer {
     private static Token<?> lastRenewed = null;
     private static Token<?> tokenToRenewIn2Sec = null;
     private static boolean cancelled = false; 
+    private static volatile Error cancelError = null;
     private static void reset() {
       counter = 0;
       lastRenewed = null;
       tokenToRenewIn2Sec = null;
       cancelled = false;
+      cancelError = null;
     }
 
     @Override
@@ -186,6 +190,9 @@ public class TestDelegationTokenRenewer {
 
     @Override
     public void cancel(Token<?> t, Configuration conf) {
+      if (cancelError != null) {
+        throw cancelError;
+      }
       cancelled = true;
       if (t instanceof MyToken) {
         MyToken token = (MyToken) t;
@@ -537,6 +544,38 @@ public class TestDelegationTokenRenewer {
     }
   }
   
+  /**
+   * An Error thrown while cancelling a token must terminate the RM through
+   * ExitUtil, so that tests can intercept it.
+   */
+  @Test
+  @Timeout(value = 60)
+  public void testTokenCancelErrorTerminates() throws Exception {
+    MyFS dfs = (MyFS)FileSystem.get(conf);
+    MyToken token = dfs.getDelegationToken("user1");
+    Credentials ts = new Credentials();
+    ts.addToken(new Text(DelegationTokenRenewer.SCHEME + "://host1:0"), token);
+    ApplicationId appId = BuilderUtils.newApplicationId(0, 1);
+
+    Error error = new AssertionError("injected cancel failure");
+    ExitUtil.disableSystemExit();
+    try {
+      delegationTokenRenewer.addApplicationAsync(appId, ts, true, "user",
+          new Configuration());
+      waitForEventsToGetProcessed(delegationTokenRenewer);
+      Renewer.cancelError = error;
+      delegationTokenRenewer.applicationFinished(appId);
+      GenericTestUtils.waitFor(ExitUtil::terminateCalled, 100, 10000);
+      ExitUtil.ExitException ee = ExitUtil.getFirstExitException();
+      assertEquals(-1, ee.getExitCode());
+      assertSame(error, ee.getCause());
+    } finally {
+      Renewer.cancelError = null;
+      ExitUtil.enableSystemExit();
+      ExitUtil.resetFirstExitException();
+    }
+  }
+
   @Test
   @Timeout(value = 60)
   public void testAppRejectionWithCancelledDelegationToken() throws Exception {
