@@ -215,6 +215,61 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
     }
   }
 
+  @Test
+  @Timeout(value = 10)
+  /**
+   * lstat a symlink and read its target using a fully qualified path
+   * (eg file:///tmp/link), forcing the deprecated (non-Stat) implementation
+   * of getFileLinkStatus.
+   */
+  public void testGetLinkStatusQualPathDeprecated() throws IOException {
+    Path fileAbs  = new Path(testBaseDir1()+"/file");
+    Path fileQual = new Path(testURI().toString(), fileAbs.toString());
+    Path link     = new Path(testBaseDir1()+"/linkToFile");
+    Path linkQual = new Path(testURI().toString(), link.toString());
+    createAndWriteFile(fileAbs);
+    wrapper.createSymlink(fileAbs, link, false);
+    RawLocalFileSystem.setUseDeprecatedFileStatus(true);
+    try {
+      FileStatus fsl = wrapper.getFileLinkStatus(linkQual);
+      assertTrue(fsl.isSymlink());
+      assertFalse(fsl.isDirectory());
+      assertEquals(fileQual, fsl.getSymlink());
+      assertEquals(linkQual, fsl.getPath());
+      assertEquals(fileAbs, wrapper.getLinkTarget(linkQual));
+    } finally {
+      RawLocalFileSystem.useStatIfAvailable();
+    }
+  }
+
+  @Test
+  @Timeout(value = 10)
+  /**
+   * lstat a dangling link using a fully qualified path, forcing the
+   * deprecated (non-Stat) implementation of getFileLinkStatus. Statting
+   * a dangling link must return a symlink rather than throw.
+   */
+  public void testDanglingLinkQualPathDeprecated() throws IOException {
+    assumeNotWindows();
+    // file is never created so the link dangles
+    Path fileAbs  = new Path(testBaseDir1()+"/file");
+    Path fileQual = new Path(testURI().toString(), fileAbs.toString());
+    Path link     = new Path(testBaseDir1()+"/danglingLinkToFile");
+    Path linkQual = new Path(testURI().toString(), link.toString());
+    wrapper.createSymlink(fileAbs, link, false);
+    RawLocalFileSystem.setUseDeprecatedFileStatus(true);
+    try {
+      FileStatus fsl = wrapper.getFileLinkStatus(linkQual);
+      assertTrue(fsl.isSymlink());
+      assertEquals(fileQual, fsl.getSymlink());
+    } finally {
+      RawLocalFileSystem.useStatIfAvailable();
+      // FileContext cannot delete dangling links (see testDanglingLink above)
+      // so remove the link directly to avoid leaking it to later tests.
+      FileUtil.fullyDelete(new File(link.toUri().getPath()));
+    }
+  }
+
   /** Test create symlink to . */
   @Override
   public void testCreateLinkToDot() throws IOException {
