@@ -189,6 +189,27 @@ message RemoveMountTableEntryResponseProto{
   optional bool status = 1;
 }
 
+message RemoveMountTableEntriesRequestProto {
+  repeated string srcPaths = 1;
+}
+
+enum RemoveMountTableEntryFailureReasonProto {
+  UNKNOWN_FAILURE = 0;
+  NONEXISTENT_MOUNT_POINT = 1;
+  DRIVER_FAILURE = 2;
+  ACCESS_DENIED = 3;
+}
+
+message RemoveMountTableEntryFailureProto {
+  optional string srcPath = 1;
+  optional RemoveMountTableEntryFailureReasonProto reason = 2;
+}
+
+message RemoveMountTableEntriesResponseProto{
+  optional bool status = 1;
+  repeated RemoveMountTableEntryFailureProto failedEntries = 2;
+}
+
 message GetMountTableEntriesRequestProto {
   optional string srcPath = 1;
 }
