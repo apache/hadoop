@@ -38,6 +38,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.VERIFY_ENABLED;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.VERIFY_ENABLED_DEFAULT;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.FORCE_CLOSE_OPEN;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.MAP;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.BANDWIDTH;
@@ -45,6 +47,7 @@ import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.TRASH;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.DELAY_DURATION;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.CLI_OPTIONS;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.DIFF_THRESHOLD;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.VERIFY;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.TrashOption;
 
 /**
@@ -83,6 +86,8 @@ public class FedBalance extends Configured implements Tool {
     private long delayDuration = TimeUnit.SECONDS.toMillis(1);
     /* Specify the threshold of diff entries. */
     private int diffThreshold = 0;
+    /* Whether to run the optional verification phase. */
+    private boolean verify = false;
     /* The source input. This specifies the source path. */
     private final String inputSrc;
     /* The dst input. This specifies the dst path. */
@@ -148,6 +153,15 @@ public class FedBalance extends Configured implements Tool {
     }
 
     /**
+     * Specify whether the optional verification phase should run.
+     * @param value true if running verification.
+     */
+    public Builder setVerify(boolean value) {
+      this.verify = value;
+      return this;
+    }
+
+    /**
      * Build the balance job.
      */
     public BalanceJob build() throws IOException {
@@ -164,7 +178,10 @@ public class FedBalance extends Configured implements Tool {
       context = new FedBalanceContext.Builder(src, dst, NO_MOUNT, getConf())
           .setForceCloseOpenFiles(forceCloseOpen).setUseMountReadOnly(false)
           .setMapNum(map).setBandwidthLimit(bandwidth).setTrash(trashOpt)
-          .setDiffThreshold(diffThreshold).build();
+          .setDiffThreshold(diffThreshold)
+          .setVerify(verify || getConf().getBoolean(VERIFY_ENABLED,
+              VERIFY_ENABLED_DEFAULT))
+          .build();
 
       LOG.info(context.toString());
       // Construct the balance job.
@@ -267,6 +284,9 @@ public class FedBalance extends Configured implements Tool {
     if (command.hasOption(DIFF_THRESHOLD.getOpt())) {
       builder.setDiffThreshold(Integer.parseInt(
           command.getOptionValue(DIFF_THRESHOLD.getOpt())));
+    }
+    if (command.hasOption(VERIFY.getOpt())) {
+      builder.setVerify(true);
     }
     if (command.hasOption(TRASH.getOpt())) {
       String val = command.getOptionValue(TRASH.getOpt());
