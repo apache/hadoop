@@ -1002,6 +1002,13 @@
                       </excludes>
                     </relocation>
                     <relocation>
+                      <pattern>jakarta/inject/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.jakarta.inject.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
                       <pattern>javax/inject/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.javax.inject.</shadedPattern>
                       <excludes>
