@@ -21,6 +21,7 @@ package org.apache.hadoop.fs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -401,6 +402,24 @@ public class TestHarFileSystemBasics {
     } catch (IOException ioe) {
       // ok, expected.
     }
+  }
+
+  @Test
+  public void testNegativeHarFsCreateFileAndAppendFileBuilders() throws Exception {
+    // the builders must not write through to the underlying file system
+    final Path fooPath = new Path(rootPath, "foo/bar");
+    final byte[] data = {1, 2, 3};
+    try (FSDataOutputStream out = localFileSystem.create(fooPath)) {
+      out.write(data);
+    }
+
+    LambdaTestUtils.intercept(IOException.class,
+        () -> harFileSystem.createFile(fooPath).build());
+    LambdaTestUtils.intercept(IOException.class, "not allowed",
+        () -> harFileSystem.createFile(fooPath).recursive().build());
+    LambdaTestUtils.intercept(IOException.class, "not allowed",
+        () -> harFileSystem.appendFile(fooPath).build());
+    assertEquals(data.length, localFileSystem.getFileStatus(fooPath).getLen());
   }
 
   @Test

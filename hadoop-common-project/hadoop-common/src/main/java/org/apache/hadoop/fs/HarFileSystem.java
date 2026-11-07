@@ -1301,14 +1301,4 @@ public class HarFileSystem extends FileSystem {
   public short getDefaultReplication(Path f) {
     return fs.getDefaultReplication(f);
   }
-
-  @Override
-  public FSDataOutputStreamBuilder createFile(Path path) {
-    return fs.createFile(path);
-  }
-
-  @Override
-  public FSDataOutputStreamBuilder appendFile(Path path) {
-    return fs.appendFile(path);
-  }
 }
