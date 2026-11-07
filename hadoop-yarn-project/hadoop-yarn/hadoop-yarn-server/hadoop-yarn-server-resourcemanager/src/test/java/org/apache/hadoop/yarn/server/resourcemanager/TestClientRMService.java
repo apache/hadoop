@@ -128,6 +128,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
@@ -156,7 +157,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -531,6 +534,96 @@ public class TestClientRMService {
     } catch (ApplicationNotFoundException ex) {
       fail(ex.getMessage());
     }
+  }
+
+  @Test
+  public void testGetContainerReportForContainerFromPreviousAttempt()
+      throws Exception {
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(123456, 1), 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    ClientRMService rmService = createRMServiceForContainerReport(
+        containerId, true, false, true);
+
+    GetContainerReportResponse response = rmService.getContainerReport(
+        GetContainerReportRequest.newInstance(containerId));
+
+    assertEquals(containerId, response.getContainerReport().getContainerId());
+  }
+
+  @Test
+  public void testGetContainerReportRejectsMissingAttemptWithoutContainerTransfer()
+      throws Exception {
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(123456, 1), 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    ClientRMService rmService = createRMServiceForContainerReport(
+        containerId, false, false, true);
+
+    assertThrows(ApplicationAttemptNotFoundException.class,
+        () -> rmService.getContainerReport(
+            GetContainerReportRequest.newInstance(containerId)));
+  }
+
+  @Test
+  public void testGetContainerReportRejectsMissingRetainedContainer()
+      throws Exception {
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(123456, 1), 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    ClientRMService rmService = createRMServiceForContainerReport(
+        containerId, true, false, false);
+
+    assertThrows(ContainerNotFoundException.class,
+        () -> rmService.getContainerReport(
+            GetContainerReportRequest.newInstance(containerId)));
+  }
+
+  private ClientRMService createRMServiceForContainerReport(
+      ContainerId containerId, boolean keepContainersAcrossAttempts,
+      boolean includeAttempt, boolean includeContainer) {
+    ApplicationAttemptId attemptId = containerId.getApplicationAttemptId();
+    ApplicationId applicationId = attemptId.getApplicationId();
+    ResourceScheduler scheduler = mock(ResourceScheduler.class);
+    RMContext rmContext = mock(RMContext.class);
+    RMApp application = mock(RMApp.class);
+
+    ConcurrentHashMap<ApplicationId, RMApp> applications =
+        new ConcurrentHashMap<>();
+    applications.put(applicationId, application);
+    when(rmContext.getRMApps()).thenReturn(applications);
+    when(rmContext.getScheduler()).thenReturn(scheduler);
+    when(application.getApplicationId()).thenReturn(applicationId);
+    when(application.getUser()).thenReturn("test-user");
+
+    ApplicationSubmissionContext submissionContext =
+        mock(ApplicationSubmissionContext.class);
+    when(submissionContext.getKeepContainersAcrossApplicationAttempts())
+        .thenReturn(keepContainersAcrossAttempts);
+    when(application.getApplicationSubmissionContext())
+        .thenReturn(submissionContext);
+
+    Map<ApplicationAttemptId, RMAppAttempt> attempts = new HashMap<>();
+    if (includeAttempt) {
+      attempts.put(attemptId, mock(RMAppAttempt.class));
+    }
+    when(application.getAppAttempts()).thenReturn(attempts);
+
+    if (includeContainer) {
+      RMContainer rmContainer = mock(RMContainer.class);
+      ContainerReport containerReport = mock(ContainerReport.class);
+      when(containerReport.getContainerId()).thenReturn(containerId);
+      when(rmContainer.createContainerReport()).thenReturn(containerReport);
+      when(scheduler.getRMContainer(containerId)).thenReturn(rmContainer);
+    }
+
+    ApplicationACLsManager applicationACLsManager =
+        mock(ApplicationACLsManager.class);
+    QueueACLsManager queueACLsManager = mock(QueueACLsManager.class);
+    when(queueACLsManager.checkAccess(any(UserGroupInformation.class),
+        any(QueueACL.class), any(RMApp.class), any(), any())).thenReturn(true);
+    return new ClientRMService(rmContext, scheduler, null,
+        applicationACLsManager, queueACLsManager, null);
   }
 
   @Test

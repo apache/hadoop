@@ -512,11 +512,14 @@ public class ClientRMService extends AbstractService implements
         ApplicationAccessType.VIEW_APP, application);
     GetContainerReportResponse response = null;
     if (allowAccess) {
-      RMAppAttempt appAttempt = application.getAppAttempts().get(appAttemptId);
-      if (appAttempt == null) {
-        throw new ApplicationAttemptNotFoundException(
-            "ApplicationAttempt with id '" + appAttemptId +
-            "' doesn't exist in RM.");
+      if (!application.getApplicationSubmissionContext()
+          .getKeepContainersAcrossApplicationAttempts()) {
+        RMAppAttempt appAttempt = application.getAppAttempts().get(appAttemptId);
+        if (appAttempt == null) {
+          throw new ApplicationAttemptNotFoundException(
+              "ApplicationAttempt with id '" + appAttemptId +
+                  "' doesn't exist in RM.");
+        }
       }
       RMContainer rmContainer = this.rmContext.getScheduler().getRMContainer(
           containerId);
