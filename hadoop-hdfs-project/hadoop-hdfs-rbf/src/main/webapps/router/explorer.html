@@ -19,28 +19,28 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.4.1/css/bootstrap.min.css" />
-    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.4.1/css/bootstrap-editable.css"/>
-    <link rel="stylesheet" type="text/css" href="/static/dataTables.bootstrap.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" type="text/css" href="/static/bootstrap-5.3.8/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="/static/dataTables.bootstrap5.min.css" />
     <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
     <title>Browsing HDFS</title>
   </head>
   <body>
 
-    <header class="navbar navbar-inverse bs-docs-nav" role="banner">
+    <header class="navbar navbar-dark navbar-expand-lg bs-docs-nav" role="banner">
     <div class="container">
-      <div class="navbar-header">
+      <div class="hadoop-navbar-header d-flex">
         <div class="navbar-brand">Hadoop</div>
       </div>
 
-      <ul class="nav navbar-nav" id="ui-tabs">
+      <ul class="nav navbar-nav flex-row flex-wrap" id="ui-tabs">
         <li><a href="federationhealth.html#tab-overview">Overview</a></li>
         <li><a href="federationhealth.html#tab-namenode">Subclusters</a></li>
         <li><a href="federationhealth.html#tab-router">Routers</a></li>
         <li><a href="federationhealth.html#tab-datanode">Datanodes</a></li>
         <li><a href="federationhealth.html#tab-mounttable">Mount table</a></li>
         <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Utilities <b class="caret"></b></a>
+          <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown">Utilities <b class="caret"></b></a>
           <ul class="dropdown-menu">
             <li><a href="#">Browse the file system</a></li>
             <li><a href="logs">Logs</a></li>
@@ -58,33 +58,33 @@
     <div class="modal" id="file-info" tabindex="-1" role="dialog" aria-hidden="true">
       <div class="modal-dialog">
     <div class="modal-content">
-      <div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+      <div class="modal-header"><button type="button" class="hadoop-close" data-bs-dismiss="modal" aria-hidden="true">&times;</button>
         <h4 class="modal-title" id="file-info-title">File information</h4>
       </div>
       <div class="modal-body" id="file-info-body">
         <div class=row>
-              <span class="col-xs-4">
+              <span class="col-4">
                 <a id="file-info-download">Download</a>
               </span>
-              <span class="col-xs-4">
+              <span class="col-4">
                 <a id="file-info-preview-head" style="cursor:pointer">Head the file (first 32K)</a>
               </span>
-              <span class="col-xs-4">
+              <span class="col-4">
                 <a id="file-info-preview-tail" style="cursor:pointer">Tail the file (last 32K)</a>
           </span>
         </div>
         <hr />
-        <div class="panel panel-success" id="file-info-blockinfo-panel">
-          <div class="panel-heading">
+        <div class="hadoop-card hadoop-card-success" id="file-info-blockinfo-panel">
+          <div class="hadoop-card-header">
         Block information --
-        <select class="btn btn-default" id="file-info-blockinfo-list">
+        <select class="btn btn-secondary" id="file-info-blockinfo-list">
         </select>
           </div>
-          <div class="panel-body" id="file-info-blockinfo-body"></div>
+          <div class="hadoop-card-body" id="file-info-blockinfo-body"></div>
         </div>
-        <div class="panel panel-info" id="file-info-tail" style="display:none">
-          <div class="panel-heading">File contents</div>
-          <div class="panel-body">
+        <div class="hadoop-card hadoop-card-info" id="file-info-tail" style="display:none">
+          <div class="hadoop-card-header">File contents</div>
+          <div class="hadoop-card-body">
         <div class="input-group-sm">
         <textarea class="form-control" style="height: 150px" id="file-info-preview-body"></textarea>
         </div>
@@ -92,16 +92,16 @@
         </div>
       </div>
       <div class="modal-footer"><button type="button" class="btn btn-success"
-                        data-dismiss="modal">Close</button></div>
+                        data-bs-dismiss="modal">Close</button></div>
     </div>
       </div>
     </div>
     <div class="container">
-      <div class="page-header">
+      <div class="hadoop-page-header">
     <h1>Browse Directory</h1>
       </div>
       <div class="alert alert-danger" id="alert-panel" style="display:none">
-    <button type="button" class="close" onclick="$('#alert-panel').hide();">&times;</button>
+    <button type="button" class="hadoop-close" onclick="$('#alert-panel').hide();">&times;</button>
     <div class="alert-body" id="alert-panel-body"></div>
       </div>
     <div class="modal" id="btn-create-directory" tabindex="-1" role="dialog"
@@ -109,21 +109,21 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <button type="button" class="close"
-              data-dismiss="modal" aria-hidden="true">&times;</button>
+            <button type="button" class="hadoop-close"
+              data-bs-dismiss="modal" aria-hidden="true">&times;</button>
             <h4 class="modal-title">Create Directory</h4>
           </div>
           <div class="modal-body">
-            <div class="form-group">
+            <div class="mb-3">
               <div class="input-group">
-                <span class="input-group-addon" id="new_directory_pwd"></span>
+                <span class="input-group-text" id="new_directory_pwd"></span>
                 <input type="text" class="form-control" id="new_directory"
                   placeholder="New Directory Name" />
               </div>
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn" data-dismiss="modal">Cancel</button>
+            <button type="button" class="btn" data-bs-dismiss="modal">Cancel</button>
             <button type="button" class="btn btn-success"
               id="btn-create-directory-send" data-complete-text="Creating...">
               Create
@@ -136,15 +136,15 @@
     <div class="modal" id="modal-upload-file" tabindex="-1" role="dialog" aria-hidden="true">
       <div class="modal-dialog">
          <div class="modal-content">
-           <div class="modal-header"><button type="button" class="close"
-             data-dismiss="modal" aria-hidden="true">&times;</button>
+           <div class="modal-header"><button type="button" class="hadoop-close"
+             data-bs-dismiss="modal" aria-hidden="true">&times;</button>
              <h4 class="modal-title" id="file-upload-title">Upload File</h4>
            </div>
            <div class="modal-body" id="file-upload-body">
              <input id="modal-upload-file-input" type="file" class="file" multiple>
            </div>
            <div class="modal-footer">
-             <button type="button" class="btn btn-success" data-dismiss="modal">Close</button>
+             <button type="button" class="btn btn-success" data-bs-dismiss="modal">Close</button>
              <button type="button" class="btn btn-success" id="modal-upload-file-button" data-complete-text="Uploading...">Upload</button>
            </div>
          </div>
@@ -154,17 +154,17 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal"
+          <button type="button" class="hadoop-close" data-bs-dismiss="modal"
             aria-hidden="true">&times;</button>
           <h4 class="modal-title" id="delete-modal-title">Delete</h4>
         </div>
         <div class="modal-body">
-          <div class="panel-body">
+          <div class="hadoop-card-body">
             <div id="delete-prompt"></div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn" data-bs-dismiss="modal">Cancel</button>
           <button type="button" class="btn btn-success" id="delete-button"
             data-complete-text="Deleting...">Delete</button>
         </div>
@@ -173,36 +173,36 @@
   </div>
 
       <div class="row">
-      <div class="col-xs-9 col-md-9">
+      <div class="col-9 col-md-9">
         <form onsubmit="return false;">
           <div class="input-group">
             <input type="text" class="form-control" id="directory"/>
-            <span class="input-group-btn">
-              <button class="btn btn-default" type="button" id="btn-nav-directory">Go!</button>
+            <span class="d-flex">
+              <button class="btn btn-secondary" type="button" id="btn-nav-directory">Go!</button>
             </span>
           </div>
         </form>
       </div>
-      <div class="col-xs-3 col-md-3">
-        <button type="button" class="btn btn-default" data-toggle="modal"
-          aria-label="New Directory" data-target="#btn-create-directory"
+      <div class="col-3 col-md-3">
+        <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
+          aria-label="New Directory" data-bs-target="#btn-create-directory"
           title="Create Directory" id="btn-create-dir">
-            <span class="glyphicon glyphicon-folder-open"></span>
+            <span class="hadoop-icon hadoop-icon-folder-open"></span>
         </button>
-        <button type="button" class="btn btn-default" data-toggle="modal"
-          data-target="#modal-upload-file" title="Upload Files" id="btn-upload-files">
-            <span class="glyphicon glyphicon-cloud-upload"></span>
+        <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
+          data-bs-target="#modal-upload-file" title="Upload Files" id="btn-upload-files">
+            <span class="hadoop-icon hadoop-icon-cloud-upload"></span>
         </button>
-        <button class="btn btn-default dropdown-toggle" type="button"
-          data-toggle="dropdown" title="Cut & Paste">
-        <span class="glyphicon glyphicon-list-alt"></span></button>
+        <button class="btn btn-secondary dropdown-toggle" type="button"
+          data-bs-toggle="dropdown" title="Cut & Paste">
+        <span class="hadoop-icon hadoop-icon-list-alt"></span></button>
         <ul class="dropdown-menu cut-paste">
           <li><a id="explorer-cut">Cut</a></li>
           <li><a id="explorer-paste">Paste</a></li>
         </ul>
-        <button type="button" class="btn btn-default"  data-toggle="modal"
+        <button type="button" class="btn btn-secondary"
           aria-label="Parent Directory" title="Parent Directory" id="parentDir">
-           <span class="glyphicon glyphicon-level-up"></span>
+           <span class="hadoop-icon hadoop-icon-level-up"></span>
         </button>
       </div>
     </div>
@@ -212,7 +212,7 @@
 
       <div class="row">
         <hr />
-        <div class="col-xs-2"><p>Hadoop, {release-year-token}.</p></div>
+        <div class="col-2"><p>Hadoop, {release-year-token}.</p></div>
       </div>
 
     </div>
@@ -289,7 +289,7 @@
             <td><span class="explorer-replication-links">{replication}</span></td>
             <td>{blockSize|fmt_bytes}</td>
             <td><a inode-type="{type}" class="explorer-browse-links">{pathSuffix}</a></td>
-            <td><span class="glyphicon glyphicon-trash"></span></td>
+            <td><span class="hadoop-icon hadoop-icon-trash"></span></td>
           </tr>
           {/FileStatus}
         </tbody>
@@ -311,11 +311,11 @@
         </ul>
       </p>
     </script>
-    <script type="text/javascript" src="/static/jquery-3.6.0.min.js">
+    <script type="text/javascript" src="/static/jquery-4.0.0.min.js">
     </script><script type="text/javascript" src="/static/jquery.dataTables.min.js">
-    </script><script type="text/javascript" src="/static/bootstrap-3.4.1/js/bootstrap.min.js">
-    </script><script type="text/javascript" src="/static/bootstrap-3.4.1/js/bootstrap-editable.min.js">
-    </script><script type="text/javascript" src="/static/dataTables.bootstrap.js">
+    </script><script type="text/javascript" src="/static/bootstrap-5.3.8/js/bootstrap.bundle.min.js">
+    </script><script type="text/javascript" src="/static/bootstrap-hadoop.js">
+    </script><script type="text/javascript" src="/static/dataTables.bootstrap5.min.js">
     </script><script type="text/javascript" src="/static/dust-full-2.0.0.min.js">
     </script><script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js">
     </script><script type="text/javascript" src="/static/dfs-dust.js">
