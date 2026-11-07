@@ -631,7 +631,7 @@ public class DistributedFileSystem extends FileSystem
     return new FileSystemLinkResolver<HdfsDataOutputStream>() {
       @Override
       public HdfsDataOutputStream doCall(final Path p) throws IOException {
-        final DFSOutputStream out = dfs.create(getPathName(f), permission,
+        final DFSOutputStream out = dfs.create(getPathName(p), permission,
             overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
                 : EnumSet.of(CreateFlag.CREATE),
             true, replication, blockSize, progress, bufferSize, null,
@@ -713,7 +713,7 @@ public class DistributedFileSystem extends FileSystem
     return new FileSystemLinkResolver<HdfsDataOutputStream>() {
       @Override
       public HdfsDataOutputStream doCall(final Path p) throws IOException {
-        final DFSOutputStream out = dfs.create(getPathName(f), permission,
+        final DFSOutputStream out = dfs.create(getPathName(p), permission,
             flag, true, replication, blockSize, progress, bufferSize,
             checksumOpt, favoredNodes, ecPolicyName, storagePolicy);
         return safelyCreateWrappedOutputStream(out);
@@ -771,7 +771,7 @@ public class DistributedFileSystem extends FileSystem
     return new FileSystemLinkResolver<HdfsDataOutputStream>() {
       @Override
       public HdfsDataOutputStream doCall(final Path p) throws IOException {
-        final DFSOutputStream out = dfs.create(getPathName(f), permission,
+        final DFSOutputStream out = dfs.create(getPathName(p), permission,
             flag, false, replication, blockSize, progress, bufferSize,
             checksumOpt, favoredNodes, ecPolicyName, storagePolicyName);
         return safelyCreateWrappedOutputStream(out);
