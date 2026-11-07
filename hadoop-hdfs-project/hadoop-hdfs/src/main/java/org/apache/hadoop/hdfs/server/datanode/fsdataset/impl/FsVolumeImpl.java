@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.BufferedWriter;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -35,10 +36,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -147,6 +151,34 @@ public class FsVolumeImpl implements FsVolumeSpi {
    * contention.
    */
   protected ThreadPoolExecutor cacheExecutor;
+  private BufferWriteResource bufferResources;
+  private int maxWriteBufferCapacityBytes;
+
+  public static class BufferWriteResource implements Closeable {
+    private final Semaphore flushPermitSemaphore;
+    private ExecutorService volumeExecutor = new ThreadPoolExecutor(1, 1,
+        Long.MAX_VALUE, TimeUnit.NANOSECONDS, new LinkedBlockingQueue<>(64000));
+
+    public BufferWriteResource(Semaphore flushPermitSemaphore) {
+      this.flushPermitSemaphore = flushPermitSemaphore;
+    }
+
+    public Optional<Semaphore> getFlushPermitSemaphore() {
+      return Optional.ofNullable(flushPermitSemaphore);
+    }
+
+    public ExecutorService getVolumeExecutor() {
+      return volumeExecutor;
+    }
+
+    @Override
+    public void close() {
+      if (volumeExecutor != null) {
+        volumeExecutor.shutdown();
+        volumeExecutor = null;
+      }
+    }
+  }
 
   FsVolumeImpl(FsDatasetImpl dataset, String storageID, StorageDirectory sd,
       FileIoProvider fileIoProvider, Configuration conf) throws IOException {
@@ -196,6 +228,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
     }
     this.conf = conf;
     this.fileIoProvider = fileIoProvider;
+    initBufferWriteResource(conf);
     this.enableSameDiskTiering =
         conf.getBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
             DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
@@ -204,6 +237,32 @@ public class FsVolumeImpl implements FsVolumeSpi {
     } else {
       mount = "";
     }
+  }
+
+  private void initBufferWriteResource(Configuration conf) {
+    int configuredCapacityBytes = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_WRITE_BUFFER_SIZE_BYTES,
+        DFSConfigKeys.DFS_DATANODE_WRITE_BUFFER_SIZE_BYTES_DEFAULT);
+    final int minBufferBytes = 1024 * 1024;
+    if (configuredCapacityBytes < minBufferBytes) {
+      LOG.warn(
+          "Configured {}={} is below the safe minimum of {} bytes; clamping "
+              + "to the minimum.",
+          DFSConfigKeys.DFS_DATANODE_WRITE_BUFFER_SIZE_BYTES,
+          configuredCapacityBytes, minBufferBytes);
+      configuredCapacityBytes = minBufferBytes;
+    }
+    this.maxWriteBufferCapacityBytes = configuredCapacityBytes;
+
+    int concurrentFlushWritesMB = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_CONCURRENT_FLUSH_MB_PER_VOLUME,
+        DFSConfigKeys.DFS_DATANODE_CONCURRENT_FLUSH_MB_PER_VOLUME_DEFAULT);
+    int concurrentFlushWrites = concurrentFlushWritesMB
+        / (maxWriteBufferCapacityBytes / (1024 * 1024));
+    Semaphore flushPermitSemaphore = concurrentFlushWrites > 0
+        ? new Semaphore(concurrentFlushWrites, true)
+        : null;
+    bufferResources = new BufferWriteResource(flushPermitSemaphore);
   }
 
   String getMount() {
@@ -1113,6 +1172,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
     if (metrics != null) {
       metrics.unRegister();
     }
+    if (bufferResources != null) {
+      bufferResources.close();
+    }
   }
 
   void addBlockPool(String bpid, Configuration c) throws IOException {
@@ -1600,5 +1662,13 @@ public class FsVolumeImpl implements FsVolumeSpi {
       ReplicaInfo replicaInfo, RamDiskReplica replicaState) throws IOException {
     return getBlockPoolSlice(bpid).activateSavedReplica(replicaInfo,
         replicaState);
+  }
+
+  public BufferWriteResource getBufferResources() {
+    return bufferResources;
+  }
+
+  public int getMaxWriteBufferCapacityBytes() {
+    return maxWriteBufferCapacityBytes;
   }
 }
