@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -49,6 +50,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.Token;
@@ -64,6 +66,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -71,6 +74,7 @@ import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
@@ -81,8 +85,10 @@ import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPo
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.retry.FederationActionRetry;
+import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.utils.FederationApplicationRMProbe;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
@@ -221,6 +227,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   private int appInfosCacheCount;
   private boolean allowPartialResult;
   private long submitIntervalTime;
+  private FederationApplicationRMProbe applicationProbe;
+  private Map<SubClusterId, ApplicationClientProtocol> probeRMProxies;
 
   private Map<SubClusterId, DefaultRequestInterceptorREST> interceptors;
   private LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> appInfosCaches;
@@ -280,6 +288,35 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     submitIntervalTime = conf.getTimeDuration(
         YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_INTERVAL_TIME,
         YarnConfiguration.DEFAULT_CLIENTRM_SUBMIT_INTERVAL_TIME, TimeUnit.MILLISECONDS);
+
+    probeRMProxies = new ConcurrentHashMap<>();
+    applicationProbe = new FederationApplicationRMProbe(
+        this::getProbeRMProxyForSubCluster,
+        FederationApplicationRMProbe.getTimeout(conf));
+  }
+
+  /**
+   * Get the proxy, with short timeouts, to ask the RM of a SubCluster for an
+   * application whose home SubCluster is not in the StateStore.
+   *
+   * @param subClusterId the SubCluster.
+   * @return the RM proxy.
+   * @throws IOException if the proxy cannot be created.
+   */
+  @VisibleForTesting
+  protected ApplicationClientProtocol getProbeRMProxyForSubCluster(
+      SubClusterId subClusterId) throws IOException {
+    ApplicationClientProtocol proxy = probeRMProxies.get(subClusterId);
+    if (proxy == null) {
+      proxy = RouterServerUtil.createProbeRMProxy(getConf(), subClusterId, getUser());
+      ApplicationClientProtocol existing =
+          probeRMProxies.putIfAbsent(subClusterId, proxy);
+      if (existing != null) {
+        RPC.stopProxy(proxy);
+        proxy = existing;
+      }
+    }
+    return proxy;
   }
 
   @VisibleForTesting
@@ -739,8 +776,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     SubClusterInfo subClusterInfo;
     SubClusterId subClusterId;
     try {
-      subClusterId =
-          federationFacade.getApplicationHomeSubCluster(applicationId);
+      subClusterId = getApplicationHomeSubCluster(applicationId);
       subClusterInfo = federationFacade.getSubCluster(subClusterId);
     } catch (YarnException e) {
       routerMetrics.incrAppsFailedKilled();
@@ -3328,6 +3364,15 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (threadpool != null) {
       threadpool.shutdown();
     }
+    if (applicationProbe != null) {
+      applicationProbe.close();
+    }
+    if (probeRMProxies != null) {
+      for (ApplicationClientProtocol proxy : probeRMProxies.values()) {
+        RPC.stopProxy(proxy);
+      }
+      probeRMProxies.clear();
+    }
   }
 
   private <R> Map<SubClusterInfo, R> invokeConcurrent(Collection<SubClusterInfo> clusterIds,
@@ -3430,11 +3475,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     try {
       ApplicationId applicationId = ApplicationId.fromString(appId);
-      SubClusterId subClusterId = federationFacade.getApplicationHomeSubCluster(applicationId);
-      if (subClusterId == null) {
-        RouterServerUtil.logAndThrowException(null,
-            "Can't get HomeSubCluster by applicationId %s", applicationId);
-      }
+      SubClusterId subClusterId = getApplicationHomeSubCluster(applicationId);
       return federationFacade.getSubCluster(subClusterId);
     } catch (IllegalArgumentException e){
       throw new IllegalArgumentException(e);
@@ -3443,6 +3484,38 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           "Get HomeSubClusterInfo by applicationId %s failed.", appId);
     }
     throw new YarnException("Unable to get subCluster by applicationId = " + appId);
+  }
+
+  /**
+   * Get the home SubCluster of an application from the StateStore, or else
+   * from the RMs of all the active SubClusters, e.g. after the RM removed the
+   * completed application and its home SubCluster with it.
+   *
+   * @param applicationId the application.
+   * @return the home SubCluster.
+   * @throws ApplicationNotFoundException if every RM answered that it does
+   *           not know the application.
+   * @throws YarnException if no RM knows it but some did not answer.
+   */
+  @VisibleForTesting
+  protected SubClusterId getApplicationHomeSubCluster(ApplicationId applicationId)
+      throws YarnException {
+    try {
+      SubClusterId subClusterId = federationFacade.getApplicationHomeSubCluster(applicationId);
+      if (subClusterId != null) {
+        return subClusterId;
+      }
+    } catch (YarnException e) {
+      LOG.debug("{} is not in the StateStore, asking every SubCluster.", applicationId);
+    }
+    SubClusterId found = applicationProbe.find(applicationId,
+        federationFacade.getSubClusters(true).keySet());
+    if (found == null) {
+      throw new ApplicationNotFoundException(String.format(
+          "Application %s does not exist in any SubCluster.", applicationId));
+    }
+    return federationFacade.addApplicationHomeSubCluster(
+        ApplicationHomeSubCluster.newInstance(applicationId, found));
   }
 
   /**
