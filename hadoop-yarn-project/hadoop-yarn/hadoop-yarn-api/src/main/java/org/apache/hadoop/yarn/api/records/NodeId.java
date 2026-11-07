@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -116,17 +117,25 @@ public abstract class NodeId implements Comparable<NodeId> {
   @Public
   @Stable
   public static NodeId fromString(String nodeIdStr) {
-    String[] parts = nodeIdStr.split(":");
-    if (parts.length != 2) {
+    // The port is always present, so the last colon separates it even when
+    // the host is an IPv6 literal, as in toString(). [ipv6]:port is accepted too.
+    int sep = nodeIdStr.lastIndexOf(':');
+    String host = nodeIdStr.substring(0, Math.max(sep, 0)).trim();
+    boolean bracketed = host.length() > 1 && host.startsWith("[") && host.endsWith("]");
+    if (bracketed) {
+      host = host.substring(1, host.length() - 1);
+    }
+    boolean ipv6 = host.contains(":");
+    // A bracketed host or a host with a colon must be an IPv6 literal.
+    if (sep < 0 || ((bracketed || ipv6) && !(ipv6 && InetAddresses.isInetAddress(host)))) {
       throw new IllegalArgumentException("Invalid NodeId [" + nodeIdStr
           + "]. Expected host:port");
     }
+    String port = nodeIdStr.substring(sep + 1);
     try {
-      NodeId nodeId =
-          NodeId.newInstance(parts[0].trim(), Integer.parseInt(parts[1]));
-      return nodeId;
+      return NodeId.newInstance(host, Integer.parseInt(port));
     } catch (NumberFormatException e) {
-      throw new IllegalArgumentException("Invalid port: " + parts[1], e);
+      throw new IllegalArgumentException("Invalid port: " + port, e);
     }
   }
 

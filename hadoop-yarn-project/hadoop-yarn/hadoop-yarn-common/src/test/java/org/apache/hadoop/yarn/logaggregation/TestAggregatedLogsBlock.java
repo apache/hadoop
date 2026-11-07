@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.webapp.view.BlockForTest;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlockForTest;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -117,6 +118,31 @@ public class TestAggregatedLogsBlock {
     block.getWriter().flush();
     String out = data.toString();
     assertTrue(out.contains(nodeName));
+  }
+
+  @Test
+  void testApplicationLogUrlBracketsIPv6Host() {
+    FileUtil.fullyDelete(new File("target/logs"));
+    Configuration configuration = getConfiguration();
+    assertThat(renderUnavailableLogs(configuration, "2001:db8:0:0:0:0:0:21:1234")).contains(
+        "Or see application log at http://[2001:db8:0:0:0:0:0:21]:8042/node/application/");
+
+    // Without a configured NM web port, the page still renders and omits the link.
+    configuration.set(YarnConfiguration.NM_WEBAPP_ADDRESS, "[::1]");
+    assertThat(renderUnavailableLogs(configuration, "2001:db8:0:0:0:0:0:21:1234"))
+        .contains("Logs not available for entity")
+        .doesNotContain("Or see application log at");
+  }
+
+  private String renderUnavailableLogs(Configuration configuration, String nodeName) {
+    AggregatedLogsBlockForTest aggregatedBlock = getAggregatedLogsBlockForTest(
+        configuration, "admin", "container_0_0001_01_000001", nodeName);
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    PrintWriter printWriter = new PrintWriter(data);
+    HtmlBlock.Block block = new BlockForTest(new HtmlBlockForTest(), printWriter, 10, false);
+    aggregatedBlock.render(block);
+    block.getWriter().flush();
+    return data.toString();
   }
 
   /**
