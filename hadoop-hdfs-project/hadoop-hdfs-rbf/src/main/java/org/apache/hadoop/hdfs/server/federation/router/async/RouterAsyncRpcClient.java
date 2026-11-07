@@ -177,7 +177,7 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
     // transfer threadLocalContext to worker threads of executor.
     ThreadLocalContext threadLocalContext = new ThreadLocalContext();
     asyncComplete(null);
-    // Returns a CompletableFuture with RejectedExecutionException if nsExecutor is full.
+    // Returns a CompletableFuture with RejectedExecutionException if the executor is full.
     asyncApplyUseExecutor((AsyncApplyFunction<Object, Object>) o -> {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Async invoke method : {}, {}, {}, {}", method.getName(), useObserver, namenodes,
@@ -192,7 +192,7 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
         releasePermit(nsid, ugi, method, controller);
         return object;
       });
-    }, router.getRpcServer().getAsyncExecutorForNamespace(nsid));
+    }, router.getRpcServer().getAsyncExecutorForNamespace(nsid, useObserver));
 
     // Catch the RejectedExecutionException and convert it to StandbyException
     asyncCatch((ret, e) -> {
