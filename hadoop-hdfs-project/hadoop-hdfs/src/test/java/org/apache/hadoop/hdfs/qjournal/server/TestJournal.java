@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -516,6 +517,55 @@ public class TestJournal {
     journal.journal(makeRI(7), 16, 16, 5, QJMTestUtil.createTxnData(16, 5));
 
     assertJournaledEditsTxnCountAndContents(16, 10, 20, newLayoutVersion);
+  }
+
+  @Test
+  public void testDiscardFinalizedSegmentsInvalidatesRpcCache() throws Exception {
+    checkDiscardRpcCache(true);
+  }
+
+  @Test
+  public void testDiscardInProgressSegmentInvalidatesRpcCache() throws Exception {
+    checkDiscardRpcCache(false);
+  }
+
+  @Test
+  public void testRejectedDiscardPreservesRpcCache() throws Exception {
+    int layout = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
+    journal.newEpoch(FAKE_NSINFO, 1);
+    journal.startLogSegment(makeRI(1), 1, layout);
+    journal.journal(makeRI(2), 1, 1, 6, QJMTestUtil.createTxnData(1, 6));
+    journal.finalizeLogSegment(makeRI(3), 1, 6);
+    assertThrows(IllegalStateException.class, () -> journal.discardSegments(4));
+    assertEquals(6, journal.getHighestWrittenTxId());
+    assertJournaledEditsTxnCountAndContents(4, 10, 6, layout);
+  }
+
+  private void checkDiscardRpcCache(boolean finalized) throws Exception {
+    int layout = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
+    journal.newEpoch(FAKE_NSINFO, 1);
+    journal.startLogSegment(makeRI(1), 1, layout);
+    journal.journal(makeRI(2), 1, 1, 3, QJMTestUtil.createTxnData(1, 3));
+    journal.finalizeLogSegment(makeRI(3), 1, 3);
+    journal.startLogSegment(makeRI(4), 4, layout);
+    journal.journal(makeRI(5), 4, 4, 3, QJMTestUtil.createTxnData(4, 3));
+    if (finalized) {
+      journal.finalizeLogSegment(makeRI(6), 4, 6);
+    }
+    assertJournaledEditsTxnCountAndContents(4, 10, 6, layout);
+    journal.discardSegments(4);
+    assertEquals(3, journal.getHighestWrittenTxId(), "Discard must rewind RPC visibility");
+    assertEquals(0, journal.getJournaledEdits(4, 10).getTxnCount());
+    IOException future = assertThrows(IOException.class,
+        () -> journal.getJournaledEdits(5, 10));
+    assertTrue(future.getMessage().contains("Highest txn ID"));
+    // A fresh epoch reuses transaction IDs, with a shorter replacement range.
+    journal.newEpoch(FAKE_NSINFO, 2);
+    journal.startLogSegment(new RequestInfo(JID, null, 2, 1, 3), 4, layout);
+    journal.journal(new RequestInfo(JID, null, 2, 2, 3), 4, 4, 2,
+        QJMTestUtil.createTxnData(4, 2));
+    assertJournaledEditsTxnCountAndContents(4, 10, 5, layout);
+    assertEquals(0, journal.getJournaledEdits(6, 10).getTxnCount());
   }
 
   private void assertJournaledEditsTxnCountAndContents(int startTxn,
