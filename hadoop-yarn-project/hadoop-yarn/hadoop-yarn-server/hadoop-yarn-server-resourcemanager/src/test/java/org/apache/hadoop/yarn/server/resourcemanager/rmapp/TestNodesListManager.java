@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.slf4j.event.Level;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentMatcher;
@@ -55,6 +56,27 @@ import org.mockito.ArgumentMatcher;
 public class TestNodesListManager {
   private boolean isRMAppEvent;
   private boolean isNodesListEvent;
+  private MockRM rm;
+  private NodesListManager.CachedResolver resolver;
+
+  @AfterEach
+  public void tearDown() {
+    try {
+      if (rm != null) {
+        rm.stop();
+      }
+    } finally {
+      try {
+        if (rm != null) {
+          rm.getNodesListManager().stop();
+        }
+      } finally {
+        if (resolver != null) {
+          resolver.stop();
+        }
+      }
+    }
+  }
 
   @Test
   @Timeout(value = 300)
@@ -62,7 +84,7 @@ public class TestNodesListManager {
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
     final Dispatcher dispatcher = getDispatcher();
     YarnConfiguration conf = new YarnConfiguration();
-    MockRM rm = new MockRM(conf) {
+    rm = new MockRM(conf) {
       @Override
       protected Dispatcher createDispatcher() {
         return dispatcher;
@@ -102,7 +124,7 @@ public class TestNodesListManager {
     ControlledClock clock = new ControlledClock();
     clock.setTime(0);
     final int CACHE_EXPIRY_INTERVAL_SECS = 30;
-    NodesListManager.CachedResolver resolver =
+    resolver =
         new NodesListManager.CachedResolver(clock, CACHE_EXPIRY_INTERVAL_SECS);
     resolver.init(new YarnConfiguration());
     resolver.start();
@@ -138,12 +160,12 @@ public class TestNodesListManager {
 
     YarnConfiguration conf = new YarnConfiguration();
 
-    MockRM rm = new MockRM(conf);
+    rm = new MockRM(conf);
     rm.init(conf);
     NodesListManager nodesListManager = rm.getNodesListManager();
 
-    NodesListManager.Resolver resolver = nodesListManager.getResolver();
-    assertTrue(resolver instanceof NodesListManager.DirectResolver,
+    NodesListManager.Resolver defaultResolver = nodesListManager.getResolver();
+    assertTrue(defaultResolver instanceof NodesListManager.DirectResolver,
         "default resolver should be DirectResolver");
   }
 
@@ -154,14 +176,13 @@ public class TestNodesListManager {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.RM_NODE_IP_CACHE_EXPIRY_INTERVAL_SECS, 30);
 
-    MockRM rm = new MockRM(conf);
+    rm = new MockRM(conf);
     rm.init(conf);
     NodesListManager nodesListManager = rm.getNodesListManager();
     nodesListManager.init(conf);
     nodesListManager.start();
 
-    NodesListManager.CachedResolver resolver =
-        (NodesListManager.CachedResolver)nodesListManager.getResolver();
+    resolver = (NodesListManager.CachedResolver) nodesListManager.getResolver();
 
     resolver.addToCache("testCachedResolverHost1", "1.1.1.1");
     resolver.addToCache("testCachedResolverHost2", "1.1.1.2");
