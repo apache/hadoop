@@ -1077,23 +1077,26 @@
 
 <property>
   <name>hadoop.security.secret-manager.key-generator.algorithm</name>
-  <value>HmacSHA1</value>
+  <value>HmacSHA256</value>
   <description>
     The configuration key specifying the KeyGenerator algorithm used in SecretManager
     for generating secret keys. The algorithm must be a KeyGenerator algorithm supported by
-    the Java Cryptography Architecture (JCA). Common examples include "HmacSHA1",
-    "HmacSHA256", and "HmacSHA512".
+    the Java Cryptography Architecture (JCA). Common examples include "HmacSHA256" and
+    "HmacSHA512". The default was changed from "HmacSHA1" to "HmacSHA256" to provide
+    stronger security. On upgrade, in-flight short-lived tokens (job tokens, block tokens)
+    will be transparently re-issued with the new algorithm; long-lived delegation tokens
+    should be renewed or re-issued after the cluster upgrade completes.
   </description>
 </property>
 
 <property>
   <name>hadoop.security.secret-manager.key-length</name>
-  <value>64</value>
+  <value>256</value>
   <description>
-    The configuration key specifying the key length of the generated secret keys
-    in SecretManager. The key length must be appropriate for the algorithm.
-    For example, longer keys are generally more secure but may not be supported
-    by all algorithms.
+    The configuration key specifying the key length (in bits) of the generated secret keys
+    in SecretManager. The key length must be appropriate for the selected algorithm.
+    The default was changed from 64 to 256 bits to match the recommended key size for
+    HmacSHA256 and to provide adequate security margin.
   </description>
 </property>
 
