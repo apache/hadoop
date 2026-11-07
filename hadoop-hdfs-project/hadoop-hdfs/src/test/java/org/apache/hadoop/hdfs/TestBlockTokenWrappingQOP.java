@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -59,6 +60,7 @@ public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
 
   private String configKey;
   private String qopValue;
+  private int auxiliaryPort;
 
   public static Collection<Object[]> qopSettings() {
     // if configured with privacy, the negotiated QOP should auth-conf
@@ -78,20 +80,25 @@ public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
   }
 
   public void setup() throws Exception {
+    auxiliaryPort = NetUtils.getFreeSocketPort();
+    int servicePort = NetUtils.getFreeSocketPort();
     conf = createSecureConfig(this.configKey);
-    conf.set(DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY, "12000");
+    conf.set(DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY,
+        String.valueOf(auxiliaryPort));
     // explicitly setting service rpc for datanode. This because
     // DFSUtil.getNNServiceRpcAddressesForCluster looks up client facing port
     // and service port at the same time, and if no setting for service
     // rpc, it would return client port, in this case, it will be the
     // auxiliary port for data node. Which is not what auxiliary is for.
     // setting service rpc port to avoid this.
-    conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "localhost:9020");
+    conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+        "localhost:" + servicePort);
     conf.set(
         CommonConfigurationKeys.HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS,
         "org.apache.hadoop.security.IngressPortBasedResolver");
-    conf.set("ingress.port.sasl.configured.ports", "12000");
-    conf.set("ingress.port.sasl.prop.12000", this.configKey);
+    conf.set("ingress.port.sasl.configured.ports",
+        String.valueOf(auxiliaryPort));
+    conf.set("ingress.port.sasl.prop." + auxiliaryPort, this.configKey);
     conf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     conf.setBoolean(DFS_NAMENODE_SEND_QOP_ENABLED, true);
     conf.set(HADOOP_RPC_PROTECTION, this.configKey);
@@ -104,7 +111,7 @@ public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
         CommonConfigurationKeys.HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS);
     URI currentURI = cluster.getURI();
     URI uriAuxiliary = new URI(currentURI.getScheme() +
-        "://" + currentURI.getHost() + ":12000");
+        "://" + currentURI.getHost() + ":" + auxiliaryPort);
     dfs = (DistributedFileSystem) FileSystem.get(uriAuxiliary, conf);
   }
 
