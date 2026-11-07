@@ -229,13 +229,13 @@ public class FifoCandidatesSelector
       }
 
       // Try to preempt this container
-     CapacitySchedulerPreemptionUtils
+      boolean selected = CapacitySchedulerPreemptionUtils
           .tryPreemptContainerAndDeductResToObtain(rc, preemptionContext,
               resToObtainByPartition, c, clusterResource, selectedContainers,
               curCandidates, totalPreemptionAllowed,
               preemptionContext.getCrossQueuePreemptionConservativeDRF());
 
-      if (!preemptionContext.isObserveOnly()) {
+      if (selected && !preemptionContext.isObserveOnly()) {
         preemptionContext.getRMContext().getDispatcher().getEventHandler()
             .handle(new ContainerPreemptEvent(appId, c,
                 SchedulerEventType.KILL_RESERVED_CONTAINER));
