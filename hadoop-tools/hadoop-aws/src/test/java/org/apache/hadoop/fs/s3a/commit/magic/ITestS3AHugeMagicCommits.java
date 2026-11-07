@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3AStore;
 import org.apache.hadoop.fs.s3a.commit.CommitUtils;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
@@ -229,7 +230,10 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   public void test_800_DeleteHugeFiles() throws IOException {
     if (getFileSystem() != null) {
       try {
-        getFileSystem().abortOutstandingMultipartUploads(0);
+        final S3AStore store = getFileSystem().getStore();
+        store.getStoreWriter()
+            .abortOutstandingMultipartUploads(0, "", 100,
+                store.createStoreContext());
       } catch (IOException e) {
         LOG.info("Exception while purging old uploads", e);
       }
