@@ -35,10 +35,12 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -412,7 +414,8 @@ public class TestOfflineImageViewer {
       PrintStream output = new PrintStream(NullOutputStream.INSTANCE);
       copyPartOfFile(originalFsimage, truncatedFile);
       try (RandomAccessFile r = new RandomAccessFile(truncatedFile, "r")) {
-        new FileDistributionCalculator(new Configuration(), 0, 0, false, output)
+        new FileDistributionCalculator(new Configuration(), 0, 0, false,
+            new OutputStreamWriter(output, StandardCharsets.UTF_8))
             .visit(r);
       }
     });
@@ -437,11 +440,11 @@ public class TestOfflineImageViewer {
   @Test
   public void testFileDistributionCalculator() throws IOException {
     try (ByteArrayOutputStream output = new ByteArrayOutputStream();
-        PrintStream o = new PrintStream(output);
+        OutputStreamWriter w = new OutputStreamWriter(output, StandardCharsets.UTF_8);
         RandomAccessFile r = new RandomAccessFile(originalFsimage, "r")) {
-      new FileDistributionCalculator(new Configuration(), 0, 0, false, o)
+      new FileDistributionCalculator(new Configuration(), 0, 0, false, w)
         .visit(r);
-      o.close();
+      w.flush();
 
       String outputString = output.toString();
       Pattern p = Pattern.compile("totalFiles = (\\d+)\n");
@@ -574,11 +577,12 @@ public class TestOfflineImageViewer {
   public void testPBImageXmlWriter() throws IOException, SAXException,
       ParserConfigurationException {
     ByteArrayOutputStream output = new ByteArrayOutputStream();
-    PrintStream o = new PrintStream(output);
-    PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
+    OutputStreamWriter w = new OutputStreamWriter(output, StandardCharsets.UTF_8);
+    PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), w);
     try (RandomAccessFile r = new RandomAccessFile(originalFsimage, "r")) {
       v.visit(r);
     }
+    w.flush();
     SAXParserFactory spf = XMLUtils.newSecureSAXParserFactory();
     SAXParser parser = spf.newSAXParser();
     final String xml = output.toString();
@@ -1412,9 +1416,10 @@ public class TestOfflineImageViewer {
   @Test
   public void testOfflineImageViewerForECPolicies() throws Exception {
     ByteArrayOutputStream output = new ByteArrayOutputStream();
-    PrintStream o = new PrintStream(output);
-    PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
+    OutputStreamWriter w = new OutputStreamWriter(output, StandardCharsets.UTF_8);
+    PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), w);
     v.visit(new RandomAccessFile(originalFsimage, "r"));
+    w.flush();
     final String xml = output.toString();
 
     DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
