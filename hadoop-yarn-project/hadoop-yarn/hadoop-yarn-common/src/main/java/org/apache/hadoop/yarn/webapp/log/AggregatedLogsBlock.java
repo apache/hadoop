@@ -26,6 +26,7 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.NM_NODENAME;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -85,12 +86,12 @@ public class AggregatedLogsBlock extends HtmlBlock {
       logEntity = containerId.toString();
     }
 
-    String nmApplicationLogUrl = getApplicationLogURL(applicationId);
     if (!conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
         YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)) {
       html.h1()
           .__("Aggregation is not enabled. Try the nodemanager at " + nodeId)
           .__();
+      String nmApplicationLogUrl = getApplicationLogURL(applicationId);
       if(nmApplicationLogUrl != null) {
         html.h1()
             .__("Or see application log at " + nmApplicationLogUrl)
@@ -109,6 +110,7 @@ public class AggregatedLogsBlock extends HtmlBlock {
               + ". Aggregation may not be complete, Check back later or "
               + "try to find the container logs in the local directory of "
               + "nodemanager " + nodeId).__();
+      String nmApplicationLogUrl = getApplicationLogURL(applicationId);
       if(nmApplicationLogUrl != null)  {
         html.h1()
             .__("Or see application log at " + nmApplicationLogUrl)
@@ -133,14 +135,17 @@ public class AggregatedLogsBlock extends HtmlBlock {
     String scheme = YarnConfiguration.useHttps(this.conf) ? "https://":
         "http://";
 
-    String webAppURLWithoutScheme =
-        WebAppUtils.getNMWebAppURLWithoutScheme(conf);
-    if (webAppURLWithoutScheme.contains(":")) {
-      String httpPort =
-          webAppURLWithoutScheme.substring(webAppURLWithoutScheme.lastIndexOf(':') + 1);
-      nodeId = NetUtils.getHostPortString(NodeId.fromString(nodeId).getHost(),
-          Integer.parseInt(httpPort));
+    HostAndPort webApp;
+    try {
+      webApp = HostAndPort.fromString(WebAppUtils.getNMWebAppURLWithoutScheme(conf));
+    } catch (IllegalArgumentException e) {
+      return null;
     }
+    // Without a configured port the NM picks one, which is not known here.
+    if (!webApp.hasPort()) {
+      return null;
+    }
+    nodeId = NetUtils.getHostPortString(NodeId.fromString(nodeId).getHost(), webApp.getPort());
 
     sb.append(scheme).append(nodeId).append("/node/application/").append(appId);
     return sb.toString();
