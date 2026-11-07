@@ -28,8 +28,10 @@ import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -53,6 +55,8 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
+
+import static java.util.Objects.requireNonNull;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
 import static org.apache.hadoop.fs.VectoredReadUtils.validateAndSortRanges;
@@ -438,7 +442,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     }
 
     /**
-     * Turn off range merging to make buffer recycling more likely (but not guaranteed).
+     * Turn off range merging to limit internal buffering and copying.
      * @return 0, always
      */
     @Override
@@ -467,11 +471,12 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     public void readVectored(final List<? extends FileRange> ranges,
         final IntFunction<ByteBuffer> allocate,
         final Consumer<ByteBuffer> release) throws IOException {
+      requireNonNull(release);
 
       // If the stream doesn't have checksums, just delegate.
       if (dataStreamToHandleVectorIO()) {
         LOG.debug("No checksums for vectored read, delegating to inner stream");
-        datas.readVectored(ranges, allocate);
+        datas.readVectored(ranges, allocate, release);
         return;
       }
       LOG.debug("Checksum vectored read for {} ranges", ranges.size());
@@ -493,9 +498,35 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       }
       List<CombinedFileRange> checksumRanges = findChecksumRanges(dataRanges,
           bytesPerSum, minSeek, maxSize);
-      sums.readVectored(checksumRanges, allocate, release);
-      datas.readVectored(dataRanges, allocate, release);
+      Map<FileRange, ByteBuffer> callerBuffers = new IdentityHashMap<>();
+      try {
+        // Allocate the caller's buffers synchronously, before submitting any reads.
+        // Internal reads may be rounded to checksum boundaries; never return slices
+        // of those buffers, as identity-tracking allocators cannot recycle them.
+        for (FileRange range : sorted) {
+          ByteBuffer buffer = allocate.apply(range.getLength());
+          callerBuffers.put(range, buffer);
+          buffer.limit(range.getLength());
+        }
+        sums.readVectored(checksumRanges, allocate, release);
+        datas.readVectored(dataRanges, allocate, release);
+      } catch (IOException | RuntimeException | Error e) {
+        // No buffers have been exposed to the caller yet. Reads already started
+        // may still be in flight, so release their buffers only after success.
+        releaseReadBuffers(checksumRanges, release);
+        releaseReadBuffers(dataRanges, release);
+        for (ByteBuffer buffer : callerBuffers.values()) {
+          releaseBuffer(buffer, release);
+        }
+        for (FileRange range : sorted) {
+          CompletableFuture<ByteBuffer> failed = new CompletableFuture<>();
+          failed.completeExceptionally(e);
+          range.setData(failed);
+        }
+        throw e;
+      }
       for(CombinedFileRange checksumRange: checksumRanges) {
+        List<CompletableFuture<ByteBuffer>> verifications = new ArrayList<>();
         for(FileRange dataRange: checksumRange.getUnderlying()) {
           // when we have both the ranges, validate the checksum
           CompletableFuture<ByteBuffer> result =
@@ -503,11 +534,72 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
                   (sumBuffer, dataBuffer) ->
                       checkBytes(sumBuffer, checksumRange.getOffset(),
                           dataBuffer, dataRange.getOffset(), bytesPerSum, file));
-          // Now, slice the read data range to the user's ranges
-          for(FileRange original: ((CombinedFileRange) dataRange).getUnderlying()) {
-            original.setData(result.thenApply(
-                (b) -> VectoredReadUtils.sliceTo(b, dataRange.getOffset(), original)));
+          verifications.add(result);
+          List<CompletableFuture<ByteBuffer>> copies = new ArrayList<>();
+          for (FileRange original : ((CombinedFileRange) dataRange).getUnderlying()) {
+            ByteBuffer target = callerBuffers.get(original);
+            CompletableFuture<ByteBuffer> copy = result.thenApply(buffer -> {
+              target.put(VectoredReadUtils.sliceTo(buffer, dataRange.getOffset(), original));
+              target.flip();
+              return target;
+            }).whenComplete((buffer, ex) -> {
+              if (ex != null) {
+                release.accept(target);
+              }
+            });
+            original.setData(copy);
+            copies.add(copy);
           }
+          // Wait for every copy before recycling the shared internal data buffer.
+          CompletableFuture.allOf(copies.toArray(new CompletableFuture[0]))
+              .whenComplete((unused, ex) -> {
+                if (!dataRange.getData().isCompletedExceptionally()) {
+                  releaseBuffer(dataRange.getData().join(), release);
+                }
+              });
+        }
+        // Release the checksum buffer once all verifications using it are complete.
+        // Without this, buffers allocated through the caller's allocator for checksum
+        // data are never released, since the caller has no reference to them.
+        CompletableFuture.allOf(verifications.toArray(new CompletableFuture[0]))
+            .whenComplete((unused, ex) -> {
+              // A failed checksum read already releases its buffer in the inner stream.
+              // Otherwise release it even if verification or a data read failed.
+              if (!checksumRange.getData().isCompletedExceptionally()) {
+                releaseBuffer(checksumRange.getData().join(), release);
+              }
+            });
+      }
+    }
+
+    /**
+     * Release successful internal reads after synchronous setup fails. Ranges
+     * without a future have not been submitted, and failed reads are responsible
+     * for releasing their own buffers.
+     * @param ranges internal ranges, none of which have been exposed to the caller
+     * @param release buffer release operation
+     */
+    private static void releaseReadBuffers(List<? extends FileRange> ranges,
+        Consumer<ByteBuffer> release) {
+      for (FileRange range : ranges) {
+        CompletableFuture<ByteBuffer> data = range.getData();
+        if (data != null) {
+          data.thenAccept(buffer -> releaseBuffer(buffer, release));
+        }
+      }
+    }
+
+    /**
+     * Release an internal or unsubmitted buffer. No caller-visible future observes
+     * this cleanup, so log callback failures rather than losing them in a discarded
+     * completion stage or masking a synchronous setup failure.
+     */
+    private static void releaseBuffer(ByteBuffer buffer, Consumer<ByteBuffer> release) {
+      if (buffer != null) {
+        try {
+          release.accept(buffer);
+        } catch (RuntimeException | Error e) {
+          LOG.warn("Failed to release vectored read buffer", e);
         }
       }
     }
@@ -527,19 +619,15 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     }
 
     /**
-     * For this stream, declare that range merging may take place;
-     * otherwise delegate to the inner stream.
+     * Caller-visible buffers are never sliced, even when internal ranges are merged.
      * @param capability string to query the stream support for.
-     * @return true for sliced vector IO if checksum validation
-     * is taking place. False if no checksums are present for the validation.
-     * For all other probes: pass to the wrapped stream
+     * @return false for sliced vector IO; otherwise pass to the wrapped stream
      */
     @Override
     public boolean hasCapability(String capability) {
       switch (capability.toLowerCase(Locale.ENGLISH)) {
-        // slicing can take place during coalescing and checksumming
       case StreamCapabilities.VECTOREDIO_BUFFERS_SLICED:
-        return !dataStreamToHandleVectorIO();
+        return false;
       default:
         return datas.hasCapability(capability);
       }
@@ -1194,7 +1282,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     case CommonPathCapabilities.FS_CONCAT:
       return false;
     case StreamCapabilities.VECTOREDIO_BUFFERS_SLICED:
-      return getVerifyChecksum();
+      return false;
 
     default:
       return super.hasPathCapability(p, capability);

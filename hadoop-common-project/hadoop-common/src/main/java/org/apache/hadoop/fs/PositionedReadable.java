@@ -141,16 +141,24 @@ public interface PositionedReadable {
 
   /**
    * Extension of {@link #readVectored(List, IntFunction)} where a {@code release(buffer)}
-   * operation may be invoked if problems surface during reads.
+   * operation may be invoked if problems surface during reads, or to release
+   * internal buffers which are not returned to the caller.
    * <p>
-   * The {@code release} operation is invoked after an IOException
-   * to return the actively buffer to a pool before reporting a failure
-   * in the future.
+   * For buffers holding caller-visible range data, the {@code release} operation
+   * is invoked after an IOException to return the active buffer to a pool before
+   * reporting a failure in the future. Buffers used only internally, such as
+   * checksum buffers, should be released once they are no longer needed, whether
+   * the read succeeds or fails. For each allocation, a buffer must not be released
+   * more than once, or if it has been returned to the caller.
    * <p>
-   * The default implementation calls {@link #readVectored(List, IntFunction)}.p
+   * {@code release} may be invoked asynchronously, including after this method
+   * has thrown. Callers must keep the release target valid until all submitted
+   * reads complete.
+   * <p>
+   * The default implementation calls {@link #readVectored(List, IntFunction)}.
    * <p>
    * Implementations SHOULD override this method if they can release buffers as
-   * part of their error handling.
+   * part of their error handling or internal buffer management.
    * @param ranges the byte ranges to read
    * @param allocate function to allocate ByteBuffer
    * @param release callable to release a ByteBuffer.
