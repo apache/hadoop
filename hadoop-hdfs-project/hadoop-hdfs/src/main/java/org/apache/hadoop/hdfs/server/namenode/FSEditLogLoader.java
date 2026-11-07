@@ -141,6 +141,17 @@ public class FSEditLogLoader {
   private final BlockManager blockManager;
   private final Timer timer;
   private long lastAppliedTxId;
+  private java.util.function.LongConsumer rollbackCheckpointBoundary;
+  private boolean stoppedForRollbackCheckpoint;
+
+  void setRollbackCheckpointBoundary(java.util.function.LongConsumer boundary) {
+    rollbackCheckpointBoundary = boundary;
+  }
+
+  boolean isStoppedForRollbackCheckpoint() {
+    return stoppedForRollbackCheckpoint;
+  }
+
   /** Total number of end transactions loaded. */
   private int totalEdits = 0;
   
@@ -325,6 +336,15 @@ public class FSEditLogLoader {
           }
           numEdits++;
           totalEdits++;
+          if (rollbackCheckpointBoundary != null
+              && op.opCode == FSEditLogOpCodes.OP_END_LOG_SEGMENT
+              && fsNamesys.isNeedRollbackFsImage()) {
+            // Async RPC streams can include START of the next segment in the
+            // same batch. Preserve a boundary that JNs can actually discard at.
+            stoppedForRollbackCheckpoint = true;
+            rollbackCheckpointBoundary.accept(lastAppliedTxId);
+            break;
+          }
           if(numEdits >= maxTxnsToRead) {
             break;
           }

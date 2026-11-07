@@ -208,13 +208,6 @@ public class StandbyCheckpointer {
       long prevCheckpointTxId = img.getStorage().getMostRecentCheckpointTxId();
       long thisCheckpointTxId = img.getCorrectLastAppliedOrWrittenTxId();
       assert thisCheckpointTxId >= prevCheckpointTxId;
-      if (thisCheckpointTxId == prevCheckpointTxId) {
-        LOG.info("A checkpoint was triggered but the Standby Node has not " +
-            "received any transactions since the last checkpoint at txid {}. " +
-            "Skipping...", thisCheckpointTxId);
-        return;
-      }
-
       if (namesystem.isRollingUpgrade()
           && !namesystem.getFSImage().hasRollbackFSImage()) {
         // if we will do rolling upgrade but have not created the rollback image
@@ -223,6 +216,19 @@ public class StandbyCheckpointer {
       } else {
         imageType = NameNodeFile.IMAGE;
       }
+      if (imageType == NameNodeFile.IMAGE_ROLLBACK
+          && !namesystem.getEditLogTailer().isRollbackCheckpointReady()) {
+        LOG.info("Waiting for a finalized segment boundary before saving rollback image");
+        return;
+      }
+      if (thisCheckpointTxId == prevCheckpointTxId
+          && imageType != NameNodeFile.IMAGE_ROLLBACK) {
+        LOG.info("A checkpoint was triggered but the Standby Node has not " +
+            "received any transactions since the last checkpoint at txid {}. " +
+            "Skipping...", thisCheckpointTxId);
+        return;
+      }
+
       img.saveNamespace(namesystem, imageType, canceler);
       txid = img.getStorage().getMostRecentCheckpointTxId();
       assert txid == thisCheckpointTxId : "expected to save checkpoint at txid=" +
@@ -475,6 +481,12 @@ public class StandbyCheckpointer {
             // on all nodes, we build the checkpoint. However, we only ship the checkpoint if have a
             // rollback request, are the checkpointer, are outside the quiet period.
             doCheckpoint();
+            if (needRollbackCheckpoint && !namesystem.getFSImage().hasRollbackFSImage()) {
+              // The tailer must reach END first. Release cpLock and avoid a
+              // busy loop starving replay, even with one transaction per batch.
+              Thread.sleep(1000);
+              continue;
+            }
 
             // reset needRollbackCheckpoint to false only when we finish a ckpt
             // for rollback image
