@@ -276,6 +276,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
   private final String defaultECPolicyName;
 
+  private final HomeDirectoryAutoCreator homeDirectoryAutoCreator;
+
   // Users who can override the client info
   private final String[] ipProxyUsers;
 
@@ -556,6 +558,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     if (lifelineRpcServer != null) {
       lifelineRpcServer.setTracer(nn.tracer);
     }
+
+    homeDirectoryAutoCreator = new HomeDirectoryAutoCreator(conf, nn);
     int[] auxiliaryPorts =
         conf.getInts(DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY);
     if (auxiliaryPorts != null && auxiliaryPorts.length != 0) {
@@ -670,6 +674,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @VisibleForTesting
   public InetSocketAddress getRpcAddress() {
     return clientRpcAddress;
+  }
+
+  public HomeDirectoryAutoCreator getHomeDirectoryAutoCreator() {
+    return homeDirectoryAutoCreator;
   }
 
   @VisibleForTesting
@@ -848,6 +856,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       String storagePolicy)
       throws IOException {
     checkNNStartup();
+    ensureHomeDirectory();
     String clientMachine = getClientMachine();
     stateChangeLog.debug("*DIR* NameNode.create: file {} for {} at {}.",
         src, clientName, clientMachine);
@@ -1204,9 +1213,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public boolean mkdirs(String src, FsPermission masked, boolean createParent)
       throws IOException {
     checkNNStartup();
+    ensureHomeDirectory();
     stateChangeLog.debug("*DIR* NameNode.mkdirs: {}.", src);
     if (!checkPathLength(src)) {
-      throw new IOException("mkdirs: Pathname too long.  Limit " 
+      throw new IOException("mkdirs: Pathname too long.  Limit "
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
     return namesystem.mkdirs(src,
@@ -1231,6 +1241,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public DirectoryListing getListing(String src, byte[] startAfter,
       boolean needLocation) throws IOException {
     checkNNStartup();
+    ensureHomeDirectory();
     DirectoryListing files = namesystem.getListing(
         src, startAfter, needLocation);
     if (files != null) {
@@ -1264,6 +1275,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public HdfsFileStatus getFileInfo(String src) throws IOException {
     checkNNStartup();
+    ensureHomeDirectory();
     metrics.incrFileInfoOps();
     return namesystem.getFileInfo(src, true, false, false);
   }
@@ -1272,6 +1284,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public HdfsLocatedFileStatus getLocatedFileInfo(String src,
       boolean needBlockToken) throws IOException {
     checkNNStartup();
+    ensureHomeDirectory();
     if (needBlockToken) {
       metrics.incrGetBlockLocations();
     } else {
@@ -2402,6 +2415,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     } finally {
       RetryCache.setState(cacheEntry, success);
     }
+  }
+
+  private void ensureHomeDirectory() throws IOException {
+    homeDirectoryAutoCreator.ensureHomeDirectory(getRemoteUser());
   }
 
   private void checkNNStartup() throws IOException {
