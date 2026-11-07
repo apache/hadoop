@@ -93,6 +93,16 @@
                       "resourceValue" : "0.0"
                     } ]
                   },
+                  "maximumQueueCapacityVectorInfo" : {
+                    "configuredCapacityVector" : "[memory-mb=0.0,vcores=0.0]",
+                    "capacityVectorEntries" : [ {
+                      "resourceName" : "memory-mb",
+                      "resourceValue" : "0.0"
+                    }, {
+                      "resourceName" : "vcores",
+                      "resourceValue" : "0.0"
+                    } ]
+                  },
                   "capacity" : 0.0,
                   "usedCapacity" : 0.0,
                   "maxCapacity" : 100.0,
@@ -538,6 +548,16 @@
                       "resourceValue" : "0.0"
                     } ]
                   },
+                  "maximumQueueCapacityVectorInfo" : {
+                    "configuredCapacityVector" : "[memory-mb=0.0,vcores=0.0]",
+                    "capacityVectorEntries" : [ {
+                      "resourceName" : "memory-mb",
+                      "resourceValue" : "0.0"
+                    }, {
+                      "resourceName" : "vcores",
+                      "resourceValue" : "0.0"
+                    } ]
+                  },
                   "capacity" : 0.0,
                   "usedCapacity" : 0.0,
                   "maxCapacity" : 100.0,
@@ -969,6 +989,16 @@
                   "resourceValue" : "0.0"
                 } ]
               },
+              "maximumQueueCapacityVectorInfo" : {
+                "configuredCapacityVector" : "[memory-mb=0.0,vcores=0.0]",
+                "capacityVectorEntries" : [ {
+                  "resourceName" : "memory-mb",
+                  "resourceValue" : "0.0"
+                }, {
+                  "resourceName" : "vcores",
+                  "resourceValue" : "0.0"
+                } ]
+              },
               "capacity" : 0.0,
               "usedCapacity" : 0.0,
               "maxCapacity" : 100.0,
@@ -1271,6 +1301,16 @@
                 }, {
                   "resourceName" : "vcores",
                   "resourceValue" : "1.0"
+                } ]
+              },
+              "maximumQueueCapacityVectorInfo" : {
+                "configuredCapacityVector" : "[memory-mb=0.0,vcores=0.0]",
+                "capacityVectorEntries" : [ {
+                  "resourceName" : "memory-mb",
+                  "resourceValue" : "0.0"
+                }, {
+                  "resourceName" : "vcores",
+                  "resourceValue" : "0.0"
                 } ]
               },
               "capacity" : 3.125,
@@ -1669,6 +1709,16 @@
         "queueCapacitiesByPartition" : [ {
           "partitionName" : "",
           "queueCapacityVectorInfo" : {
+            "configuredCapacityVector" : "[memory-mb=100.0%,vcores=100.0%]",
+            "capacityVectorEntries" : [ {
+              "resourceName" : "memory-mb",
+              "resourceValue" : "100.0%"
+            }, {
+              "resourceName" : "vcores",
+              "resourceValue" : "100.0%"
+            } ]
+          },
+          "maximumQueueCapacityVectorInfo" : {
             "configuredCapacityVector" : "[memory-mb=100.0%,vcores=100.0%]",
             "capacityVectorEntries" : [ {
               "resourceName" : "memory-mb",
