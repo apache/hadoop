@@ -315,8 +315,25 @@ public class DatanodeAdminManager {
               blockManager.getMinStorageNum(block));
         }
       } else {
-        // Can decom a non-UC as long as the default replication is met
-        if (numLive >= blockManager.getDefaultStorageNum(block)) {
+        // Can decom a non-UC as long as the default replication is met.
+        // Also count excess replicas: they are physically present block copies
+        // that contribute to redundancy. This handles the case where a standby
+        // NameNode incorrectly marks a replica as excess (e.g., due to a timing
+        // race where the block report from the newly-added replica arrives before
+        // the decommission state is propagated to the standby). If decommission
+        // proceeds and the excess replica is later deleted, the block manager
+        // will detect under-replication and schedule re-replication. We require
+        // at least dfs.replication.min live copies to ensure durability.
+        final int numLiveAndExcess =
+            numLive + numberReplicas.excessReplicas();
+        if (numLiveAndExcess >= blockManager.getDefaultStorageNum(block)
+            && blockManager.hasMinStorage(block, numLive)) {
+          LOG.trace("Block {} sufficiently-replicated for decommission: "
+              + "numLive ({}) + excessReplicas ({}) >= defaultReplication ({})"
+              + " and numLive >= minReplication ({})", block, numLive,
+              numberReplicas.excessReplicas(),
+              blockManager.getDefaultStorageNum(block),
+              blockManager.getMinStorageNum(block));
           return true;
         }
       }
