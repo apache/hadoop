@@ -28,14 +28,15 @@ import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.eclipse.jetty.websocket.api.Session;
-import org.eclipse.jetty.websocket.api.UpgradeRequest;
-import org.eclipse.jetty.websocket.client.WebSocketClient;
+import org.eclipse.jetty.ee8.websocket.api.Session;
+import org.eclipse.jetty.ee8.websocket.api.UpgradeRequest;
+import org.eclipse.jetty.ee8.websocket.client.WebSocketClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
@@ -48,6 +49,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Test class for Node Manager Container Web Socket.
@@ -125,31 +127,36 @@ public class TestNMContainerWebSocket {
     return new NodeHealthCheckerService(dirsHandler);
   }
 
+  /**
+   * The container shell endpoint completes a WebSocket upgrade.
+   * <p>
+   * What is asserted is the handshake, not a working shell: there is no
+   * container "abc" here, so ContainerShellWebSocket closes the session
+   * shortly after it opens. Getting a Session at all is the interesting part,
+   * because it is the whole Jetty upgrade path - and it is what breaks, with a
+   * 500, when the WebSocket components are missing from the context.
+   */
   @Test
-  public void testWebServerWithServlet() {
+  public void testWebServerWithServlet() throws Exception {
     int port = startNMWebAppServer("0.0.0.0");
     LOG.info("bind to port: " + port);
-    StringBuilder sb = new StringBuilder();
-    sb.append("ws://localhost:").append(port).append("/container/abc/");
-    String dest = sb.toString();
+    String dest = "ws://localhost:" + port + "/container/abc/";
     WebSocketClient client = new WebSocketClient();
     try {
-      ContainerShellClientSocketTest socket = new ContainerShellClientSocketTest();
+      ContainerShellClientSocketTest socket =
+          new ContainerShellClientSocketTest();
       client.start();
-      URI echoUri = new URI(dest);
-      Future<Session> future = client.connect(socket, echoUri);
-      Session session = future.get();
-      session.getRemote().sendString("hello world");
+      Future<Session> future = client.connect(socket, new URI(dest));
+      Session session = future.get(30, TimeUnit.SECONDS);
+      assertNotNull(session, "WebSocket upgrade produced no session");
+      assertTrue(socket.getLatch().await(30, TimeUnit.SECONDS),
+          "the client was never told the WebSocket had connected");
       session.close();
-      client.stop();
-    } catch (Throwable t) {
-      LOG.error("Failed to connect WebSocket and send message to server", t);
     } finally {
       try {
         client.stop();
+      } finally {
         server.close();
-      } catch (Exception e) {
-        LOG.error("Failed to close client", e);
       }
     }
   }

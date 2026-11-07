@@ -55,9 +55,13 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.eclipse.jetty.util.log.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MockNM {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MockNM.class);
+
 
   private int responseId;
   private NodeId nodeId;
@@ -238,7 +242,7 @@ public class MockNM {
     ArrayList<ContainerStatus> containerStatusList =
         new ArrayList<ContainerStatus>(1);
     containerStatusList.add(containerStatus);
-    Log.getLog().info("ContainerStatus: " + containerStatus);
+    LOG.info("ContainerStatus: " + containerStatus);
     return nodeHeartbeat(containerStatusList,
         Collections.<Container>emptyList(), true, responseId);
   }

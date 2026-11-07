@@ -124,10 +124,6 @@
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>jakarta.servlet</groupId>
-          <artifactId>jakarta.servlet-api</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>jakarta.ws.rs</groupId>
           <artifactId>jakarta.ws.rs-api</artifactId>
         </exclusion>
@@ -419,7 +415,6 @@
     </dependency>
     <!-- Add back in the transitive dependencies excluded from hadoop-common in client TODO remove once we have a filter for "is in these artifacts" -->
     <!-- skip javax.servlet:javax.servlet-api because it's in client -->
-    <!-- skip jakarta.servlet:jakarta.servlet-api because it's in client -->
     <!-- skip jakarta.ws.rs-api:jakarta.ws.rs because it's in client -->
     <!-- Skip commons-logging:commons-logging-api because it looks like nothing actually included it -->
     <dependency>
@@ -463,7 +458,6 @@
     </dependency>
     <!-- add back in transitive dependencies of hadoop-mapreduce-client-app removed in client -->
     <!-- Skipping javax.servlet:javax.servlet-api because it's in client -->
-    <!-- Skipping jakarta.servlet:jakarta.servlet-api because it's in client -->
     <!-- Skipping jakarta.ws.rs-api:jakarta.ws.rs because it's in client -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -473,10 +467,6 @@
         <exclusion>
           <groupId>javax.servlet</groupId>
           <artifactId>javax.servlet-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>jakarta.servlet</groupId>
-          <artifactId>jakarta.servlet-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
@@ -550,10 +540,6 @@
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>jakarta.servlet</groupId>
-          <artifactId>jakarta.servlet-api</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>jakarta.ws.rs</groupId>
           <artifactId>jakarta.ws.rs-api</artifactId>
         </exclusion>
@@ -617,10 +603,6 @@
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
           <artifactId>jakarta.ws.rs-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>jakarta.servlet</groupId>
-          <artifactId>jakarta.servlet-api</artifactId>
         </exclusion>
         <exclusion>
           <artifactId>junit-jupiter</artifactId>
@@ -713,8 +695,14 @@
                       <exclude>junit:junit</exclude>
                       <exclude>com.google.code.findbugs:jsr305</exclude>
                       <exclude>ch.qos.reload4j:reload4j</exclude>
-                      <exclude>org.eclipse.jetty.websocket:websocket-common</exclude>
-                      <exclude>org.eclipse.jetty.websocket:websocket-api</exclude>
+                      <!--
+                        WebSocket is hadoop-client-runtime's to ship. Jetty 12
+                        renamed both of these and split the Jetty-flavoured API
+                        out per EE environment, so the two names become three.
+                      -->
+                      <exclude>org.eclipse.jetty.websocket:jetty-websocket-core-common</exclude>
+                      <exclude>org.eclipse.jetty.ee8.websocket:jetty-ee8-websocket-jetty-api</exclude>
+                      <exclude>org.eclipse.jetty.ee8.websocket:jetty-ee8-websocket-jetty-common</exclude>
                       <!-- We need a filter that matches just those things that are included in the above artiacts -->
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>
@@ -744,6 +732,15 @@
                       <artifact>*:*</artifact>
                       <excludes>
                         <exclude>**/Test*.class</exclude>
+                      </excludes>
+                    </filter>
+                    <!-- Test support of hadoop-common's TestJettyClasspath tests: it checks a
+                         module's own test classpath and is not for minicluster users. -->
+                    <filter>
+                      <artifact>org.apache.hadoop:hadoop-common:*</artifact>
+                      <excludes>
+                        <exclude>org/apache/hadoop/test/AbstractJettyClasspathTest.class</exclude>
+                        <exclude>org/apache/hadoop/test/ClasspathTestUtils.class</exclude>
                       </excludes>
                     </filter>
                     <!-- Since runtime has classes for these jars, we exclude them.
@@ -842,24 +839,12 @@
                       </excludes>
                     </filter>
                     <filter>
-                      <artifact>org.eclipse.jetty.websocket:javax-websocket-server-impl</artifact>
-                      <excludes>
-                        <exclude>*/**</exclude>
-                      </excludes>
-                    </filter>
-                    <filter>
-                      <artifact>org.eclipse.jetty.websocket:websocket-client</artifact>
-                      <excludes>
-                        <exclude>*/**</exclude>
-                      </excludes>
-                    </filter>
-                    <filter>
                       <artifact>org.eclipse.jetty:jetty-io</artifact>
                       <excludes>
                         <exclude>*/**</exclude>
                       </excludes>
                     </filter>
-                    <!-- Jetty 9.4.x: jetty-client and jetty-xml are depended by org.eclipse.jetty.websocket:websocket-client.-->
+                    <!-- jetty-client and jetty-xml are depended by the Jetty WebSocket client. -->
                     <filter>
                       <artifact>org.eclipse.jetty:jetty-client</artifact>
                       <excludes>
