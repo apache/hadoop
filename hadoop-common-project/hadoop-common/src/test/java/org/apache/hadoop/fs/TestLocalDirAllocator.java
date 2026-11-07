@@ -40,6 +40,7 @@ import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -591,6 +592,55 @@ public class TestLocalDirAllocator {
     Assertions.assertThat(ex.getMessage())
         .contains(new File(dir0).getName())
         .contains(new File(dir1).getName());
+  }
+
+  /**
+   * Test that the SIZE_UNKNOWN roulette-wheel allocation raises a
+   * DiskErrorException instead of an ArithmeticException when every
+   * directory with positive reported capacity fails the createPath check
+   * while a directory with zero capacity is still left unsearched.
+   */
+  @Timeout(value = 30)
+  @MethodSource("params")
+  @ParameterizedTest
+  public void testGetLocalPathForWriteWhenAllDirsFailCreate(String paramRoot,
+      String paramPrefix) throws Exception {
+    assumeNotWindows();
+    initTestLocalDirAllocator(paramRoot, paramPrefix);
+    String dir0 = buildBufferDir(root, 7);
+    String dir1 = buildBufferDir(root, 8);
+    File dir0File = new File(new Path(dir0).toUri().getPath());
+    File dir1File = new File(new Path(dir1).toUri().getPath());
+    try {
+      conf.set(CONTEXT, dir0 + "," + dir1);
+      assertTrue(localFs.mkdirs(new Path(dir0)));
+      assertTrue(localFs.mkdirs(new Path(dir1)));
+      // build and cache the allocator context while both dirs are healthy
+      assertNotNull(dirAllocator.getLocalPathForWrite(FILENAME, conf));
+
+      // dir0: delete it, then make the buffer root read-only so the
+      // allocation loop cannot recreate it; it now reports zero
+      // availability yet still counts towards numDirs
+      assertTrue(localFs.delete(new Path(dir0), true));
+      assertTrue(BUFFER_ROOT.setReadOnly());
+      assertFalse(dir0File.exists());
+      // dir1: still present with capacity, but no longer writable, so
+      // createPath(dir1) returns null
+      assertTrue(dir1File.setWritable(false));
+
+      final DiskErrorException ex = intercept(DiskErrorException.class,
+          "Could not find any valid local directory for p1/x",
+          "Expect a DiskErrorException, not an ArithmeticException.",
+          () -> dirAllocator.getLocalPathForWrite("p1/x", conf));
+      Assertions.assertThat(ex.getMessage())
+          .contains(dir0File.getName())
+          .contains(dir1File.getName());
+    } finally {
+      Shell.execCommand(Shell.getSetPermissionCommand("u+w", false,
+                                                      BUFFER_DIR_ROOT));
+      dir1File.setWritable(true);
+      rmBufferDirs();
+    }
   }
 
   /**
