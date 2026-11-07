@@ -119,7 +119,10 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <spotbugs-maven-plugin.version>4.9.7.0</spotbugs-maven-plugin.version>
     <jsonschema2pojo-maven-plugin.version>1.1.1</jsonschema2pojo-maven-plugin.version>
     <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
-    <cyclonedx.version>2.9.1</cyclonedx.version>
+    <cyclonedx.version>2.9.3</cyclonedx.version>
+    <cyclonedx-core-java.version>13.2.0</cyclonedx-core-java.version>
+    <gmavenplus-plugin.version>5.1.0</gmavenplus-plugin.version>
+    <groovy.version>5.0.8</groovy.version>
     <docker-maven-plugin.version>0.29.0</docker-maven-plugin.version>
 
     <shell-executable>bash</shell-executable>
@@ -672,6 +675,23 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
         <artifactId>cyclonedx-maven-plugin</artifactId>
         <version>${cyclonedx.version}</version>
       </plugin>
+      <plugin>
+        <groupId>org.codehaus.gmavenplus</groupId>
+        <artifactId>gmavenplus-plugin</artifactId>
+        <version>${gmavenplus-plugin.version}</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy</artifactId>
+            <version>${groovy.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.cyclonedx</groupId>
+            <artifactId>cyclonedx-core-java</artifactId>
+            <version>${cyclonedx-core-java.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
     </plugins>
   </build>
 
@@ -865,6 +885,27 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <configuration>
               <outputFormat>xml</outputFormat>
             </configuration>
+          </plugin>
+          <plugin>
+            <!-- Post-processes the CycloneDX SBOM into a 1.7 document that
+                 marks dependencies shaded into the jar by maven-shade-plugin.
+                 See dev-support/sbom/sbom.groovy. -->
+            <groupId>org.codehaus.gmavenplus</groupId>
+            <artifactId>gmavenplus-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sbom-postprocess</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>execute</goal>
+                </goals>
+                <configuration>
+                  <scripts>
+                    <script>${maven.multiModuleProjectDirectory}/dev-support/sbom/sbom.groovy</script>
+                  </scripts>
+                </configuration>
+              </execution>
+            </executions>
           </plugin>
         </plugins>
       </build>
