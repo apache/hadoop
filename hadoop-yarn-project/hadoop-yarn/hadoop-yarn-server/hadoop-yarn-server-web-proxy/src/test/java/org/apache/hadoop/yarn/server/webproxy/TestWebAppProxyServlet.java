@@ -443,6 +443,45 @@ public class TestWebAppProxyServlet {
     }
   }
 
+  /**
+   * An application without tracking URL found in another history server is
+   * redirected to the page of that history server, never to the configured
+   * one, and not found if its page is unknown.
+   */
+  @Test
+  @Timeout(5000)
+  void testAppReportFromOtherHistoryServer() throws Exception {
+    configuration.set(YarnConfiguration.PROXY_ADDRESS, "localhost:9090");
+    // overriding num of web server threads, see HttpServer.HTTP_MAXTHREADS
+    configuration.setInt("hadoop.http.max.threads", 10);
+    configuration.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, false);
+    WebAppProxyServerForTest proxy = new WebAppProxyServerForTest();
+    proxy.init(configuration);
+    proxy.start();
+    int proxyPort = proxy.proxy.proxyServer.getConnectorAddress(0).getPort();
+    AppReportFetcherForTest appReportFetcher = proxy.proxy.appReportFetcher;
+    try {
+      ApplicationId app = ApplicationId.newInstance(0, 0);
+      URL url = new URL("http://localhost:" + proxyPort + "/proxy/" + app);
+
+      appReportFetcher.answer = 11;
+      HttpURLConnection proxyConn = (HttpURLConnection) url.openConnection();
+      proxyConn.setInstanceFollowRedirects(false);
+      proxyConn.connect();
+      assertEquals(HttpURLConnection.HTTP_NOT_FOUND, proxyConn.getResponseCode());
+
+      appReportFetcher.answer = 12;
+      proxyConn = (HttpURLConnection) url.openConnection();
+      proxyConn.setInstanceFollowRedirects(false);
+      proxyConn.connect();
+      assertEquals(HttpURLConnection.HTTP_MOVED_TEMP, proxyConn.getResponseCode());
+      assertEquals("http://ahs-sc1:8188/applicationhistory/app/" + app,
+          proxyConn.getHeaderField("Location"));
+    } finally {
+      proxy.close();
+    }
+  }
+
   @Test
   @Timeout(5000)
   void testWebAppProxyPassThroughHeaders() throws Exception {
@@ -720,6 +759,11 @@ public class TestWebAppProxyServlet {
         result.getApplicationReport().setOriginalTrackingUrl("localhost:"
             + originalPort);
         return result;
+      } else if (answer == 11 || answer == 12) {
+        // From the history server of a SubCluster, with or without its page
+        FetchedAppReport result = getDefaultApplicationReport(appId, false);
+        return new FetchedAppReport(result.getApplicationReport(),
+            answer == 12 ? "http://ahs-sc1:8188/applicationhistory/app" : null);
       }
       return null;
     }

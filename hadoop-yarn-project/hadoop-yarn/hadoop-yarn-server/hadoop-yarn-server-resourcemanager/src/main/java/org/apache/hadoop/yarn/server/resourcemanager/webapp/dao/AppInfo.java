@@ -30,6 +30,7 @@ import javax.xml.bind.annotation.XmlTransient;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
@@ -361,6 +362,69 @@ public class AppInfo {
         }
       }
     }
+  }
+
+  /**
+   * Create the information of an application from its report, e.g. for an
+   * application that the RM removed and that is only in the Application
+   * History Server. Only the fields of the report are set: there are no
+   * resource requests, no partition resource usage and no timeouts.
+   *
+   * @param report the application report.
+   * @param schemePrefix the scheme of the tracking URL.
+   */
+  public AppInfo(ApplicationReport report, String schemePrefix) {
+    this.schemePrefix = schemePrefix;
+    this.applicationId = report.getApplicationId();
+    this.id = applicationId.toString();
+    this.appIdNum = String.valueOf(applicationId.getId());
+    this.user = report.getUser();
+    this.name = report.getName();
+    this.queue = report.getQueue();
+    this.state = report.getYarnApplicationState();
+    this.finalStatus = report.getFinalApplicationStatus();
+    this.progress = report.getProgress() * 100;
+    String reportTrackingUrl = report.getTrackingUrl();
+    this.trackingUrlIsNotReady = reportTrackingUrl == null
+        || reportTrackingUrl.isEmpty() || "N/A".equals(reportTrackingUrl);
+    if (trackingUrlIsNotReady) {
+      this.trackingUI = "UNASSIGNED";
+      this.trackingUrlPretty = "UNASSIGNED";
+    } else {
+      this.trackingUI = report.getFinishTime() == 0 ? "ApplicationMaster" : "History";
+      this.trackingUrl = WebAppUtils.getURLWithScheme(schemePrefix, reportTrackingUrl);
+      this.trackingUrlPretty = this.trackingUrl;
+    }
+    this.diagnostics = report.getDiagnostics() == null ? "" : report.getDiagnostics();
+    this.rmClusterId = report.getRMClusterId();
+    this.applicationType = report.getApplicationType();
+    if (report.getApplicationTags() != null && !report.getApplicationTags().isEmpty()) {
+      this.applicationTags = Joiner.on(',').join(report.getApplicationTags());
+    }
+    if (report.getPriority() != null) {
+      this.priority = report.getPriority().getPriority();
+    }
+    this.startedTime = report.getStartTime();
+    this.launchTime = report.getLaunchTime();
+    this.finishedTime = report.getFinishTime();
+    this.elapsedTime = Times.elapsed(report.getStartTime(), report.getFinishTime());
+    if (report.getHost() != null && !report.getHost().isEmpty()
+        && !"N/A".equals(report.getHost())) {
+      this.amRPCAddress = report.getHost() + ":" + report.getRpcPort();
+    }
+    ApplicationResourceUsageReport usage = report.getApplicationResourceUsageReport();
+    if (usage != null) {
+      this.memorySeconds = usage.getMemorySeconds();
+      this.vcoreSeconds = usage.getVcoreSeconds();
+      this.resourceSecondsMap = usage.getResourceSecondsMap();
+      this.preemptedMemorySeconds = usage.getPreemptedMemorySeconds();
+      this.preemptedVcoreSeconds = usage.getPreemptedVcoreSeconds();
+      this.preemptedResourceSecondsMap = usage.getPreemptedResourceSecondsMap();
+    }
+    this.logAggregationStatus = report.getLogAggregationStatus();
+    this.unmanagedApplication = report.isUnmanagedApp();
+    this.appNodeLabelExpression = report.getAppNodeLabelExpression();
+    this.amNodeLabelExpression = report.getAmNodeLabelExpression();
   }
 
   public boolean isTrackingUrlReady() {
