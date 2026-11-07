@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -122,6 +123,61 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
       // raw local fs instance.
       intercept(ChecksumException.class,
           () -> validateVectoredReadResult(ranges, datasetCorrupted, 0));
+    }
+  }
+
+  /**
+   * When the checksum file exists but its header cannot be read, reads
+   * proceed without checksum verification. Vectored reads must do the same
+   * instead of failing against the unusable checksum file.
+   */
+  @Test
+  public void testVectoredReadWithCorruptChecksumHeader() throws Exception {
+    // garbage header
+    verifyVectoredReadWithUnreadableChecksumHeader(
+        new byte[]{0x0, 0x1, 0x2, 0x3});
+  }
+
+  /**
+   * A zero-length checksum file, as left behind by a writer that died
+   * before flushing the checksum header.
+   */
+  @Test
+  public void testVectoredReadWithEmptyChecksumFile() throws Exception {
+    verifyVectoredReadWithUnreadableChecksumHeader(new byte[0]);
+  }
+
+  private void verifyVectoredReadWithUnreadableChecksumHeader(
+      byte[] checksumFileContent) throws Exception {
+    Path testPath = path("corrupt_crc_header_file");
+    final int length = 1024;
+    LocalFileSystem localFs = (LocalFileSystem) getFileSystem();
+    final byte[] dataset = ContractTestUtils.dataset(length, 'a', 32);
+    try (FSDataOutputStream out = localFs.create(testPath, true)) {
+      out.write(dataset);
+    }
+    Path checksumPath = localFs.getChecksumFile(testPath);
+    Assertions.assertThat(localFs.exists(checksumPath))
+        .describedAs("Checksum file should be present")
+        .isTrue();
+    try (FSDataOutputStream out = localFs.getRaw().create(checksumPath, true)) {
+      out.write(checksumFileContent);
+    }
+    try (FSDataInputStream in = localFs.openFile(testPath).build().get()) {
+      byte[] buffer = new byte[length];
+      in.readFully(buffer);
+      assertThat(buffer).describedAs("read data").isEqualTo(dataset);
+    }
+    List<FileRange> ranges = new ArrayList<>();
+    ranges.add(FileRange.createFileRange(10, 100));
+    ranges.add(FileRange.createFileRange(200, 150));
+    CompletableFuture<FSDataInputStream> fis = localFs.openFile(testPath).build();
+    try (FSDataInputStream in = fis.get()) {
+      assertThat(in.hasCapability(StreamCapabilities.VECTOREDIO_BUFFERS_SLICED))
+          .describedAs("sliced buffers without checksum verification")
+          .isFalse();
+      in.readVectored(ranges, getAllocate());
+      validateVectoredReadResult(ranges, dataset, 0);
     }
   }
 

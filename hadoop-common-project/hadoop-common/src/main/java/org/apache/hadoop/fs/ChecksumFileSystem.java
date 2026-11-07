@@ -523,7 +523,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
      * the data stream.
      */
     private boolean dataStreamToHandleVectorIO() {
-      return sums == null;
+      return sums == null || !needChecksum();
     }
 
     /**
