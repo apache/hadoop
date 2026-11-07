@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -488,5 +489,14 @@ public class TestClusterId {
     NameNode.initMetrics(config, NamenodeRole.NAMENODE);
     config.setBoolean(DFSConfigKeys.DFS_REFORMAT_DISABLED, true);
     DFSTestUtil.formatNameNode(config);
+  }
+
+  @Test
+  public void testNewBlockPoolID() {
+    assertThat(NNStorage.newBlockPoolID("192.168.0.10")).matches("BP-\\d+-192\\.168\\.0\\.10-\\d+");
+    assertThat(NNStorage.newBlockPoolID("fd00:dead:beef:0:0:0:0:10"))
+        .matches("BP-\\d+-fd00_dead_beef_0_0_0_0_10-\\d+");
+    assertThat(NNStorage.newBlockPoolID("fe80:0:0:0:0:0:0:1%eth0"))
+        .matches("BP-\\d+-fe80_0_0_0_0_0_0_1-\\d+");
   }
 }
