@@ -1101,7 +1101,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
     LOG.debug("calling addAnswer");
     byte rcode = addAnswer(response, name, type, dclass, 0, flags);
     if (rcode != Rcode.NOERROR) {
-      rcode = remoteLookup(response, name, type, 0);
+      rcode = remoteLookup(response, name, type);
       response.getHeader().setRcode(rcode);
     }
     addAdditional(response, flags);
@@ -1119,47 +1119,44 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
   /**
    * Lookup record from upstream DNS servers.
    */
-  private byte remoteLookup(Message response, Name name, int type,
-      int iterations) {
+  private byte remoteLookup(Message response, Name name, int type) {
     // If retrieving the root zone, query for NS record type
     if (name.toString().equals(".")) {
       type = Type.NS;
     }
 
-    // Always add any CNAMEs to the response first
-    if (type != Type.CNAME) {
-      Record[] cnameAnswers = getRecords(name, Type.CNAME);
-      if (cnameAnswers != null) {
-        for (Record cnameR : cnameAnswers) {
-          if (!response.findRecord(cnameR)) {
-            response.addRecord(cnameR, Section.ANSWER);
+    // Forward lookup to primary DNS servers
+    RemoteAnswer ra = getRecords(name, type);
+
+    // Support for CNAME/DNAME chaining
+    if (ra.aliases != null) {
+      for (Name targetName : ra.aliases) {
+        Record[] answers = getRecords(targetName, Type.CNAME).answers;
+        if (answers == null) {
+          answers = getRecords(targetName, Type.DNAME).answers;
+        }
+        if (answers != null) {
+          for (Record r : answers) {
+            if (!response.findRecord(r)) {
+              response.addRecord(r, Section.ANSWER);
+            }
           }
         }
       }
     }
-
-    // Forward lookup to primary DNS servers
-    Record[] answers = getRecords(name, type);
-    try {
-      for (Record r : answers) {
-        if (!response.findRecord(r)) {
-          if (r.getType() == Type.SOA) {
-            response.addRecord(r, Section.AUTHORITY);
-          } else {
-            response.addRecord(r, Section.ANSWER);
-          }
-        }
-        if (r.getType() == Type.CNAME) {
-          Name cname = r.getName();
-          if (iterations < 6) {
-            remoteLookup(response, cname, type, iterations + 1);
-          }
+    Record[] answers = ra.answers;
+    // no answer
+    if (answers == null) {
+      return (byte)ra.rcode;
+    }
+    for (Record r : answers) {
+      if (!response.findRecord(r)) {
+        if (r.getType() == Type.SOA) {
+          response.addRecord(r, Section.AUTHORITY);
+        } else {
+          response.addRecord(r, Section.ANSWER);
         }
       }
-    } catch (NullPointerException e) {
-      return Rcode.NXDOMAIN;
-    } catch (Throwable e) {
-      return Rcode.SERVFAIL;
     }
     return Rcode.NOERROR;
   }
@@ -1169,20 +1166,32 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
    *
    * @param name - query string
    * @param type - type of DNS record to lookup
-   * @return DNS records
+   * @return DNS records and return code from remote DNS server
    */
-  protected Record[] getRecords(Name name, int type) {
-    Record[] result = null;
+  protected RemoteAnswer getRecords(Name name, int type) {
     ExecutorService executor = Executors.newSingleThreadExecutor();
-    Future<Record[]> future = executor.submit(new LookupTask(name, type));
+    Future<Lookup> future = executor.submit(new LookupTask(name, type));
     try {
-      result = future.get(1500, TimeUnit.MILLISECONDS);
-      return result;
+      Lookup lookup = future.get(1500, TimeUnit.MILLISECONDS);
+      int result = lookup.getResult();
+      int rcode = Rcode.NXDOMAIN;
+      switch (result) {
+        case Lookup.SUCCESSFUL:
+        case Lookup.TYPE_NOT_FOUND:
+          rcode = Rcode.NOERROR;
+          break;
+        case Lookup.HOST_NOT_FOUND:
+          break;
+        default:
+          LOG.warn("Unexpected result from lookup: {} type: {} error: {}", name, Type.string(type), lookup.getErrorString());
+          break;
+      }
+      return new RemoteAnswer(lookup.getAnswers(), lookup.getAliases(), rcode);
     } catch (InterruptedException | ExecutionException |
         TimeoutException | NullPointerException |
         ExceptionInInitializerError e) {
       LOG.warn("Failed to lookup: {} type: {}", name, Type.string(type), e);
-      return result;
+      return new RemoteAnswer(null, null, Rcode.NXDOMAIN);
     } finally {
       executor.shutdown();
     }
@@ -1777,6 +1786,18 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
     @Override
     public void close() {
       lock.unlock();
+    }
+  }
+
+  public static class RemoteAnswer {
+    public Record[] answers;
+    public Name[] aliases;
+    public int rcode;
+
+    public RemoteAnswer(Record[] answers, Name[] aliases, int rcode) {
+      this.answers = answers;
+      this.aliases = aliases;
+      this.rcode = rcode;
     }
   }
 }
