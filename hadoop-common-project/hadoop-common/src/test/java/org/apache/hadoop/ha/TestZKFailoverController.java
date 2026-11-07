@@ -28,6 +28,7 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 import java.net.BindException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.security.NoSuchAlgorithmException;
@@ -140,13 +141,11 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
   }
 
   @Test
-  public void testBindExceptionIsNotMaskedWhenZkfcRpcServerFailsToStart()
-      throws Exception {
+  public void testBindExceptionIsNotMaskedWhenZkfcRpcServerFailsToStart() throws Exception {
     DummyHAService svc = cluster.getService(1);
     assertEquals(0, runFC(svc, "-formatZK"));
 
-    try (ServerSocket occupiedSocket = new ServerSocket(0, 1,
-        java.net.InetAddress.getByName("127.0.0.1"))) {
+    try (ServerSocket occupiedSocket = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))) {
       int occupiedPort = occupiedSocket.getLocalPort();
       DummyZKFC zkfc = new DummyZKFC(conf, svc) {
         @Override
