@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,15 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.util.Lists;
+import software.amazon.awssdk.core.SdkRequest;
+import software.amazon.awssdk.core.interceptor.Context;
+import software.amazon.awssdk.core.interceptor.InterceptorContext;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
+import software.amazon.awssdk.services.sts.model.DecodeAuthorizationMessageRequest;
+import software.amazon.awssdk.services.sts.model.GetSessionTokenRequest;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_STS;
@@ -39,6 +50,8 @@ import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_KEEPALIVE;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_HEADERS_S3;
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_HEADERS_STS;
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_REQUEST_HEADERS_S3_PREFIX;
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_REQUEST_HEADERS_STS_PREFIX;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_ACQUISITION_TIMEOUT_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_IDLE_TIME_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_KEEPALIVE;
@@ -217,14 +230,25 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
   public void testInitRequestHeadersForSTS() throws IOException {
     final Configuration conf = new Configuration();
     conf.set(CUSTOM_HEADERS_STS, "header1=value1;value2,header2=value3");
+    conf.set(CUSTOM_REQUEST_HEADERS_STS_PREFIX + "GetSessionTokenRequest", "header3=value4;value5,header4=value6");
+    conf.set(CUSTOM_REQUEST_HEADERS_STS_PREFIX + "assumerolerequest", "header5=value7");
 
     assertThat(conf.get(CUSTOM_HEADERS_S3))
             .describedAs("Custom client headers for s3 %s", CUSTOM_HEADERS_S3)
             .isNull();
+    assertThat(conf.getPropsWithPrefix(CUSTOM_REQUEST_HEADERS_S3_PREFIX))
+            .describedAs("Custom per-request client headers for s3 %s", CUSTOM_REQUEST_HEADERS_S3_PREFIX)
+            .isEmpty();
 
     assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
             .headers().size())
         .describedAs("Count of S3 client headers")
+        .isEqualTo(0);
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+            .executionInterceptors().stream()
+            .filter(ei -> ei instanceof AddRequestHeaderInterceptor)
+            .count())
+        .describedAs("Count of request header interceptors of S3 client")
         .isEqualTo(0);
 
     assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
@@ -241,6 +265,55 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
             .headers().get("header2"))
         .describedAs("STS client 'header2' header value")
         .isEqualTo(Lists.newArrayList("value3"));
+
+    List<AddRequestHeaderInterceptor> interceptors =
+            createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+                .executionInterceptors().stream()
+                .filter(ei -> ei instanceof AddRequestHeaderInterceptor)
+                .map(ie -> (AddRequestHeaderInterceptor) ie)
+                .toList();
+
+    assertThat(interceptors.size())
+        .describedAs("Count of request header interceptors of STS client")
+        .isEqualTo(1);
+
+    AddRequestHeaderInterceptor interceptor = interceptors.get(0);
+
+    SdkRequest request = DecodeAuthorizationMessageRequest.builder().build();
+    Context.ModifyRequest modifyRequest = InterceptorContext.builder().request(request).build();
+    SdkRequest modifiedRequest = interceptor.modifyRequest(modifyRequest, null);
+    assertThat(modifiedRequest.overrideConfiguration().isPresent())
+            .describedAs("STS list request has override configuration")
+            .isFalse();
+
+    SdkRequest getRequest = GetSessionTokenRequest.builder().build();
+    Context.ModifyRequest modifyGetRequest = InterceptorContext.builder().request(getRequest).build();
+    SdkRequest modifiedGetRequest = interceptor.modifyRequest(modifyGetRequest, null);
+    assertThat(modifiedGetRequest.overrideConfiguration().isPresent())
+        .describedAs("STS list request has override configuration")
+        .isTrue();
+    assertThat(modifiedGetRequest.overrideConfiguration().get().headers().keySet())
+        .describedAs("STS client request headers")
+        .isEqualTo(new HashSet<>(Lists.newArrayList("header3", "header4")));
+    assertThat(modifiedGetRequest.overrideConfiguration().get().headers().get("header3"))
+        .describedAs("STS client request 'header3' header value")
+        .isEqualTo(Lists.newArrayList("value4", "value5"));
+    assertThat(modifiedGetRequest.overrideConfiguration().get().headers().get("header4"))
+        .describedAs("STS client request 'header4' header value")
+        .isEqualTo(Lists.newArrayList("value6"));
+
+    SdkRequest assumeRequest = AssumeRoleRequest.builder().build();
+    Context.ModifyRequest modifyAssumeRequest = InterceptorContext.builder().request(assumeRequest).build();
+    SdkRequest modifiedAssumeRequest = interceptor.modifyRequest(modifyAssumeRequest, null);
+    assertThat(modifiedAssumeRequest.overrideConfiguration().isPresent())
+        .describedAs("STS delete request has override configuration")
+        .isTrue();
+    assertThat(modifiedAssumeRequest.overrideConfiguration().get().headers().keySet())
+        .describedAs("STS client request headers")
+        .isEqualTo(new HashSet<>(Lists.newArrayList("header5")));
+    assertThat(modifiedAssumeRequest.overrideConfiguration().get().headers().get("header5"))
+        .describedAs("STS client request 'header3' header value")
+        .isEqualTo(Lists.newArrayList("value7"));
   }
 
   /**
@@ -251,15 +324,26 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
   public void testInitRequestHeadersForS3() throws IOException {
     final Configuration conf = new Configuration();
     conf.set(CUSTOM_HEADERS_S3, "header1=value1;value2,header2=value3");
+    conf.set(CUSTOM_REQUEST_HEADERS_S3_PREFIX + "ListObjectsV2Request", "header3=value4;value5,header4=value6");
+    conf.set(CUSTOM_REQUEST_HEADERS_S3_PREFIX + "deleteobjectrequest", "header5=value7");
 
     assertThat(conf.get(CUSTOM_HEADERS_STS))
             .describedAs("Custom client headers for STS %s", CUSTOM_HEADERS_STS)
             .isNull();
+    assertThat(conf.getPropsWithPrefix(CUSTOM_REQUEST_HEADERS_STS_PREFIX))
+            .describedAs("Custom per-request client headers for STS %s", CUSTOM_REQUEST_HEADERS_STS_PREFIX)
+            .isEmpty();
 
     assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
             .headers().size())
         .describedAs("Count of STS client headers")
         .isEqualTo(0);
+    assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+            .executionInterceptors().stream()
+            .filter(ei -> ei instanceof AddRequestHeaderInterceptor)
+            .count())
+            .describedAs("Count of request header interceptors of STS client")
+            .isEqualTo(0);
 
     assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
             .headers().size())
@@ -275,6 +359,55 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
             .headers().get("header2"))
         .describedAs("S3 client 'header2' header value")
         .isEqualTo(Lists.newArrayList("value3"));
+
+    List<AddRequestHeaderInterceptor> interceptors =
+            createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+                    .executionInterceptors().stream()
+                    .filter(ei -> ei instanceof AddRequestHeaderInterceptor)
+                    .map(ie -> (AddRequestHeaderInterceptor) ie)
+                    .toList();
+
+    assertThat(interceptors.size())
+        .describedAs("Count of request header interceptors of S3 client")
+        .isEqualTo(1);
+
+    AddRequestHeaderInterceptor interceptor = interceptors.get(0);
+
+    SdkRequest request = CreateBucketRequest.builder().build();
+    Context.ModifyRequest modifyRequest = InterceptorContext.builder().request(request).build();
+    SdkRequest modifiedRequest = interceptor.modifyRequest(modifyRequest, null);
+    assertThat(modifiedRequest.overrideConfiguration().isPresent())
+            .describedAs("S3 list request has override configuration")
+            .isFalse();
+
+    SdkRequest listRequest = ListObjectsV2Request.builder().build();
+    Context.ModifyRequest modifyListRequest = InterceptorContext.builder().request(listRequest).build();
+    SdkRequest modifiedListRequest = interceptor.modifyRequest(modifyListRequest, null);
+    assertThat(modifiedListRequest.overrideConfiguration().isPresent())
+        .describedAs("S3 list request has override configuration")
+        .isTrue();
+    assertThat(modifiedListRequest.overrideConfiguration().get().headers().keySet())
+        .describedAs("S3 client request headers")
+        .isEqualTo(new HashSet<>(Lists.newArrayList("header3", "header4")));
+    assertThat(modifiedListRequest.overrideConfiguration().get().headers().get("header3"))
+        .describedAs("S3 client request 'header3' header value")
+        .isEqualTo(Lists.newArrayList("value4", "value5"));
+    assertThat(modifiedListRequest.overrideConfiguration().get().headers().get("header4"))
+        .describedAs("S3 client request 'header4' header value")
+        .isEqualTo(Lists.newArrayList("value6"));
+
+    SdkRequest deleteRequest = DeleteObjectRequest.builder().build();
+    Context.ModifyRequest modifyDeleteRequest = InterceptorContext.builder().request(deleteRequest).build();
+    SdkRequest modifiedDeleteRequest = interceptor.modifyRequest(modifyDeleteRequest, null);
+    assertThat(modifiedDeleteRequest.overrideConfiguration().isPresent())
+        .describedAs("S3 delete request has override configuration")
+        .isTrue();
+    assertThat(modifiedDeleteRequest.overrideConfiguration().get().headers().keySet())
+        .describedAs("S3 client request headers")
+        .isEqualTo(new HashSet<>(Lists.newArrayList("header5")));
+    assertThat(modifiedDeleteRequest.overrideConfiguration().get().headers().get("header5"))
+          .describedAs("S3 client request 'header3' header value")
+          .isEqualTo(Lists.newArrayList("value7"));
   }
 
   /**
