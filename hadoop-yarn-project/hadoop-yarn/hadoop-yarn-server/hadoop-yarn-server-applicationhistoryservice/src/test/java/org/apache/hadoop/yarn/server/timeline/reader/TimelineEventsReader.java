@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents.EventsOfOneEntity;
+import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.WebApplicationException;
@@ -47,6 +48,10 @@ import java.util.Map;
 public class TimelineEventsReader implements MessageBodyReader<TimelineEvents> {
 
   private ObjectMapper objectMapper = new ObjectMapper();
+
+  public TimelineEventsReader() {
+    YarnJacksonJaxbJsonProvider.configObjectMapper(objectMapper);
+  }
 
   @Override
   public boolean isReadable(Class<?> type, Type genericType,

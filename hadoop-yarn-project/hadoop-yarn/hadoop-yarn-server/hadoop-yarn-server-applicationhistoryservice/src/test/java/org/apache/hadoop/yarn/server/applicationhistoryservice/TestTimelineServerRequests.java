@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -91,6 +92,26 @@ public class TestTimelineServerRequests {
   void testPutAndGetTimelineEntity() throws Exception {
     putEntity();
     getEntity();
+  }
+
+  /**
+   * The put response is written by the generic JSON provider, so it shows
+   * which one the server registered: Jackson writes an empty list as [],
+   * Jettison as "".
+   */
+  @Test
+  void testPutResponseIsWrittenByJackson() {
+    String url = String.format("http://%s:%d/ws/v1/timeline?user.name=foo",
+        HOST, testTimelineServer.getPort());
+    Client client = ClientBuilder.newClient();
+    try (Response response = client.target(url)
+        .request(MediaType.APPLICATION_JSON)
+        .post(Entity.json("{\"entities\":[]}"))) {
+      assertEquals(200, response.getStatus());
+      assertEquals("{\"errors\":[]}", response.readEntity(String.class));
+    } finally {
+      client.close();
+    }
   }
 
   private void putEntity() throws IOException, YarnException {
