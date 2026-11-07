@@ -17,20 +17,29 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .queuemanagement.GatedGuaranteedOrZeroCapacityOverTimePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .queuemanagement.GuaranteedOrZeroCapacityOverTimePolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.Map;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
     .NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CSQueueUtils.EPSILON;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
+    .capacity.CapacitySchedulerConfiguration.AUTO_CREATED_QUEUE_MANAGEMENT_POLICY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestQueueManagementDynamicEditPolicy extends
     TestCapacitySchedulerAutoCreatedQueueBase {
@@ -110,6 +119,63 @@ public class TestQueueManagementDynamicEditPolicy extends
       cleanupQueue(USER1);
       cleanupQueue(USER2);
       cleanupQueue(USER3);
+    }
+  }
+
+  @Test
+  @Timeout(value = 60)
+  public void testMonitorAndReinitializeDoNotDeadlock() throws Exception {
+    // Switch the parent queue to the gated policy.
+    CapacitySchedulerConfiguration conf =
+        new CapacitySchedulerConfiguration(cs.getConfiguration());
+    conf.set(QueuePrefixes.getQueuePrefix(C)
+            + AUTO_CREATED_QUEUE_MANAGEMENT_POLICY,
+        GatedGuaranteedOrZeroCapacityOverTimePolicy.class.getName());
+    cs.reinitialize(conf, mockRM.getRMContext());
+
+    // Finish node registrations first, so no scheduler event is pending on
+    // the parent queue lock when the threads below block.
+    mockRM.drainEvents();
+
+    ManagedParentQueue parentQueue =
+        (ManagedParentQueue) cs.getQueue(PARENT_QUEUE);
+    GatedGuaranteedOrZeroCapacityOverTimePolicy gatedPolicy =
+        (GatedGuaranteedOrZeroCapacityOverTimePolicy)
+            parentQueue.getAutoCreatedQueueManagementPolicy();
+
+    FutureTask<Void> monitor = new FutureTask<>(() -> {
+      policy.editSchedule();
+      return null;
+    });
+    FutureTask<Void> reinit = new FutureTask<>(() -> {
+      parentQueue.reinitialize(parentQueue, cs.getClusterResource());
+      return null;
+    });
+    Thread monitorThread = new Thread(monitor, "queue-management-monitor");
+    Thread reinitThread = new Thread(reinit, "queue-reinitialize");
+    monitorThread.setDaemon(true);
+    reinitThread.setDaemon(true);
+
+    try {
+      // The monitor pauses while holding the policy's write lock.
+      gatedPolicy.gateThread(monitorThread);
+      monitorThread.start();
+      assertTrue(gatedPolicy.awaitGate(10, TimeUnit.SECONDS),
+          "Monitor thread did not reach the policy gate");
+
+      // Reinitialize takes the parent queue's write lock, then blocks.
+      reinitThread.start();
+      GenericTestUtils.waitFor(
+          () -> reinitThread.getState() == Thread.State.WAITING, 10, 10000);
+
+      // If deadlock happens, the monitor waits on the parent queue lock
+      // while reinitialize waits on the policy lock, and both get() calls
+      // time out.
+      gatedPolicy.release();
+      monitor.get(10, TimeUnit.SECONDS);
+      reinit.get(10, TimeUnit.SECONDS);
+    } finally {
+      gatedPolicy.release();
     }
   }
 
