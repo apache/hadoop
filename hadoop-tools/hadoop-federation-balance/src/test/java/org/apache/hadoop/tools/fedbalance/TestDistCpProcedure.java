@@ -201,6 +201,144 @@ public class TestDistCpProcedure {
   }
 
   @Test
+  public void testStopAfterInitialCopyAndStartFromIncremental()
+      throws Exception {
+    String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
+    DistributedFileSystem fs =
+        (DistributedFileSystem) FileSystem.get(URI.create(nnUri), conf);
+    createFiles(fs, testRoot, srcfiles);
+    Path src = new Path(testRoot, SRCDAT);
+    Path dst = new Path(testRoot, DSTDAT);
+
+    FedBalanceContext context = new FedBalanceContext.Builder(src, dst, MOUNT,
+        conf)
+        .setMapNum(10)
+        .setBandwidthLimit(1)
+        .setTrash(TrashOption.TRASH)
+        .setDelayDuration(1000)
+        .setStopAfterInitialCopy(true)
+        .build();
+    DistCpProcedure dcProcedure =
+        new DistCpProcedure("distcp-procedure", null, 1000, context);
+    intercept(IOException.class, "Stopping after initial copy",
+        () -> executeProcedure(dcProcedure, Stage.DIFF_DISTCP,
+            () -> dcProcedure.initDistCp()));
+    assertEquals(Stage.DIFF_DISTCP, dcProcedure.getStage());
+    assertTrue(fs.exists(dst));
+
+    FedBalanceContext restartContext =
+        new FedBalanceContext.Builder(src, dst, MOUNT, conf)
+            .setMapNum(10)
+            .setBandwidthLimit(1)
+            .setTrash(TrashOption.TRASH)
+            .setDelayDuration(1000)
+            .setStartFromIncremental(true)
+            .build();
+    DistCpProcedure restartedProcedure =
+        new DistCpProcedure("distcp-procedure", null, 1000, restartContext);
+    assertEquals(Stage.DIFF_DISTCP, restartedProcedure.getStage());
+    cleanup(fs, new Path(testRoot));
+  }
+
+  @Test
+  public void testDiffStageSentinels() throws Exception {
+    String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
+    DistributedFileSystem fs =
+        (DistributedFileSystem) FileSystem.get(URI.create(nnUri), conf);
+    createFiles(fs, testRoot, srcfiles);
+    Path src = new Path(testRoot, SRCDAT);
+    Path dst = new Path(testRoot, DSTDAT);
+    Path timeWindowSentinel = new Path(testRoot, "time-window-sentinel");
+
+    FedBalanceContext context = new FedBalanceContext.Builder(src, dst, MOUNT,
+        conf)
+        .setMapNum(10)
+        .setBandwidthLimit(1)
+        .setTrash(TrashOption.TRASH)
+        .setDelayDuration(1000)
+        .setDiffThreshold(10)
+        .setStopOnSmallDiff(true)
+        .setTimeWindowSentinelPath(timeWindowSentinel.toString())
+        .build();
+    DistCpProcedure dcProcedure =
+        new DistCpProcedure("distcp-procedure", null, 1000, context);
+    executeProcedure(dcProcedure, Stage.DIFF_DISTCP,
+        () -> dcProcedure.initDistCp());
+    // Outside the time window, diffDistCpStageDone() should keep retrying
+    // rather than hard-stop, even though stopOnSmallDiff is set.
+    intercept(RetryException.class, () -> dcProcedure.diffDistCpStageDone());
+    fs.create(timeWindowSentinel).close();
+    assertTrue(dcProcedure.diffDistCpStageDone());
+    cleanup(fs, new Path(testRoot));
+  }
+
+  @Test
+  public void testStopOnSmallDiffWithOpenFiles() throws Exception {
+    String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
+    DistributedFileSystem fs =
+        (DistributedFileSystem) FileSystem.get(URI.create(nnUri), conf);
+    createFiles(fs, testRoot, srcfiles);
+    Path src = new Path(testRoot, SRCDAT);
+    Path dst = new Path(testRoot, DSTDAT);
+
+    FedBalanceContext context = new FedBalanceContext.Builder(src, dst, MOUNT,
+        conf)
+        .setMapNum(10)
+        .setBandwidthLimit(1)
+        .setTrash(TrashOption.TRASH)
+        .setDelayDuration(1000)
+        .setDiffThreshold(10)
+        .setStopOnSmallDiff(true)
+        .build();
+    DistCpProcedure dcProcedure =
+        new DistCpProcedure("distcp-procedure", null, 1000, context);
+    executeProcedure(dcProcedure, Stage.DIFF_DISTCP,
+        () -> dcProcedure.initDistCp());
+    OutputStream out = fs.append(new Path(src, "a"));
+    try {
+      intercept(IOException.class, "there are still open files",
+          () -> dcProcedure.diffDistCpStageDone());
+    } finally {
+      out.close();
+    }
+    cleanup(fs, new Path(testRoot));
+  }
+
+  @Test
+  public void testForceCloseSentinel() throws Exception {
+    String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
+    DistributedFileSystem fs =
+        (DistributedFileSystem) FileSystem.get(URI.create(nnUri), conf);
+    createFiles(fs, testRoot, srcfiles);
+    Path src = new Path(testRoot, SRCDAT);
+    Path dst = new Path(testRoot, DSTDAT);
+    Path forceCloseSentinel = new Path(testRoot, "force-close-sentinel");
+
+    FedBalanceContext context = new FedBalanceContext.Builder(src, dst, MOUNT,
+        conf)
+        .setMapNum(10)
+        .setBandwidthLimit(1)
+        .setTrash(TrashOption.TRASH)
+        .setDelayDuration(1000)
+        .setDiffThreshold(10)
+        .setForceCloseSentinelPath(forceCloseSentinel.toString())
+        .build();
+    DistCpProcedure dcProcedure =
+        new DistCpProcedure("distcp-procedure", null, 1000, context);
+    executeProcedure(dcProcedure, Stage.DIFF_DISTCP,
+        () -> dcProcedure.initDistCp());
+    OutputStream out = fs.append(new Path(src, "a"));
+    try {
+      intercept(RetryException.class, () -> dcProcedure.diffDistCpStageDone());
+      fs.create(forceCloseSentinel).close();
+      assertTrue(dcProcedure.diffDistCpStageDone());
+    } finally {
+      out.close();
+    }
+    cleanup(fs, new Path(testRoot));
+  }
+
+  @Test
   public void testDiffDistCp() throws Exception {
     String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
     DistributedFileSystem fs =

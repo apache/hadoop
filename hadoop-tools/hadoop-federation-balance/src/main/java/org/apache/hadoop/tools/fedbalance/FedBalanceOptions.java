@@ -82,6 +82,46 @@ public final class FedBalanceOptions {
           + " used. If the trash is disabled in the server side, the default"
           + " trash interval 60 minutes is used.");
 
+  /**
+   * Stop the FedBalance job after the initial DistCp job succeeds.
+   */
+  public final static Option STOP_AFTER_INITIAL_COPY =
+      new Option("stopAfterInitialCopy", false,
+          "Stop the FedBalance job after the initial DistCp job succeeds.");
+
+  /**
+   * Start the FedBalance job from the incremental DistCp stage.
+   */
+  public final static Option START_FROM_INCREMENTAL =
+      new Option("startFromIncremental", false,
+          "Start the FedBalance job from the incremental DistCp stage.");
+
+  /**
+   * Stop instead of retrying when the diff size is small enough but final
+   * copy conditions are not satisfied.
+   */
+  public final static Option STOP_ON_SMALL_DIFF =
+      new Option("stopOnSmallDiff", false,
+          "Stop when the diff size is no greater than the threshold but "
+              + "final copy conditions are not satisfied.");
+
+  /**
+   * A sentinel path that must exist before FedBalance can leave the
+   * incremental DistCp stage.
+   */
+  public final static Option TIME_WINDOW_SENTINEL =
+      new Option("timeWindowSentinel", true,
+          "A sentinel path that must exist before FedBalance can leave the "
+              + "incremental DistCp stage.");
+
+  /**
+   * A sentinel path that makes FedBalance treat open files as force closeable.
+   */
+  public final static Option FORCE_CLOSE_SENTINEL =
+      new Option("forceCloseSentinel", true,
+          "A sentinel path that makes FedBalance treat open files as force "
+              + "closeable.");
+
   public final static Options CLI_OPTIONS = new Options();
 
   static {
@@ -90,5 +130,10 @@ public final class FedBalanceOptions {
     CLI_OPTIONS.addOption(BANDWIDTH);
     CLI_OPTIONS.addOption(DELAY_DURATION);
     CLI_OPTIONS.addOption(TRASH);
+    CLI_OPTIONS.addOption(STOP_AFTER_INITIAL_COPY);
+    CLI_OPTIONS.addOption(START_FROM_INCREMENTAL);
+    CLI_OPTIONS.addOption(STOP_ON_SMALL_DIFF);
+    CLI_OPTIONS.addOption(TIME_WINDOW_SENTINEL);
+    CLI_OPTIONS.addOption(FORCE_CLOSE_SENTINEL);
   }
 }
