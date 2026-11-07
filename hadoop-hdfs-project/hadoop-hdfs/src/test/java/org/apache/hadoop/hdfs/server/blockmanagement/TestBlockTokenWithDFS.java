@@ -21,6 +21,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONN
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -28,6 +29,7 @@ import java.net.Socket;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -220,6 +222,17 @@ public class TestBlockTokenWithDFS {
     // Set short retry timeouts so this test runs faster
     conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
     return conf;
+  }
+
+  @Test
+  public void testInvalidBlockTokenLifetime() {
+    for (long lifetime : new long[] {0, -1}) {
+      Configuration conf = getConf(1);
+      conf.setLong(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY, lifetime);
+      assertThrows(HadoopIllegalArgumentException.class,
+          () -> new MiniDFSCluster.Builder(conf).numDataNodes(1).build(),
+          DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY);
+    }
   }
 
   /**
