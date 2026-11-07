@@ -192,7 +192,7 @@ public class TestRMWebServicesHttpStaticUserPermissions {
         JSONObject remoteException = errResponse
             .getJSONObject("RemoteException");
         assertEquals(
-            "The default static user cannot carry out "
+            "java.lang.Exception: The default static user cannot carry out "
             + "this operation.",
             remoteException.getString("message"));
       }
