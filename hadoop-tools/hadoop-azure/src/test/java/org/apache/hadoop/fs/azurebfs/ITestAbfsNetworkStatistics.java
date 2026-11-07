@@ -39,11 +39,11 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_RECEIVED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_BLOB_LAYOUT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.GET_RESPONSES;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SEND_REQUESTS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CREATE_BLOB_IDEMPOTENCY;
 
 public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
@@ -287,6 +287,11 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
 
       // Assertions
       metricMap = fs.getInstrumentationMap();
+      if (fs.getAbfsStore().getAbfsConfiguration().isDataLocalityEnabled()) {
+        expectedConnectionsMade++;
+        expectedGetResponses++;
+        assertAbfsStatistics(CALL_GET_BLOB_LAYOUT, 1, metricMap);
+      }
       assertAbfsStatistics(CONNECTIONS_MADE, expectedConnectionsMade, metricMap);
       assertAbfsStatistics(GET_RESPONSES, expectedGetResponses, metricMap);
       assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED, expectedBytesReceived, metricMap);
@@ -338,6 +343,11 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
 
       // Assertions
       metricMap = fs.getInstrumentationMap();
+      if (fs.getAbfsStore().getAbfsConfiguration().isDataLocalityEnabled()) {
+        expectedConnectionsMade++;
+        expectedGetResponses++;
+        assertAbfsStatistics(CALL_GET_BLOB_LAYOUT, 2, metricMap);
+      }
       assertAbfsStatistics(CONNECTIONS_MADE, expectedConnectionsMade, metricMap);
       assertAbfsStatistics(GET_RESPONSES, expectedGetResponses, metricMap);
       assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED, expectedBytesReceived, metricMap);

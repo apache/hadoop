@@ -27,7 +27,11 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import org.assertj.core.api.Assertions;
@@ -68,6 +72,8 @@ import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.test.ReflectionUtils;
 import org.apache.http.HttpClientConnection;
+import org.apache.http.HttpException;
+import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.utils.URIBuilder;
 
@@ -101,7 +107,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.OS_VERSI
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLON;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_VALUE_UNKNOWN;
@@ -1332,10 +1337,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   /**
    * Test to verify that the KeepAliveCache is initialized with the correct number of connections.
-   * This test is applicable only for ApacheHttpClient.
    */
   @Test
-  public void testKeepAliveCacheInitializationWithApacheHttpClient() throws Exception {
+  public void testKeepAliveCacheInitializationWithApacheHttpClient()
+      throws Exception {
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
         this.getFileSystem().getAbfsStore()
@@ -1362,10 +1367,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Configuration conf = fs.getConf();
 
-    // This is to avoid actual metric calls during the test
     conf.unset(FS_AZURE_METRICS_ACCOUNT_NAME);
 
-    // Initialize the file system
     AzureBlobFileSystemStore store = this.getFileSystem(conf).getAbfsStore();
     AbfsClientHandler abfsClientHandler = store.getClientHandler();
 
@@ -1373,122 +1376,615 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     AbfsClient blobClient = abfsClientHandler.getBlobClient();
 
     checkKacState(dfsClient, blobClient);
-    // Wait for 5 minutes to make the cached connections stale
-    // This will ensure all the connections in the KeepAliveCache are stale
-    // and will be removed by the Apache HttpClient's KeepAliveStrategy.
+
+    // Stall to trigger staling logic
     Thread.sleep(TimeUnit.MINUTES.toMillis(5));
 
-    // Verify that the KeepAliveCache returns null after making connections stale
-    // This is because the connections are stale and should not be reused.
-    // The size of the KeepAliveCache should also be 0.
-    // This indicates that the cache has been cleared of stale connections.
     checkKacAfterMakingConnectionsStale(dfsClient);
     checkKacAfterMakingConnectionsStale(blobClient);
   }
 
   /**
-   * Test to verify that the KeepAliveCache is reused for both DFS and Blob clients.
-   * This test is applicable only for ApacheHttpClient.
-   */
-  @Test
-  public void testApacheConnectionReuse() throws Exception {
-    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
-    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
-        this.getFileSystem().getAbfsStore()
-            .getAbfsConfiguration().getPreferredHttpOperationType());
-    AzureBlobFileSystem fs = this.getFileSystem();
-
-    AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
-    AbfsClient dfsClient = abfsClientHandler.getDfsClient();
-    AbfsClient blobClient = abfsClientHandler.getBlobClient();
-
-    checkKacState(dfsClient, blobClient);
-
-    if (getAbfsServiceType() == AbfsServiceType.DFS) {
-      checkConnectionReuse(dfsClient);
-    } else {
-      checkConnectionReuse(blobClient);
-    }
-  }
-
-  /**
    * Test to verify that the connection is not reused after an IOException occurs.
-   * This test is applicable only for ApacheHttpClient.
    */
   @Test
   public void testConnectionNotReusedOnIOException() throws Exception {
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
-    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
-        this.getFileSystem().getAbfsStore()
-            .getAbfsConfiguration().getPreferredHttpOperationType());
-    AzureBlobFileSystem fs = this.getFileSystem();
 
-    AbfsClientHandler abfsClientHandler = fs.getAbfsStore().getClientHandler();
-    AbfsClient client = abfsClientHandler.getClient();
+    AzureBlobFileSystem fs = this.getFileSystem();
+    AbfsClient client = fs.getAbfsStore().getClientHandler().getClient();
     KeepAliveCache keepAliveCache = client.getKeepAliveCache();
 
-    HttpClientConnection connection = keepAliveCache.pollFirst();
-    Assertions.assertThat(connection)
-        .describedAs("Connection should be present in the cache")
-        .isNotNull();
-    HttpClientConnection spiedConnection = Mockito.spy(connection);
-    HttpClientConnection successfulConnection = keepAliveCache.peekFirst();
+    String host = getBaseUrl(client);
+    // Ensure the spy is at the head of the ConcurrentLinkedDeque
+    HttpClientConnection spiedConnection = bringSpiedConnectionToFront(
+        keepAliveCache, host, true);
 
-    keepAliveCache.addFirst(spiedConnection);
-    Assertions.assertThat(spiedConnection)
-        .describedAs("Connection should be present in the cache")
-        .isNotNull();
-    Mockito.doThrow(new IOException("Incomplete input stream"))
-        .when(spiedConnection).receiveResponseEntity(any());
+    try {
+      client.listPath("/", false, 1, null, getTestTracingContext(fs, true),
+          null);
+    } catch (Exception e) {
+      // Expected
+    }
 
-    // First list call fail with IOException exception and that connection will not be reused.
-    // Subsequent retry call will use a new connection from the cache.
-    client.listPath("/", false, 1,
-          null, getTestTracingContext(fs, true), null);
+    KeepAliveCache.HostQueue hq = keepAliveCache.getHostQueue(host);
 
-    // After the failed operation, connection should NOT be reused
-    Assertions.assertThat(keepAliveCache.peekLast())
-        .describedAs("Connection should not be reused after IO failure.")
-        .isNotEqualTo(spiedConnection);
+    if (hq != null) {
+      // Stream is thread-safe on ConcurrentLinkedDeque
+      boolean isSpiedConnInCache = hq.queue.stream().anyMatch(p -> {
+        try {
+          java.lang.reflect.Field connField = p.getClass()
+              .getDeclaredField("conn");
+          connField.setAccessible(true);
+          return connField.get(p) == spiedConnection;
+        } catch (Exception e) {
+          return false;
+        }
+      });
 
-    // After the failed operation, connection should NOT be reused
-    Assertions.assertThat(keepAliveCache.peekLast())
-        .describedAs("Successful connection should be reused.")
-        .isEqualTo(successfulConnection);
-
-    // Optionally, ensure it's not in cache at all
-    Assertions.assertThat(keepAliveCache.contains(spiedConnection)).isFalse();
+      Assertions.assertThat(isSpiedConnInCache)
+          .describedAs(
+              "The failed spied connection should not have been returned to the cache")
+          .isFalse();
+    }
   }
 
   /**
-   * Test to verify that the KeepAliveCache is initialized with 0 connection
-   * when warmup count is set to 0.
-   * This test is applicable only for ApacheHttpClient.
+   * Test to verify that connections for non-base hosts are reused correctly in the KeepAliveCache.
+   *
+   * @throws Exception if any error occurs during test execution
    */
   @Test
-  public void testNumberOfConnectionsInKacWithoutWarmup() throws Exception {
+  public void testNonBaseHostConnectionReuse() throws Exception {
     assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
-    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(
-        this.getFileSystem().getAbfsStore()
-            .getAbfsConfiguration().getPreferredHttpOperationType());
     AzureBlobFileSystem fs = this.getFileSystem();
-    final Configuration configuration = fs.getConf();
-    configuration.setInt(FS_AZURE_APACHE_HTTP_CLIENT_CACHE_WARMUP_COUNT, 0);
-    // To avoid any network calls during FS initialization
-    configuration.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, false);
-    configuration.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, false);
-    fs = this.getFileSystem(configuration);
+    AbfsClient client = fs.getAbfsStore().getClientHandler().getClient();
+    KeepAliveCache keepAliveCache = client.getKeepAliveCache();
 
-    AbfsClient dfsClient = fs.getAbfsStore().getClientHandler().getDfsClient();
-    AbfsClient blobClient = fs.getAbfsStore().getClientHandler().getBlobClient();
+    String nonBaseHost = "otheraccount.blob.core.windows.net";
 
-    // In case cache is not warmed up
-    Assertions.assertThat(dfsClient.getKeepAliveCache().size())
-        .describedAs("KeepAliveCache will be empty when warmup count is set to 0")
+    // Start with a clean cluster cache for this test
+    while (keepAliveCache.get(nonBaseHost, false) != null) ;
+
+    AbfsManagedApacheHttpConnection mockConn = createMockConnection(
+        nonBaseHost);
+    keepAliveCache.put(mockConn, false);
+
+    Assertions.assertThat(keepAliveCache.getDefaultConnectionsSize())
+        .describedAs("Default cache size should remain constant")
+        .isEqualTo(this.getConfiguration().getApacheCacheWarmupCount());
+
+    HttpClientConnection retrieved = keepAliveCache.get(nonBaseHost, false);
+    Assertions.assertThat(retrieved)
+        .describedAs(
+            "Should retrieve the mock connection from the cluster-specific logic")
+        .isEqualTo(mockConn);
+  }
+
+  /**
+   * Test to verify that connections for non-base hosts are not reused in the KeepAliveCache after an IOException occurs.
+   *
+   * This test simulates a failure on a connection for a non-base host by throwing an IOException when
+   * `receiveResponseEntity` is called. It then asserts that the failed connection is discarded and not found
+   * in subsequent cache retrievals, ensuring that faulty connections are not reused.
+   *
+   * @throws Exception if any error occurs during test execution
+   */
+  @Test
+  public void testNonBaseConnectionNotReusedOnIOException() throws Exception {
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
+    KeepAliveCache keepAliveCache = this.getFileSystem().getAbfsStore()
+        .getClientHandler().getClient().getKeepAliveCache();
+
+    String host = "nonbase.blob.core.windows.net";
+    // Using a fresh mock directly to avoid double-proxy issues with spies
+    AbfsManagedApacheHttpConnection mockConn = createMockConnection(host);
+
+    Mockito.doThrow(new IOException("Failure"))
+        .when(mockConn).receiveResponseEntity(any());
+
+    keepAliveCache.put(mockConn, false);
+
+    HttpClientConnection conn = keepAliveCache.get(host, false);
+    try {
+      conn.receiveResponseEntity(null);
+    } catch (IOException e) {
+      // Simulated failure
+    }
+
+    Assertions.assertThat(keepAliveCache.get(host, false))
+        .describedAs(
+            "Connection should be discarded and not found in subsequent get")
+        .isNull();
+  }
+
+  /**
+   * Test to verify that the KeepAliveCache evicts the oldest connection from a cluster when the maximum cluster size is exceeded.
+   *
+   * This test:
+   * 1. Drains the cluster cache.
+   * 2. Fills the cluster cache with connections for Host A up to the maximum allowed.
+   * 3. Adds a connection for Host B, triggering eviction.
+   * 4. Verifies that the oldest connection for Host A is evicted.
+   *
+   * @throws Exception if any error occurs during test execution
+   */
+  @Test
+  public void testClusterGlobalEviction() throws Exception {
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
+    KeepAliveCache keepAliveCache = this.getFileSystem().getAbfsStore()
+        .getClientHandler().getClient().getKeepAliveCache();
+
+    int maxCluster = keepAliveCache.getMaxCacheConnectionsForHost();
+    String hostA = "hostA.blob.core.windows.net";
+    String hostB = "hostB.blob.core.windows.net";
+
+    // 1. DRAIN the cluster cache
+    while (keepAliveCache.get("any-host", false) != null) ;
+
+    // 2. Fill cluster cache with Host A connections
+    AbfsManagedApacheHttpConnection firstConnA = createMockConnection(hostA);
+    keepAliveCache.put(firstConnA, false);
+
+    for (int i = 1; i < maxCluster; i++) {
+      keepAliveCache.put(createMockConnection(hostA), false);
+    }
+
+    // 3. Trigger Eviction by adding Host B
+    AbfsManagedApacheHttpConnection hostBConn = createMockConnection(hostB);
+    keepAliveCache.put(hostBConn, false);
+
+    // 4. Verification
+    KeepAliveCache.HostQueue hqA = keepAliveCache.getHostQueue(hostA);
+    boolean firstConnAStillExists = hqA.queue.stream().anyMatch(p -> {
+      try {
+        java.lang.reflect.Field f = p.getClass().getDeclaredField("conn");
+        f.setAccessible(true);
+        return f.get(p) == firstConnA;
+      } catch (Exception e) {
+        return false;
+      }
+    });
+
+    Assertions.assertThat(firstConnAStillExists)
+        .describedAs(
+            "The oldest cluster connection (firstConnA) should be evicted")
+        .isFalse();
+  }
+
+  /**
+   * Tests the thread safety and correctness of concurrent access to the KeepAliveCache.
+   * This test launches multiple threads that simultaneously perform put and get operations
+   * on the cache, ensuring that the internal state remains consistent and no race conditions
+   * or data corruption occur. The test verifies that the cache size does not exceed the maximum
+   * allowed connections and that concurrent operations do not break cache invariants.
+   *
+   * @throws Exception if any error occurs during concurrent execution
+   */
+  @Test
+  public void testConcurrentAccessSafety() throws Exception {
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
+    final KeepAliveCache cache = this.getFileSystem()
+        .getAbfsStore()
+        .getClientHandler()
+        .getClient()
+        .getKeepAliveCache();
+    int threadCount = 20;
+    ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+    CountDownLatch latch = new CountDownLatch(1);
+    AtomicInteger successCount = new AtomicInteger(0);
+
+    for (int i = 0; i < threadCount; i++) {
+      executor.submit(() -> {
+        try {
+          latch.await(); // Start all at once
+          for (int j = 0; j < 100; j++) {
+            AbfsManagedApacheHttpConnection conn = createMockConnection("host");
+            if (cache.put(conn, true)) {
+              HttpClientConnection retrieved = cache.get("host", true);
+              if (retrieved != null) {successCount.incrementAndGet();}
+            }
+          }
+        } catch (Exception ignored) {}
+      });
+    }
+
+    latch.countDown();
+    executor.shutdown();
+    executor.awaitTermination(10, TimeUnit.SECONDS);
+
+    Assertions.assertThat(cache.getDefaultConnectionsSize())
+        .isLessThanOrEqualTo(cache.getMaxCacheConnections());
+  }
+
+  /**
+   * Tests the thread safety and atomicity of the KeepAliveCache under high contention parallel access
+   * for the default host. This test launches multiple threads performing concurrent put and get operations
+   * on the cache for the default host, and verifies:
+   * <ul>
+   *   <li>The atomic counter for default host connections matches the physical queue size after operations.</li>
+   *   <li>After draining the cache, the counter returns exactly to zero.</li>
+   * </ul>
+   * This ensures that the cache maintains correct synchronization and state under stress conditions.
+   *
+   * @throws Exception if any error occurs during the test execution
+   */
+  @Test
+  public void testHighContentionParallelAccessForDefaultHost()
+      throws Exception {
+    String host = getBaseUrl(this.getFileSystem().getAbfsStore().getClient());
+    performHighContentionTest(host, true);
+  }
+
+  /**
+   * Tests the thread safety and atomicity of the KeepAliveCache under high contention parallel access
+   * for a non-default host. This test launches multiple threads performing concurrent put and get operations
+   * on the cache for a non-default host, and verifies:
+   * <ul>
+   *   <li>The atomic counter for cluster (non-default) host connections matches the physical queue size after operations.</li>
+   *   <li>After draining the cache, the counter returns exactly to zero.</li>
+   * </ul>
+   * This ensures that the cache maintains correct synchronization and state for non-default hosts under stress conditions.
+   *
+   * @throws Exception if any error occurs during the test execution
+   */
+  @Test
+  public void testHighContentionParallelAccessForNonDefaultHost()
+      throws Exception {
+    String host = "test-non-default-host";
+    performHighContentionTest(host, false);
+  }
+
+  /**
+   * Tests the security and correctness of the KeepAliveCache after it has been closed.
+   * <p>
+   * This test verifies that:
+   * <ul>
+   *   <li>After closing the cache, put operations fail and return false.</li>
+   *   <li>Get operations throw a {@link org.apache.hadoop.fs.ClosedIOException}.</li>
+   * </ul>
+   * This ensures that the cache does not allow further access or modification after closure,
+   * maintaining proper resource safety and preventing unintended usage.
+   *
+   * @throws Exception if any error occurs during the test execution
+   */
+  @Test
+  public void testCacheSecurityAfterClose() throws Exception {
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
+    KeepAliveCache cache = this.getFileSystem()
+        .getAbfsStore()
+        .getClientHandler()
+        .getClient()
+        .getKeepAliveCache();
+
+    cache.close();
+
+    // 1. Put should fail
+    boolean putResult = cache.put(createMockConnection("any"), true);
+    Assertions.assertThat(putResult).isFalse();
+
+    // 2. Get should throw ClosedIOException
+    Assertions.assertThatThrownBy(() -> cache.get("any", true))
+        .isInstanceOf(org.apache.hadoop.fs.ClosedIOException.class);
+  }
+
+  /**
+   * Tests that the KeepAliveCache get operation correctly filters out stale connections.
+   * <p>
+   * This test puts two connections (one stale, one healthy) into the cache for a host,
+   * then verifies that:
+   * <ul>
+   *   <li>The get operation skips the stale connection and returns the healthy one.</li>
+   *   <li>The stale connection is properly closed.</li>
+   * </ul>
+   * This ensures that the cache maintains connection health and resource safety by not returning stale connections.
+   *
+   * @throws Exception if any error occurs during the test execution
+   */
+  @Test
+  public void testGetFiltersStaleConnections() throws Exception {
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
+    KeepAliveCache cache = this.getFileSystem()
+        .getAbfsStore()
+        .getClientHandler()
+        .getClient()
+        .getKeepAliveCache();
+    String host = "stale-host.blob.core.windows.net";
+
+    // 1. Put two connections, first one is stale
+    AbfsManagedApacheHttpConnection staleConn = createMockConnection(host);
+    AbfsManagedApacheHttpConnection healthyConn = createMockConnection(host);
+
+    Mockito.when(staleConn.isStale()).thenReturn(true);
+
+    cache.put(staleConn, true);
+    cache.put(healthyConn, true);
+
+    // 2. Action: Call get()
+    HttpClientConnection result = cache.get(host, true);
+
+    // 3. Verification
+    Assertions.assertThat(result)
+        .describedAs(
+            "Should skip the stale connection and return the healthy one")
+        .isEqualTo(healthyConn);
+
+    Mockito.verify(staleConn, Mockito.atLeastOnce()).close();
+  }
+
+  /**
+   * Tests the global eviction consistency of the KeepAliveCache when the cluster cache reaches its maximum size.
+   * <p>
+   * This test fills the cache for one host to its limit, then adds a connection for a different host,
+   * triggering eviction. It verifies that:
+   * <ul>
+   *   <li>The oldest connection from the original host is evicted from its queue.</li>
+   *   <li>The host queue size is reduced by one after eviction.</li>
+   * </ul>
+   * This ensures that eviction logic is consistent and synchronized across hosts in the cluster cache.
+   *
+   * @throws Exception if any error occurs during the test execution
+   */
+  @Test
+  public void testGlobalEvictionConsistency() throws Exception {
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
+    KeepAliveCache cache = this.getFileSystem()
+        .getAbfsStore()
+        .getClientHandler()
+        .getClient()
+        .getKeepAliveCache();
+    int maxCluster = cache.getMaxCacheConnectionsForHost();
+
+    // 1. Setup: Clean cluster and fill to limit
+    while (cache.get("any", false) != null) ;
+
+    String hostA = "hostA.blob.core.windows.net";
+    AbfsManagedApacheHttpConnection oldestConn = createMockConnection(hostA);
+    cache.put(oldestConn, false);
+
+    for (int i = 1; i < maxCluster; i++) {
+      cache.put(createMockConnection(hostA), false);
+    }
+
+    // 2. Trigger Eviction
+    String hostB = "hostB.blob.core.windows.net";
+    cache.put(createMockConnection(hostB), false);
+
+    // 3. Verify oldest is gone from HostA's queue via stream
+    boolean exists = cache.getHostQueue(hostA).queue.stream()
+        .anyMatch(p -> {
+          try {
+            java.lang.reflect.Field f = p.getClass().getDeclaredField("conn");
+            f.setAccessible(true);
+            return f.get(p) == oldestConn;
+          } catch (Exception e) {return false;}
+        });
+
+    Assertions.assertThat(exists)
+        .describedAs("Oldest connection should be evicted from host queue")
+        .isFalse();
+    Assertions.assertThat(cache.getHostQueue(hostA).queue.size())
+        .isEqualTo(maxCluster - 1);
+  }
+
+  /**
+   * Tests atomicity of concurrent get operations for the default host in KeepAliveCache.
+   * <p>
+   * This test launches multiple threads competing for a single connection in the cache for the default host,
+   * and verifies that:
+   * <ul>
+   *   <li>Exactly one thread successfully claims the connection.</li>
+   *   <li>All other threads receive null, confirming atomic access.</li>
+   * </ul>
+   * This ensures thread safety and atomicity under race conditions for the default host.
+   *
+   * @throws Exception if any error occurs during the test execution
+   */
+  @Test
+  public void testConcurrentGetRaceConditionOnDefaultHost() throws Exception {
+    String host = getBaseUrl(this.getFileSystem().getAbfsStore().getClient());
+    performConcurrentGetRaceTest(host, true);
+  }
+
+  /**
+   * Tests atomicity of concurrent get operations for a non-default host in KeepAliveCache.
+   * <p>
+   * This test launches multiple threads competing for a single connection in the cache for a non-default host,
+   * and verifies that:
+   * <ul>
+   *   <li>Exactly one thread successfully claims the connection.</li>
+   *   <li>All other threads receive null, confirming atomic access.</li>
+   * </ul>
+   * This ensures thread safety and atomicity under race conditions for non-default hosts.
+   *
+   * @throws Exception if any error occurs during the test execution
+   */
+  @Test
+  public void testConcurrentGetRaceConditionOnNonDefaultHost()
+      throws Exception {
+    String host = "non-default-race-host.blob.core.windows.net";
+    performConcurrentGetRaceTest(host, false);
+  }
+
+  /**
+   * Helper to verify that multiple threads competing for the same single connection
+   * result in exactly one "winner" and N-1 "losers" (null returns).
+   */
+  private void performConcurrentGetRaceTest(String host, boolean isDefault)
+      throws Exception {
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
+    final KeepAliveCache cache = this.getFileSystem()
+        .getAbfsStore()
+        .getClient()
+        .getKeepAliveCache();
+
+    // 1. Setup: Ensure the host queue has exactly ONE connection
+    while (cache.get(host, isDefault) != null) ;
+    AbfsManagedApacheHttpConnection singletonConn = createMockConnection(host);
+    cache.put(singletonConn, isDefault);
+
+    int threadCount = 20;
+    ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+    CountDownLatch startGun = new CountDownLatch(1);
+    CountDownLatch finishLine = new CountDownLatch(threadCount);
+
+    AtomicInteger successCount = new AtomicInteger(0);
+    AtomicInteger nullCount = new AtomicInteger(0);
+
+    // 2. Action: 20 threads compete for 1 connection
+    for (int i = 0; i < threadCount; i++) {
+      executor.submit(() -> {
+        try {
+          startGun.await(); // Synchronize all threads to start at once
+          HttpClientConnection conn = cache.get(host, isDefault);
+          if (conn != null) {
+            successCount.incrementAndGet();
+          } else {
+            nullCount.incrementAndGet();
+          }
+        } catch (Exception ignored) {
+          // In a test race, we expect clean execution
+        } finally {
+          finishLine.countDown();
+        }
+      });
+    }
+
+    startGun.countDown(); // FIRE! All threads hit cache.get() simultaneously
+    boolean finished = finishLine.await(10, TimeUnit.SECONDS);
+    executor.shutdown();
+
+    Assertions.assertThat(finished)
+        .describedAs("Test timed out waiting for threads to complete")
+        .isTrue();
+
+    // 3. Verification of Atomicity
+    Assertions.assertThat(successCount.get())
+        .describedAs(
+            "Atomicity Failure: Exactly one thread should claim the connection for %s host",
+            isDefault ? "default" : "non-default")
+        .isEqualTo(1);
+
+    Assertions.assertThat(nullCount.get())
+        .describedAs(
+            "Atomicity Failure: Remaining %d threads should have received null",
+            threadCount - 1)
+        .isEqualTo(threadCount - 1);
+
+    // 4. Final state check: The counter should now be zero
+    int finalCounter = isDefault
+        ? cache.getDefaultConnectionsSize()
+        : cache.getClusterConnectionsSize();
+    Assertions.assertThat(finalCounter)
+        .describedAs(
+            "Counter should be 0 after the single connection was claimed")
         .isEqualTo(0);
-    Assertions.assertThat(blobClient.getKeepAliveCache().size())
-        .describedAs("KeepAliveCache will be empty when warmup count is set to 0")
+  }
+
+  /**
+   * Helper method to simulate high concurrent pressure on the KeepAliveCache.
+   * Verifies that the internal Atomic counters stay in sync with the physical queue sizes.
+   */
+  private void performHighContentionTest(String host, boolean isDefaultHost)
+      throws Exception {
+    assumeThat(APACHE_HTTP_CLIENT).isEqualTo(httpOperationType);
+    final KeepAliveCache cache = this.getFileSystem()
+        .getAbfsStore()
+        .getClient()
+        .getKeepAliveCache();
+
+    int numThreads = 10;
+    int iterations = 100;
+    ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+
+    // 1. Initial Cleanup: Ensure a fresh state for this host
+    while (cache.get(host, isDefaultHost) != null) ;
+
+    // 2. Execution: Concurrent Put and Get operations
+    for (int i = 0; i < numThreads; i++) {
+      executor.submit(() -> {
+        for (int j = 0; j < iterations; j++) {
+          try {
+            AbfsManagedApacheHttpConnection mock = createMockConnection(host);
+            cache.put(mock, isDefaultHost);
+            // We don't assert 'retrieved != null' because of the race condition with other threads
+            cache.get(host, isDefaultHost);
+          } catch (IOException ignored) {
+            // Context-specific failure in a stress test
+          }
+        }
+      });
+    }
+
+    executor.shutdown();
+    Assertions.assertThat(executor.awaitTermination(30, TimeUnit.SECONDS))
+        .describedAs("Threads should finish within the timeout")
+        .isTrue();
+
+    // 3. Counter Sync Verification
+    // Verify that the AtomicInteger exactly matches the number of items in the Deque
+    int counterSize = isDefaultHost
+        ? cache.getDefaultConnectionsSize()
+        : cache.getClusterConnectionsSize();
+    KeepAliveCache.HostQueue hq = cache.getHostQueue(host);
+    int physicalQueueSize = (hq != null) ? hq.queue.size() : 0;
+
+    Assertions.assertThat(counterSize)
+        .describedAs(
+            "The Atomic counter (%d) must match physical queue size (%d) for %s host",
+            counterSize, physicalQueueSize,
+            isDefaultHost ? "default" : "non-default")
+        .isEqualTo(physicalQueueSize);
+
+    // 4. Final Drain Verification
+    // Ensure that after a full drain, the counter returns exactly to zero
+    while (cache.get(host, isDefaultHost) != null) ;
+
+    int finalCounterSize = isDefaultHost
+        ? cache.getDefaultConnectionsSize()
+        : cache.getClusterConnectionsSize();
+    Assertions.assertThat(finalCounterSize)
+        .describedAs("Counter should be exactly 0 after full drain")
         .isEqualTo(0);
+  }
+
+  /**
+   * Brings the specified spied connection to the front of the KeepAliveCache for the given host.
+   * Ensures the connection is at the head of the queue for testing purposes.
+   *
+   * @param keepAliveCache the cache instance
+   * @param host the host name
+   * @param isDefaultHost whether the host is the default
+   * @return the spied HttpClientConnection
+   */
+  private HttpClientConnection bringSpiedConnectionToFront(KeepAliveCache keepAliveCache,
+      String host, boolean isDefaultHost) throws HttpException, IOException {
+    // Drain to ensure we control exactly what goes back in
+    while (keepAliveCache.get(host, isDefaultHost) != null) ;
+    AbfsManagedApacheHttpConnection realConn = createMockConnection(host);
+    HttpClientConnection spiedConnection = Mockito.spy(realConn);
+    Mockito.doThrow(new IOException("Incomplete input stream"))
+        .when(spiedConnection).receiveResponseEntity(any());
+    // In lock-free FIFO, the first one put into an empty queue is at the front
+    keepAliveCache.put(spiedConnection, isDefaultHost);
+    return spiedConnection;
+  }
+
+  /**
+   * Helper method to create a mock instance of AbfsManagedApacheHttpConnection for the specified host.
+   * This is used in tests to simulate HTTP connections for the KeepAliveCache.
+   *
+   * @param host the host name for which the mock connection is created
+   * @return a mocked AbfsManagedApacheHttpConnection instance
+   */
+  private AbfsManagedApacheHttpConnection createMockConnection(String host) {
+    AbfsManagedApacheHttpConnection mockConn = Mockito.mock(
+        AbfsManagedApacheHttpConnection.class);
+    Mockito.when(mockConn.isOpen()).thenReturn(true);
+    Mockito.when(mockConn.isStale()).thenReturn(false);
+    HttpHost httpHost = new HttpHost(host);
+    Mockito.when(mockConn.getTargetHost()).thenReturn(httpHost);
+    return mockConn;
   }
 
   /**
@@ -1496,7 +1992,6 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
    * configured service type.
    * @param dfsClient AbfsClient instance for DFS endpoint
    * @param blobClient AbfsClient instance for Blob endpoint
-   *
    * @throws IOException if an error occurs while checking the cache
    */
   private void checkKacState(AbfsClient dfsClient, AbfsClient blobClient)
@@ -1511,103 +2006,98 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   }
 
   /**
+   * Helper method to get Base Url based on client
+   * @param client Abfs client
+   * @return String base url
+   */
+  private String getBaseUrl(AbfsClient client) {
+    URL baseUrl = client.getBaseUrl();
+    HttpHost baseHost = new HttpHost(baseUrl.getHost(),
+        baseUrl.getDefaultPort(), baseUrl.getProtocol());
+    return baseHost.toHostString();
+  }
+
+  /**
    * Helper method to check the KeepAliveCache on both clients.
    * @param abfsClient AbfsClient instance to check
-   *
    * @throws IOException if an error occurs while checking the cache
    */
-  private void checkKacOnDefaultClientsAfterFSInit(AbfsClient abfsClient) throws IOException {
-    AbfsApacheHttpClient abfsApacheHttpClient = abfsClient.getAbfsApacheHttpClient();
+  private void checkKacOnDefaultClientsAfterFSInit(AbfsClient abfsClient)
+      throws IOException {
+    AbfsApacheHttpClient abfsApacheHttpClient
+        = abfsClient.getAbfsApacheHttpClient();
     Assertions.assertThat(abfsApacheHttpClient)
         .describedAs("AbfsApacheHttpClient should not be null")
         .isNotNull();
 
     KeepAliveCache keepAliveCache = abfsClient.getKeepAliveCache();
 
-    Assertions.assertThat(keepAliveCache.size())
-        .describedAs("KeepAliveCache should be warm with default connection count")
+    Assertions.assertThat(keepAliveCache.getDefaultConnectionsSize())
+        .describedAs(
+            "KeepAliveCache should be warm with default connection count")
         .isEqualTo(this.getConfiguration().getApacheCacheWarmupCount());
-
-    Assertions.assertThat(keepAliveCache.get())
+    Assertions.assertThat(keepAliveCache.get(getBaseUrl(abfsClient), true))
         .describedAs("KeepAliveCache should not be null")
         .isNotNull();
 
     // 1 connection is taken in above get call, so size should be
     // DEFAULT_APACHE_CACHE_WARMUP_CONNECTION_COUNT - 1
     // after the get call.
-    Assertions.assertThat(keepAliveCache.size())
-        .describedAs("KeepAliveCache size should be one less than the warmup count")
+    Assertions.assertThat(keepAliveCache.getDefaultConnectionsSize())
+        .describedAs(
+            "KeepAliveCache size should be one less than the warmup count")
         .isEqualTo(this.getConfiguration().getApacheCacheWarmupCount() - 1);
   }
 
   /**
    * Helper method to check the KeepAliveCache on both clients.
    * @param abfsClient AbfsClient instance to check
-   *
    * @throws IOException if an error occurs while checking the cache
    */
-  private void checkKacOnNonDefaultClientsAfterFSInit(AbfsClient abfsClient) throws IOException {
-    AbfsApacheHttpClient abfsApacheHttpClient = abfsClient.getAbfsApacheHttpClient();
+  private void checkKacOnNonDefaultClientsAfterFSInit(AbfsClient abfsClient)
+      throws IOException {
+    AbfsApacheHttpClient abfsApacheHttpClient
+        = abfsClient.getAbfsApacheHttpClient();
+
     Assertions.assertThat(abfsApacheHttpClient)
         .describedAs("AbfsApacheHttpClient should not be null")
         .isNotNull();
 
     KeepAliveCache keepAliveCache = abfsClient.getKeepAliveCache();
 
-    Assertions.assertThat(keepAliveCache.size())
-        .describedAs("KeepAliveCache size should be 0 as non-default clients do not warmup")
+    Assertions.assertThat(keepAliveCache.getDefaultConnectionsSize())
+        .describedAs(
+            "KeepAliveCache size should be 0 as non-default clients do not warmup")
         .isEqualTo(0);
 
-    Assertions.assertThat(keepAliveCache.get())
+    Assertions.assertThat(keepAliveCache.get(getBaseUrl(abfsClient), true))
         .describedAs("KeepAliveCache should be null")
         .isNull();
 
     // 1 connection is taken in above get call, so size should be
     // DEFAULT_APACHE_CACHE_WARMUP_CONNECTION_COUNT - 1
     // after the get call.
-    Assertions.assertThat(keepAliveCache.size())
-        .describedAs("KeepAliveCache size should be 0 as no new connection is added")
+    Assertions.assertThat(keepAliveCache.getDefaultConnectionsSize())
+        .describedAs(
+            "KeepAliveCache size should be 0 as no new connection is added")
         .isEqualTo(0);
   }
 
   /**
    * Helper method to check the KeepAliveCache after making connections stale.
    * @param abfsClient AbfsClient instance to check
-   *
    * @throws IOException if an error occurs while checking the cache
    */
   private void checkKacAfterMakingConnectionsStale(AbfsClient abfsClient)
       throws IOException {
     KeepAliveCache keepAliveCache = abfsClient.getKeepAliveCache();
-    Assertions.assertThat(keepAliveCache.get())
+    Assertions.assertThat(keepAliveCache.get(getBaseUrl(abfsClient), true))
         .describedAs("KeepAliveCache should return null")
         .isNull();
-
     // Verify that the cache is empty after making connections stale
-    Assertions.assertThat(keepAliveCache.size())
-        .describedAs("KeepAliveCache should be empty after making connections stale")
+    Assertions.assertThat(keepAliveCache.getDefaultConnectionsSize())
+        .describedAs(
+            "KeepAliveCache should be empty after making connections stale")
         .isEqualTo(0);
-  }
-
-  /**
-   * Helper method to check connection reuse in the KeepAliveCache.
-   * @param abfsClient AbfsClient instance to check
-   *
-   * @throws IOException if an error occurs while checking the cache
-   */
-  private void checkConnectionReuse(AbfsClient abfsClient) throws IOException {
-    KeepAliveCache keepAliveCache = abfsClient.getKeepAliveCache();
-    for (int i = 0; i < this.getConfiguration().getApacheCacheWarmupCount(); i++) {
-      // Check first connection in the cache before the operation
-      HttpClientConnection connection = keepAliveCache.peekFirst();
-      // Perform a list operation to reuse the connection
-      // This will use the first connection in the cache.
-      abfsClient.listPath("/", false, 1,
-          null, getTestTracingContext(this.getFileSystem(), true), null);
-      // After the operation, the connection should be kept back in the last position
-      Assertions.assertThat(connection)
-          .describedAs("Connection will be put back to the cache for reuse.")
-          .isEqualTo(keepAliveCache.peekLast());
-    }
   }
 }

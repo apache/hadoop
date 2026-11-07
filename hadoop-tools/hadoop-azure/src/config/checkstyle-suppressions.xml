@@ -71,4 +71,12 @@
               files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]WriteThreadPoolSizeManager.java"/>
   <suppress checks="ParameterNumber"
              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]ResourceUtilizationStats.java"/>
+  <suppress checks="MagicNumber"
+              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]BlobLayoutTest.java"/>
+  <suppress checks="MagicNumber"
+              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]BlobLayoutCacheTest.java"/>
+  <suppress checks="MagicNumber"
+              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]BlobLayoutCacheEvictionTest.java"/>
+  <suppress checks="MagicNumber"
+              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]BlobLayoutXmlParserTest.java"/>
 </suppressions>

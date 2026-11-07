@@ -87,6 +87,12 @@ public final class AbfsHttpConstants {
   public static final String LEASE = "lease";
 
   /**
+   * HTTP Header Value to denote component as layout.
+   * {@value}.
+   */
+  public static final String LAYOUT = "layout";
+
+  /**
    * HTTP Header Value to denote bock list type as committed.
    * {@value}.
    */

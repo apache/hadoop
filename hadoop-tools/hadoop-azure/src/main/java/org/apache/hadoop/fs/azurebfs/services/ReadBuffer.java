@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -48,6 +49,11 @@ public class ReadBuffer {
   private CountDownLatch latch = null;   // signaled when the buffer is done reading, so any client
   // waiting on this buffer gets unblocked
   private TracingContext tracingContext;
+  private int bufferOffset;
+  private boolean isParent = false;
+  CopyOnWriteArrayList<ReadBuffer> childBufferList = new CopyOnWriteArrayList<>();
+  ReadBuffer parentBuffer = null;
+  String readEndpoint;
 
   // fields to help with eviction logic
   private long timeStamp = 0;  // tick at which buffer became available to read
@@ -62,6 +68,7 @@ public class ReadBuffer {
   private IntFunction<ByteBuffer> allocator;
   // Tracks whether fanOut has already been executed
   private final AtomicBoolean fanOutDone = new AtomicBoolean(false);
+  private final AtomicInteger activeChildCount = new AtomicInteger(0);  // Only for parents
 
   private IOException errException = null;
 
@@ -103,6 +110,72 @@ public class ReadBuffer {
 
   public void setOffset(long offset) {
     this.offset = offset;
+  }
+
+  public void setReadEndpoint(String readEndpoint) {
+    this.readEndpoint = readEndpoint;
+  }
+
+  public int getBufferOffset() {
+    return bufferOffset;
+  }
+
+  public void setBufferOffset(int bufferOffset) {
+    this.bufferOffset = bufferOffset;
+  }
+
+  public void setParentToTrue() {
+    this.isParent = true;
+  }
+
+  public boolean isParent() {
+    return isParent;
+  }
+
+  public void setParentBuffer(ReadBuffer parentBuffer) {
+    this.parentBuffer = parentBuffer;
+  }
+
+  public ReadBuffer getParentBuffer() {
+    return parentBuffer;
+  }
+
+  public String getReadEndpoint() {
+    return readEndpoint;
+  }
+
+  //Required for cases where even one child fails
+  public void resetChildBufferList() {
+    this.childBufferList.clear();
+  }
+
+  public List<ReadBuffer> getChildBufferList() {
+    return this.childBufferList;
+  }
+
+  public int getChildBufferSize() {
+    return this.childBufferList.size();
+  }
+
+  public void pushToChildBufferList(ReadBuffer child){
+    this.childBufferList.add(child);
+  }
+
+  public void resetActiveChildCount() {
+    activeChildCount.set(0);
+  }
+
+  public void incrementActiveChildren() {
+    activeChildCount.incrementAndGet();
+  }
+
+  // When child completes (success or failure)
+  public boolean decrementActiveChildren() {
+    return activeChildCount.decrementAndGet() == 0;  // true if this was the last child
+  }
+
+  public int getActiveChildCount() {
+    return activeChildCount.get();
   }
 
   public int getLength() {
