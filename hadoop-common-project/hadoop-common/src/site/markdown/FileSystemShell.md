@@ -161,7 +161,7 @@ The -e option shows the erasure coding policy for each file.
 
 The output columns with -count -e are: DIR\_COUNT, FILE\_COUNT, CONTENT_SIZE, ERASURECODING\_POLICY, PATHNAME
 
-The ERASURECODING\_POLICY is name of the policy for the file. If an erasure coding policy is set on that file, it will return the name of the policy. Otherwise, it will return \"Replicated\" which means it uses the replication storage strategy.
+The ERASURECODING\_POLICY is name of the policy for the file. If an erasure coding policy is set on that file, it will return the name of the policy. Otherwise, it will return \"Replicated\" which means it uses the replication storage strategy. If the file system does not report an erasure coding policy, an error is reported for that path.
 
 The -s option shows the snapshot counts for each directory.
 
