@@ -529,6 +529,60 @@ public interface HdfsClientConfigKeys {
     int     THREADPOOL_SIZE_DEFAULT = 0;
   }
 
+  /**
+   * dfs.client.prefetch configuration properties.
+   *
+   * Sequential read-ahead cache. When enabled (per file with more than one
+   * block), background workers fetch blocks ahead of the read cursor, in
+   * parallel, into reusable in-memory buffers so the foreground read can be
+   * served from memory instead of waiting on a per-block DataNode round trip.
+   * A stream keeps a sliding window of up to {@code N = SIZE / blockSize}
+   * per-block buffers (each holding one HDFS block); up to
+   * {@code THREADS} blocks are filled concurrently.
+   */
+  interface Prefetch {
+    String  PREFIX = HdfsClientConfigKeys.PREFIX + "prefetch.";
+
+    // Per-stream opt-in. Single-block files never prefetch.
+    String  ENABLED_KEY = PREFIX + "enabled";
+    boolean ENABLED_DEFAULT = false;
+
+    // Total per-stream prefetch memory in bytes. Holds N = SIZE / blockSize
+    // per-block buffers.
+    String  SIZE_KEY = PREFIX + "size";
+    long    SIZE_DEFAULT = 512L * 1024 * 1024; // 512 MB
+
+    // Evict a cached block this many millis after it was last accessed.
+    String  TTL_MS_KEY = PREFIX + "ttl.ms";
+    long    TTL_MS_DEFAULT = 60000;
+
+    // Global cap (across all prefetching streams of a DFSClient) on bytes held
+    // in prefetch buffers. Governs how many streams can prefetch concurrently
+    // (roughly MAX_BYTES / SIZE).
+    String  MAX_BYTES_KEY = PREFIX + "max.bytes";
+    long    MAX_BYTES_DEFAULT = 2L * 1024 * 1024 * 1024; // 2 GB
+
+    // Shared prefetch worker pool size. <= 0 disables prefetch.
+    String  THREADPOOL_SIZE_KEY = PREFIX + "threadpool.size";
+    int     THREADPOOL_SIZE_DEFAULT = 16;
+
+    // Max number of blocks a single stream prefetches concurrently.
+    String  THREADS_KEY = PREFIX + "threads";
+    int     THREADS_DEFAULT = 4;
+
+    // Granularity at which a block is filled and its readiness published, so
+    // the reader can consume a block's prefix before the whole block lands.
+    String  CHUNK_SIZE_KEY = PREFIX + "chunk.size";
+    int     CHUNK_SIZE_DEFAULT = 8 * 1024 * 1024; // 8 MB
+
+    // Periodically log per-stream read-cache metrics (cache vs direct bytes,
+    // cache usage) and whether caching is enabled for the stream.
+    String  METRICS_LOG_ENABLED_KEY = PREFIX + "metrics.log.enabled";
+    boolean METRICS_LOG_ENABLED_DEFAULT = false;
+    String  METRICS_LOG_INTERVAL_MS_KEY = PREFIX + "metrics.log.interval.ms";
+    long    METRICS_LOG_INTERVAL_MS_DEFAULT = 60000;
+  }
+
   /** dfs.client.read.striped configuration properties */
   interface StripedRead {
     String PREFIX = Read.PREFIX + "striped.";
