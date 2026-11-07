@@ -121,6 +121,18 @@ public class TrashPolicyDefault extends TrashPolicy {
     return Path.mergePaths(basePath, rmFilePath);
   }
 
+  /**
+   * @return true if {@code ancestor} is {@code path} or one of its ancestors,
+   *         comparing whole path components: "/user/al" is not an ancestor
+   *         of "/user/alice".
+   */
+  private static boolean isAncestorOf(Path ancestor, Path path) {
+    String a = ancestor.toString();
+    String p = path.toString();
+    return p.equals(a) || p.startsWith(
+        a.endsWith(Path.SEPARATOR) ? a : a + Path.SEPARATOR);
+  }
+
   @Override
   public boolean isEnabled() {
     return deletionInterval > 0;
@@ -137,15 +149,15 @@ public class TrashPolicyDefault extends TrashPolicy {
 
     // check that path exists
     fs.getFileStatus(path);
-    String qpath = fs.makeQualified(path).toString();
+    Path qpath = fs.makeQualified(path);
 
     Path trashRoot = fs.getTrashRoot(path);
     Path trashCurrent = new Path(trashRoot, CURRENT);
-    if (qpath.startsWith(trashRoot.toString())) {
+    if (isAncestorOf(trashRoot, qpath)) {
       return false;                               // already in trash
     }
 
-    if (trashRoot.getParent().toString().startsWith(qpath)) {
+    if (isAncestorOf(qpath, trashRoot.getParent())) {
       throw new IOException("Cannot move \"" + path +
                             "\" to the trash, as it contains the trash");
     }
