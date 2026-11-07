@@ -68,7 +68,9 @@ public class TestTableMapping {
     File mapFile = File.createTempFile(getClass().getSimpleName() +
         ".testResolveIPv6", ".txt");
     Files.asCharSink(mapFile, StandardCharsets.UTF_8).write(
-        "2001:db8::10 /rack1\n2001:DB8:0:0:0:0:0:20 /rack2\n" + hostName1 + " /rack3\n");
+        "2001:db8::10 /rack1\n2001:DB8:0:0:0:0:0:20 /rack2\n" + hostName1 + " /rack3\n"
+            // scope names an interface that does not exist, so it cannot be normalized
+            + "fe80::1%hadoop-no-such-interface /rack4\n");
     mapFile.deleteOnExit();
     TableMapping mapping = new TableMapping();
 

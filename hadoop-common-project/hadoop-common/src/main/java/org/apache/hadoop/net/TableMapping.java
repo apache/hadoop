@@ -127,10 +127,15 @@ public class TableMapping extends CachedDNSToSwitchMapping {
   
     /**
      * Rewrite an IP literal to the form {@link NetUtils#normalizeHostName} gives lookups,
-     * e.g. 2001:db8::10 to 2001:db8:0:0:0:0:0:10. Other keys are kept as written.
+     * e.g. 2001:db8::10 to 2001:db8:0:0:0:0:0:10. Other keys, and literals that cannot be
+     * parsed here (such as a scope naming an interface this host lacks), are kept as written.
      */
     private static String normalizeIpLiteral(String key) {
-      return InetAddresses.isInetAddress(key) ? InetAddresses.forString(key).getHostAddress() : key;
+      try {
+        return InetAddresses.forString(key).getHostAddress();
+      } catch (IllegalArgumentException e) {
+        return key;
+      }
     }
 
     @Override
