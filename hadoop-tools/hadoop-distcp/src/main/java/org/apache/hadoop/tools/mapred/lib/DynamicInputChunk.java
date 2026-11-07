@@ -41,7 +41,7 @@ import java.io.IOException;
  * mapper may claim another and process it, until there are no more to be
  * consumed.
  */
-class DynamicInputChunk<K, V> {
+final class DynamicInputChunk<K, V> {
   private static Logger LOG = LoggerFactory.getLogger(DynamicInputChunk.class);
   private Path chunkFilePath;
   private SequenceFileRecordReader<K, V> reader;

@@ -537,7 +537,7 @@ public final class DistCpOptions {
           "Source paths should not be null or empty!");
       Preconditions.checkArgument(targetPath != null,
           "Target path should not be null!");
-      this.sourcePaths = sourcePaths;
+      this.sourcePaths = new ArrayList<>(sourcePaths);
       this.targetPath = targetPath;
     }
 
