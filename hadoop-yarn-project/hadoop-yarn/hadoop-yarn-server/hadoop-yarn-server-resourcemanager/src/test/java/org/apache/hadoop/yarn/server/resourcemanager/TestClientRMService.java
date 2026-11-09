@@ -537,13 +537,18 @@ public class TestClientRMService {
   }
 
   @Test
-  public void testGetContainerReportForContainerFromPreviousAttempt()
+  public void testGetContainerReportWhenAttemptMissingWithKeepContainers()
       throws Exception {
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(123456, 1), 1);
     ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    final boolean keepContainers = true;
+    final boolean includeAttempt = false;
+    final boolean includeContainer = true;
+    final boolean allowAccess = true;
     ClientRMService rmService = createRMServiceForContainerReport(
-        containerId, true, false, true);
+        containerId, keepContainers, includeAttempt, includeContainer,
+        allowAccess);
 
     GetContainerReportResponse response = rmService.getContainerReport(
         GetContainerReportRequest.newInstance(containerId));
@@ -552,13 +557,38 @@ public class TestClientRMService {
   }
 
   @Test
-  public void testGetContainerReportRejectsMissingAttemptWithoutContainerTransfer()
+  public void testGetContainerReportWithExistingAttemptAndKeepContainers()
       throws Exception {
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(123456, 1), 1);
     ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    final boolean keepContainers = true;
+    final boolean includeAttempt = true;
+    final boolean includeContainer = true;
+    final boolean allowAccess = true;
     ClientRMService rmService = createRMServiceForContainerReport(
-        containerId, false, false, true);
+        containerId, keepContainers, includeAttempt, includeContainer,
+        allowAccess);
+
+    GetContainerReportResponse response = rmService.getContainerReport(
+        GetContainerReportRequest.newInstance(containerId));
+
+    assertEquals(containerId, response.getContainerReport().getContainerId());
+  }
+
+  @Test
+  public void testGetContainerReportRejectsMissingAttemptWithoutKeepContainers()
+      throws Exception {
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(123456, 1), 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    final boolean keepContainers = false;
+    final boolean includeAttempt = false;
+    final boolean includeContainer = true;
+    final boolean allowAccess = true;
+    ClientRMService rmService = createRMServiceForContainerReport(
+        containerId, keepContainers, includeAttempt, includeContainer,
+        allowAccess);
 
     assertThrows(ApplicationAttemptNotFoundException.class,
         () -> rmService.getContainerReport(
@@ -566,22 +596,47 @@ public class TestClientRMService {
   }
 
   @Test
-  public void testGetContainerReportRejectsMissingRetainedContainer()
+  public void testGetContainerReportWithMissingAttemptAndContainer()
       throws Exception {
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(123456, 1), 1);
     ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    final boolean keepContainers = true;
+    final boolean includeAttempt = false;
+    final boolean includeContainer = false;
+    final boolean allowAccess = true;
     ClientRMService rmService = createRMServiceForContainerReport(
-        containerId, true, false, false);
+        containerId, keepContainers, includeAttempt, includeContainer,
+        allowAccess);
 
     assertThrows(ContainerNotFoundException.class,
         () -> rmService.getContainerReport(
             GetContainerReportRequest.newInstance(containerId)));
   }
 
+  @Test
+  public void testGetContainerReportRejectsUnauthorizedUserWithKeepContainers()
+      throws Exception {
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(123456, 1), 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    final boolean keepContainers = true;
+    final boolean includeAttempt = false;
+    final boolean includeContainer = true;
+    final boolean allowAccess = false;
+    ClientRMService rmService = createRMServiceForContainerReport(
+        containerId, keepContainers, includeAttempt, includeContainer,
+        allowAccess);
+
+    YarnException exception = assertThrows(YarnException.class,
+        () -> rmService.getContainerReport(
+            GetContainerReportRequest.newInstance(containerId)));
+    assertThat(exception.getMessage()).contains("does not have privilege");
+  }
+
   private ClientRMService createRMServiceForContainerReport(
       ContainerId containerId, boolean keepContainersAcrossAttempts,
-      boolean includeAttempt, boolean includeContainer) {
+      boolean includeAttempt, boolean includeContainer, boolean allowAccess) {
     ApplicationAttemptId attemptId = containerId.getApplicationAttemptId();
     ApplicationId applicationId = attemptId.getApplicationId();
     ResourceScheduler scheduler = mock(ResourceScheduler.class);
@@ -621,7 +676,8 @@ public class TestClientRMService {
         mock(ApplicationACLsManager.class);
     QueueACLsManager queueACLsManager = mock(QueueACLsManager.class);
     when(queueACLsManager.checkAccess(any(UserGroupInformation.class),
-        any(QueueACL.class), any(RMApp.class), any(), any())).thenReturn(true);
+        any(QueueACL.class), any(RMApp.class), any(), any()))
+        .thenReturn(allowAccess);
     return new ClientRMService(rmContext, scheduler, null,
         applicationACLsManager, queueACLsManager, null);
   }
