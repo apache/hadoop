@@ -104,6 +104,9 @@ public final class ContainerSignalContext {
    */
   @Override
   public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
     if (obj instanceof ContainerSignalContext) {
       ContainerSignalContext other = (ContainerSignalContext)obj;
       return Objects.equals(getPid(), other.getPid())
