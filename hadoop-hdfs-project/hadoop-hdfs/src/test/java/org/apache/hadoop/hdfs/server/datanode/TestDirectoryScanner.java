@@ -41,6 +41,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -153,6 +154,72 @@ public class TestDirectoryScanner {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  /**
+   * HDFS-17995: The scanner should wait the configured interval between the
+   * end of one scan and the start of the next one, so a scan that takes
+   * longer than the interval does not cause scans to run back-to-back.
+   */
+  @Test
+  @Timeout(value = 60)
+  public void testScanScheduledWithFixedDelay() throws Exception {
+    final long intervalMs = 1000L;
+    final long slowScanMs = 1500L;
+    final int expectedScans = 3;
+    Configuration conf = getConfiguration();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+    try {
+      cluster.waitActive();
+      fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
+      GenericTestUtils.LogCapturer logCapturer =
+          GenericTestUtils.LogCapturer.captureLogs(
+              LoggerFactory.getLogger(DirectoryScanner.class));
+
+      // Each element is {scanEnteredMs, scanExitedMs} of one reconcile().
+      final List<long[]> scans = new CopyOnWriteArrayList<>();
+      DataNodeFaultInjector.set(new DataNodeFaultInjector() {
+        @Override
+        public void waitUntilStorageRemoved() {
+          long entered = Time.monotonicNow();
+          try {
+            // Make the scan take longer than the scan interval.
+            Thread.sleep(slowScanMs);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+          scans.add(new long[] {entered, Time.monotonicNow()});
+        }
+      });
+
+      conf.setLong(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
+          TimeUnit.MILLISECONDS.toSeconds(intervalMs));
+      scanner = new DirectoryScanner(fds, conf);
+      scanner.start();
+      GenericTestUtils.waitFor(() -> scans.size() >= expectedScans, 100,
+          30000);
+      scanner.shutdown();
+      scanner = null;
+
+      for (int i = 1; i < expectedScans; i++) {
+        long gap = scans.get(i)[0] - scans.get(i - 1)[1];
+        // With a fixed rate the overdue scan would start right after the
+        // previous one, leaving a gap of only a few milliseconds.
+        assertTrue(gap >= intervalMs - 100,
+            "Scan " + i + " started " + gap + "ms after the previous scan "
+                + "finished, expected at least " + intervalMs + "ms");
+      }
+      assertTrue(logCapturer.getOutput().contains("Directory scan finished in"),
+          "Scan duration was not logged");
+    } finally {
+      DataNodeFaultInjector.set(oldInjector);
+      if (scanner != null) {
+        scanner.shutdown();
+        scanner = null;
+      }
+      cluster.shutdown();
     }
   }
 
