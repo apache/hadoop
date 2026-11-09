@@ -98,7 +98,10 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   public static final String ZK_DTSM_TOKEN_WATCHER_ENABLED = ZK_CONF_PREFIX
       + "token.watcher.enabled";
   public static final boolean ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT = true;
-  /** Bound on the wait for the initial cache load; 0 waits indefinitely. */
+  /**
+   * Bound on the wait for the initial load, per cache (keys, then tokens);
+   * 0 waits indefinitely.
+   */
   public static final String ZK_DTSM_ZK_CACHE_INIT_TIMEOUT = ZK_CONF_PREFIX
       + "zkCacheInitTimeout";
   public static final long ZK_DTSM_ZK_CACHE_INIT_TIMEOUT_DEFAULT = 0;
@@ -180,6 +183,9 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT);
     cacheInitTimeoutMs = conf.getTimeDuration(ZK_DTSM_ZK_CACHE_INIT_TIMEOUT,
         ZK_DTSM_ZK_CACHE_INIT_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);
+    Preconditions.checkArgument(cacheInitTimeoutMs >= 0,
+        "%s must not be negative: %s", ZK_DTSM_ZK_CACHE_INIT_TIMEOUT,
+        cacheInitTimeoutMs);
     
     String workPath = conf.get(ZK_DTSM_ZNODE_WORKING_PATH, ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT);
     String nameSpace = workPath + "/" + ZK_DTSM_NAMESPACE;
@@ -329,7 +335,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
               processKeyAddOrUpdate(node.getData());
             } catch (IOException e) {
               LOG.error("Error while processing Curator keyCacheListener "
-                  + "NODE_CREATED / NODE_CHANGED event");
+                  + "NODE_CREATED / NODE_CHANGED event for {}", node.getPath());
               throw new UncheckedIOException(e);
             }
           })
@@ -360,7 +366,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
                 processTokenAddOrUpdate(node.getData());
               } catch (IOException e) {
                 LOG.error("Error while processing Curator tokenCacheListener "
-                    + "NODE_CREATED / NODE_CHANGED event");
+                    + "NODE_CREATED / NODE_CHANGED event for {}", node.getPath());
                 throw new UncheckedIOException(e);
               }
             })
@@ -369,7 +375,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
                 processTokenRemoved(childData);
               } catch (IOException e) {
                 LOG.error("Error while processing Curator tokenCacheListener "
-                    + "NODE_DELETED event");
+                    + "NODE_DELETED event for {}", childData.getPath());
                 throw new UncheckedIOException(e);
               }
             })

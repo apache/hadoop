@@ -837,6 +837,45 @@ public class TestZKDelegationTokenSecretManager {
   }
 
   /**
+   * Roots created before empty data was used carry Curator's default payload
+   * (the local address); the listeners must not parse them.
+   */
+  @Test
+  public void testRootPayloadNotParsed() throws Exception {
+    String ns = "/testPath/ZKDTSMRoot";
+    byte[] payload = "127.0.0.1".getBytes(StandardCharsets.UTF_8);
+    try (CuratorFramework zk = CuratorFrameworkFactory.newClient(
+        zkServer.getConnectString(), new ExponentialBackoffRetry(1000, 3))) {
+      zk.start();
+      zk.create().creatingParentsIfNeeded()
+          .forPath(ns + "/ZKDTSMMasterKeyRoot", payload);
+      zk.create().creatingParentsIfNeeded()
+          .forPath(ns + "/ZKDTSMTokensRoot", payload);
+    }
+    GenericTestUtils.LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+        LoggerFactory.getLogger(ZKDelegationTokenSecretManager.class));
+    DelegationTokenManager tm = new DelegationTokenManager(
+        getSecretConf(zkServer.getConnectString()), new Text("bla"));
+    try {
+      tm.init();
+      assertFalse(logs.getOutput().contains("Error while processing Curator"),
+          logs.getOutput());
+    } finally {
+      tm.destroy();
+      logs.stopCapturing();
+    }
+  }
+
+  @Test
+  public void testNegativeCacheInitTimeoutRejected() throws Exception {
+    Configuration conf = getSecretConf(zkServer.getConnectString());
+    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CACHE_INIT_TIMEOUT, "-1");
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CACHE_INIT_TIMEOUT,
+        () -> new StartupHookSecretManager(conf, new Text("bla")));
+  }
+
+  /**
    * Runs a hook once when the starting thread applies a token itself.
    */
   private static final class StartupHookSecretManager
