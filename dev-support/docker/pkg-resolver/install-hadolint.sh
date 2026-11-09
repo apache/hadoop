@@ -27,7 +27,7 @@ if [ $? -eq 1 ]; then
   exit 1
 fi
 
-curl -L -s -S \
+curl -f -L -s -S --retry 5 --retry-delay 5 \
   https://github.com/hadolint/hadolint/releases/download/v1.11.1/hadolint-Linux-x86_64 \
   -o /bin/hadolint &&
   chmod a+rx /bin/hadolint &&

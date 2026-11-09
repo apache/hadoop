@@ -41,7 +41,7 @@ fi
 if [ "$version_to_install" == "1.86.0" ]; then
   # hadolint ignore=DL3003
   mkdir -p /opt/boost-library &&
-    curl -L https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz > boost-1.86.0.tar.gz &&
+    curl -f -L -s -S --retry 5 --retry-delay 5 https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz -o boost-1.86.0.tar.gz &&
     mv boost-1.86.0.tar.gz /opt/boost-library &&
     cd /opt/boost-library &&
     tar -xzf boost-1.86.0.tar.gz &&
