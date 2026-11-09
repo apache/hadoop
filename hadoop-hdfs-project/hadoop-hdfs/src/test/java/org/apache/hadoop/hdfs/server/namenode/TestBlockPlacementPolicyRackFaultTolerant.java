@@ -20,14 +20,17 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -35,8 +38,11 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolerant;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.util.RwLockMode;
 import org.apache.hadoop.net.StaticMapping;
@@ -62,8 +68,14 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
 
   @BeforeEach
   public void setup() throws IOException {
+    startCluster(new HdfsConfiguration());
+  }
+
+  /**
+   * Start a cluster with 10 racks and 2 datanodes on each rack.
+   */
+  private void startCluster(Configuration conf) throws IOException {
     StaticMapping.resetMap();
-    Configuration conf = new HdfsConfiguration();
     final ArrayList<String> rackList = new ArrayList<String>();
     final ArrayList<String> hostList = new ArrayList<String>();
     for (int i = 0; i < 10; i++) {
@@ -278,6 +290,113 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
               .verifyBlockPlacement(block.getLocations(), 5);
       assertTrue(status.isPlacementPolicySatisfied());
     }
+  }
+
+  /**
+   * Verify that ALL_SSD falls back to DISK when there is no SSD.
+   */
+  @Test
+  public void testChooseTargetFallbackStorageType() throws Exception {
+    DistributedFileSystem fs = cluster.getFileSystem();
+    Path dir = new Path("/all_ssd");
+    fs.mkdirs(dir);
+    fs.setStoragePolicy(dir, "ALL_SSD");
+
+    // 3 replicas fit on distinct racks, while 11 replicas on 10 racks go
+    // through the two-pass placement.
+    for (short replication : new short[] { 3, 11 }) {
+      Path file = new Path(dir, "file" + replication);
+      DFSTestUtil.createFile(fs, file, DEFAULT_BLOCK_SIZE, replication, 0L);
+      DFSTestUtil.waitReplication(fs, file, replication);
+
+      LocatedBlocks locatedBlocks =
+          fs.getClient().getLocatedBlocks(file.toString(), 0);
+      assertEquals(1, locatedBlocks.locatedBlockCount());
+      verifyDiskTargetsOnRacks(locatedBlocks.get(0), replication,
+          Math.min(replication, 10));
+    }
+  }
+
+  /**
+   * Verify that ALL_SSD falls back to DISK for an EC file when there is no
+   * SSD.
+   */
+  @Test
+  public void testChooseTargetFallbackStorageTypeForEC() throws Exception {
+    DistributedFileSystem fs = cluster.getFileSystem();
+    String ecPolicyName = "RS-6-3-1024k";
+    Path dir = new Path("/ec_all_ssd");
+    fs.mkdirs(dir);
+    fs.enableErasureCodingPolicy(ecPolicyName);
+    fs.setErasureCodingPolicy(dir, ecPolicyName);
+    fs.setStoragePolicy(dir, "ALL_SSD");
+
+    String clientMachine = "client.foo.com";
+    String src = dir + "/file";
+    HdfsFileStatus fileStatus = namesystem.startFile(src, perm,
+        clientMachine, clientMachine, EnumSet.of(CreateFlag.CREATE), true,
+        (short) 1, DEFAULT_BLOCK_SIZE * 1024, null, null, null, false);
+    LocatedBlock locatedBlock = nameNodeRpc.addBlock(src, clientMachine,
+        null, null, fileStatus.getFileId(), null, null);
+    verifyDiskTargetsOnRacks(locatedBlock, 9, 9);
+  }
+
+  /**
+   * Verify that the retry without avoiding stale nodes works when every
+   * datanode is stale.
+   */
+  @Test
+  public void testChooseTargetRetryWithStaleNodes() throws Exception {
+    cluster.shutdown();
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY, true);
+    conf.setFloat(
+        DFSConfigKeys.DFS_NAMENODE_USE_STALE_DATANODE_FOR_WRITE_RATIO_KEY,
+        1.0f);
+    startCluster(conf);
+
+    // Make every datanode stale.
+    for (DataNode dn : cluster.getDataNodes()) {
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
+    }
+    BlockManager bm = namesystem.getBlockManager();
+    DatanodeManager dm = bm.getDatanodeManager();
+    for (DatanodeDescriptor dnd :
+        dm.getDatanodeListForReport(DatanodeReportType.LIVE)) {
+      DFSTestUtil.resetLastUpdatesWithOffset(dnd,
+          -(DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT + 1000));
+    }
+    BlockManagerTestUtil.checkHeartbeat(bm);
+    assertEquals(20, dm.getNumStaleNodes());
+    assertTrue(dm.shouldAvoidStaleDataNodesForWrite());
+
+    String clientMachine = "client.foo.com";
+    String src = "/stale_file";
+    HdfsFileStatus fileStatus = namesystem.startFile(src, perm,
+        clientMachine, clientMachine, EnumSet.of(CreateFlag.CREATE), true,
+        (short) 3, DEFAULT_BLOCK_SIZE, null, null, null, false);
+    LocatedBlock locatedBlock = nameNodeRpc.addBlock(src, clientMachine,
+        null, null, fileStatus.getFileId(), null, null);
+    verifyDiskTargetsOnRacks(locatedBlock, 3, 3);
+  }
+
+  /**
+   * Verify that the block has the expected number of targets, all on DISK,
+   * spread across the expected number of racks.
+   */
+  private void verifyDiskTargetsOnRacks(LocatedBlock block, int numTargets,
+      int numRacks) {
+    assertEquals(numTargets, block.getLocations().length);
+    assertEquals(numTargets, block.getStorageTypes().length);
+    for (StorageType type : block.getStorageTypes()) {
+      assertEquals(StorageType.DISK, type);
+    }
+    Set<String> racks = new HashSet<>();
+    for (DatanodeInfo node : block.getLocations()) {
+      racks.add(node.getNetworkLocation());
+    }
+    assertEquals(numRacks, racks.size());
   }
 
   private void shuffle(DatanodeInfo[] locs, String[] storageIDs) {
