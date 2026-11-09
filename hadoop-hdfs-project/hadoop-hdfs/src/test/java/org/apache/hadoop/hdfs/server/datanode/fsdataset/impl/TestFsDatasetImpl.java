@@ -267,6 +267,18 @@ public class TestFsDatasetImpl {
     assertNotEquals(0L, dataset.getLastDirScannerFinishTime());
   }
 
+  /**
+   * FsDatasetSpi#getStoredBlock should return null when the replica does not
+   * exist, callers such as VolumeScanner#scanBlock rely on this contract.
+   */
+  @Test
+  public void testGetStoredBlockForNonExistentReplica() throws IOException {
+    long nonExistentBlockId = 1234567L;
+    for (String bpid : BLOCK_POOL_IDS) {
+      assertNull(dataset.getStoredBlock(bpid, nonExistentBlockId));
+    }
+  }
+
   @Test
   public void testAddVolumes() throws IOException {
     final int numNewVolumes = 3;
