@@ -30,14 +30,14 @@ name: "Fork CI status"
 # access. Neither can be triggered by a pull request or from a fork. It does
 # not use the `workflow_run` signal that ASF policy and the fork-ci README
 # suggest: zizmor flags that trigger as dangerous, and for builds that take
-# hours, a check that appears on the next scheduled run is soon enough. fork-ci only reads GitHub API metadata: it does not
-# check out, build or download artifacts from PR or fork code, and it only
-# writes its own checks.
+# hours, a check that appears on the next scheduled run is soon enough.
+# fork-ci only reads GitHub API metadata: it does not check out, build or
+# download artifacts from PR or fork code, and it only writes its own checks.
 on:
   schedule:
     # Every 10 minutes on odd minutes, away from the top-of-the-hour peak
-    # when GitHub most often delays scheduled runs. Keep `sweep-minutes`
-    # below equal to this interval.
+    # when GitHub most often delays scheduled runs. If you change the
+    # interval, set `sweep-minutes` below to the new number of minutes.
     - cron: "7,17,27,37,47,57 * * * *"
   workflow_dispatch:
 
@@ -70,9 +70,11 @@ jobs:
           base-branches: |
             trunk
           guide-url: https://github.com/apache/hadoop/blob/trunk/.github/pr-build-check.md
-          # PRs revisited per run. A finished check on a quiet PR, such as a
-          # rerun, only refreshes when its group comes round: about once an
-          # hour with ~260 PRs, at roughly 1,000 API calls per hour.
+          # PRs revisited per run. fork-ci skips a finished check on any PR
+          # outside the current group, even a recently updated one, so a
+          # rerun of a finished build only shows when its group comes round:
+          # about once an hour with ~260 PRs, at roughly 1,000 API calls per
+          # hour.
           sweep-size: "50"
           sweep-minutes: "10"
 

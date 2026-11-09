@@ -2,6 +2,7 @@
   Thanks for sending a pull request!
     1. If this is your first time, please read our contributor guidelines: https://cwiki.apache.org/confluence/display/HADOOP/How+To+Contribute
     2. Make sure your PR title starts with JIRA issue id, e.g., 'HADOOP-17799. Your PR title ...'.
+    3. The "Build" check on your PR mirrors CI that runs in your own fork. Enable GitHub Actions in your fork before your first push: https://github.com/apache/hadoop/blob/trunk/.github/pr-build-check.md
 -->
 
 ### Description of PR
