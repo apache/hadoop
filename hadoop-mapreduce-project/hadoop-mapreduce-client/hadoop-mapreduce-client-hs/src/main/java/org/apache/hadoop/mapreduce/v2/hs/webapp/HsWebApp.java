@@ -31,7 +31,7 @@ import org.apache.hadoop.mapreduce.v2.app.webapp.App;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryContext;
 import org.apache.hadoop.yarn.webapp.WebApp;
 
-import com.google.inject.Singleton;
+import com.google.inject.servlet.RequestScoped;
 
 public class HsWebApp extends WebApp implements AMParams {
 
@@ -43,7 +43,7 @@ public class HsWebApp extends WebApp implements AMParams {
 
   @Override
   public void setup() {
-    bind(App.class).in(Singleton.class);
+    bind(App.class).in(RequestScoped.class);
     bind(AppContext.class).toInstance(history);
     bind(HistoryContext.class).toInstance(history);
     route("/", HsController.class);

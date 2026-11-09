@@ -18,10 +18,11 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 
-import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.UnmodifiableIterator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -38,6 +39,8 @@ import java.util.Map;
  * .getPort() || B.getPort() == 0.
  */
 public class HostSet implements Iterable<InetSocketAddress> {
+  private static final Logger LOG = LoggerFactory.getLogger(HostSet.class);
+
   // Host -> lists of ports
   private final Multimap<InetAddress, Integer> addrs = HashMultimap.create();
 
@@ -72,7 +75,11 @@ public class HostSet implements Iterable<InetSocketAddress> {
   }
 
   void add(InetSocketAddress addr) {
-    Preconditions.checkArgument(!addr.isUnresolved());
+    LOG.debug("Adding address to HostSet: {}", addr);
+    if (addr.isUnresolved()) {
+      LOG.warn("Unresolved address not added to HostSet: {}", addr);
+      return;
+    }
     addrs.put(addr.getAddress(), addr.getPort());
   }
 

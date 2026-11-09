@@ -1256,7 +1256,9 @@ public class NameNode extends ReconfigurableBase implements
       }
     }
     started.set(false);
-    tracer.close();
+    if (tracer != null) {
+      tracer.close();
+    }
   }
 
   synchronized boolean isStopRequested() {

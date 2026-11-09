@@ -309,10 +309,7 @@ class StripedWriter {
 
   void close() {
     for (StripedBlockWriter writer : writers) {
-      ByteBuffer targetBuffer =
-          writer != null ? writer.getTargetBuffer() : null;
-      if (targetBuffer != null) {
-        reconstructor.freeBuffer(targetBuffer);
+      if (writer != null) {
         writer.freeTargetBuffer();
       }
     }

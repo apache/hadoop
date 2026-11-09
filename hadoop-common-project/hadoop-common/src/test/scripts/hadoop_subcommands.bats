@@ -76,3 +76,24 @@ TOKEN
   run "${BATS_TEST_DIRNAME}/../../main/bin/hadoop" multi 1 2
   [ "${output}" = 2 ]
 }
+
+@test "hadoop_generic_columnprinter (missing tput)" {
+  local oldpath="${PATH}"
+  local fakebin="${TMP}/fakebin"
+
+  mkdir -p "${fakebin}"
+  ln -s "$(command -v sort)" "${fakebin}/sort"
+  ln -s "$(command -v fold)" "${fakebin}/fold"
+
+  PATH="${fakebin}"
+  unset COLUMNS
+
+  run hadoop_generic_columnprinter "" \
+    "archive-logs@client@combine aggregated logs into hadoop archives"
+
+  PATH="${oldpath}"
+
+  [ "${status}" -eq 0 ]
+  [[ "${output}" == *"archive-logs"* ]]
+  [[ "${output}" != *"tput: command not found"* ]]
+}

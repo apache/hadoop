@@ -26,6 +26,7 @@ import static org.apache.hadoop.hdfs.server.datanode.BlockScanner.Conf.INTERNAL_
 import static org.apache.hadoop.hdfs.server.datanode.BlockScanner.Conf.INTERNAL_DFS_BLOCK_SCANNER_CURSOR_SAVE_INTERVAL_MS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -48,6 +49,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.SequentialBlockIdGenerator;
 import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils.MaterializedReplica;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.VolumeScanner.ScanResultHandler;
@@ -1133,6 +1135,57 @@ public class TestBlockScanner {
     } finally {
       // restore the VolumeScanner callback injector.
       VolumeScannerCBInjector.set(prevVolumeScannerCBInject);
+    }
+  }
+
+  @Test
+  public void testNextBlock() throws Exception {
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+    try {
+      Configuration conf = new Configuration();
+      disableBlockScanner(conf);
+
+      // Need to manually delete block to trigger error
+      final DataNodeFaultInjector injector = new DataNodeFaultInjector() {
+        @Override
+        public void delayDeleteReplica() {
+          while (true) {
+            try {
+              Thread.sleep(1000);
+            } catch (InterruptedException e) {
+              throw new RuntimeException(e);
+            }
+          }
+        }
+      };
+      DataNodeFaultInjector.set(injector);
+
+      TestContext ctx = new TestContext(conf, 1);
+      SequentialBlockIdGenerator blockIdGenerator =
+          ctx.cluster.getNamesystem().getBlockManager().getBlockIdManager().getBlockIdGenerator();
+
+      // /subdir24/subdir4
+      blockIdGenerator.skipTo(1356375042);
+      ctx.createFiles(0, 1, 1);
+      // /subdir24/subdir29
+      blockIdGenerator.skipTo(1356381682);
+      ctx.createFiles(0, 1, 1);
+
+      FsVolumeSpi volume = ctx.volumes.get(0);
+      BlockIterator iter = volume.newBlockIterator(ctx.bpids[0], "test");
+
+      // Get the subdir29 block. It comes before the subdir4 block.
+      ExtendedBlock nextBlock = iter.nextBlock();
+      assertNotNull(nextBlock);
+      FinalizedReplica replica = (FinalizedReplica) ctx.datanode.getFSDataset()
+          .getReplica(ctx.cluster.getNamesystem().getBlockPoolId(), nextBlock.getBlockId());
+      replica.deleteBlockData();
+      replica.deleteMetadata();
+
+      // subdir29 has been cleaned up, nextBlock() will skip directly to subdir4
+      assertNotNull(iter.nextBlock());
+    } finally {
+      DataNodeFaultInjector.set(oldInjector);
     }
   }
 
