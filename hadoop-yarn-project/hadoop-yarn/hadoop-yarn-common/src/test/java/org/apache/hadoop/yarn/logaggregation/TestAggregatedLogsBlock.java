@@ -127,11 +127,14 @@ public class TestAggregatedLogsBlock {
     assertThat(renderUnavailableLogs(configuration, "2001:db8:0:0:0:0:0:21:1234")).contains(
         "Or see application log at http://[2001:db8:0:0:0:0:0:21]:8042/node/application/");
 
-    // Without a configured NM web port, the page still renders and omits the link.
-    configuration.set(YarnConfiguration.NM_WEBAPP_ADDRESS, "[::1]");
-    assertThat(renderUnavailableLogs(configuration, "2001:db8:0:0:0:0:0:21:1234"))
-        .contains("Logs not available for entity")
-        .doesNotContain("Or see application log at");
+    // Without a known NM web port, the page still renders and omits the link.
+    for (String webAppAddress : new String[] {"[::1]", "0.0.0.0:0"}) {
+      configuration.set(YarnConfiguration.NM_WEBAPP_ADDRESS, webAppAddress);
+      assertThat(renderUnavailableLogs(configuration, "2001:db8:0:0:0:0:0:21:1234"))
+          .as(webAppAddress)
+          .contains("Logs not available for entity")
+          .doesNotContain("Or see application log at");
+    }
   }
 
   private String renderUnavailableLogs(Configuration configuration, String nodeName) {

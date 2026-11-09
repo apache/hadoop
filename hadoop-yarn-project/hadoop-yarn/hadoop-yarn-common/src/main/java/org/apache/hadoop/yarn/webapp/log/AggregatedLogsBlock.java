@@ -141,8 +141,8 @@ public class AggregatedLogsBlock extends HtmlBlock {
     } catch (IllegalArgumentException e) {
       return null;
     }
-    // Without a configured port the NM picks one, which is not known here.
-    if (!webApp.hasPort()) {
+    // Without a configured port, or with port 0, the NM picks one, which is not known here.
+    if (!webApp.hasPort() || webApp.getPort() == 0) {
       return null;
     }
     nodeId = NetUtils.getHostPortString(NodeId.fromString(nodeId).getHost(), webApp.getPort());
