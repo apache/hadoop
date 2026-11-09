@@ -1431,6 +1431,7 @@ class DataStreamer extends Daemon {
           lastAckedSeqno = endOfBlockPacket.getSeqno();
           pipelineRecoveryCount = 0;
           dataQueue.notifyAll();
+          endOfBlockPacket.releaseBuffer(byteArrayManager);
         }
         endBlock();
       } else {
