@@ -428,22 +428,28 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   /**
    * Add the volume lock and all DIR locks of the given volume for a block pool.
+   * @return the number of DIR locks added.
    */
-  private void addVolumeLocks(String bpid, String storageId) {
+  private int addVolumeLocks(String bpid, String storageId) {
     lockManager.addLock(LockLevel.VOLUME, bpid, storageId);
-    for (String dir : datasetSubLockStrategy.getAllSubLockNames()) {
+    List<String> subLockNames = datasetSubLockStrategy.getAllSubLockNames();
+    for (String dir : subLockNames) {
       lockManager.addLock(LockLevel.DIR, bpid, storageId, dir);
     }
+    return subLockNames.size();
   }
 
   /**
    * Remove all DIR locks and the volume lock of the given volume for a block pool.
+   * @return the number of DIR locks removed.
    */
-  private void removeVolumeLocks(String bpid, String storageId) {
-    for (String dir : datasetSubLockStrategy.getAllSubLockNames()) {
+  private int removeVolumeLocks(String bpid, String storageId) {
+    List<String> subLockNames = datasetSubLockStrategy.getAllSubLockNames();
+    for (String dir : subLockNames) {
       lockManager.removeLock(LockLevel.DIR, bpid, storageId, dir);
     }
     lockManager.removeLock(LockLevel.VOLUME, bpid, storageId);
+    return subLockNames.size();
   }
 
   /**
@@ -456,13 +462,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       FsVolumeReference ref) throws IOException {
     String storageId = ref.getVolume().getStorageID();
     String[] bpids = volumeMap.getBlockPoolList();
+    int numDirLocks = 0;
     for (String bp : bpids) {
-      addVolumeLocks(bp, storageId);
+      numDirLocks += addVolumeLocks(bp, storageId);
     }
     if (bpids.length > 0) {
-      LOG.info("Added volume and {} DIR locks per block pool for volume {}, block pools: {}",
-          datasetSubLockStrategy.getAllSubLockNames().size(), storageId,
-          String.join(",", bpids));
+      LOG.info("Added volume locks and {} DIR locks for volume {}, block pools: {}",
+          numDirLocks, storageId, String.join(",", bpids));
     }
     DatanodeStorage dnStorage = storageMap.get(sd.getStorageUuid());
     if (dnStorage != null) {
@@ -662,13 +668,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       for (String storageUuid : storageToRemove) {
         storageMap.remove(storageUuid);
         String[] bpids = volumeMap.getBlockPoolList();
+        int numDirLocks = 0;
         for (String bp : bpids) {
-          removeVolumeLocks(bp, storageUuid);
+          numDirLocks += removeVolumeLocks(bp, storageUuid);
         }
         if (bpids.length > 0) {
-          LOG.info("Removed volume and {} DIR locks per block pool for volume {}, "
-              + "block pools: {}", datasetSubLockStrategy.getAllSubLockNames().size(),
-              storageUuid, String.join(",", bpids));
+          LOG.info("Removed volume locks and {} DIR locks for volume {}, block pools: {}",
+              numDirLocks, storageUuid, String.join(",", bpids));
         }
       }
     }
@@ -3313,11 +3319,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
       volumeMap.initBlockPool(bpid);
       Set<String> vols = storageMap.keySet();
+      int numDirLocks = 0;
       for (String v : vols) {
-        addVolumeLocks(bpid, v);
+        numDirLocks += addVolumeLocks(bpid, v);
       }
-      LOG.info("Added volume and {} DIR locks per volume for bpid {} on {} volumes",
-          datasetSubLockStrategy.getAllSubLockNames().size(), bpid, vols.size());
+      LOG.info("Added volume locks and {} DIR locks for bpid {} on {} volumes",
+          numDirLocks, bpid, vols.size());
     }
     try {
       volumes.getAllVolumesMap(bpid, volumeMap, ramDiskReplicaTracker);

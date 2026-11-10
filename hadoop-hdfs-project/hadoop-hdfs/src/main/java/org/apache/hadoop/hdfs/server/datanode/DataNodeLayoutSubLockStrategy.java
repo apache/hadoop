@@ -18,14 +18,9 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.util.Collections;
 import java.util.List;
 
 public class DataNodeLayoutSubLockStrategy implements DataSetSubLockStrategy {
-  /** The block directory layout is fixed, so compute the sub lock names once. */
-  private static final List<String> ALL_SUB_LOCK_NAMES =
-      Collections.unmodifiableList(DatanodeUtil.getAllSubDirNameForDataSetLock());
-
   @Override
   public String blockIdToSubLock(long blockid) {
     return DatanodeUtil.idToBlockDirSuffix(blockid);
@@ -33,6 +28,6 @@ public class DataNodeLayoutSubLockStrategy implements DataSetSubLockStrategy {
 
   @Override
   public List<String> getAllSubLockNames() {
-    return ALL_SUB_LOCK_NAMES;
+    return DatanodeUtil.getAllSubDirNameForDataSetLock();
   }
 }
