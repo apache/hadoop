@@ -123,6 +123,29 @@ class SFTPInputStream extends FSInputStream {
     return byteRead;
   }
 
+  @Override
+  public synchronized int read(byte[] buf, int off, int len)
+      throws IOException {
+    checkNotClosed();
+    validatePositionedReadArgs(nextPos, buf, off, len);
+    if (len == 0) {
+      return 0;
+    }
+    if (this.contentLength == 0 || (nextPos >= contentLength)) {
+      return -1;
+    }
+    seekInternal();
+    int bytesRead = wrappedStream.read(buf, off, len);
+    if (bytesRead > 0) {
+      pos += bytesRead;
+      nextPos += bytesRead;
+      if (stats != null) {
+        stats.incrementBytesRead(bytesRead);
+      }
+    }
+    return bytesRead;
+  }
+
   public synchronized void close() throws IOException {
     if (closed) {
       return;

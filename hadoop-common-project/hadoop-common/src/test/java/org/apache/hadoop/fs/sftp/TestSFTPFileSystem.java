@@ -22,8 +22,10 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -32,6 +34,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
@@ -232,6 +235,57 @@ public class TestSFTPFileSystem {
         is.close();
       }
     }
+    assertTrue(sftpFs.delete(file, false));
+    assertThat(
+        ((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount())
+        .isEqualTo(1);
+  }
+
+  /**
+   * Test reading a file with bulk reads, before and after a backward seek.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testReadFileInBulk(TestInfo testInfo) throws Exception {
+    byte[] data = new byte[1024 * 1024 + 17];
+    new Random(0xDEADBEEFL).nextBytes(data);
+    Path file = touch(localFs, testInfo.getDisplayName().toLowerCase(), data);
+    StorageStatistics stats =
+        FileSystem.getGlobalStorageStatistics().get("sftp");
+    long bytesReadBefore = stats.getLong("bytesRead");
+
+    int chunkSize = 64 * 1024;
+    byte[] actual = new byte[data.length];
+    byte[] reread = new byte[chunkSize];
+    int seekPos = data.length / 3;
+    FSDataInputStream is = null;
+    try {
+      is = sftpFs.open(file);
+      int total = 0;
+      while (total < data.length) {
+        int n = is.read(actual, total,
+            Math.min(chunkSize, data.length - total));
+        assertTrue(n > 0);
+        total += n;
+      }
+      assertArrayEquals(data, actual);
+      assertEquals(data.length, is.getPos());
+      assertEquals(-1, is.read(actual, 0, chunkSize));
+      assertEquals(0, is.read(actual, 0, 0));
+
+      is.seek(seekPos);
+      is.readFully(reread);
+      assertArrayEquals(
+          Arrays.copyOfRange(data, seekPos, seekPos + reread.length), reread);
+      assertEquals(seekPos + reread.length, is.getPos());
+    } finally {
+      if (is != null) {
+        is.close();
+      }
+    }
+    assertEquals(data.length + reread.length,
+        stats.getLong("bytesRead") - bytesReadBefore);
     assertTrue(sftpFs.delete(file, false));
     assertThat(
         ((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount())
