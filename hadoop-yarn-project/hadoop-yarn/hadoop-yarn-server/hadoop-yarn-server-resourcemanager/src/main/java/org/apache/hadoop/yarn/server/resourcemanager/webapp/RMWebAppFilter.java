@@ -22,7 +22,6 @@ import static org.apache.hadoop.yarn.util.StringHelper.pjoin;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Random;
@@ -42,7 +41,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.http.IsActiveServlet;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -88,18 +86,7 @@ public class RMWebAppFilter implements Filter {
   @Inject
   public RMWebAppFilter(Injector injector, Configuration conf) {
     this.injector = injector;
-    InetSocketAddress sock = YarnConfiguration.useHttps(conf)
-        ? conf.getSocketAddr(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_PORT)
-        : conf.getSocketAddr(YarnConfiguration.RM_WEBAPP_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_WEBAPP_PORT);
-
-    path = NetUtils.getHostPortString(sock);
-    path = YarnConfiguration.useHttps(conf)
-        ? "https://" + path
-        : "http://" + path;
+    path = RMWebApp.getWebAppURLWithScheme(conf);
     ahsEnabled = conf.getBoolean(
         YarnConfiguration.APPLICATION_HISTORY_ENABLED,
         YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED);

@@ -20,29 +20,20 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNodes.newResource;
 import static org.apache.hadoop.yarn.webapp.Params.TITLE;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
-
-import javax.servlet.FilterChain;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
@@ -83,7 +74,6 @@ import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import com.google.inject.Binder;
@@ -444,30 +434,12 @@ public class TestRMWebApp {
   }
 
   @Test
-  public void testStandbyRefreshUrl() throws Exception {
-    assertThat(standbyRefreshUrl("1.2.3.4:8088")).startsWith("http://1.2.3.4:8088/cluster/apps?");
-    assertThat(standbyRefreshUrl("[2001:db8::1]:8088")).startsWith("http://[2001:db8::1]:8088/cluster/apps?");
-  }
-
-  /** Runs RMWebAppFilter as a standby RM with no active RM and returns the Refresh URL. */
-  private static String standbyRefreshUrl(String webappAddress) throws Exception {
+  public void testGetWebAppURLWithScheme() {
     Configuration conf = new YarnConfiguration();
-    conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, webappAddress);
-    RMWebApp rmWebApp = mock(RMWebApp.class);
-    when(rmWebApp.isStandby()).thenReturn(true);
-    when(rmWebApp.getRedirectPath()).thenReturn("");
-    Injector injector = mock(Injector.class);
-    when(injector.getInstance(RMWebApp.class)).thenReturn(rmWebApp);
-    HttpServletRequest request = mock(HttpServletRequest.class);
-    when(request.getRequestURI()).thenReturn("/cluster/apps");
-    HttpServletResponse response = mock(HttpServletResponse.class);
-    when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
-
-    new RMWebAppFilter(injector, conf).doFilter(request, response, mock(FilterChain.class));
-
-    ArgumentCaptor<String> refresh = ArgumentCaptor.forClass(String.class);
-    verify(response).setHeader(eq("Refresh"), refresh.capture());
-    return refresh.getValue().substring(refresh.getValue().indexOf(";url=") + 5);
+    conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, "1.2.3.4:8088");
+    assertEquals("http://1.2.3.4:8088", RMWebApp.getWebAppURLWithScheme(conf));
+    conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, "[2001:db8::1]:8088");
+    assertEquals("http://[2001:db8::1]:8088", RMWebApp.getWebAppURLWithScheme(conf));
   }
 
   private class CustomRMWebServices extends RMWebServices {

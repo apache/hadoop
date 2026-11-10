@@ -97,13 +97,17 @@ public class TestWebAppUtils {
 
   @Test
   void testGetResolvedAddress() throws UnknownHostException {
-    assertEquals("1.2.3.4:8088", WebAppUtils.getResolvedAddress(literalSocketAddr("1.2.3.4", 8088)));
-    assertEquals("[2001:db8::1]:8088", WebAppUtils.getResolvedAddress(literalSocketAddr("2001:db8::1", 8088)));
+    assertEquals("1.2.3.4:8088",
+        WebAppUtils.getResolvedAddress(literalSocketAddr("1.2.3.4", 8088)));
+    assertEquals("[2001:db8::1]:8088",
+        WebAppUtils.getResolvedAddress(literalSocketAddr("2001:db8::1", 8088)));
   }
 
   /** Socket address whose host name is the given IP literal, so no reverse lookup happens. */
-  private static InetSocketAddress literalSocketAddr(String ip, int port) throws UnknownHostException {
-    return new InetSocketAddress(InetAddress.getByAddress(ip, InetAddress.getByName(ip).getAddress()), port);
+  private static InetSocketAddress literalSocketAddr(String ip, int port)
+      throws UnknownHostException {
+    InetAddress addr = InetAddress.getByAddress(ip, InetAddress.getByName(ip).getAddress());
+    return new InetSocketAddress(addr, port);
   }
 
   @Test
