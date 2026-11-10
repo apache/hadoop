@@ -42,6 +42,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.http.IsActiveServlet;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -95,7 +96,7 @@ public class RMWebAppFilter implements Filter {
             YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS,
             YarnConfiguration.DEFAULT_RM_WEBAPP_PORT);
 
-    path = sock.getHostName() + ":" + sock.getPort();
+    path = NetUtils.getHostPortString(sock);
     path = YarnConfiguration.useHttps(conf)
         ? "https://" + path
         : "http://" + path;

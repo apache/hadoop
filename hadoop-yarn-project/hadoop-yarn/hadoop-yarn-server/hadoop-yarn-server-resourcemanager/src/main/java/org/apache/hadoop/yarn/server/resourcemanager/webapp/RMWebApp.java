@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.util.RMHAUtils;
@@ -149,7 +150,7 @@ public class RMWebApp extends WebApp implements YarnWebParams {
               YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS,
               YarnConfiguration.DEFAULT_RM_WEBAPP_PORT);
 
-      path = sock.getHostName() + ":" + sock.getPort();
+      path = NetUtils.getHostPortString(sock);
       path = YarnConfiguration.useHttps(yarnConf)
           ? "https://" + path
           : "http://" + path;
