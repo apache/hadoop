@@ -17,18 +17,19 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.metrics;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports.DiskOp;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
@@ -37,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -111,9 +113,11 @@ public class DataNodeDiskMetrics {
       public void run() {
         while (shouldRun) {
           if (dn.getFSDataset() != null) {
-            Map<String, Double> metadataOpStats = Maps.newHashMap();
-            Map<String, Double> readIoStats = Maps.newHashMap();
-            Map<String, Double> writeIoStats = Maps.newHashMap();
+            Map<StorageType, Map<String, Double>> metadataOpStats =
+                new EnumMap<>(StorageType.class);
+            Map<StorageType, Map<String, Double>> readIoStats = new EnumMap<>(StorageType.class);
+            Map<StorageType, Map<String, Double>> writeIoStats = new EnumMap<>(StorageType.class);
+            Map<String, StorageType> diskToStorageType = new HashMap<>();
             FsDatasetSpi.FsVolumeReferences fsVolumeReferences = null;
             try {
               fsVolumeReferences = dn.getFSDataset().getFsVolumeReferences();
@@ -123,11 +127,18 @@ public class DataNodeDiskMetrics {
                 FsVolumeSpi volume = volumeIterator.next();
                 DataNodeVolumeMetrics metrics = volume.getMetrics();
                 String volumeName = volume.getBaseURI().getPath();
+                StorageType storageType = volume.getStorageType();
+                if (storageType == null) {
+                  storageType = StorageType.DEFAULT;
+                }
 
-                metadataOpStats.put(volumeName,
-                    metrics.getMetadataOperationMean());
-                readIoStats.put(volumeName, metrics.getReadIoMean());
-                writeIoStats.put(volumeName, metrics.getWriteIoMean());
+                diskToStorageType.put(volumeName, storageType);
+                metadataOpStats.computeIfAbsent(storageType, k -> Maps.newHashMap())
+                    .put(volumeName, metrics.getMetadataOperationMean());
+                readIoStats.computeIfAbsent(storageType, k -> Maps.newHashMap())
+                    .put(volumeName, metrics.getReadIoMean());
+                writeIoStats.computeIfAbsent(storageType, k -> Maps.newHashMap())
+                    .put(volumeName, metrics.getWriteIoMean());
               }
             } finally {
               if (fsVolumeReferences != null) {
@@ -147,19 +158,30 @@ public class DataNodeDiskMetrics {
             detectAndUpdateDiskOutliers(metadataOpStats, readIoStats,
                 writeIoStats);
 
-            // Sort the slow disks by latency and extract the top n by maxSlowDisksToExclude.
+            // Sort the slow disks by latency and extract the top n by maxSlowDisksToExclude
+            // within each StorageType group independently.
             if (maxSlowDisksToExclude > 0) {
-              ArrayList<DiskLatency> diskLatencies = new ArrayList<>();
-              for (Map.Entry<String, Map<DiskOp, Double>> diskStats :
-                  diskOutliersStats.entrySet()) {
-                diskLatencies.add(new DiskLatency(diskStats.getKey(), diskStats.getValue()));
+              Map<StorageType, ArrayList<DiskLatency>> slowDisksByType =
+                  new EnumMap<>(StorageType.class);
+              for (Map.Entry<String, Map<DiskOp, Double>> diskStats : diskOutliersStats.entrySet()) {
+                String diskPath = diskStats.getKey();
+                StorageType st = diskToStorageType.get(diskPath);
+                if (st == null) {
+                  st = StorageType.DEFAULT;
+                }
+                slowDisksByType.computeIfAbsent(st, k -> new ArrayList<>())
+                    .add(new DiskLatency(diskPath, diskStats.getValue()));
               }
 
-              Collections.sort(diskLatencies, (o1, o2)
-                  -> Double.compare(o2.getMaxLatency(), o1.getMaxLatency()));
-
-              slowDisksToExclude = diskLatencies.stream().limit(maxSlowDisksToExclude)
-                  .map(DiskLatency::getSlowDisk).collect(Collectors.toList());
+              List<String> excludeList = new ArrayList<>();
+              for (Map.Entry<StorageType, ArrayList<DiskLatency>> entry : slowDisksByType.entrySet()) {
+                ArrayList<DiskLatency> typeSlowDisks = entry.getValue();
+                Collections.sort(typeSlowDisks,
+                    (o1, o2) -> Double.compare(o2.getMaxLatency(), o1.getMaxLatency()));
+                excludeList.addAll(typeSlowDisks.stream().limit(maxSlowDisksToExclude)
+                    .map(DiskLatency::getSlowDisk).collect(Collectors.toList()));
+              }
+              slowDisksToExclude = excludeList;
             }
           }
 
@@ -175,30 +197,35 @@ public class DataNodeDiskMetrics {
     slowDiskDetectionDaemon.start();
   }
 
-  private void detectAndUpdateDiskOutliers(Map<String, Double> metadataOpStats,
-      Map<String, Double> readIoStats, Map<String, Double> writeIoStats) {
+  private void detectAndUpdateDiskOutliers(Map<StorageType, Map<String, Double>> metadataOpStats,
+      Map<StorageType, Map<String, Double>> readIoStats,
+      Map<StorageType, Map<String, Double>> writeIoStats) {
     Map<String, Map<DiskOp, Double>> diskStats = Maps.newHashMap();
 
     // Get MetadataOp Outliers
-    Map<String, Double> metadataOpOutliers = slowDiskDetector
-        .getOutliers(metadataOpStats);
-    for (Map.Entry<String, Double> entry : metadataOpOutliers.entrySet()) {
-      addDiskStat(diskStats, entry.getKey(), DiskOp.METADATA, entry.getValue());
+    for (Map.Entry<StorageType, Map<String, Double>> entry : metadataOpStats.entrySet()) {
+      Map<String, Double> metadataOpOutliers = slowDiskDetector.getOutliers(entry.getValue());
+      for (Map.Entry<String, Double> outlier : metadataOpOutliers.entrySet()) {
+        addDiskStat(diskStats, outlier.getKey(), DiskOp.METADATA, outlier.getValue());
+      }
     }
 
     // Get ReadIo Outliers
-    Map<String, Double> readIoOutliers = slowDiskDetector
-        .getOutliers(readIoStats);
-    for (Map.Entry<String, Double> entry : readIoOutliers.entrySet()) {
-      addDiskStat(diskStats, entry.getKey(), DiskOp.READ, entry.getValue());
+    for (Map.Entry<StorageType, Map<String, Double>> entry : readIoStats.entrySet()) {
+      Map<String, Double> readIoOutliers = slowDiskDetector.getOutliers(entry.getValue());
+      for (Map.Entry<String, Double> outlier : readIoOutliers.entrySet()) {
+        addDiskStat(diskStats, outlier.getKey(), DiskOp.READ, outlier.getValue());
+      }
     }
 
     // Get WriteIo Outliers
-    Map<String, Double> writeIoOutliers = slowDiskDetector
-        .getOutliers(writeIoStats);
-    for (Map.Entry<String, Double> entry : writeIoOutliers.entrySet()) {
-      addDiskStat(diskStats, entry.getKey(), DiskOp.WRITE, entry.getValue());
+    for (Map.Entry<StorageType, Map<String, Double>> entry : writeIoStats.entrySet()) {
+      Map<String, Double> writeIoOutliers = slowDiskDetector.getOutliers(entry.getValue());
+      for (Map.Entry<String, Double> outlier : writeIoOutliers.entrySet()) {
+        addDiskStat(diskStats, outlier.getKey(), DiskOp.WRITE, outlier.getValue());
+      }
     }
+
     if (overrideStatus) {
       diskOutliersStats = diskStats;
       LOG.debug("Updated disk outliers.");
