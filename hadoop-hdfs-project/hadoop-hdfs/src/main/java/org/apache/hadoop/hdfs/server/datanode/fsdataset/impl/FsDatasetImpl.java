@@ -427,6 +427,26 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   /**
+   * Add the volume lock and all DIR locks of the given volume for a block pool.
+   */
+  private void addVolumeLocks(String bpid, String storageId) {
+    lockManager.addLock(LockLevel.VOLUME, bpid, storageId);
+    for (String dir : datasetSubLockStrategy.getAllSubLockNames()) {
+      lockManager.addLock(LockLevel.DIR, bpid, storageId, dir);
+    }
+  }
+
+  /**
+   * Remove all DIR locks and the volume lock of the given volume for a block pool.
+   */
+  private void removeVolumeLocks(String bpid, String storageId) {
+    for (String dir : datasetSubLockStrategy.getAllSubLockNames()) {
+      lockManager.removeLock(LockLevel.DIR, bpid, storageId, dir);
+    }
+    lockManager.removeLock(LockLevel.VOLUME, bpid, storageId);
+  }
+
+  /**
    * Activate a volume to serve requests.
    * @throws IOException if the storage UUID already exists.
    */
@@ -434,14 +454,15 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       ReplicaMap replicaMap,
       Storage.StorageDirectory sd, StorageType storageType,
       FsVolumeReference ref) throws IOException {
-    for (String bp : volumeMap.getBlockPoolList()) {
-      lockManager.addLock(LockLevel.VOLUME, bp, ref.getVolume().getStorageID());
-      List<String> allSubDirNameForDataSetLock = datasetSubLockStrategy.getAllSubLockNames();
-      for (String dir : allSubDirNameForDataSetLock) {
-        lockManager.addLock(LockLevel.DIR, bp, ref.getVolume().getStorageID(), dir);
-        LOG.info("Added DIR lock for bpid:{}, volume storageid:{}, dir:{}",
-            bp, ref.getVolume().getStorageID(), dir);
-      }
+    String storageId = ref.getVolume().getStorageID();
+    String[] bpids = volumeMap.getBlockPoolList();
+    for (String bp : bpids) {
+      addVolumeLocks(bp, storageId);
+    }
+    if (bpids.length > 0) {
+      LOG.info("Added volume and {} DIR locks per block pool for volume {}, block pools: {}",
+          datasetSubLockStrategy.getAllSubLockNames().size(), storageId,
+          String.join(",", bpids));
     }
     DatanodeStorage dnStorage = storageMap.get(sd.getStorageUuid());
     if (dnStorage != null) {
@@ -640,14 +661,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     synchronized (this) {
       for (String storageUuid : storageToRemove) {
         storageMap.remove(storageUuid);
-        for (String bp : volumeMap.getBlockPoolList()) {
-          List<String> allSubDirNameForDataSetLock = datasetSubLockStrategy.getAllSubLockNames();
-          for (String dir : allSubDirNameForDataSetLock) {
-            lockManager.removeLock(LockLevel.DIR, bp, storageUuid, dir);
-            LOG.info("Removed DIR lock for bpid:{}, volume storageid:{}, dir:{}",
-                bp, storageUuid, dir);
-          }
-          lockManager.removeLock(LockLevel.VOLUME, bp, storageUuid);
+        String[] bpids = volumeMap.getBlockPoolList();
+        for (String bp : bpids) {
+          removeVolumeLocks(bp, storageUuid);
+        }
+        if (bpids.length > 0) {
+          LOG.info("Removed volume and {} DIR locks per block pool for volume {}, "
+              + "block pools: {}", datasetSubLockStrategy.getAllSubLockNames().size(),
+              storageUuid, String.join(",", bpids));
         }
       }
     }
@@ -3293,14 +3314,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       volumeMap.initBlockPool(bpid);
       Set<String> vols = storageMap.keySet();
       for (String v : vols) {
-        lockManager.addLock(LockLevel.VOLUME, bpid, v);
-        List<String> allSubDirNameForDataSetLock = datasetSubLockStrategy.getAllSubLockNames();
-        for (String dir : allSubDirNameForDataSetLock) {
-          lockManager.addLock(LockLevel.DIR, bpid, v, dir);
-          LOG.info("Added DIR lock for bpid:{}, volume storageid:{}, dir:{}",
-              bpid, v, dir);
-        }
+        addVolumeLocks(bpid, v);
       }
+      LOG.info("Added volume and {} DIR locks per volume for bpid {} on {} volumes",
+          datasetSubLockStrategy.getAllSubLockNames().size(), bpid, vols.size());
     }
     try {
       volumes.getAllVolumesMap(bpid, volumeMap, ramDiskReplicaTracker);
