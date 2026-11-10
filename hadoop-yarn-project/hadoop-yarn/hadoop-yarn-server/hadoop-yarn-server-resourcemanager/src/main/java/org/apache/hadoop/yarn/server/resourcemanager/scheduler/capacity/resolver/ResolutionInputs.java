@@ -26,7 +26,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -56,6 +58,24 @@ public final class ResolutionInputs {
       this.leaf = leaf;
     }
 
+    /**
+     * Classifies an existing queue: an AQC v1 auto-created leaf
+     * ({@code AutoCreatedLeafQueue}) receives the leaf queue template of its
+     * managed parent, any other queue marked dynamic is an AQC v2 queue.
+     * @param path the queue path
+     * @param legacyAutoCreated whether the queue is an AQC v1 auto-created leaf
+     * @param dynamic whether the queue is marked dynamic
+     * @param leaf whether the queue is a leaf
+     * @return the dynamic queue, or null for a static queue
+     */
+    public static DynamicQueue of(QueuePath path, boolean legacyAutoCreated,
+        boolean dynamic, boolean leaf) {
+      if (legacyAutoCreated) {
+        return new DynamicQueue(path, true, true);
+      }
+      return dynamic ? new DynamicQueue(path, false, leaf) : null;
+    }
+
     public QueuePath getPath() {
       return path;
     }
@@ -72,6 +92,8 @@ public final class ResolutionInputs {
   private final List<DynamicQueue> dynamicQueues;
   private final Resource clusterMaximumAllocation;
   private final Priority clusterMaximumApplicationPriority;
+  private final RuntimeException clusterMaximumAllocationFailure;
+  private final RuntimeException clusterMaximumApplicationPriorityFailure;
 
   /**
    * @param dynamicQueues the existing dynamic queues
@@ -83,10 +105,51 @@ public final class ResolutionInputs {
   public ResolutionInputs(List<DynamicQueue> dynamicQueues,
       Resource clusterMaximumAllocation,
       Priority clusterMaximumApplicationPriority) {
+    this(dynamicQueues, clusterMaximumAllocation,
+        clusterMaximumApplicationPriority, null, null);
+  }
+
+  private ResolutionInputs(List<DynamicQueue> dynamicQueues,
+      Resource clusterMaximumAllocation,
+      Priority clusterMaximumApplicationPriority,
+      RuntimeException clusterMaximumAllocationFailure,
+      RuntimeException clusterMaximumApplicationPriorityFailure) {
     this.dynamicQueues = Collections.unmodifiableList(
         new ArrayList<>(dynamicQueues));
     this.clusterMaximumAllocation = Resources.clone(clusterMaximumAllocation);
     this.clusterMaximumApplicationPriority = clusterMaximumApplicationPriority;
+    this.clusterMaximumAllocationFailure = clusterMaximumAllocationFailure;
+    this.clusterMaximumApplicationPriorityFailure =
+        clusterMaximumApplicationPriorityFailure;
+  }
+
+  /**
+   * Reads the scheduler-wide inputs from a configuration. Queue setup reads
+   * the cluster maximum allocation and priority itself and fails there if
+   * they cannot be read, so a value that cannot be read is replaced by zero
+   * and its failure is kept for validation.
+   * @param conf the configuration
+   * @param dynamicQueues the existing dynamic queues
+   * @return the inputs
+   */
+  public static ResolutionInputs from(CapacitySchedulerConfiguration conf,
+      List<DynamicQueue> dynamicQueues) {
+    Resource maximumAllocation = Resources.none();
+    RuntimeException maximumAllocationFailure = null;
+    try {
+      maximumAllocation = ResourceUtils.fetchMaximumAllocationFromConfig(conf);
+    } catch (RuntimeException e) {
+      maximumAllocationFailure = e;
+    }
+    Priority maximumPriority = Priority.newInstance(0);
+    RuntimeException maximumPriorityFailure = null;
+    try {
+      maximumPriority = conf.getClusterLevelApplicationMaxPriority();
+    } catch (RuntimeException e) {
+      maximumPriorityFailure = e;
+    }
+    return new ResolutionInputs(dynamicQueues, maximumAllocation,
+        maximumPriority, maximumAllocationFailure, maximumPriorityFailure);
   }
 
   public List<DynamicQueue> getDynamicQueues() {
@@ -99,5 +162,21 @@ public final class ResolutionInputs {
 
   public Priority getClusterMaximumApplicationPriority() {
     return clusterMaximumApplicationPriority;
+  }
+
+  /**
+   * @return why {@link #from} could not read the cluster maximum allocation,
+   *         or null
+   */
+  public RuntimeException getClusterMaximumAllocationFailure() {
+    return clusterMaximumAllocationFailure;
+  }
+
+  /**
+   * @return why {@link #from} could not read the cluster maximum application
+   *         priority, or null
+   */
+  public RuntimeException getClusterMaximumApplicationPriorityFailure() {
+    return clusterMaximumApplicationPriorityFailure;
   }
 }

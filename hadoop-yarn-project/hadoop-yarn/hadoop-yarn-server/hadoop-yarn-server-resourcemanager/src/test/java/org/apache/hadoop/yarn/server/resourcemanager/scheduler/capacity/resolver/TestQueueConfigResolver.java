@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -360,5 +361,64 @@ public class TestQueueConfigResolver {
         path("root.a.d"), true);
     assertEquals("dynamic queue default",
         d.get(CAPACITY_VECTOR).getSourceDetail());
+  }
+
+  @Test
+  public void testResolveQueueUnderRemovedPlan() {
+    // A refresh removed root.plan while the plan follower adds a reservation
+    Configuration conf = conf("root.queues", "a", "root.a.capacity", "100",
+        "user-limit-factor", "3");
+    ResolvedQueueTree tree = resolve(conf);
+    assertNull(tree.get(path("root.plan")));
+
+    ResolvedQueueConfig reservation = QueueConfigResolver.resolveQueue(tree,
+        path("root.plan.r1"), Kind.RESERVATION, false);
+    assertEquals(Kind.RESERVATION, reservation.getKind());
+    assertEquals(3f, reservation.get(USER_LIMIT_FACTOR).getValue());
+    assertEquals(QueueState.RUNNING, reservation.get(STATE).getValue());
+    ResolvedQueueConfig plan = tree.get(path("root.plan"));
+    assertNotNull(plan);
+    assertEquals(Kind.PLAN, plan.getKind());
+    assertSame(reservation, tree.get(path("root.plan.r1")));
+  }
+
+  @Test
+  public void testDynamicQueueClassification() {
+    QueuePath path = path("root.a.b");
+    DynamicQueue legacy = DynamicQueue.of(path, true, false, true);
+    assertTrue(legacy.isLegacyAutoCreated());
+    assertTrue(legacy.isLeaf());
+    DynamicQueue flexibleParent = DynamicQueue.of(path, false, true, false);
+    assertFalse(flexibleParent.isLegacyAutoCreated());
+    assertFalse(flexibleParent.isLeaf());
+    assertTrue(DynamicQueue.of(path, false, true, true).isLeaf());
+    assertNull(DynamicQueue.of(path, false, false, true));
+  }
+
+  @Test
+  public void testInputsKeepReadFailures() {
+    CapacitySchedulerConfiguration conf =
+        new CapacitySchedulerConfiguration(new Configuration(false), false);
+    conf.set(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, "abc");
+    conf.set(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY, "x");
+    ResolutionInputs inputs =
+        ResolutionInputs.from(conf, Collections.emptyList());
+    assertTrue(inputs.getClusterMaximumAllocationFailure()
+        instanceof NumberFormatException);
+    assertTrue(inputs.getClusterMaximumApplicationPriorityFailure()
+        instanceof NumberFormatException);
+    assertEquals(Resource.newInstance(0, 0),
+        inputs.getClusterMaximumAllocation());
+    assertEquals(0,
+        inputs.getClusterMaximumApplicationPriority().getPriority());
+
+    conf.set(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, "4096");
+    conf.set(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY, "5");
+    inputs = ResolutionInputs.from(conf, Collections.emptyList());
+    assertNull(inputs.getClusterMaximumAllocationFailure());
+    assertNull(inputs.getClusterMaximumApplicationPriorityFailure());
+    assertEquals(4096, inputs.getClusterMaximumAllocation().getMemorySize());
+    assertEquals(5,
+        inputs.getClusterMaximumApplicationPriority().getPriority());
   }
 }
