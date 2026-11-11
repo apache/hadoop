@@ -1,0 +1,84 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+# Mirror the contributor's fork workflow run as an informational check on the
+# upstream pull request. Contributors run build_and_test.yml in their own fork
+# (on `push` or `workflow_dispatch`); this bridge finds the run for the PR's
+# head branch and commit and reports it as the "Build" check.
+# See https://github.com/apache/infrastructure-actions/tree/fork-ci/v1.0.0/fork-ci
+name: "Fork CI status"
+
+# Security: this privileged (checks: write) workflow is only triggered via
+# `schedule`, which runs it as merged on the default branch, and
+# `workflow_dispatch`, which runs it on a branch chosen by a user with write
+# access. Neither can be triggered by a pull request or from a fork. It does
+# not use the `workflow_run` signal that ASF policy and the fork-ci README
+# suggest: zizmor flags that trigger as dangerous, and for builds that take
+# hours, a check that appears on the next scheduled run is soon enough.
+# fork-ci only reads GitHub API metadata: it does not check out, build or
+# download artifacts from PR or fork code, and it only writes its own checks.
+on:
+  schedule:
+    # Every 10 minutes on odd minutes, away from the top-of-the-hour peak
+    # when GitHub most often delays scheduled runs. If you change the
+    # interval, set `sweep-minutes` below to the new number of minutes.
+    - cron: "7,17,27,37,47,57 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+# Serialize every invocation, scheduled or manual, so that concurrent runs
+# cannot create duplicate checks or overwrite newer results with older ones.
+concurrency:
+  group: fork-ci-status
+  cancel-in-progress: false
+
+jobs:
+  bridge:
+    name: "Mirror fork CI"
+    runs-on: ubuntu-slim
+    if: github.repository == 'apache/hadoop'
+    timeout-minutes: 10
+    permissions:
+      actions: read        # read workflow runs in contributor forks
+      checks: write        # create and update the mirrored checks
+      pull-requests: read  # list open PRs and re-read them before writing
+    steps:
+      - name: "Mirror build_and_test.yml as Build"
+        uses: apache/infrastructure-actions/fork-ci@36e391618baf31f50c5a7a7347faf00cba6cf085 # fork-ci/v1.0.0
+        with:
+          workflow: build_and_test.yml
+          check-name: Build
+          # Exact names of the base branches that contain build_and_test.yml.
+          # Add a release branch only after the workflow lands on it.
+          base-branches: |
+            trunk
+          guide-url: https://github.com/apache/hadoop/blob/trunk/.github/pr-build-check.md
+          # PRs revisited per run. fork-ci skips a finished check on any PR
+          # outside the current group, even a recently updated one, so a
+          # rerun of a finished build only shows when its group comes round:
+          # about once an hour with ~260 PRs. Larger groups use more API
+          # calls per run.
+          sweep-size: "50"
+          sweep-minutes: "10"
+
+      # To mirror another fork workflow (e.g. build_and_test_windows.yml as
+      # "Build (Windows)"), add a step like the one above with its own
+      # `workflow`, a distinct `check-name` and its own `base-branches`, and
+      # `if: ${{ !cancelled() }}` so a failed sync above does not skip it.
