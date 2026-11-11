@@ -73,8 +73,8 @@ jobs:
           # PRs revisited per run. fork-ci skips a finished check on any PR
           # outside the current group, even a recently updated one, so a
           # rerun of a finished build only shows when its group comes round:
-          # about once an hour with ~260 PRs, at roughly 1,000 API calls per
-          # hour.
+          # about once an hour with ~260 PRs. Larger groups use more API
+          # calls per run.
           sweep-size: "50"
           sweep-minutes: "10"
 
