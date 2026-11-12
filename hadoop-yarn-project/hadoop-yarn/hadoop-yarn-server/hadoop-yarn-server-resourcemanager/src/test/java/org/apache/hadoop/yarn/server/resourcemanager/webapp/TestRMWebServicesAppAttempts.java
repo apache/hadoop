@@ -253,7 +253,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       checkStringMatch("exception message",
-          "Invalid ApplicationId: application_invalid_12", message);
+          "java.lang.IllegalArgumentException: Invalid ApplicationId: application_invalid_12", message);
       checkStringMatch("exception type", "BadRequestException", type);
       checkStringMatch("exception classname",
           "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
@@ -290,7 +290,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       checkStringMatch("exception message",
-          "Invalid AppAttemptId: appattempt_invalid_12_000001", message);
+          "java.lang.IllegalArgumentException: Invalid AppAttemptId: appattempt_invalid_12_000001", message);
       checkStringMatch("exception type", "BadRequestException", type);
       checkStringMatch("exception classname",
           "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
@@ -331,7 +331,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       checkStringMatch("exception message",
-          "app with id: application_00000_0099 not found", message);
+          "java.lang.Exception: app with id: application_00000_0099 not found", message);
       checkStringMatch("exception type", "NotFoundException", type);
       checkStringMatch("exception classname",
           "org.apache.hadoop.yarn.webapp.NotFoundException", classname);

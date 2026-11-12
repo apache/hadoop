@@ -339,7 +339,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringMatch("exception cause",
-          "Error: You must specify a non-empty string for the user", message);
+          "java.lang.Exception: Error: You must specify a non-empty string for the user", message);
       WebServicesTestUtils.checkStringMatch("exception type", "BadRequestException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",
           "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
@@ -579,7 +579,8 @@ public class TestNMWebServicesApps extends JerseyTestBase {
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
-      WebServicesTestUtils.checkStringMatch("exception message", "Invalid ApplicationId prefix: " +
+      WebServicesTestUtils.checkStringMatch("exception message", 
+          "java.lang.IllegalArgumentException: Invalid ApplicationId prefix: " +
           "app_foo_0000. The valid ApplicationId should start with prefix application", message);
       WebServicesTestUtils.checkStringMatch("exception type", "BadRequestException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",
@@ -613,7 +614,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringMatch("exception message",
-          "app with id application_1234_0009 not found", message);
+          "java.lang.Exception: app with id application_1234_0009 not found", message);
       WebServicesTestUtils.checkStringMatch("exception type", "NotFoundException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",
           "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
