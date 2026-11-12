@@ -328,8 +328,9 @@ class FsDatasetAsyncDiskService {
       File newMetaFile = new File(trashDirectory,
           DatanodeUtil.getMetaName(blockName, genstamp));
       try {
-        return (replicaToDelete.renameData(newBlockFile.toURI()) &&
-                replicaToDelete.renameMeta(newMetaFile.toURI()));
+        return (replicaToDelete.renameData(
+            DatanodeUtil.fileToURI(newBlockFile)) &&
+            replicaToDelete.renameMeta(DatanodeUtil.fileToURI(newMetaFile)));
       } catch (IOException e) {
         LOG.error("Error moving files to trash: " + replicaToDelete, e);
       }
