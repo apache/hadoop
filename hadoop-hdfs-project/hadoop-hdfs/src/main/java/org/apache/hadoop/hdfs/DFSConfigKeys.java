@@ -1101,6 +1101,18 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String DFS_BLOCK_REPLICATOR_CLASSNAME_KEY = "dfs.block.replicator.classname";
   public static final Class<BlockPlacementPolicyDefault> DFS_BLOCK_REPLICATOR_CLASSNAME_DEFAULT = BlockPlacementPolicyDefault.class;
+  public static final String DFS_BLOCK_REPLICATOR_CROSS_DC_ASYNC_ENABLED_KEY = "dfs.block.replicator.cross.dc.async.enabled";
+  public static final boolean DFS_BLOCK_REPLICATOR_ASYNC_CROSS_DC_ENABLED_DEFAULT = false;
+  public static final String DFS_BLOCK_REPLICATOR_CROSS_DC_PREFERRED_DATACENTER_KEY = "dfs.block.replicator.cross.dc.preferred.datacenter";
+  public static final String DFS_BLOCK_REPLICATOR_CROSS_DC_PREFERRED_DATACENTER_DEFAULT = "";
+  public static final String DFS_BLOCK_REPLICATOR_CROSS_DC_BANDWIDTH_LIMIT_MB_KEY = "dfs.block.replicator.cross.dc.bandwidth.limit.mb";
+  public static final long DFS_BLOCK_REPLICATOR_CROSS_DC_BANDWIDTH_LIMIT_DEFAULT = 5L * 1024; // 5 GB/s in MB
+  public static final String DFS_BLOCK_REPLICATOR_CROSS_DC_BANDWIDTH_REFILL_PERIOD_SEC_KEY = "dfs.block.replicator.cross.dc.bandwidth.refill.period.sec";
+  public static final long DFS_BLOCK_REPLICATOR_CROSS_DC_BANDWIDTH_REFILL_PERIOD_DEFAULT = 1; // 1 second
+  public static final String DFS_BLOCK_REPLICATOR_CROSS_DC_SYNC_PATHS_KEY = "dfs.block.replicator.cross.dc.sync.paths";
+  public static final String DFS_BLOCK_REPLICATOR_CROSS_DC_SYNC_PATHS_DEFAULT = "";
+  public static final String DFS_BLOCK_REPLICATOR_CROSS_DC_LIMITED_SYNC_PATHS_KEY = "dfs.block.replicator.cross.dc.limited.sync.paths";
+  public static final String DFS_BLOCK_REPLICATOR_CROSS_DC_LIMITED_SYNC_PATHS_DEFAULT = "";
   public static final String  DFS_REPLICATION_MAX_KEY = "dfs.replication.max";
   public static final int     DFS_REPLICATION_MAX_DEFAULT = 512;
   public static final String DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY = "dfs.block.placement.ec.classname";
