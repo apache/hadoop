@@ -22,7 +22,7 @@ import org.xbill.DNS.Lookup;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
 
-public class LookupTask implements Callable<Record[]> {
+public class LookupTask implements Callable<Lookup> {
 
   private Name name;
   private int type;
@@ -33,7 +33,9 @@ public class LookupTask implements Callable<Record[]> {
   }
 
   @Override
-  public Record[] call() throws Exception {
-    return new Lookup(name, type).run();
+  public Lookup call() throws Exception {
+    Lookup lookup = new Lookup(name, type);
+    lookup.run();
+    return lookup;
   }
 }
