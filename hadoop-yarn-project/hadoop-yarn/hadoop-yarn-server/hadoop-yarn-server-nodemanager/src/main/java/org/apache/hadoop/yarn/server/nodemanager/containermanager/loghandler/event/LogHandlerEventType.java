@@ -21,5 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.ev
 public enum LogHandlerEventType {
   APPLICATION_STARTED,
   CONTAINER_FINISHED,
-  APPLICATION_FINISHED, LOG_AGG_TOKEN_UPDATE
+  APPLICATION_FINISHED,
+  CONTAINER_RECOVERED,
+  LOG_AGG_TOKEN_UPDATE
 }
