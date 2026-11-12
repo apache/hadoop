@@ -108,7 +108,7 @@ class NameCache<K> {
       if (useCount != null) {
         useCount.increment();
         if (useCount.get() >= useThreshold) {
-          promote(name);
+          promote(name, useCount);
         }
         return useCount.value;
       }
@@ -147,9 +147,9 @@ class NameCache<K> {
   }
   
   /** Promote a frequently used name to the cache */
-  private void promote(final K name) {
+  private void promote(final K name, final UseCount useCount) {
     transientMap.remove(name);
-    cache.put(name, name);
+    cache.put(name, useCount.value);
     lookups += useThreshold;
   }
 
