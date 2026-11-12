@@ -3496,6 +3496,16 @@
   </property>
 
   <property>
+    <name>dfs.client.lease.renewal.interval.ms</name>
+    <value>0</value>
+    <description>
+      If set between 0 and 30000 inclusive, HDFS clients will renew leases for files they are writing at this interval.
+      If dfs.client.lease.renewal.interval.ms is not set and ipc.client.rpc-timeout.ms is set between 0 and 60000,
+      then the value of ipc.client.rpc-timeout.ms / 2 will be used as the lease renewal interval.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.client.refresh.read-block-locations.ms</name>
     <value>0</value>
     <description>

@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.hdfs.client.impl;
 
-import java.util.function.Supplier;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSOutputStream;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.util.Time;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.doReturn;
 
 public class TestLeaseRenewer {
   private final String FAKE_AUTHORITY="hdfs://nn1/";
@@ -284,5 +287,60 @@ public class TestLeaseRenewer {
       }
     }
     return count;
+  }
+
+  @Test
+  public void testDefaultRenewalInterval() {
+    final DfsClientConf mockConf = Mockito.mock(DfsClientConf.class);
+    doReturn(0).when(mockConf).getLeaseRenewalIntervalMs();
+    doReturn(0).when(mockConf).getHdfsTimeout();
+    DFSClient dfsClient = Mockito.mock(DFSClient.class);
+    doReturn(mockConf).when(dfsClient).getConf();
+    // Use default renewal interval if both explicit renewal interval and HDFS timeout are not set
+    assertEquals(HdfsConstants.LEASE_SOFTLIMIT_PERIOD / 2, LeaseRenewer.getNewRenewalIntervalMs(ImmutableList.of(dfsClient)));
+  }
+
+  @Test
+  public void testShortExplicitRenewalInterval() {
+    final DfsClientConf mockConf = Mockito.mock(DfsClientConf.class);
+    doReturn(37).when(mockConf).getLeaseRenewalIntervalMs();
+    doReturn(100).when(mockConf).getHdfsTimeout();
+    DFSClient dfsClient = Mockito.mock(DFSClient.class);
+    doReturn(mockConf).when(dfsClient).getConf();
+    // Explicit renewal interval is shorter than half the HDFS timeout, renewer should use it
+    assertEquals(37, LeaseRenewer.getNewRenewalIntervalMs(ImmutableList.of(dfsClient)));
+  }
+
+  @Test
+  public void testMediumExplicitRenewalInterval() {
+    final DfsClientConf mockConf = Mockito.mock(DfsClientConf.class);
+    doReturn(370).when(mockConf).getLeaseRenewalIntervalMs();
+    doReturn(100).when(mockConf).getHdfsTimeout();
+    DFSClient dfsClient = Mockito.mock(DFSClient.class);
+    doReturn(mockConf).when(dfsClient).getConf();
+    // Explicit renewal interval is longer than half the HDFS timeout, renewer should use it regardless
+    assertEquals(370, LeaseRenewer.getNewRenewalIntervalMs(ImmutableList.of(dfsClient)));
+  }
+
+  @Test
+  public void testLongExplicitRenewalIntervalWithShortHdfsTimeout() {
+    final DfsClientConf mockConf = Mockito.mock(DfsClientConf.class);
+    doReturn(37000).when(mockConf).getLeaseRenewalIntervalMs();
+    doReturn(100).when(mockConf).getHdfsTimeout();
+    DFSClient dfsClient = Mockito.mock(DFSClient.class);
+    doReturn(mockConf).when(dfsClient).getConf();
+    // Explicit renewal interval is longer than HdfsConstants.LEASE_SOFTLIMIT_PERIOD / 2, but half the HDFS timeout is shorter, so renewer should use the HDFS timeout
+    assertEquals(50, LeaseRenewer.getNewRenewalIntervalMs(ImmutableList.of(dfsClient)));
+  }
+
+  @Test
+  public void testLongExplicitRenewalIntervalWithLongHdfsTimeout() {
+    final DfsClientConf mockConf = Mockito.mock(DfsClientConf.class);
+    doReturn(37000).when(mockConf).getLeaseRenewalIntervalMs();
+    doReturn(120000).when(mockConf).getHdfsTimeout();
+    DFSClient dfsClient = Mockito.mock(DFSClient.class);
+    doReturn(mockConf).when(dfsClient).getConf();
+    // Explicit renewal interval and HDFS timeout is longer than HdfsConstants.LEASE_SOFTLIMIT_PERIOD / 2, so renewer should use default renewal interval
+    assertEquals(HdfsConstants.LEASE_SOFTLIMIT_PERIOD / 2, LeaseRenewer.getNewRenewalIntervalMs(ImmutableList.of(dfsClient)));
   }
 }
