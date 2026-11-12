@@ -987,13 +987,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     final File dstfile = new File(destdir, b.getBlockName());
     final File dstmeta = FsDatasetUtil.getMetaFile(dstfile, b.getGenerationStamp());
     try {
-      replicaInfo.renameMeta(dstmeta.toURI());
+      replicaInfo.renameMeta(DatanodeUtil.fileToURI(dstmeta));
     } catch (IOException e) {
       throw new IOException("Failed to move meta file for " + b
           + " from " + replicaInfo.getMetadataURI() + " to " + dstmeta, e);
     }
     try {
-      replicaInfo.renameData(dstfile.toURI());
+      replicaInfo.renameData(DatanodeUtil.fileToURI(dstfile));
     } catch (IOException e) {
       throw new IOException("Failed to move block file for " + b
           + " from " + replicaInfo.getBlockURI() + " to "
@@ -1046,14 +1046,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       computeChecksum(srcReplica, dstMeta, smallBufferSize, conf);
     } else {
       try {
-        srcReplica.copyMetadata(dstMeta.toURI());
+        srcReplica.copyMetadata(DatanodeUtil.fileToURI(dstMeta));
       } catch (IOException e) {
         throw new IOException("Failed to copy " + srcReplica + " metadata to "
             + dstMeta, e);
       }
     }
     try {
-      srcReplica.copyBlockdata(dstFile.toURI());
+      srcReplica.copyBlockdata(DatanodeUtil.fileToURI(dstFile));
     } catch (IOException e) {
       throw new IOException("Failed to copy " + srcReplica + " block file to "
           + dstFile, e);
@@ -2564,7 +2564,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
       ReplicaInfo removing = volumeMap.remove(bpid, localBlock);
       addDeletingBlock(bpid, removing.getBlockId());
-      LOG.debug("Block file {} is to be deleted", removing.getBlockURI());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Block file {} is to be deleted", removing.getBlockURI());
+      }
       datanode.getMetrics().incrBlocksRemoved(1);
       if (removing instanceof ReplicaInPipeline) {
         ((ReplicaInPipeline) removing).releaseAllBytesReserved();
@@ -2915,7 +2917,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
        */
       // Compare block files
       if (memBlockInfo.blockDataExists()) {
-        if (memBlockInfo.getBlockURI().compareTo(diskFile.toURI()) != 0) {
+        if (memBlockInfo.getBlockURI().compareTo(
+            DatanodeUtil.fileToURI(diskFile)) != 0) {
           if (diskMetaFileExists) {
             if (memBlockInfo.metadataExists()) {
               // We have two sets of block+meta files. Decide which one to

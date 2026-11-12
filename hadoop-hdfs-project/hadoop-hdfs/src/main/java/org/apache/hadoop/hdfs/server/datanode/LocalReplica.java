@@ -253,7 +253,7 @@ abstract public class LocalReplica extends ReplicaInfo {
 
   @Override
   public URI getBlockURI() {
-    return getBlockFile().toURI();
+    return DatanodeUtil.fileToURI(getBlockFile());
   }
 
   @Override
@@ -284,7 +284,7 @@ abstract public class LocalReplica extends ReplicaInfo {
 
   @Override
   public URI getMetadataURI() {
-    return getMetaFile().toURI();
+    return DatanodeUtil.fileToURI(getMetaFile());
   }
 
   @Override

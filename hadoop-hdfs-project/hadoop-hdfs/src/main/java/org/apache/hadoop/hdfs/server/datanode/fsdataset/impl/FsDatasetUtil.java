@@ -210,7 +210,7 @@ public class FsDatasetUtil {
     ReplicaInfo wrapper = new FinalizedReplica(0, 0, 0, null, null) {
       @Override
       public URI getMetadataURI() {
-        return srcMeta.toURI();
+        return DatanodeUtil.fileToURI(srcMeta);
       }
 
       @Override
