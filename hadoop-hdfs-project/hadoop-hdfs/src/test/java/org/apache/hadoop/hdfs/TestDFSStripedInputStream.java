@@ -48,6 +48,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import org.apache.hadoop.hdfs.StripeReader.BlockReaderInfo;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -798,5 +799,47 @@ public class TestDFSStripedInputStream {
     } finally {
       DFSClientFaultInjector.set(old);
     }
+  }
+
+  /**
+   * HDFS-17879: Test that an IOException thrown by refreshLocatedBlock()
+   * (before dnInfo is populated) is propagated cleanly without a
+   * NullPointerException from the catch block accessing dnInfo.addr.
+   */
+  @Test
+  public void testCreateBlockReaderExceptionBeforeDnInfoInit() throws Exception {
+    DFSTestUtil.createStripedFile(cluster, filePath, null, 1,
+        stripesPerBlock, false, ecPolicy);
+
+    DFSStripedInputStream in = new DFSStripedInputStream(
+        fs.getClient(), filePath.toString(), false, ecPolicy, null);
+
+    // Spy on the stream so we can make refreshLocatedBlock() throw
+    // before getBestNodeDNAddrPair() is called (i.e. before dnInfo is set).
+    DFSStripedInputStream spyIn = spy(in);
+    IOException injectedException = new IOException("Injected failure in refreshLocatedBlock");
+    doThrow(injectedException).when(spyIn).refreshLocatedBlock(
+        org.mockito.ArgumentMatchers.any());
+
+    LocatedBlocks lbs = fs.getClient().namenode.getBlockLocations(
+        filePath.toString(), 0, blockGroupSize);
+    LocatedStripedBlock lsb = (LocatedStripedBlock) lbs.getLocatedBlocks().get(0);
+    LocatedBlock[] targetBlocks = StripedBlockUtil.parseStripedBlockGroup(
+        lsb, cellSize, dataBlocks, parityBlocks);
+    BlockReaderInfo[] readerInfos = new BlockReaderInfo[dataBlocks + parityBlocks];
+
+    // Before the fix this would throw NullPointerException wrapping the real cause.
+    // After the fix it should propagate the original IOException directly.
+    try {
+      spyIn.createBlockReader(targetBlocks[0], 0, targetBlocks, readerInfos, 0, blockSize);
+      fail("Expected IOException to be thrown");
+    } catch (NullPointerException npe) {
+      fail("Got NullPointerException — dnInfo.addr was accessed before initialization. " +
+          "HDFS-17879 fix is missing.");
+    } catch (IOException e) {
+      assertEquals(injectedException, e,
+          "Should propagate the original IOException from refreshLocatedBlock");
+    }
+    spyIn.close();
   }
 }
