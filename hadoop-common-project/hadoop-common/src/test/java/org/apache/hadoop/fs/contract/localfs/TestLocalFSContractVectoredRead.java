@@ -501,6 +501,152 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
   }
 
   @Test
+  public void testCallerCleanupFailuresLoggedAfterChecksumFailure() throws Exception {
+    verifyCallerCleanupFailureLogged(true);
+  }
+
+  @Test
+  public void testCallerCleanupFailuresLoggedAfterCopyFailure() throws Exception {
+    verifyCallerCleanupFailureLogged(false);
+  }
+
+  private void verifyCallerCleanupFailureLogged(boolean checksumFailure) throws Exception {
+    Path testPath = createBufferReleaseTestFile("caller_cleanup_failure_" + checksumFailure);
+    if (checksumFailure) {
+      LocalFileSystem localFs = (LocalFileSystem) getFileSystem();
+      try (FSDataOutputStream out = localFs.getRaw().create(testPath, true)) {
+        out.write(ContractTestUtils.dataset(8192, 'a', 64));
+      }
+    }
+    ElasticByteBufferPool pool = new ElasticByteBufferPool() {
+      @Override
+      public ByteBuffer getBuffer(boolean direct, int length) {
+        ByteBuffer buffer = super.getBuffer(direct, length);
+        return !checksumFailure && length == 17 ? buffer.asReadOnlyBuffer() : buffer;
+      }
+    };
+    LogCapturer logs = LogCapturer.captureLogs(FSInputChecker.LOG);
+    try (TrackingByteBufferPool tracker = TrackingByteBufferPool.wrap(pool);
+         FSDataInputStream in = getFileSystem().open(testPath)) {
+      FileRange range = FileRange.createFileRange(1, 17);
+      CountDownLatch bufferReleases = new CountDownLatch(3);
+      in.readVectored(singletonList(range), size -> tracker.getBuffer(isDirect, size), buffer -> {
+        releaser(tracker, bufferReleases).accept(buffer);
+        if (buffer.capacity() == 17) {
+          throw new IllegalStateException("Injected caller cleanup failure");
+        }
+      });
+      // interceptFuture uses get(), which discards suppressed exceptions on a
+      // CompletionException wrapper. Cleanup failures must still be logged.
+      Class<? extends Exception> failure = checksumFailure
+          ? ChecksumException.class : ReadOnlyBufferException.class;
+      interceptFuture(failure, "", 5, TimeUnit.SECONDS, range.getData());
+      assertAllBuffersReleased(tracker, bufferReleases, 3);
+      assertThat(logs.getOutput()).contains("Failed to release vectored read buffer",
+          "Injected caller cleanup failure");
+    } finally {
+      logs.stopCapturing();
+    }
+  }
+
+  @Test
+  public void testCancellationDoesNotReleasePendingReadBuffers() throws Exception {
+    verifyCancelledRead(false, false);
+    verifyCancelledRead(true, false);
+  }
+
+  @Test
+  public void testCancellationReleasesBuffersAfterChecksumFailure() throws Exception {
+    verifyCancelledRead(false, true);
+    verifyCancelledRead(true, true);
+  }
+
+  private void verifyCancelledRead(boolean completeDataFirst, boolean checksumFailure)
+      throws Exception {
+    Path testPath = createBufferReleaseTestFile(
+        "cancelled_read_" + completeDataFirst + "_" + checksumFailure);
+    byte[] dataset = ContractTestUtils.dataset(8192, 'a', 32);
+    if (checksumFailure) {
+      byte[] corrupted = dataset.clone();
+      corrupted[0] ^= 1;
+      LocalFileSystem localFs = (LocalFileSystem) getFileSystem();
+      try (FSDataOutputStream out = localFs.getRaw().create(testPath, true)) {
+        out.write(corrupted);
+      }
+    }
+    List<Runnable> checksumCompletions = new ArrayList<>();
+    List<Runnable> dataCompletions = new ArrayList<>();
+    RawLocalFileSystem rawFs = new RawLocalFileSystem() {
+      @Override
+      public FSDataInputStream open(Path file, int bufferSize) throws IOException {
+        return new FSDataInputStream(super.open(file, bufferSize)) {
+          @Override
+          public void readVectored(List<? extends FileRange> ranges,
+              IntFunction<ByteBuffer> allocate, Consumer<ByteBuffer> release) throws IOException {
+            for (FileRange range : ranges) {
+              ByteBuffer buffer = allocate.apply(range.getLength());
+              byte[] bytes = new byte[range.getLength()];
+              readFully(range.getOffset(), bytes);
+              buffer.put(bytes).flip();
+              CompletableFuture<ByteBuffer> pending = new CompletableFuture<>();
+              range.setData(pending);
+              List<Runnable> completions = ChecksumFileSystem.isChecksumFile(file)
+                  ? checksumCompletions : dataCompletions;
+              completions.add(() -> pending.complete(buffer));
+            }
+          }
+        };
+      }
+    };
+    try (LocalFileSystem localFs = new LocalFileSystem(rawFs);
+         TrackingByteBufferPool tracker = newTrackingPool()) {
+      localFs.initialize(getFileSystem().getUri(), getFileSystem().getConf());
+      try (FSDataInputStream in = localFs.open(testPath)) {
+        List<FileRange> ranges = bufferReleaseRanges();
+        CountDownLatch bufferReleases = new CountDownLatch(5);
+        in.readVectored(ranges, size -> tracker.getBuffer(isDirect, size), buffer -> {
+          // Poison recycled storage so premature release breaks checksum verification.
+          buffer.clear();
+          while (buffer.hasRemaining()) {
+            buffer.put((byte) 0);
+          }
+          releaser(tracker, bufferReleases).accept(buffer);
+        });
+        try {
+          if (completeDataFirst) {
+            dataCompletions.forEach(Runnable::run);
+          }
+          // Bound the wait: cancellation used to block on an internal read's join().
+          assertThat(CompletableFuture.supplyAsync(() -> ranges.get(0).getData().cancel(false))
+              .get(5, TimeUnit.SECONDS)).isTrue();
+          assertThat(ranges.get(0).getData().isCancelled()).isTrue();
+          assertThat(tracker.getBufferReleases()).isZero();
+          if (!completeDataFirst) {
+            dataCompletions.forEach(Runnable::run);
+          }
+          assertThat(tracker.getBufferReleases())
+              .describedAs("Data buffers remain live until verification and copying finish")
+              .isZero();
+          checksumCompletions.forEach(Runnable::run);
+          ByteBuffer successful = ranges.get(1).getData().get(5, TimeUnit.SECONDS);
+          assertThat(bufferReleases.await(5, TimeUnit.SECONDS)).isTrue();
+          assertThat(tracker.getBufferAllocations()).isEqualTo(6);
+          assertThat(tracker.getBufferReleases()).isEqualTo(5);
+          assertThat(tracker.size()).isEqualTo(1);
+          assertThat(tracker.containsBuffer(successful)).isTrue();
+          assertThat(ranges.get(1).getData().cancel(false)).isFalse();
+          validateVectoredReadResult(singletonList(ranges.get(1)), dataset, 0);
+          tracker.putBuffer(successful);
+        } finally {
+          // Unblock internal reads even if an assertion fails on a regressed chain.
+          dataCompletions.forEach(Runnable::run);
+          checksumCompletions.forEach(Runnable::run);
+        }
+      }
+    }
+  }
+
+  @Test
   public void testAllocatedBuffersReturnedWithoutSlicing() throws Exception {
     verifyAllocatedBuffersReturned(false);
     verifyAllocatedBuffersReturned(true);
@@ -558,9 +704,9 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
         in.readVectored(ranges, allocate, releaser(tracker, internalReleases));
         assertThat(internalReleases.await(5, TimeUnit.SECONDS)).isTrue();
       } else {
-        // A capturing allocator on the original API can release every allocation
-        // itself; no sliced backing buffers need special handling.
         in.readVectored(ranges, allocate);
+        assertThat(allocations).hasSize(ranges.size());
+        assertThat(tracker.getBufferAllocations()).isEqualTo(ranges.size());
       }
       validateVectoredReadResult(ranges, ContractTestUtils.dataset(8192, 'a', 32), 0);
       for (int i = 0; i < ranges.size(); i++) {
@@ -571,12 +717,12 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
       }
       if (withRelease) {
         assertThat(tracker.getBufferReleases()).isEqualTo(6);
-        for (FileRange range : ranges) {
-          tracker.putBuffer(range.getData().join());
-        }
       } else {
         assertThat(tracker.getBufferReleases()).isZero();
-        allocations.forEach(tracker::putBuffer);
+      }
+      // Recycle only results, not captured internal allocations, on either API.
+      for (FileRange range : ranges) {
+        tracker.putBuffer(range.getData().join());
       }
       assertThat(tracker.size()).isZero();
     }

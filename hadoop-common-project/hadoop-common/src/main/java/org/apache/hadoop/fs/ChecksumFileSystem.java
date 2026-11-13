@@ -464,12 +464,20 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     @Override
     public void readVectored(List<? extends FileRange> ranges,
                              IntFunction<ByteBuffer> allocate) throws IOException {
-      readVectored(ranges, allocate, (b) -> { });
+      // Without a release callback, keep internal buffers out of the caller's pool.
+      readVectored(ranges, allocate, ByteBuffer::allocate, (b) -> { });
     }
 
     @Override
     public void readVectored(final List<? extends FileRange> ranges,
         final IntFunction<ByteBuffer> allocate,
+        final Consumer<ByteBuffer> release) throws IOException {
+      readVectored(ranges, allocate, allocate, release);
+    }
+
+    private void readVectored(final List<? extends FileRange> ranges,
+        final IntFunction<ByteBuffer> allocate,
+        final IntFunction<ByteBuffer> allocateInternal,
         final Consumer<ByteBuffer> release) throws IOException {
       requireNonNull(release);
 
@@ -508,8 +516,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
           callerBuffers.put(range, buffer);
           buffer.limit(range.getLength());
         }
-        sums.readVectored(checksumRanges, allocate, release);
-        datas.readVectored(dataRanges, allocate, release);
+        sums.readVectored(checksumRanges, allocateInternal, release);
+        datas.readVectored(dataRanges, allocateInternal, release);
       } catch (IOException | RuntimeException | Error e) {
         // No buffers have been exposed to the caller yet. Reads already started
         // may still be in flight, so release their buffers only after success.
@@ -535,19 +543,24 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
                       checkBytes(sumBuffer, checksumRange.getOffset(),
                           dataBuffer, dataRange.getOffset(), bytesPerSum, file));
           verifications.add(result);
-          List<CompletableFuture<ByteBuffer>> copies = new ArrayList<>();
+          List<CompletableFuture<Void>> copies = new ArrayList<>();
           for (FileRange original : ((CombinedFileRange) dataRange).getUnderlying()) {
             ByteBuffer target = callerBuffers.get(original);
-            CompletableFuture<ByteBuffer> copy = result.thenApply(buffer -> {
+            // Caller cancellation must not complete the internal copy/cleanup stages.
+            CompletableFuture<ByteBuffer> delivered = new CompletableFuture<>();
+            original.setData(delivered);
+            CompletableFuture<Void> copy = result.thenAccept(buffer -> {
               target.put(VectoredReadUtils.sliceTo(buffer, dataRange.getOffset(), original));
               target.flip();
-              return target;
-            }).whenComplete((buffer, ex) -> {
+            }).whenComplete((unused, ex) -> {
               if (ex != null) {
-                release.accept(target);
+                releaseBuffer(target, release);
+                delivered.completeExceptionally(ex);
+              } else if (!delivered.complete(target)) {
+                // The caller cancelled (or otherwise completed) its future before delivery.
+                releaseBuffer(target, release);
               }
             });
-            original.setData(copy);
             copies.add(copy);
           }
           // Wait for every copy before recycling the shared internal data buffer.
@@ -590,9 +603,9 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     }
 
     /**
-     * Release an internal or unsubmitted buffer. No caller-visible future observes
-     * this cleanup, so log callback failures rather than losing them in a discarded
-     * completion stage or masking a synchronous setup failure.
+     * Release a buffer which will not be returned to the caller. Log callback
+     * failures rather than losing them in a discarded completion stage or
+     * masking the original read/setup failure.
      */
     private static void releaseBuffer(ByteBuffer buffer, Consumer<ByteBuffer> release) {
       if (buffer != null) {

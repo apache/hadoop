@@ -129,6 +129,11 @@ public interface PositionedReadable {
    * <p>
    *   While a readVectored() operation is in progress, normal read api calls may block.
    * </p>
+   * Implementations may allocate internal buffers without using {@code allocate}.
+   * For example, the two-argument overload in {@link ChecksumFileSystem} uses
+   * unpooled heap buffers for internal reads, so only caller-visible range buffers
+   * are obtained through {@code allocate}. Use the three-argument overload to
+   * manage its internal buffers through the allocator and release callback too.
    * @param ranges the byte ranges to read
    * @param allocate the function to allocate ByteBuffer
    * @throws IOException any IOE.
@@ -146,9 +151,10 @@ public interface PositionedReadable {
    * <p>
    * For buffers holding caller-visible range data, the {@code release} operation
    * is invoked after an IOException to return the active buffer to a pool before
-   * reporting a failure in the future. Buffers used only internally, such as
-   * checksum buffers, should be released once they are no longer needed, whether
-   * the read succeeds or fails. For each allocation, a buffer must not be released
+   * reporting a failure in the future, or when cancellation prevents delivery.
+   * Buffers used only internally, such as checksum buffers, should be released
+   * once they are no longer needed, whether the read succeeds or fails.
+   * For each allocation, a buffer must not be released
    * more than once, or if it has been returned to the caller.
    * <p>
    * {@code release} may be invoked asynchronously, including after this method

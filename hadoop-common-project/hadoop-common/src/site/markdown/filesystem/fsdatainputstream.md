@@ -468,6 +468,10 @@ Also, clients are encouraged to use `WeakReferencedElasticByteBufferPool` for
 allocating buffers such that even direct buffers are garbage collected when
 they are no longer referenced.
 
+Implementations MAY allocate internal buffers without using `allocate()`; it is not
+guaranteed to see every allocation. Returned range buffers MUST be obtained through
+the supplied allocator.
+
 The position returned by `getPos()` after `readVectored()` is undefined.
 
 If a file is changed while the `readVectored()` operation is in progress, the output is
@@ -733,7 +737,8 @@ if release = null raise NullPointerException
   the data was being read.
 * Implementations MUST NOT call `release(buffer)` with any non-null buffer _not_ obtained through `allocate()`.
 * For buffers holding caller-visible range data, implementations MUST only call `release(buffer)`
-  when a failure has occurred and the future is about to have `CompletableFuture.completeExceptionally()` invoked.
+  when a failure has occurred and the future is about to have `CompletableFuture.completeExceptionally()` invoked,
+  or when cancellation prevents delivery of the buffer to the caller.
 * Implementations SHOULD release buffers used only internally, such as checksum buffers, once all
   operations using them have completed, whether successfully or exceptionally.
 * Implementations MUST NOT release a buffer if it has been returned to the caller.
@@ -741,9 +746,14 @@ if release = null raise NullPointerException
 * `release` MAY be invoked asynchronously, including after `readVectored()` has thrown.
   Callers MUST keep the release target valid until all submitted reads complete.
 
-The two-argument overload has no release callback. Callers whose allocators require
-explicit recycling of internal buffers SHOULD use the three-argument overload on
-implementations which support it. When migrating from a capturing-allocator workaround,
+The two-argument overload has no release callback. `ChecksumFileSystem` uses unpooled
+heap buffers for its internal data and checksum reads on this path, and invokes the
+caller's allocator exactly once per requested range. Internal buffers are therefore
+garbage collected rather than retained by a caller's pool. This includes direct-buffer
+callers: internal memory is on the heap and outside their allocator's accounting or
+limits. The three-argument overload uses the supplied allocator and release callback
+for internal buffers too, allowing callers to control their allocation and recycling.
+When migrating from a capturing-allocator workaround to the three-argument overload,
 callers must not also release every captured allocation: internal and failed buffers
 are already released through the callback. Only successfully returned range buffers
 remain caller-owned.
