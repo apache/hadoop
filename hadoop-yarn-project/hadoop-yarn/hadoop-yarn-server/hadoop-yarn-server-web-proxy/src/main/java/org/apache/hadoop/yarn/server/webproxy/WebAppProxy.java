@@ -23,10 +23,10 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -83,12 +83,9 @@ public class WebAppProxy extends AbstractService {
           " is not set so the proxy will not run.");
     }
 
-    String[] parts = StringUtils.split(bindAddress, ':');
-    port = 0;
-    if (parts.length == 2) {
-      bindAddress = parts[0];
-      port = Integer.parseInt(parts[1]);
-    }
+    HostAndPort bindHostAndPort = HostAndPort.fromString(bindAddress);
+    bindAddress = bindHostAndPort.getHost();
+    port = bindHostAndPort.getPortOrDefault(0);
 
     String bindHost = conf.getTrimmed(YarnConfiguration.PROXY_BIND_HOST, null);
     if (bindHost != null) {
@@ -111,8 +108,8 @@ public class WebAppProxy extends AbstractService {
       HttpServer2.Builder b = new HttpServer2.Builder()
           .setName("proxy")
           .addEndpoint(
-              URI.create(WebAppUtils.getHttpSchemePrefix(conf) + bindAddress
-                  + ":" + port)).setFindPort(port == 0).setConf(getConfig())
+              URI.create(WebAppUtils.getHttpSchemePrefix(conf) + getBindAddress()))
+          .setFindPort(port == 0).setConf(getConfig())
           .setACL(acl);
       if (YarnConfiguration.useHttps(conf)) {
         WebAppUtils.loadSslConfiguration(b);
@@ -158,9 +155,8 @@ public class WebAppProxy extends AbstractService {
     }
   }
 
-  @VisibleForTesting
   String getBindAddress() {
-    return bindAddress + ":" + port;
+    return NetUtils.getHostPortString(bindAddress, port);
   }
 
   @VisibleForTesting
