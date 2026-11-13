@@ -3103,12 +3103,17 @@ public class BlockManager implements BlockStatsMXBean {
    * @param limit The limit number of blocks used to check for excess redundancy timeout.
    */
   public void setExcessRedundancyTimeoutCheckLimit(long limit) {
-    if (excessRedundancyTimeoutCheckLimit <= 0) {
+    if (limit <= 0) {
       this.excessRedundancyTimeoutCheckLimit =
           DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_CHECK_LIMIT_DEFAULT;
     } else {
       this.excessRedundancyTimeoutCheckLimit = limit;
     }
+  }
+
+  @VisibleForTesting
+  long getExcessRedundancyTimeoutCheckLimit() {
+    return excessRedundancyTimeoutCheckLimit;
   }
 
   /**

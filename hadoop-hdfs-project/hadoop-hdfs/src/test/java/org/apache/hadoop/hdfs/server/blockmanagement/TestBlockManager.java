@@ -2339,4 +2339,32 @@ public class TestBlockManager {
       DataNodeFaultInjector.set(oldInjector);
     }
   }
+
+  /**
+   * Test that the configured excess redundancy timeout check limit takes
+   * effect, and that a non-positive value falls back to the default.
+   */
+  @Test
+  public void testSetExcessRedundancyTimeoutCheckLimit() throws IOException {
+    // Not configured, the default value is used.
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_CHECK_LIMIT_DEFAULT,
+        bm.getExcessRedundancyTimeoutCheckLimit());
+
+    // The configured value is used.
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_CHECK_LIMIT, 10L);
+    BlockManager blockManager = new BlockManager(fsn, false, conf);
+    assertEquals(10L, blockManager.getExcessRedundancyTimeoutCheckLimit());
+
+    blockManager.setExcessRedundancyTimeoutCheckLimit(20L);
+    assertEquals(20L, blockManager.getExcessRedundancyTimeoutCheckLimit());
+
+    // A non-positive value falls back to the default.
+    blockManager.setExcessRedundancyTimeoutCheckLimit(0L);
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_CHECK_LIMIT_DEFAULT,
+        blockManager.getExcessRedundancyTimeoutCheckLimit());
+    blockManager.setExcessRedundancyTimeoutCheckLimit(-1L);
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_CHECK_LIMIT_DEFAULT,
+        blockManager.getExcessRedundancyTimeoutCheckLimit());
+  }
 }
