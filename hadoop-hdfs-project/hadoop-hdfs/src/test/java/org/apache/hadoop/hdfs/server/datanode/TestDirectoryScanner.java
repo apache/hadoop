@@ -41,12 +41,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.io.FileUtils;
@@ -1440,6 +1442,63 @@ public class TestDirectoryScanner {
       dn.getDirectoryScanner().run();
       assertNotEquals(lastDirScannerFinishTime, fds.getLastDirScannerFinishTime());
     } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * shutdown() must not wait for reconcile() to work through every diff: the
+   * reconcile loop sleeps between batches while holding the diffs lock that
+   * shutdown() needs.
+   */
+  @Test
+  @Timeout(value = 120)
+  public void testShutdownAbortsReconcile() throws Exception {
+    final int numDiffs = 20;
+    Configuration conf = getConfiguration();
+    // Sleep after every diff, so that a full reconcile takes numDiffs seconds.
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_RECONCILE_BLOCKS_BATCH_SIZE, 1);
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_RECONCILE_BLOCKS_BATCH_INTERVAL,
+        1000L);
+    cluster = new MiniDFSCluster.Builder(conf).build();
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    try {
+      cluster.waitActive();
+      bpid = cluster.getNamesystem().getBlockPoolId();
+      fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
+      client = cluster.getFileSystem().getClient();
+
+      createFile(GenericTestUtils.getMethodName(), BLOCK_LENGTH * numDiffs,
+          false);
+      for (int i = 0; i < numDiffs; i++) {
+        assertTrue(deleteMetaFile() > 0);
+      }
+
+      final AtomicInteger reconciled = new AtomicInteger();
+      final CountDownLatch reconcileStarted = new CountDownLatch(1);
+      FsDatasetSpi<? extends FsVolumeSpi> spyFds = Mockito.spy(fds);
+      Mockito.doAnswer(invocation -> {
+        reconciled.incrementAndGet();
+        reconcileStarted.countDown();
+        return invocation.callRealMethod();
+      }).when(spyFds).checkAndUpdate(Mockito.anyString(),
+          Mockito.any(FsVolumeSpi.ScanInfo.class));
+
+      final DirectoryScanner dirScanner = new DirectoryScanner(spyFds, conf);
+      Future<Void> reconcile = executor.submit(() -> {
+        dirScanner.reconcile();
+        return null;
+      });
+      assertTrue(reconcileStarted.await(60, TimeUnit.SECONDS));
+
+      dirScanner.shutdown();
+      reconcile.get(60, TimeUnit.SECONDS);
+
+      assertTrue(reconciled.get() < numDiffs,
+          "reconcile was not aborted by shutdown, handled "
+              + reconciled.get() + " diffs");
+    } finally {
+      executor.shutdownNow();
       cluster.shutdown();
     }
   }
