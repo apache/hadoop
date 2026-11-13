@@ -225,18 +225,14 @@ public class FSEditLogLoader {
       MetaRecoveryContext recovery) throws IOException {
     EnumMap<FSEditLogOpCodes, Holder<Integer>> opCounts =
       new EnumMap<FSEditLogOpCodes, Holder<Integer>>(FSEditLogOpCodes.class);
-
     if (LOG.isTraceEnabled()) {
       LOG.trace("Acquiring write lock to replay edit log");
     }
-
     fsNamesys.writeLock(RwLockMode.GLOBAL);
     FSDirectory fsDir = fsNamesys.dir;
     fsDir.writeLock();
-
     long recentOpcodeOffsets[] = new long[4];
     Arrays.fill(recentOpcodeOffsets, -1);
-    
     long expectedTxId = expectedStartingTxId;
     long numEdits = 0;
     long lastTxId = in.getLastTxId();
@@ -247,7 +243,6 @@ public class FSEditLogLoader {
     Counter counter = prog.getCounter(Phase.LOADING_EDITS, step);
     long lastLogTime = timer.monotonicNow();
     long lastInodeId = fsNamesys.dir.getLastInodeId();
-    
     try {
       while (true) {
         try {
@@ -309,7 +304,6 @@ public class FSEditLogLoader {
             if (recovery == null) {
               throw e instanceof IOException? (IOException)e: new IOException(e);
             }
-
             MetaRecoveryContext.editLogLoaderPrompt("Failed to " +
              "apply edit log operation " + op + ": error " +
              e.getMessage(), recovery, "applying edits");
@@ -364,7 +358,6 @@ public class FSEditLogLoader {
       }
       fsDir.writeUnlock();
       fsNamesys.writeUnlock(RwLockMode.GLOBAL, "loadEditRecords");
-
       if (LOG.isTraceEnabled()) {
         LOG.trace("replaying edit log finished");
       }

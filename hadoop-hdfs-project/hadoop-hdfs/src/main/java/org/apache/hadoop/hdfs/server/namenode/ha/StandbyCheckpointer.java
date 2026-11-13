@@ -202,9 +202,7 @@ public class StandbyCheckpointer {
       assert namesystem.getEditLog().isOpenForRead() :
         "Standby Checkpointer should only attempt a checkpoint when " +
         "NN is in standby mode, but the edit logs are in an unexpected state";
-
       FSImage img = namesystem.getFSImage();
-
       long prevCheckpointTxId = img.getStorage().getMostRecentCheckpointTxId();
       long thisCheckpointTxId = img.getCorrectLastAppliedOrWrittenTxId();
       assert thisCheckpointTxId >= prevCheckpointTxId;
@@ -228,12 +226,10 @@ public class StandbyCheckpointer {
             "Skipping...", thisCheckpointTxId);
         return;
       }
-
       img.saveNamespace(namesystem, imageType, canceler);
       txid = img.getStorage().getMostRecentCheckpointTxId();
       assert txid == thisCheckpointTxId : "expected to save checkpoint at txid=" +
           thisCheckpointTxId + " but instead saved at txid=" + txid;
-
       // Save the legacy OIV image, if the output dir is defined.
       String outputDir = checkpointConf.getLegacyOivImageDir();
       if (outputDir != null && !outputDir.isEmpty()) {
@@ -247,7 +243,6 @@ public class StandbyCheckpointer {
     } finally {
       namesystem.cpUnlock();
     }
-
     // Upload the saved checkpoint back to remote NNs
     // Do this in a separate thread to avoid blocking transition to active, but don't allow more
     // than the expected number of tasks to run or queue up
@@ -322,7 +317,6 @@ public class StandbyCheckpointer {
     // cleaner than copying code for multiple catch statements and better than catching all
     // exceptions, so we just handle the ones we expect.
     if (ie != null) {
-
       // cancel the rest of the tasks, and close the pool
       for (Map.Entry<String, Future<TransferFsImage.TransferResult>> entry :
           uploads.entrySet()) {
