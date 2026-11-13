@@ -1,0 +1,10 @@
+# R7 stage C: manifest-assets.txt package-style entries EXEMPT from
+# version evidence (gate tiers a-d), one "<name> <version>" per line,
+# '#' starts a comment. Only for entries whose content is compiled into
+# a jar with no probeable version string — there is no bundle, vendor
+# manifest, or lock file to interrogate.
+# Self-cleaning both directions: a row whose manifest entry is pruned
+# fails (drop the exemption with it); an entry that needs an exemption
+# but has no row fails the probe checks.
+leveldb 1.13	# native leveldb compiled into leveldbjni-all:1.8 (jar-side
+# listing carries the licence); the stripped .so exposes no version string
