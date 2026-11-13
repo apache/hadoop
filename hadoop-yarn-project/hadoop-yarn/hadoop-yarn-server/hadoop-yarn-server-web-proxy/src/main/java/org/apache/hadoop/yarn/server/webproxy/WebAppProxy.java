@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -69,8 +70,7 @@ public class WebAppProxy extends AbstractService {
           " of " + auth);
     }
     String proxy = WebAppUtils.getProxyHostAndPort(conf);
-    String[] proxyParts = proxy.split(":");
-    proxyHost = proxyParts[0];
+    proxyHost = HostAndPort.fromString(proxy).getHost();
 
     if (HAUtil.isFederationEnabled(conf)) {
       fetcher = new FedAppReportFetcher(conf);

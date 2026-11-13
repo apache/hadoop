@@ -66,6 +66,16 @@ public class TestAmFilterInitializer {
         con.givenParameters.get(AmIpFilter.PROXY_URI_BASES));
     assertNull(con.givenParameters.get(AmFilterInitializer.RM_HA_URLS));
 
+    // Check an IPv6 PROXY_ADDRESS
+    con = new MockFilterContainer();
+    conf = new Configuration(false);
+    conf.set(YarnConfiguration.PROXY_ADDRESS, "[2001:db8::1]:1000");
+    afi = new MockAmFilterInitializer();
+    afi.initFilter(con, conf);
+    assertEquals("2001:db8::1", con.givenParameters.get(AmIpFilter.PROXY_HOSTS));
+    assertEquals("http://[2001:db8::1]:1000/foo",
+        con.givenParameters.get(AmIpFilter.PROXY_URI_BASES));
+
     // Check a single RM_WEBAPP_ADDRESS
     con = new MockFilterContainer();
     conf = new Configuration(false);
