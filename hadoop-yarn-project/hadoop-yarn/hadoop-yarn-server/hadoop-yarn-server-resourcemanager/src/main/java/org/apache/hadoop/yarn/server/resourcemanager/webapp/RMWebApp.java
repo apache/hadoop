@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.util.RMHAUtils;
@@ -140,21 +141,28 @@ public class RMWebApp extends WebApp implements YarnWebParams {
     String path = "";
     if (activeRMHAId != null) {
       yarnConf.set(YarnConfiguration.RM_HA_ID, activeRMHAId);
-
-      InetSocketAddress sock = YarnConfiguration.useHttps(yarnConf)
-          ? yarnConf.getSocketAddr(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
-              YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_ADDRESS,
-              YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_PORT)
-          : yarnConf.getSocketAddr(YarnConfiguration.RM_WEBAPP_ADDRESS,
-              YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS,
-              YarnConfiguration.DEFAULT_RM_WEBAPP_PORT);
-
-      path = sock.getHostName() + ":" + sock.getPort();
-      path = YarnConfiguration.useHttps(yarnConf)
-          ? "https://" + path
-          : "http://" + path;
+      path = getWebAppURLWithScheme(yarnConf);
     }
     return path;
+  }
+
+  /**
+   * @param conf configuration.
+   * @return the RM web app URL with scheme, with IPv6 literals in brackets.
+   */
+  static String getWebAppURLWithScheme(Configuration conf) {
+    InetSocketAddress sock = YarnConfiguration.useHttps(conf)
+        ? conf.getSocketAddr(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_PORT)
+        : conf.getSocketAddr(YarnConfiguration.RM_WEBAPP_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_WEBAPP_PORT);
+
+    String path = NetUtils.getHostPortString(sock);
+    return YarnConfiguration.useHttps(conf)
+        ? "https://" + path
+        : "http://" + path;
   }
 
   public String getHAZookeeperConnectionState() {
