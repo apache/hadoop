@@ -70,6 +70,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -341,6 +342,91 @@ public class TestIPC {
       invocations++;
       return super.invoke(proxy, method, args);
     }
+  }
+
+  /**
+   * Once a connection is marked closed, its request sending thread must exit
+   * promptly instead of lingering in rpcRequestQueue.poll() for up to
+   * ipc.client.connection.maxidletime. Under heavy connection churn the
+   * lingering threads used to pile up until the process hit
+   * vm.max_map_count.
+   */
+  @Test
+  @Timeout(value = 60)
+  public void testSendingThreadExitsWhenConnectionClosed() throws Exception {
+    // Long idle time: without the fix the sending thread would linger for
+    // up to this long after the connection is closed.
+    final int maxIdleTimeMs = 60000;
+    final Configuration clientConf = new Configuration(conf);
+    clientConf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
+        maxIdleTimeMs);
+
+    final TestServer server = new TestServer(1, false);
+    final CountDownLatch callReceived = new CountDownLatch(1);
+    final CountDownLatch neverReleased = new CountDownLatch(1);
+    // Keep a call in flight so the client reader is blocked on the socket
+    // and observes the close immediately when the server goes away.
+    server.callListener = () -> {
+      callReceived.countDown();
+      // server.stop() interrupts the handler thread. Keep blocking until the
+      // test releases neverReleased so the call stays in flight while the
+      // connection is closed. Otherwise the handler could race the connection
+      // close and send a successful echo response before markClosed() runs,
+      // which would leave the sending thread alive in rpcRequestQueue.poll().
+      boolean released = false;
+      while (!released) {
+        try {
+          neverReleased.await();
+          released = true;
+        } catch (InterruptedException ignored) {
+          // keep waiting; the interrupt flag is cleared by await()
+        }
+      }
+    };
+    final InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    server.start();
+
+    final String senderName = "IPC Parameter Sending Thread for " + addr;
+    final Client client = new Client(LongWritable.class, clientConf);
+    final AtomicBoolean callFailed = new AtomicBoolean(false);
+    final Thread caller = new Thread(() -> {
+      try {
+        call(client, RANDOM.nextLong(), addr, clientConf);
+      } catch (IOException expected) {
+        // The server is stopped while the call is in flight.
+        callFailed.set(true);
+      }
+    });
+    try {
+      caller.start();
+      assertTrue(callReceived.await(10, TimeUnit.SECONDS), "server never received the call");
+      assertTrue(countThreadsNamed(senderName) > 0, "sending thread should exist while connected");
+
+      server.stop();
+
+      // The sending thread must go away well before maxIdleTimeMs.
+      GenericTestUtils.waitFor(() -> countThreadsNamed(senderName) == 0,
+          100, 10000);
+
+      caller.join(10000);
+      assertFalse(caller.isAlive(), "caller thread should have finished");
+      assertTrue(callFailed.get(), "in-flight call should fail after server stop");
+    } finally {
+      neverReleased.countDown();
+      client.stop();
+      server.stop();
+    }
+  }
+
+  private static int countThreadsNamed(String name) {
+    int count = 0;
+    for (Thread t : Thread.getAllStackTraces().keySet()) {
+      if (t.isAlive() && name.equals(t.getName())) {
+        count++;
+      }
+    }
+    return count;
   }
 
   @Test

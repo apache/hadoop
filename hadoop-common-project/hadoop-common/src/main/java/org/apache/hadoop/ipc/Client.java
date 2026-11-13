@@ -1299,6 +1299,10 @@ public class Client implements AutoCloseable {
       if (shouldCloseConnection.compareAndSet(false, true)) {
         closeException = e;
         notifyAll();
+        // Wake the request sending thread. It blocks in
+        // rpcRequestQueue.poll(maxIdleTime) and would otherwise keep the
+        // thread (and its stack) alive for up to maxIdleTime after close.
+        rpcRequestThread.interrupt();
       }
     }
 
