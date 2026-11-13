@@ -36,6 +36,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -57,6 +58,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import org.xbill.DNS.Name;
 
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
@@ -610,6 +612,16 @@ public class TestSecurityUtil {
     SecurityUtil.QualifiedHostResolver
         resolver = new SecurityUtil.QualifiedHostResolver(1);
     testCacheableResolve(resolver);
+  }
+
+  @Test
+  public void testQualifiedHostResolverSearchDomainsAreRelative()
+      throws Exception {
+    List<String> domains = SecurityUtil.QualifiedHostResolver.toSearchDomains(
+        Arrays.asList(Name.fromString("example.com", Name.root),
+            Name.fromString("sub.example.com."), Name.root));
+    assertEquals(Arrays.asList("example.com", "sub.example.com", "."),
+        domains);
   }
 
   /**

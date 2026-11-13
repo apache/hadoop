@@ -45,6 +45,16 @@ public class NetUtilsTestResolver extends QualifiedHostResolver {
     return resolver;
   }
 
+  /**
+   * Replace the DNS search list. Callers outside this package use this to
+   * inject a domain, such as one that ends with a dot, which is what dnsjava
+   * {@code Name.toString()} returns for an absolute name.
+   */
+  @Override
+  public void setSearchDomains(String... domains) {
+    super.setSearchDomains(domains);
+  }
+
   public void addResolvedHost(String host, String ip) {
     InetAddress addr;
     try {
