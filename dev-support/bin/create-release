@@ -225,6 +225,8 @@ function set_defaults
 
   INDOCKER=false
 
+  LICENSE_CHECK=false
+
   LOGDIR="${BASEDIR}/patchprocess"
 
   if [[ -z "${MVN}" ]]; then
@@ -286,6 +288,9 @@ function usage
   echo "--deploy                Deploy Maven artifacts using ~/.m2/settings.xml"
   echo "--docker                Use Hadoop's Dockerfile for guaranteed environment"
   echo "--dockercache           Use a Docker-private maven cache"
+  echo "--license-check         Run the license generate-and-verify checks"
+  echo "                        (run-release-checks.sh) on the exact tarballs"
+  echo "                        built by this run, after assembly"
   echo "--logdir=[path]         Path to store logs"
   echo "--mvncache=[path]       Path to the maven cache to use"
   echo "--native                Also build the native components"
@@ -326,6 +331,9 @@ function option_parse
       ;;
       --indocker)
         INDOCKER=true
+      ;;
+      --license-check)
+        LICENSE_CHECK=true
       ;;
       --logdir=*)
         LOGDIR=${i#*=}
@@ -651,6 +659,34 @@ function makearelease
   run tar -czpf "hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz" "hadoop-${HADOOP_VERSION}"
   run rm -rf "hadoop-${HADOOP_VERSION}"
 
+  run_license_checks
+}
+
+function run_license_checks
+{
+  if [[ "${LICENSE_CHECK}" != true ]]; then
+    return
+  fi
+
+  big_console_header "License Release Checks"
+
+  # run-release-checks.sh invokes maven for the dependency inventory
+  # collection; make sure it finds the same mvn this script uses.
+  if [[ -n "${MVN}" && -x "${MVN}" ]]; then
+    PATH="$(dirname -- "${MVN}"):${PATH}"
+    export PATH
+  fi
+
+  # Fail-closed: a red result stops the release build before signing,
+  # with a fix list naming the exact entries and the configuration file
+  # where each change belongs. The check's outputs (dependency report,
+  # generated license files, checksums, RM checklist) land in
+  # ${ARTIFACTS_DIR}/license-checks for the RM to stage with the RC.
+  run "${BASEDIR}/dev-support/licenses/run-release-checks.sh" \
+    --tarballs "${ARTIFACTS_DIR}" \
+    --repo "${BASEDIR}" \
+    --collect \
+    --out "${ARTIFACTS_DIR}/license-checks"
 }
 
 function signartifacts
