@@ -23,9 +23,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -82,6 +85,8 @@ import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_HEADERS_S3;
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_HEADERS_STS;
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_REQUEST_HEADERS_S3_PREFIX;
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_REQUEST_HEADERS_STS_PREFIX;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.enforceMinimumDuration;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.getDuration;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
@@ -421,6 +426,32 @@ public final class AWSClientConfig {
   }
 
   /**
+   * Parses header configuration at the given key. Calls apply callback for headers with
+   * non-empty header values list. Calls ignore callback for headers with empty header values list.
+   *
+   * @param conf hadoop configuration
+   * @param configKey configuration key
+   * @param apply apply callback
+   * @param ignore ignore callback
+   */
+  private static void applyHeaders(Configuration conf, String configKey,
+      BiConsumer<String, List<String>> apply, Consumer<String> ignore) {
+    Map<String, String> awsClientCustomHeadersMap =
+            S3AUtils.getTrimmedStringCollectionSplitByEquals(conf, configKey);
+    awsClientCustomHeadersMap.forEach((header, valueString) -> {
+      List<String> headerValues = Arrays.stream(valueString.split(";"))
+              .map(String::trim)
+              .filter(v -> !v.isEmpty())
+              .collect(Collectors.toList());
+      if (!headerValues.isEmpty()) {
+        apply.accept(header, headerValues);
+      } else {
+        ignore.accept(header);
+      }
+    });
+  }
+
+  /**
    * Initialize custom request headers for AWS clients.
    * @param conf hadoop configuration
    * @param clientConfig client configuration to update
@@ -429,32 +460,44 @@ public final class AWSClientConfig {
   private static void initRequestHeaders(Configuration conf,
       ClientOverrideConfiguration.Builder clientConfig, String awsServiceIdentifier) {
     String configKey = null;
+    String configKeyPrefix = null;
     switch (awsServiceIdentifier) {
     case AWS_SERVICE_IDENTIFIER_S3:
       configKey = CUSTOM_HEADERS_S3;
+      configKeyPrefix = CUSTOM_REQUEST_HEADERS_S3_PREFIX;
       break;
     case AWS_SERVICE_IDENTIFIER_STS:
       configKey = CUSTOM_HEADERS_STS;
+      configKeyPrefix = CUSTOM_REQUEST_HEADERS_STS_PREFIX;
       break;
     default:
       // No known service.
     }
     if (configKey != null) {
-      Map<String, String> awsClientCustomHeadersMap =
-              S3AUtils.getTrimmedStringCollectionSplitByEquals(conf, configKey);
-      awsClientCustomHeadersMap.forEach((header, valueString) -> {
-        List<String> headerValues = Arrays.stream(valueString.split(";"))
-                        .map(String::trim)
-                        .filter(v -> !v.isEmpty())
-                        .collect(Collectors.toList());
-        if (!headerValues.isEmpty()) {
-          clientConfig.putHeader(header, headerValues);
-        } else {
-          LOG.warn("Ignoring header '{}' for {} client because no values were provided",
-                  header, awsServiceIdentifier);
-        }
-      });
+      // headers for all requests are provided via clientConfig.putHeader
+      applyHeaders(conf, configKey, clientConfig::putHeader,
+              (header) -> LOG.warn("Ignoring header '{}' for {} client because no values were provided",
+                      header, awsServiceIdentifier));
       LOG.debug("headers for {} client = {}", awsServiceIdentifier, clientConfig.headers());
+
+      // per-request headers are provided via AddRequestHeaderInterceptor
+      String keyPrefix = configKeyPrefix;
+      Map<String, Map<String, List<String>>> requestHeaders = new HashMap<>();
+      Map<String, String> requestHeaderConfs = conf.getPropsWithPrefix(keyPrefix);
+      requestHeaderConfs.keySet().forEach((request) ->
+              applyHeaders(conf, keyPrefix + request,
+                      (header, headerValues) ->
+                              requestHeaders.computeIfAbsent(request, c -> new HashMap<>()).put(header, headerValues),
+                      (header) -> LOG.warn("Ignoring {} request header '{}' for {} client because " +
+                              "no values were provided", request, header, awsServiceIdentifier)
+              )
+      );
+      if (!requestHeaders.isEmpty()) {
+        clientConfig.addExecutionInterceptor(new AddRequestHeaderInterceptor(requestHeaders));
+        requestHeaders.forEach((request, headers) ->
+                LOG.debug("{} request headers for {} client = {}", request, awsServiceIdentifier, headers)
+        );
+      }
     }
   }
 
