@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.viewfs.ConfigUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Shell;
@@ -420,6 +421,36 @@ public class TestHarFileSystemBasics {
     LambdaTestUtils.intercept(IOException.class, "not allowed",
         () -> harFileSystem.appendFile(fooPath).build());
     assertEquals(data.length, localFileSystem.getFileStatus(fooPath).getLen());
+  }
+
+  @Test
+  public void testNegativeHarFsBuildersWithQualifiedHarPath() throws Exception {
+    assertBuildersRejectWrites(harFileSystem);
+
+    // mount the test root at the same path, so the archive resolves through ViewFS
+    final Configuration viewConf = new Configuration(conf);
+    ConfigUtil.addLink(viewConf, rootPath.toString(),
+        localFileSystem.makeQualified(rootPath).toUri());
+    final FileSystem viewFs =
+        FileSystem.newInstance(new URI("viewfs://default/"), viewConf);
+    // closing the HAR also closes the underlying ViewFS
+    try (HarFileSystem harViewFs = new HarFileSystem(viewFs)) {
+      harViewFs.initialize(
+          new URI("har://viewfs-default" + harPath.toUri().getPath()), viewConf);
+      assertBuildersRejectWrites(harViewFs);
+    }
+  }
+
+  private static void assertBuildersRejectWrites(HarFileSystem harFs)
+      throws Exception {
+    final Path fooPath = harFs.makeQualified(new Path("foo"));
+    assertEquals("har", fooPath.toUri().getScheme());
+    LambdaTestUtils.intercept(IOException.class,
+        () -> harFs.createFile(fooPath).build());
+    LambdaTestUtils.intercept(IOException.class, "not allowed",
+        () -> harFs.createFile(fooPath).recursive().build());
+    LambdaTestUtils.intercept(IOException.class, "not allowed",
+        () -> harFs.appendFile(fooPath).build());
   }
 
   @Test
