@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.glassfish.jersey.servlet.ServletContainer;
@@ -1446,8 +1447,8 @@ public class ResourceManager extends CompositeService
       builder.withAttribute(WebAppProxy.PROXY_CA,
           rmContext.getProxyCAManager().getProxyCA());
       builder.withAttribute(WebAppProxy.FETCHER_ATTRIBUTE, fetcher);
-      String[] proxyParts = proxyHostAndPort.split(":");
-      builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE, proxyParts[0]);
+      builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE,
+          HostAndPort.fromString(proxyHostAndPort).getHost());
     }
 
     WebAppContext uiWebAppContext = null;

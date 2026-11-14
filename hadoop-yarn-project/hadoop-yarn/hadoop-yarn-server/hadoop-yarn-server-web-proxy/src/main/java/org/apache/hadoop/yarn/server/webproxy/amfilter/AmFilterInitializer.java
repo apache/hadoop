@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
+import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.conf.HAUtil;
@@ -45,7 +46,7 @@ public class AmFilterInitializer extends FilterInitializer {
     List<String> proxies = WebAppUtils.getProxyHostsAndPortsForAmFilter(conf);
     StringBuilder sb = new StringBuilder();
     for (String proxy : proxies) {
-      sb.append(proxy.split(":")[0]).append(AmIpFilter.PROXY_HOSTS_DELIMITER);
+      sb.append(HostAndPort.fromString(proxy).getHost()).append(AmIpFilter.PROXY_HOSTS_DELIMITER);
     }
     sb.setLength(sb.length() - 1);
     params.put(AmIpFilter.PROXY_HOSTS, sb.toString());
