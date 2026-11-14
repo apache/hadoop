@@ -845,7 +845,10 @@ public class HarFileSystem extends FileSystem {
   @Override
   public void copyToLocalFile(boolean delSrc, Path src, Path dst) 
     throws IOException {
-    FileUtil.copy(this, src, getLocal(getConf()), dst, false, getConf());
+    if (!FileUtil.copy(this, src, getLocal(getConf()), dst, false,
+        getConf())) {
+      throw new IOException("Failed to copy " + src + " to " + dst);
+    }
   }
   
   /**

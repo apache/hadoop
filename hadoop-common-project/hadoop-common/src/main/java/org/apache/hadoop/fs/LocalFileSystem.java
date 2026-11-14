@@ -95,7 +95,10 @@ public class LocalFileSystem extends ChecksumFileSystem {
   @Override
   public void copyToLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
-    FileUtil.copy(this, src, this, dst, delSrc, getConf());
+    if (!FileUtil.copy(this, src, this, dst, delSrc, getConf())) {
+      throw new IOException("Failed to " + (delSrc ? "move " : "copy ")
+          + src + " to " + dst);
+    }
   }
 
   /**

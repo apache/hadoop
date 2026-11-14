@@ -1004,4 +1004,65 @@ public class TestLocalFileSystem {
                 .build()),
         true);
   }
+
+  /**
+   * moveToLocalFile() through FileSystem#copyToLocalFile: RawLocalFileSystem
+   * does not override it.
+   */
+  @Test
+  public void testMoveToLocalFileFailsOnChildMkdirsFailure() throws Exception {
+    try (RawLocalFileSystem srcFS = new RawLocalFileSystem()) {
+      srcFS.initialize(URI.create("file:///"), failChildMkdirsConf());
+      assertMoveToLocalFileFails(srcFS);
+    }
+  }
+
+  /** moveToLocalFile() through LocalFileSystem#copyToLocalFile. */
+  @Test
+  public void testLocalMoveToLocalFileFailsOnChildMkdirsFailure()
+      throws Exception {
+    try (FileSystem srcFS = FileSystem.getLocal(failChildMkdirsConf())) {
+      assertMoveToLocalFileFails(srcFS);
+    }
+  }
+
+  /** @return a configuration whose local file system fails child mkdirs. */
+  private Configuration failChildMkdirsConf() {
+    Configuration failConf = new Configuration(conf);
+    failConf.setClass("fs.file.impl", FailChildMkdirsLocalFileSystem.class,
+        FileSystem.class);
+    failConf.setBoolean("fs.file.impl.disable.cache", true);
+    return failConf;
+  }
+
+  /**
+   * Move a directory with two child directories to the local file system,
+   * where creating one of them fails: the move must throw and keep the
+   * source of that child, and the other child must still be copied.
+   */
+  private void assertMoveToLocalFileFails(FileSystem srcFS) throws Exception {
+    FileSystem rawFS = fileSys.getRawFileSystem();
+    Path src = new Path(TEST_ROOT_DIR, "src");
+    Path failedFile = new Path(src,
+        FailChildMkdirsLocalFileSystem.FAILING_DIR + "/file");
+    createFile(rawFS, failedFile);
+    createFile(rawFS, new Path(src, "child2/file"));
+    Path dst = new Path(TEST_ROOT_DIR, "dst");
+
+    LambdaTestUtils.intercept(IOException.class, "Failed to move",
+        () -> srcFS.moveToLocalFile(src, dst));
+    assertTrue(rawFS.exists(failedFile), "source of the failed child deleted");
+    assertTrue(rawFS.exists(new Path(dst, "child2/file")),
+        "other child not copied");
+  }
+
+  /** A LocalFileSystem on which mkdirs of any "child1" directory fails. */
+  public static class FailChildMkdirsLocalFileSystem extends LocalFileSystem {
+    static final String FAILING_DIR = "child1";
+
+    @Override
+    public boolean mkdirs(Path f) throws IOException {
+      return !FAILING_DIR.equals(f.getName()) && super.mkdirs(f);
+    }
+  }
 }
