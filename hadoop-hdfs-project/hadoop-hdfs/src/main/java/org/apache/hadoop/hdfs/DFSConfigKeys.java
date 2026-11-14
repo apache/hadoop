@@ -152,6 +152,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_DATANODE_SYNC_BEHIND_WRITES_IN_BACKGROUND_DEFAULT = false;
   public static final String  DFS_DATANODE_DROP_CACHE_BEHIND_READS_KEY = "dfs.datanode.drop.cache.behind.reads";
   public static final boolean DFS_DATANODE_DROP_CACHE_BEHIND_READS_DEFAULT = false;
+  public static final String  DFS_DATANODE_READ_AHEAD_CACHE_BYTES_THRESHOLD_KEY =
+      "dfs.datanode.read.ahead.cache.bytes.threshold";
+  public static final long    DFS_DATANODE_READ_AHEAD_CACHE_BYTES_THRESHOLD_DEFAULT =
+      256 * 1024;
   public static final String  DFS_DATANODE_USE_DN_HOSTNAME = "dfs.datanode.use.datanode.hostname";
   public static final boolean DFS_DATANODE_USE_DN_HOSTNAME_DEFAULT = false;
   public static final String  DFS_DATANODE_MAX_LOCKED_MEMORY_KEY = "dfs.datanode.max.locked.memory";
@@ -1673,6 +1677,41 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int
       DFS_DATANODE_TRANSFER_SOCKET_RECV_BUFFER_SIZE_DEFAULT =
       HdfsConstants.DEFAULT_DATA_SOCKET_SIZE;
+
+  // Write buffer optimization
+  public static final String
+      DFS_DATANODE_WRITE_MEMORY_BUFFER_ENABLED =
+      "dfs.datanode.write.memory.buffer.enabled";
+  public static final boolean
+      DFS_DATANODE_WRITE_MEMORY_BUFFER_ENABLED_DEFAULT = false;
+  public static final String
+      DFS_DATANODE_WRITE_MEMORY_BUFFER_LAST_REPLICA_ONLY =
+      "dfs.datanode.write.memory.buffer.last-replica-only";
+  public static final boolean
+      DFS_DATANODE_WRITE_MEMORY_BUFFER_LAST_REPLICA_ONLY_DEFAULT = true;
+  public static final String
+      DFS_DATANODE_WRITE_MEMORY_BUFFER_MAX_CAPACITY_MB =
+      "dfs.datanode.write.memory.buffer.max.capacity.mb";
+  public static final int
+      DFS_DATANODE_WRITE_MEMORY_BUFFER_MAX_CAPACITY_MB_DEFAULT = -1;
+  public static final String
+      DFS_DATANODE_WRITE_MEMORY_BUFFER_MIN_VOLUMES =
+      "dfs.datanode.write.memory.buffer.min.volumes";
+  public static final int
+      DFS_DATANODE_WRITE_MEMORY_BUFFER_MIN_VOLUMES_DEFAULT = 0;
+  public static final String
+      DFS_DATANODE_CONCURRENT_FLUSH_MB_PER_VOLUME =
+      "dfs.datanode.concurrent.flush.mb.per.volume";
+  public static final int
+      DFS_DATANODE_CONCURRENT_FLUSH_MB_PER_VOLUME_DEFAULT = 0;
+  public static final String DFS_DATANODE_WRITE_BUFFER_SIZE_BYTES =
+      "dfs.datanode.write.buffer.size.bytes";
+  public static final int DFS_DATANODE_WRITE_BUFFER_SIZE_BYTES_DEFAULT =
+      8 * 1024 * 1024;
+  public static final String DFS_DATANODE_WRITE_BUFFER_IDLE_FLUSH_TIMEOUT_MS =
+      "dfs.datanode.write.buffer.idle.flush.timeout.ms";
+  public static final long
+      DFS_DATANODE_WRITE_BUFFER_IDLE_FLUSH_TIMEOUT_MS_DEFAULT = 0;
 
   public static final String
       DFS_DATA_TRANSFER_SERVER_TCPNODELAY =

@@ -152,7 +152,7 @@ public class TestDataXceiverLazyPersistHint {
         any(), any(), any(), anyString(), anyString(),
         any(), anyLong(), anyLong(), anyLong(),
         anyString(), any(), any(), any(), any(),
-        captor.capture(), anyBoolean(), any());
+        captor.capture(), anyBoolean(), any(), anyBoolean());
     doReturn(mock(DataOutputStream.class)).when(xceiverSpy)
         .getBufferedOutputStream();
     return xceiverSpy;
