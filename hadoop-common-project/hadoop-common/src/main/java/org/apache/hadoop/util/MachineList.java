@@ -61,6 +61,19 @@ public class MachineList {
     public InetAddress getByName (String host) throws UnknownHostException {
       return InetAddress.getByName(host);
     }
+
+    /**
+     * Returns all addresses of the host. A subclass that does not override this method
+     * resolves the host through {@link #getByName(String)} and gets a single address.
+     *
+     * @param host the host name or ip address.
+     * @return all addresses of the host.
+     * @throws UnknownHostException if the host cannot be resolved.
+     */
+    public InetAddress[] getAllByName(String host) throws UnknownHostException {
+      return getClass() == InetAddressFactory.class
+          ? InetAddress.getAllByName(host) : new InetAddress[] {getByName(host)};
+    }
   }
 
   /**
@@ -166,7 +179,7 @@ public class MachineList {
             }
           } else {
             try {
-              addrs.add(addressFactory.getByName(hostEntry));
+              Collections.addAll(addrs, addressFactory.getAllByName(hostEntry));
             } catch (UnknownHostException e) {
               LOG.warn(e.toString());
             }
