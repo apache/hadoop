@@ -28,7 +28,6 @@ import java.net.UnknownHostException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.ServiceLoader;
@@ -695,13 +694,10 @@ public final class SecurityUtil {
    *       hadoop.security.token.service.use_ip=false 
    */
   protected static class QualifiedHostResolver extends CacheableHostResolver {
-    private List<String> searchDomains = new ArrayList<>();
-    {
-      ResolverConfig resolverConfig = ResolverConfig.getCurrentConfig();
-      for (Name name : resolverConfig.searchPath()) {
-        searchDomains.add(name.toString());
-      }
-    }
+    private static final String ROOT_DOMAIN = ".";
+
+    private List<String> searchDomains =
+        toSearchDomains(ResolverConfig.getCurrentConfig().searchPath());
 
     QualifiedHostResolver() {
       this(0);
@@ -792,12 +788,56 @@ public final class SecurityUtil {
         addr = getByExactName(host); 
       } else {
         for (String domain : searchDomains) {
-          String dot = !domain.startsWith(".") ? "." : "";
-          addr = getByExactName(host + dot + domain);
+          String candidate;
+          if (ROOT_DOMAIN.equals(domain)) {
+            // the root suffix means the host itself; pass it unrooted so the
+            // stored hostname has no trailing dot
+            candidate = host;
+          } else {
+            String dot = !domain.startsWith(".") ? "." : "";
+            candidate = host + dot + domain;
+          }
+          addr = getByExactName(candidate);
           if (addr != null) break;
         }
       }
       return addr;
+    }
+
+    /**
+     * Convert the dnsjava search path to search-list suffixes.
+     * {@link Name#toString()} is absolute ({@code example.com.}), so the
+     * relative form is used instead.
+     */
+    @VisibleForTesting
+    static List<String> toSearchDomains(List<Name> names) {
+      List<String> domains = new ArrayList<>();
+      for (Name name : names) {
+        String domain = stripRootDotFromSearchDomain(name.toString(true));
+        if (domain != null) {
+          domains.add(domain);
+        }
+      }
+      return domains;
+    }
+
+    /**
+     * Search-list suffixes must not end in '.', except the root domain
+     * itself; a rooted suffix makes getByExactName store hostnames like
+     * {@code nn.example.com.} and breaks delegation token service name
+     * matching.
+     */
+    private static String stripRootDotFromSearchDomain(String domain) {
+      if (domain == null || domain.isEmpty()) {
+        return null;
+      }
+      if (ROOT_DOMAIN.equals(domain)) {
+        return domain;
+      }
+      if (domain.endsWith(".")) {
+        domain = domain.substring(0, domain.length() - 1);
+      }
+      return domain.isEmpty() ? null : domain;
     }
 
     // implemented as a separate method to facilitate unit testing
@@ -806,7 +846,13 @@ public final class SecurityUtil {
     }
 
     void setSearchDomains(String ... domains) {
-      searchDomains = Arrays.asList(domains);
+      searchDomains = new ArrayList<>();
+      for (String domain : domains) {
+        String normalized = stripRootDotFromSearchDomain(domain);
+        if (normalized != null) {
+          searchDomains.add(normalized);
+        }
+      }
     }
   }
 

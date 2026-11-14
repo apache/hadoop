@@ -495,6 +495,7 @@ public class TestNetUtils {
   
   @BeforeEach
   public void resetResolver() {
+    resolver.setSearchDomains("a.b", "b", "c");
     resolver.reset();
     config = new Configuration();
   }
@@ -615,6 +616,30 @@ public class TestNetUtils {
     String host = "host";
     InetAddress addr = verifyResolve(host, host+".a.b.");
     verifyInetAddress(addr, "host.a.b", "1.1.1.1");
+  }
+
+  @Test
+  public void testResolverUnqualifiedWithDottedSearchDomain() {
+    resolver.setSearchDomains("a.b.", "b.", "c.");
+    String host = "host";
+    InetAddress addr = verifyResolve(host, host + ".a.b.");
+    verifyInetAddress(addr, "host.a.b", "1.1.1.1");
+  }
+
+  @Test
+  public void testResolverUnqualifiedWithRootSearchDomain() {
+    resolver.setSearchDomains(".", "a.b");
+    InetAddress addr = verifyResolve("simple", "simple.");
+    verifyInetAddress(addr, "simple", "3.3.3.3");
+
+    resolver.reset();
+    addr = verifyResolve("host", "host.", "host.a.b.");
+    verifyInetAddress(addr, "host.a.b", "1.1.1.1");
+
+    resolver.setSearchDomains("a.b", ".");
+    resolver.reset();
+    addr = verifyResolve("simple", "simple.a.b.", "simple.");
+    verifyInetAddress(addr, "simple", "3.3.3.3");
   }
 
   @Test
