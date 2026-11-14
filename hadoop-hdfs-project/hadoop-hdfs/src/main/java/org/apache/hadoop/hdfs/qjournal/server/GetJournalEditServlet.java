@@ -17,30 +17,31 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
+
+import com.google.re2j.Pattern;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.security.Principal;
 import java.util.HashSet;
 import java.util.Set;
-
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.hadoop.hdfs.server.namenode.DfsServlet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.GlobPattern;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.namenode.DfsServlet;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
@@ -53,6 +54,8 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This servlet is used in two cases:
@@ -74,6 +77,8 @@ public class GetJournalEditServlet extends DfsServlet {
   static final String JOURNAL_ID_PARAM = "jid";
   static final String SEGMENT_TXID_PARAM = "segmentTxId";
   static final String IN_PROGRESS_OK = "inProgressOk";
+
+  private static final String MATCH_ALL_PATTERN = "*";
 
   protected boolean isValidRequestor(HttpServletRequest request, Configuration conf)
       throws IOException {
@@ -103,6 +108,22 @@ public class GetJournalEditServlet extends DfsServlet {
         conf.get(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
           DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_DEFAULT));
       LOG.warn(msg);
+    }
+
+    // The pattern defaults to "*", which matches every principal, so it is only
+    // meaningful as an access check when it has been narrowed by the operator.
+    String clientPattern = conf.get(DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY + ".pattern");
+    Principal userPrincipal = request.getUserPrincipal();
+    if (userPrincipal != null && clientPattern != null && !clientPattern.isEmpty()
+        && !MATCH_ALL_PATTERN.equals(clientPattern)) {
+      String remotePrincipal = userPrincipal.getName();
+      Pattern pattern = GlobPattern.compile(clientPattern);
+      LOG.debug("isValidRequestor is comparing to valid NameNode principal pattern: " +
+          clientPattern);
+      if (pattern.matcher(remotePrincipal).matches()) {
+        LOG.debug("isValidRequestor is allowing: " + remotePrincipal);
+        return true;
+      }
     }
 
     // Check the full principal name of all the configured valid requestors.
