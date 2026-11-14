@@ -29,6 +29,7 @@ public enum FSOperationType {
     GET_ACL_STATUS("GA"),
     GET_ATTR("GR"),
     GET_FILESTATUS("GF"),
+    GET_BLOB_LAYOUT("GL"),
     LISTSTATUS("LS"),
     MKDIR("MK"),
     MODIFY_ACL("MA"),

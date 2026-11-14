@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -183,11 +184,18 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
           long requestsMadeAfterTest = metricMap
               .get(CONNECTIONS_MADE.getStatName());
 
+          long expected;
           if (optimizeFooterRead) {
-            assertEquals(1, requestsMadeAfterTest - requestsMadeBeforeTest);
+            expected = 1;
           } else {
-            assertEquals(3, requestsMadeAfterTest - requestsMadeBeforeTest);
+            expected = 3;
           }
+          Assertions.assertThat(requestsMadeAfterTest - requestsMadeBeforeTest)
+              .describedAs(
+                  "Number of calls made will be equal to " + expected
+                      + "if data layout is already present else greater than 1 if call to "
+                      + "fetch data layout is made")
+              .isIn(Arrays.asList(expected, expected + 1));
         }
       }
     }
@@ -434,7 +442,7 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
       abfsInputStream = spy(abfsInputStream);
       doReturn(10).doReturn(10).doCallRealMethod().when(abfsInputStream)
           .readRemote(anyLong(), any(), anyInt(), anyInt(),
-              any(TracingContext.class));
+              any(TracingContext.class), any());
 
       iStream = new FSDataInputStream(abfsInputStream);
       abfsInputStreamTestUtils.seek(iStream, seekPos);
@@ -509,7 +517,7 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
       doReturn(10).doReturn(secondReturnSize).doCallRealMethod()
           .when(abfsInputStream)
           .readRemote(anyLong(), any(), anyInt(), anyInt(),
-              any(TracingContext.class));
+              any(TracingContext.class), any());
 
       iStream = new FSDataInputStream(abfsInputStream);
       abfsInputStreamTestUtils.seek(iStream, seekPos);

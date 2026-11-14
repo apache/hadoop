@@ -938,8 +938,17 @@ public class ITestAzureBlobFileSystemListStatus extends
       fs2.mkdirs(new Path("/dir2"));
       fs2.create(new Path("/dir2/file2")).close();
       // List containers with prefix filter
-      ContainerListResponseData response =
-          blobClient.listContainers("abfs-test-", null, tracingContext);
+      ContainerListResponseData response = new ContainerListResponseData();
+      String continuationToken = null;
+      do {
+        ContainerListResponseData responseData =
+            blobClient.listContainers("abfs-test-", continuationToken,
+                tracingContext);
+        for (ContainerListEntrySchema containerListEntrySchema : responseData.getContainers()) {
+          response.getContainers().add(containerListEntrySchema);
+        }
+        continuationToken = responseData.getContinuationToken();
+      } while (continuationToken != null);
       assertThat(response)
           .describedAs("listContainers response should not be null")
           .isNotNull();
