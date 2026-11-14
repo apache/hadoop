@@ -31,6 +31,7 @@ import {
 import { createReadOnlyBlockedError } from '~/lib/errors/readOnlyGuard';
 import { normalizeNodeLabels, normalizeNodeToLabels } from '~/lib/normalizers/nodeDataNormalizers';
 import { validateLabelRemoval } from '~/features/node-labels/utils/labelValidation';
+import { getNodeIdsToClearOnUnassign } from '~/lib/nodeLabels/nodeLabelHostWildcard';
 import type { NodeLabelsSlice, SchedulerStore } from './types';
 
 export const createNodeLabelsSlice: StateCreator<
@@ -209,11 +210,13 @@ export const createNodeLabelsSlice: StateCreator<
     });
 
     try {
-      // Replace with new label or empty array if null
-      const newLabels = labelName ? [labelName] : [];
-
-      await get().apiClient.replaceNodeToLabels([{ nodeId, labels: newLabels }]);
-
+      const nodeToLabelsReplacement = labelName
+        ? [{ nodeId, labels: [labelName] }]
+        : getNodeIdsToClearOnUnassign(nodeId, get().nodeToLabels).map((id) => ({
+            nodeId: id,
+            labels: [],
+          }));
+      await get().apiClient.replaceNodeToLabels(nodeToLabelsReplacement);
       // Refresh node-to-label mappings
       const nodeToLabels = await get().apiClient.getNodeToLabels();
 
