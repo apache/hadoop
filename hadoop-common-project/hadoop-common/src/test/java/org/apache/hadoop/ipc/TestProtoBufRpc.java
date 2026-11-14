@@ -34,6 +34,7 @@ import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcProto;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtosLegacy;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
@@ -45,6 +46,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.TimeoutException;
@@ -163,6 +165,7 @@ public class TestProtoBufRpc extends TestRpcBase {
     conf = new Configuration();
     conf.setInt(CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH, 1024);
     conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_LOG_SLOW_RPC, true);
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
     // Set RPC engine to protobuf RPC engine
     if (testWithLegacy) {
       RPC.setProtocolEngine(conf, TestRpcService2Legacy.class,
@@ -395,11 +398,29 @@ public class TestProtoBufRpc extends TestRpcBase {
     assertThat(before).isEqualTo(after);
 
     // Make a really slow call. Sleep sleeps for 3000ms.
-    client.sleep(null, newSleepRequest(SLEEP_DURATION * 3));
+    // The context is escaped and truncated.
+    String longContext = "slowRpc\nContext\r\t_" + StringUtils.repeat("X", 200);
+    String expectedContext = ("slowRpc\\nContext\\r\\t_" + StringUtils.repeat("X", 200))
+        .substring(0, CommonConfigurationKeys.HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT);
+    GenericTestUtils.LogCapturer logs =
+        GenericTestUtils.LogCapturer.captureLogs(Server.LOG);
+    CallerContext.setCurrent(new CallerContext.Builder(longContext)
+        .setSignature("sig".getBytes(StandardCharsets.UTF_8)).build());
+    try {
+      client.sleep(null, newSleepRequest(SLEEP_DURATION * 3));
 
-    // Ensure slow call is logged.
-    GenericTestUtils.waitFor(()
-        -> rpcMetrics.getRpcSlowCalls() == before + 1L, 10, 1000);
+      // Ensure slow call is logged.
+      GenericTestUtils.waitFor(()
+          -> rpcMetrics.getRpcSlowCalls() == before + 1L, 10, 1000);
+      // The log carries the user and the truncated caller context.
+      assertThat(logs.getOutput())
+          .contains("Slow RPC : sleep")
+          .contains("user " + UserGroupInformation.getCurrentUser().getShortUserName())
+          .contains("callerContext " + expectedContext + ",");
+    } finally {
+      CallerContext.setCurrent(null);
+      logs.stopCapturing();
+    }
   }
 
   @ParameterizedTest
