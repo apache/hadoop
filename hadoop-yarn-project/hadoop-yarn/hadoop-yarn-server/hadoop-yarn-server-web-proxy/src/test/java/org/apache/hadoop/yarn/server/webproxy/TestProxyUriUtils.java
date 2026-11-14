@@ -86,6 +86,18 @@ public class TestProxyUriUtils {
 
 
   @Test
+  void testGetProxyUriWithWebAppPath() throws Exception {
+    URI originalUri = new URI("http://host.com:13562/mapreduce/app");
+    URI proxyUri = new URI("http://proxy.net:8080/");
+    ApplicationId id = BuilderUtils.newApplicationId(6384623L, 5);
+    URI expected = new URI(
+        "http://proxy.net:8080/proxy/application_6384623_0005/mapreduce/app");
+    URI result = ProxyUriUtils.getProxyUri(originalUri, proxyUri, id);
+    assertEquals(expected, result);
+  }
+
+
+  @Test
   void testGetProxyUriNull() throws Exception {
     URI originalUri = null;
     URI proxyUri = new URI("http://proxy.net:8080/");
