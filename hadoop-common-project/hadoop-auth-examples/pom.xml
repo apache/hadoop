@@ -85,7 +85,7 @@
         <configuration>
           <mainClass>org.apache.hadoop.security.authentication.examples.WhoClient</mainClass>
           <arguments>
-            <argument>${url}</argument>
+            <argument>${project.url}</argument>
           </arguments>
         </configuration>
       </plugin>
