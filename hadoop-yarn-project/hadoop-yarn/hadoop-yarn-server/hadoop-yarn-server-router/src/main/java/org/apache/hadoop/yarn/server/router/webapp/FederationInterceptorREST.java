@@ -3227,10 +3227,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           String errorMsg = subClusterId + " Can't getSchedulerConfiguration.";
           federationConfInfo.getErrorMsgs().add(errorMsg);
         } else if (response.getStatus() == Status.BAD_REQUEST.getStatusCode()) {
-          String errorMsg = String.valueOf(response.getEntity());
+          String errorMsg = response.readEntity(String.class);
           federationConfInfo.getErrorMsgs().add(errorMsg);
         } else if (response.getStatus() == Status.OK.getStatusCode()) {
-          ConfInfo fedConfInfo = (ConfInfo) response.getEntity();
+          ConfInfo fedConfInfo = response.readEntity(ConfInfo.class);
           fedConfInfo.setSubClusterId(subClusterId.getId());
           federationConfInfo.getList().add(fedConfInfo);
         }
