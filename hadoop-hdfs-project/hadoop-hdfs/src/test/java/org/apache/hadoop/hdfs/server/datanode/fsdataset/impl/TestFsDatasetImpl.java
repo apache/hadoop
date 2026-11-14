@@ -755,6 +755,7 @@ public class TestFsDatasetImpl {
     } catch (MultipleIOException e) {
     }
 
+    verify(mockVolume).shutdown();
     FsDatasetTestUtil.assertFileLockReleased(badDir.toString());
   }
   
