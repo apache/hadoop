@@ -611,6 +611,42 @@ describe('YarnApiClient', () => {
     });
   });
 
+  describe('diagnostic endpoints', () => {
+    it('should fetch scheduler bulk activities', async () => {
+      server.use(
+        http.get('*/ws/v1/cluster/scheduler/bulk-activities', ({ request }) => {
+          const url = new URL(request.url);
+          expect(url.searchParams.get('activitiesCount')).toBe('10');
+          return HttpResponse.json({
+            bulkActivities: { activities: [{ nodeId: 'host:8041' }] },
+          });
+        }),
+      );
+
+      const client = new YarnApiClient('/ws/v1/cluster');
+      const response = await client.getBulkSchedulerActivities();
+
+      expect(response.bulkActivities?.activities).toHaveLength(1);
+    });
+
+    it('should fetch resource manager jstack as plain text', async () => {
+      server.use(
+        http.get('*/ws/v1/cluster/jstack/:count', ({ params }) => {
+          expect(params.count).toBe('2');
+          return new HttpResponse('--- JStack iteration 0 ---\nFull thread dump', {
+            headers: { 'Content-Type': 'text/plain' },
+          });
+        }),
+      );
+
+      const client = new YarnApiClient('/ws/v1/cluster', { detectSecurityMode: false });
+      const response = await client.getResourceManagerJstack(2);
+
+      expect(response).toContain('Full thread dump');
+    });
+
+  });
+
   describe('error handling', () => {
     it('should handle HTTP 500 errors', async () => {
       server.use(
