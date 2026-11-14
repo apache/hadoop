@@ -46,7 +46,7 @@
 .federationhealth-router-icon:before {
     font-size: 10pt;
     padding-right: 1pt;
-    font-family: 'Glyphicons Halflings';
+    font-family: sans-serif;
     font-style: normal;
     font-weight: normal;
     line-height: 1;
@@ -56,17 +56,17 @@
 
 .federationhealth-router-active:before {
     color: #5fa341;
-    content: "\e013";
+    content: "\2714";
 }
 
 .federationhealth-router-unavailable:before {
     color: #c7254e;
-    content: "\e101";
+    content: "\26A0";
 }
 
 .federationhealth-router-safemode:before {
     color: #bc5f04;
-    content: "\e090";
+    content: "\2298";
 }
 
 .federationhealth-router-legend {
@@ -87,7 +87,7 @@
 .federationhealth-mounttable-icon:before {
     font-size: 10pt;
     padding-right: 1pt;
-    font-family: 'Glyphicons Halflings';
+    font-family: sans-serif;
     font-style: normal;
     font-weight: normal;
     line-height: 1;
@@ -97,12 +97,12 @@
 
 .federationhealth-mounttable-readonly:before {
     color: #000000;
-    content: "\e033";
+    content: "\1F512";
 }
 
 .federationhealth-mounttable-readwrite:before {
     color: #000000;
-    content: "\e065";
+    content: "\270E";
 }
 
 .federationhealth-mounttable-legend {

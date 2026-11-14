@@ -313,7 +313,7 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     resp = new DefaultHttpResponse(HTTP_1_1, OK);
     HttpHeaders headers = resp.headers();
     headers.set(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
-    headers.set(ACCESS_CONTROL_ALLOW_HEADERS, ACCEPT);
+    headers.set(ACCESS_CONTROL_ALLOW_HEADERS, ACCEPT + ", " + CONTENT_TYPE);
     headers.set(ACCESS_CONTROL_ALLOW_METHODS, PUT);
     headers.set(ACCESS_CONTROL_MAX_AGE, 1728000);
     headers.set(CONTENT_LENGTH, 0);
