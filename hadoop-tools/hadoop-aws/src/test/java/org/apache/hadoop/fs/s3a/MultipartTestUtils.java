@@ -25,6 +25,7 @@ import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.fs.s3a.impl.write.WriteOperationHelper;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import org.junit.jupiter.api.Assertions;
@@ -67,17 +68,16 @@ public final class MultipartTestUtils {
    * Clean up all provided uploads.
    * @param keySet set of uploads to abort
    */
-  static void cleanupParts(S3AFileSystem fs, Set <IdKey> keySet) {
+  public static void cleanupParts(S3AFileSystem fs, Set <IdKey> keySet) {
     boolean anyFailure = false;
     for (IdKey ik : keySet) {
       try (AuditSpan span =
                fs.createSpan("multipart", ik.key, null)) {
 
         LOG.debug("aborting upload id {}", ik.getUploadId());
-        fs.abortMultipartUpload(ik.getKey(), ik.getUploadId());
+        fs.getStore().getStoreWriter().abortMultipartUpload(ik.getKey(), ik.getUploadId());
       } catch (Exception e) {
-        LOG.error(String.format("Failure aborting upload %s, continuing.",
-            ik.getKey()), e);
+        LOG.error("Failure aborting upload {}, continuing.", ik.getKey(), e);
         anyFailure = true;
       }
     }
@@ -87,7 +87,7 @@ public final class MultipartTestUtils {
   public static IdKey createPartUpload(S3AFileSystem fs, String key, int len,
       int partNo) throws IOException {
     try (AuditSpan span = fs.createSpan("multipart", key, null)) {
-      WriteOperationHelper writeHelper = fs.getWriteOperationHelper();
+      WriteOperationHelper writeHelper = fs.createWriteOperationHelper(span);
       byte[] data = dataset(len, 'a', 'z');
       InputStream in = new ByteArrayInputStream(data);
       String uploadId = writeHelper.initiateMultiPartUpload(key, PutObjectOptions.defaultOptions());
@@ -144,8 +144,7 @@ public final class MultipartTestUtils {
       String prefix) throws IOException {
 
     try (AuditSpan span = fs.createSpan("multipart", prefix, null)) {
-      return fs
-          .listMultipartUploads(prefix).stream()
+      return fs.getStore().getStoreWriter().listMultipartUploads(prefix).stream()
           .map(upload -> String.format("Upload to %s with ID %s; initiated %s",
               upload.key(),
               upload.uploadId(),
@@ -191,7 +190,7 @@ public final class MultipartTestUtils {
     private String key;
     private String uploadId;
 
-    IdKey(String key, String uploadId) {
+    public IdKey(String key, String uploadId) {
       this.key = key;
       this.uploadId = uploadId;
     }
