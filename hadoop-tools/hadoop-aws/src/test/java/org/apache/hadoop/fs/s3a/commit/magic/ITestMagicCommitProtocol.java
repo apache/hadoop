@@ -18,14 +18,17 @@
 
 package org.apache.hadoop.fs.s3a.commit.magic;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -41,11 +44,13 @@ import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getProjectBuildDir;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3AUtils.listAndFilter;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
@@ -56,11 +61,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Test the magic committer's commit protocol.
  */
-@ParameterizedClass(name="track-commit-in-memory-{0}")
+@ParameterizedClass(name="track-commit-in-memory-{0}-cluster-tmp-path-{1}")
 @MethodSource("params")
 public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
 
   private boolean trackCommitsInMemory;
+
+  /**
+   * Should the job data be saved to a path in a cluster filesystem
+   * through {@link CommitConstants#FS_S3A_COMMITTER_MAGIC_TMP_PATH}?
+   * The local filesystem is used as a stand-in for HDFS.
+   */
+  private final boolean useClusterTmpPath;
+
+  /** Cluster FS dir for job data; null if {@link #useClusterTmpPath} is false. */
+  private Path clusterTmpPath;
 
   @Override
   protected String suitename() {
@@ -86,13 +101,17 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
 
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {false},
-        {true}
+        {false, false},
+        {true, false},
+        {false, true},
+        {true, true}
     });
   }
 
-  public ITestMagicCommitProtocol(boolean trackCommitsInMemory) {
+  public ITestMagicCommitProtocol(boolean trackCommitsInMemory,
+      boolean useClusterTmpPath) {
     this.trackCommitsInMemory = trackCommitsInMemory;
+    this.useClusterTmpPath = useClusterTmpPath;
   }
 
   @Override
@@ -100,18 +119,71 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     Configuration conf = super.createConfiguration();
     removeBaseAndBucketOverrides(conf, FS_S3A_COMMITTER_MAGIC_TRACK_COMMITS_IN_MEMORY_ENABLED);
     conf.setBoolean(FS_S3A_COMMITTER_MAGIC_TRACK_COMMITS_IN_MEMORY_ENABLED, trackCommitsInMemory);
-
+    removeBaseAndBucketOverrides(conf, FS_S3A_COMMITTER_MAGIC_TMP_PATH);
+    if (useClusterTmpPath) {
+      if (clusterTmpPath == null) {
+        File dir = new File(getProjectBuildDir(),
+            "magic-tmp/" + UUID.randomUUID());
+        clusterTmpPath = new Path(dir.toURI());
+      }
+      conf.set(FS_S3A_COMMITTER_MAGIC_TMP_PATH, clusterTmpPath.toString());
+    }
     return conf;
+  }
+
+  @Override
+  @AfterEach
+  public void teardown() throws Exception {
+    super.teardown();
+    if (clusterTmpPath != null) {
+      clusterTmpPath.getFileSystem(new Configuration())
+          .delete(clusterTmpPath, true);
+    }
   }
 
   @Override
   public void assertJobAbortCleanedUp(JobData jobData)
       throws Exception {
     // special handling of magic directory; harmless in staging
-    Path magicDir = getMagicJobPath(jobData.getCommitter().getUUID(), getOutDir());
+    MagicS3GuardCommitter committer =
+        (MagicS3GuardCommitter) jobData.getCommitter();
+    Path magicDir = getMagicJobPath(committer.getUUID(), getOutDir());
     ContractTestUtils.assertPathDoesNotExist(getFileSystem(),
         "magic dir ", magicDir);
+    // and the job dir in the cluster FS
+    Path jobPath = committer.getJobPath();
+    ContractTestUtils.assertPathDoesNotExist(
+        jobPath.getFileSystem(committer.getConf()),
+        "job dir ", jobPath);
     super.assertJobAbortCleanedUp(jobData);
+  }
+
+  /**
+   * Assert that a path is in the cluster FS if
+   * {@link #useClusterTmpPath} is set, else under the S3 magic dir.
+   * @param committer committer
+   * @param path path to check
+   */
+  private void assertInJobDataFS(MagicS3GuardCommitter committer,
+      Path path) {
+    String magicDir = "/" + MAGIC_PATH_PREFIX + committer.getUUID();
+    if (useClusterTmpPath) {
+      assertThat(path.toString())
+          .describedAs("path of %s", committer)
+          .startsWith(clusterTmpPath.toString())
+          .contains(magicDir);
+      assertThat(path.toUri().getScheme())
+          .describedAs("scheme of %s", path)
+          .isEqualTo("file");
+    } else {
+      assertThat(path.toString())
+          .describedAs("path of %s", committer)
+          .startsWith(getOutDir().toString())
+          .contains(magicDir);
+      assertThat(path.toUri().getScheme())
+          .describedAs("scheme of %s", path)
+          .isEqualTo("s3a");
+    }
   }
 
   @Override
@@ -203,6 +275,14 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
         .doesNotContain(TEMP_DATA)
         .endsWith(BASE)
         .contains(ta0);
+    // task attempt path is always on S3
+    assertThat(taskAttemptPath.toUri().getScheme())
+        .describedAs("task path of %s", committer)
+        .isEqualTo("s3a");
+
+    // job paths are in the cluster FS if configured
+    assertInJobDataFS(committer, committer.getJobPath());
+    assertInJobDataFS(committer, committer.getJobAttemptPath(tContext));
 
     // temp path for files which the TA will create with an absolute path
     // and which need renaming into place.
@@ -214,6 +294,42 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
         .doesNotContain("/" + MAGIC_PATH_PREFIX + committer.getUUID() + "/")
         .doesNotContain(BASE)
         .contains(ta0);
+  }
+
+  /**
+   * Verify that task commit saves the .pendingset file into
+   * the job attempt dir, which is in the cluster FS if configured,
+   * and that no job data is saved in the S3 magic dir in that case.
+   */
+  @Test
+  public void testPendingSetSavedInJobAttemptDir() throws Throwable {
+    JobData jobData = startJob(true);
+    JobContext jContext = jobData.getJContext();
+    TaskAttemptContext tContext = jobData.getTContext();
+    MagicS3GuardCommitter committer =
+        (MagicS3GuardCommitter) jobData.getCommitter();
+
+    commitTask(committer, tContext);
+    Path jobAttemptPath = committer.getJobAttemptPath(jContext);
+    assertInJobDataFS(committer, jobAttemptPath);
+    FileSystem jobFS = jobAttemptPath.getFileSystem(committer.getConf());
+    Path pendingSet = new Path(jobAttemptPath,
+        getTaskAttempt0().getTaskID() + PENDINGSET_SUFFIX);
+    ContractTestUtils.assertIsFile(jobFS, pendingSet);
+
+    if (useClusterTmpPath) {
+      // nothing saved in the job attempt dir under the destination
+      Path s3JobAttemptPath = new Path(
+          getMagicJobPath(committer.getUUID(), getOutDir()),
+          jobAttemptPath.getParent().getName() + "/"
+              + jobAttemptPath.getName());
+      ContractTestUtils.assertPathDoesNotExist(getFileSystem(),
+          "S3 job attempt dir", s3JobAttemptPath);
+    }
+
+    commitJob(committer, jContext);
+    assertPathExists("job output", getPart0000(getOutDir()));
+    assertJobAttemptPathDoesNotExist(committer, jContext);
   }
 
   /**

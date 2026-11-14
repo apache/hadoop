@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -46,6 +47,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_MAGIC_TMP_PATH;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.TASK_ATTEMPT_ID;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.TEMP_DATA;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
@@ -70,6 +72,29 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   public static final String NAME = CommitConstants.COMMITTER_NAME_MAGIC;
 
   /**
+   * Base directory under which the job/job attempt directories
+   * holding the .pendingset files are created.
+   * This is the destination path unless
+   * {@link CommitConstants#FS_S3A_COMMITTER_MAGIC_TMP_PATH} is set,
+   * in which case it is that (cluster) filesystem path.
+   */
+  private final Path jobsDir;
+
+  /**
+   * Work out the base directory for job coordination data.
+   * @param defaultPath path to use if the option is unset.
+   * @param conf configuration
+   * @return a qualified path under which job data is saved.
+   * @throws IOException failure to instantiate the filesystem.
+   */
+  public static Path jobsDir(Path defaultPath,
+      Configuration conf) throws IOException {
+    Path path = new Path(conf.getTrimmed(
+        FS_S3A_COMMITTER_MAGIC_TMP_PATH, defaultPath.toString()));
+    return path.getFileSystem(conf).makeQualified(path);
+  }
+
+  /**
    * Create a task committer.
    * @param outputPath the job's output path
    * @param context the task's context
@@ -78,6 +103,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   public MagicS3GuardCommitter(Path outputPath,
       TaskAttemptContext context) throws IOException {
     super(outputPath, context);
+    jobsDir = jobsDir(getOutputPath(), getConf());
     setWorkPath(getTaskAttemptPath(context));
     verifyIsMagicCommitPath(getDestS3AFS(), getWorkPath());
     LOG.debug("Task attempt {} has work path {}",
@@ -104,10 +130,11 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     try (DurationInfo d = new DurationInfo(LOG,
         "Setup Job %s", jobIdString(context))) {
       super.setupJob(context);
-      Path jobPath = getJobPath();
-      final FileSystem destFS = getDestinationFS(jobPath,
-          context.getConfiguration());
-      destFS.mkdirs(jobPath);
+      // create the job attempt dir, so that job commit can list it
+      // even if no task has saved anything there.
+      Path jobAttemptPath = getJobAttemptPath(context);
+      jobAttemptPath.getFileSystem(context.getConfiguration())
+          .mkdirs(jobAttemptPath);
     }
   }
 
@@ -121,7 +148,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   protected ActiveCommit listPendingUploadsToCommit(
       CommitContext commitContext)
       throws IOException {
-    FileSystem fs = getDestFS();
+    FileSystem fs = jobsDir.getFileSystem(getConf());
     return ActiveCommit.fromStatusIterator(fs,
         listAndFilter(fs, getJobAttemptPath(commitContext.getJobContext()),
             false,
@@ -134,6 +161,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   public void cleanupStagingDirs() {
     if (isCleanupMagicCommitterEnabled(getConf())) {
       final Path out = getOutputPath();
+      // magic directory under the destination
       Path path = getMagicJobPath(getUUID(), out);
       try(DurationInfo ignored = new DurationInfo(LOG, true,
               "Deleting magic directory %s", path)) {
@@ -144,6 +172,43 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
                 () -> deleteWithWarning(getDestFS(),
                         new Path(out, TEMP_DATA), true));
       }
+      // job directory in the cluster FS, if one was configured
+      Path jobPath = getJobPath();
+      if (!jobPath.equals(path)) {
+        try (DurationInfo ignored = new DurationInfo(LOG, true,
+            "Deleting job directory %s", jobPath)) {
+          Invoker.ignoreIOExceptions(LOG, "cleanup job directory",
+              jobPath.toString(),
+              () -> deleteWithWarning(
+                  jobPath.getFileSystem(getConf()), jobPath, true));
+        }
+      }
+    }
+  }
+
+  /**
+   * When commit data is tracked in memory nothing is saved under the
+   * task attempt path, so skip the S3 DELETE/LIST/PUT calls.
+   * @param context task attempt
+   * @throws IOException failure
+   */
+  @Override
+  protected void prepareTaskAttemptPath(TaskAttemptContext context)
+      throws IOException {
+    if (!isTrackMagicCommitsInMemoryEnabled(context.getConfiguration())) {
+      super.prepareTaskAttemptPath(context);
+    }
+  }
+
+  /**
+   * Delete the task attempt path, unless commit data is tracked
+   * in memory, in which case nothing was created there.
+   * @param context task context
+   */
+  @Override
+  protected void deleteTaskAttemptPathQuietly(TaskAttemptContext context) {
+    if (!isTrackMagicCommitsInMemoryEnabled(context.getConfiguration())) {
+      super.deleteTaskAttemptPathQuietly(context);
     }
   }
 
@@ -225,7 +290,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
           IOStatisticsLogging.demandStringifyIOStatisticsSource(pendingSet));
       try {
         // We will overwrite if there exists a pendingSet file already
-        pendingSet.save(getDestFS(),
+        pendingSet.save(taskOutcomePath.getFileSystem(getConf()),
             taskOutcomePath,
             commitContext.getPendingSetSerializer());
       } catch (IOException e) {
@@ -341,9 +406,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
         getCommitOperations().abortAllSinglePendingCommits(attemptPath, commitContext, true);
       }
     } finally {
-      deleteQuietly(
-          attemptPath.getFileSystem(context.getConfiguration()),
-          attemptPath, true);
+      deleteTaskAttemptPathQuietly(context);
     }
   }
 
@@ -353,7 +416,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    */
   @Override
   protected Path getJobPath() {
-    return getMagicJobPath(getUUID(), getOutputPath());
+    return getMagicJobPath(getUUID(), jobsDir);
   }
 
   /**
@@ -363,7 +426,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    * @return the path to store job attempt data.
    */
   protected final Path getJobAttemptPath(int appAttemptId) {
-    return getMagicJobAttemptPath(getUUID(), appAttemptId, getOutputPath());
+    return getMagicJobAttemptPath(getUUID(), appAttemptId, jobsDir);
   }
 
   /**
@@ -391,7 +454,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   public Path getTempTaskAttemptPath(TaskAttemptContext context) {
     return CommitUtilsWithMR.getTempTaskAttemptPath(context,
         getUUID(),
-        getOutputPath());
+        jobsDir);
   }
 
   @Override
