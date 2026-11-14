@@ -141,6 +141,17 @@ public class FSEditLogLoader {
   private final BlockManager blockManager;
   private final Timer timer;
   private long lastAppliedTxId;
+  private java.util.function.LongConsumer rollbackCheckpointBoundary;
+  private boolean stoppedForRollbackCheckpoint;
+
+  void setRollbackCheckpointBoundary(java.util.function.LongConsumer boundary) {
+    rollbackCheckpointBoundary = boundary;
+  }
+
+  boolean isStoppedForRollbackCheckpoint() {
+    return stoppedForRollbackCheckpoint;
+  }
+
   /** Total number of end transactions loaded. */
   private int totalEdits = 0;
   
@@ -214,18 +225,14 @@ public class FSEditLogLoader {
       MetaRecoveryContext recovery) throws IOException {
     EnumMap<FSEditLogOpCodes, Holder<Integer>> opCounts =
       new EnumMap<FSEditLogOpCodes, Holder<Integer>>(FSEditLogOpCodes.class);
-
     if (LOG.isTraceEnabled()) {
       LOG.trace("Acquiring write lock to replay edit log");
     }
-
     fsNamesys.writeLock(RwLockMode.GLOBAL);
     FSDirectory fsDir = fsNamesys.dir;
     fsDir.writeLock();
-
     long recentOpcodeOffsets[] = new long[4];
     Arrays.fill(recentOpcodeOffsets, -1);
-    
     long expectedTxId = expectedStartingTxId;
     long numEdits = 0;
     long lastTxId = in.getLastTxId();
@@ -236,7 +243,6 @@ public class FSEditLogLoader {
     Counter counter = prog.getCounter(Phase.LOADING_EDITS, step);
     long lastLogTime = timer.monotonicNow();
     long lastInodeId = fsNamesys.dir.getLastInodeId();
-    
     try {
       while (true) {
         try {
@@ -298,7 +304,6 @@ public class FSEditLogLoader {
             if (recovery == null) {
               throw e instanceof IOException? (IOException)e: new IOException(e);
             }
-
             MetaRecoveryContext.editLogLoaderPrompt("Failed to " +
              "apply edit log operation " + op + ": error " +
              e.getMessage(), recovery, "applying edits");
@@ -325,6 +330,15 @@ public class FSEditLogLoader {
           }
           numEdits++;
           totalEdits++;
+          if (rollbackCheckpointBoundary != null
+              && op.opCode == FSEditLogOpCodes.OP_END_LOG_SEGMENT
+              && fsNamesys.isNeedRollbackFsImage()) {
+            // Async RPC streams can include START of the next segment in the
+            // same batch. Preserve a boundary that JNs can actually discard at.
+            stoppedForRollbackCheckpoint = true;
+            rollbackCheckpointBoundary.accept(lastAppliedTxId);
+            break;
+          }
           if(numEdits >= maxTxnsToRead) {
             break;
           }
@@ -344,7 +358,6 @@ public class FSEditLogLoader {
       }
       fsDir.writeUnlock();
       fsNamesys.writeUnlock(RwLockMode.GLOBAL, "loadEditRecords");
-
       if (LOG.isTraceEnabled()) {
         LOG.trace("replaying edit log finished");
       }

@@ -893,6 +893,25 @@ public class FSImage implements Closeable {
       FSNamesystem target, long maxTxnsToRead,
       StartupOption startOpt, MetaRecoveryContext recovery)
       throws IOException {
+    return loadEdits(editStreams, target, maxTxnsToRead, startOpt, recovery, null);
+  }
+
+  /**
+   * Replay edits with an optional standby rollback-checkpoint boundary callback.
+   * The caller serializes this callback with checkpoint creation using cpLock.
+   * @param editStreams streams to replay
+   * @param target namespace receiving the edits
+   * @param maxTxnsToRead maximum operations to apply
+   * @param startOpt startup mode, or null for periodic tailing
+   * @param recovery recovery context, or null
+   * @param rollbackBoundary callback at END after PREPARE, or null for unrestricted replay
+   * @return number of transaction IDs advanced
+   * @throws IOException if replay fails
+   */
+  public long loadEdits(Iterable<EditLogInputStream> editStreams,
+      FSNamesystem target, long maxTxnsToRead, StartupOption startOpt,
+      MetaRecoveryContext recovery, java.util.function.LongConsumer rollbackBoundary)
+      throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("About to load edits:\n  {}.", Joiner.on("\n  ").join(editStreams));
     }
@@ -901,6 +920,7 @@ public class FSImage implements Closeable {
     long remainingReadTxns = maxTxnsToRead;
     try {    
       FSEditLogLoader loader = new FSEditLogLoader(target, lastAppliedTxId);
+      loader.setRollbackCheckpointBoundary(rollbackBoundary);
       
       // Load latest edits
       for (EditLogInputStream editIn : editStreams) {
@@ -927,7 +947,7 @@ public class FSImage implements Closeable {
             && recovery != null) {
           lastAppliedTxId = editIn.getLastTxId();
         }
-        if (remainingReadTxns <= 0) {
+        if (remainingReadTxns <= 0 || loader.isStoppedForRollbackCheckpoint()) {
           break;
         }
       }

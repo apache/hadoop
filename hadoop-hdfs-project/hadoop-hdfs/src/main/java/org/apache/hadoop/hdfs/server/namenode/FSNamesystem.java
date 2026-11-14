@@ -7740,6 +7740,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return rollingUpgradeInfo;
   }
 
+  /**
+   * Whether this role is configured to create standby checkpoints.
+   * @return false for observers and non-checkpointing standbys
+   */
+  public boolean isStandbyCheckpointEnabled() {
+    return standbyShouldCheckpoint && getState() == STANDBY;
+  }
+
   public boolean isNeedRollbackFsImage() {
     return needRollbackFsImage;
   }
