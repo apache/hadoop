@@ -40,7 +40,7 @@ fi
 
 if [ "$version_to_install" == "1.2.0-4" ]; then
   mkdir -p /tmp/yasm &&
-    curl -L -s -S https://archives.fedoraproject.org/pub/archive/epel/7/x86_64/Packages/y/yasm-1.2.0-4.el7.x86_64.rpm \
+    curl -f -L -s -S --retry 5 --retry-delay 5 https://archives.fedoraproject.org/pub/archive/epel/7/x86_64/Packages/y/yasm-1.2.0-4.el7.x86_64.rpm \
       -o /tmp/yasm-1.2.0-4.el7.x86_64.rpm &&
     rpm -Uvh /tmp/yasm-1.2.0-4.el7.x86_64.rpm
 else
