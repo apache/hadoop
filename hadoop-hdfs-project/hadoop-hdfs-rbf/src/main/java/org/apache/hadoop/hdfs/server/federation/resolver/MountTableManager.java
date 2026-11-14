@@ -29,6 +29,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
@@ -76,11 +78,21 @@ public interface MountTableManager {
    * Remove an entry from the mount table.
    *
    * @param request Fully populated request object.
-   * @return True the mount table entry was removed from the data store.
+   * @return True if the mount table entry was removed from the data store.
    * @throws IOException Throws exception if the data store is not initialized.
    */
   RemoveMountTableEntryResponse removeMountTableEntry(
       RemoveMountTableEntryRequest request) throws IOException;
+
+  /**
+   * Remove multiple entries from the mount table.
+   *
+   * @param request Fully populated request object.
+   * @return True if all paths were removed from the data store.
+   * @throws IOException if the data store is not initialized.
+   */
+  RemoveMountTableEntriesResponse removeMountTableEntries(RemoveMountTableEntriesRequest request)
+      throws IOException;
 
   /**
    * List all mount table entries present at or below the path. Fetches from the
