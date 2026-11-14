@@ -17,14 +17,25 @@
  */
 package org.apache.hadoop.tools;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryScope;
+import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verify CopyListingFileStatus serialization and requirements for distcp.
@@ -75,4 +86,40 @@ public class TestCopyListingFileStatus {
     assertEquals(stat.isErasureCoded(), clfs.isErasureCoded());
   }
 
+  @Test
+  public void testAclEntriesAndXAttrsAreCopied() {
+    CopyListingFileStatus status = new CopyListingFileStatus(
+        4344L, false, 2, 512 << 20, 1234L, 5678L, new FsPermission((short)0750),
+        "dingo", "yaks", new Path("hdfs://localhost:4344"));
+
+    List<AclEntry> aclEntries = new ArrayList<>();
+    aclEntries.add(aclEntry("user1"));
+    status.setAclEntries(aclEntries);
+    List<AclEntry> expectedAcl = status.getAclEntries();
+    aclEntries.add(aclEntry("user2"));
+    assertEquals(expectedAcl, status.getAclEntries(),
+        "changing the list passed to setAclEntries() changed the status");
+
+    Map<String, byte[]> xAttrs = new HashMap<>();
+    byte[] value = new byte[] {1, 2, 3};
+    xAttrs.put("user.a", value);
+    status.setXAttrs(xAttrs);
+    xAttrs.put("user.b", new byte[] {4});
+    assertEquals(1, status.getXAttrs().size(),
+        "changing the map passed to setXAttrs() changed the status");
+    assertSame(value, status.getXAttrs().get("user.a"));
+
+    status.setAclEntries(null);
+    status.setXAttrs(null);
+    assertTrue(status.getXAttrs().isEmpty());
+  }
+
+  private static AclEntry aclEntry(String user) {
+    return new AclEntry.Builder()
+        .setScope(AclEntryScope.ACCESS)
+        .setType(AclEntryType.USER)
+        .setName(user)
+        .setPermission(FsAction.READ)
+        .build();
+  }
 }
