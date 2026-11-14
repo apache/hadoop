@@ -29,12 +29,19 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -53,6 +60,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -944,6 +952,105 @@ public class TestFileUtil {
     }
     Verify.notExists(partitioned); // should be deleted
   }  
+
+  @Test
+  @Timeout(value = 30)
+  /*
+   * Test method copy(FileSystem srcFS, Path src, FileSystem dstFS, Path dst,
+   * boolean deleteSource, boolean overwrite, Configuration conf) when mkdirs
+   * of one child directory fails at the destination: the other child is
+   * still copied, false is returned and the source directory is kept.
+   */
+  public void testCopyChildMkdirsFailure() throws IOException {
+    Configuration conf = new Configuration();
+    LocalFileSystem srcFS = FileSystem.getLocal(conf);
+    File srcDir = createSourceTreeWithTwoChildren("srcDir");
+    FileSystem dstFS = mockDestinationFailingFirstChildMkdirs();
+
+    assertFalse(FileUtil.copy(srcFS, new Path(srcDir.toURI()), dstFS,
+        new Path("/dst"), true, false, conf));
+    // the child that was copied has been moved, the failed one is kept
+    assertEquals(1, srcDir.list().length);
+    verify(dstFS, times(3)).mkdirs(any(Path.class));
+  }
+
+  @Test
+  @Timeout(value = 30)
+  /*
+   * Test method copy(File src, FileSystem dstFS, Path dst,
+   * boolean deleteSource, Configuration conf) when mkdirs of one child
+   * directory fails at the destination.
+   */
+  public void testCopyFromLocalChildMkdirsFailure() throws IOException {
+    File srcDir = createSourceTreeWithTwoChildren("localSrcDir");
+    FileSystem dstFS = mockDestinationFailingFirstChildMkdirs();
+
+    assertFalse(FileUtil.copy(srcDir, dstFS, new Path("/dst"), true,
+        new Configuration()));
+    assertEquals(1, srcDir.list().length);
+    verify(dstFS, times(3)).mkdirs(any(Path.class));
+  }
+
+  @Test
+  @Timeout(value = 30)
+  /*
+   * Test method copy(FileSystem srcFS, Path src, File dst,
+   * boolean deleteSource, Configuration conf) when mkdirs of one local
+   * child directory fails. The listing repeats a name, as two names that
+   * differ only in case do on a case-insensitive local file system.
+   */
+  public void testCopyToLocalChildMkdirsFailure() throws IOException {
+    Path src = new Path("/src");
+    FileSystem srcFS = mock(FileSystem.class);
+    when(srcFS.getFileStatus(src)).thenReturn(dirStatus(src));
+    when(srcFS.listStatus(any(Path.class))).thenReturn(new FileStatus[0]);
+    when(srcFS.listStatus(src)).thenReturn(new FileStatus[] {
+        dirStatus(new Path(src, "a")),
+        dirStatus(new Path(src, "a")),
+        dirStatus(new Path(src, "b"))});
+    when(srcFS.delete(any(Path.class), anyBoolean())).thenReturn(true);
+    File dst = new File(tmp, "localDst");
+
+    assertFalse(FileUtil.copy(srcFS, src, dst, true, new Configuration()));
+    assertTrue(new File(dst, "b").isDirectory());
+    verify(srcFS, never()).delete(src, true);
+  }
+
+  /** @return a directory with two child directories, each holding a file. */
+  private File createSourceTreeWithTwoChildren(String name)
+      throws IOException {
+    File srcDir = new File(tmp, name);
+    for (String child : new String[] {"child1", "child2"}) {
+      File childDir = new File(srcDir, child);
+      assertTrue(childDir.mkdirs());
+      createFile(childDir, FILE_1_NAME, "some-content");
+    }
+    return srcDir;
+  }
+
+  /**
+   * @return a mock destination on which no path exists, mkdirs of "/dst"
+   * succeeds and mkdirs of the first child directory under it fails.
+   */
+  private static FileSystem mockDestinationFailingFirstChildMkdirs()
+      throws IOException {
+    FileSystem dstFS = mock(FileSystem.class);
+    when(dstFS.getFileStatus(any(Path.class)))
+        .thenThrow(new FileNotFoundException("no such destination"));
+    AtomicBoolean childFailed = new AtomicBoolean();
+    when(dstFS.mkdirs(any(Path.class))).thenAnswer(invocation ->
+        "dst".equals(invocation.getArgument(0, Path.class).getName())
+            || !childFailed.compareAndSet(false, true));
+    when(dstFS.create(any(Path.class))).thenAnswer(
+        invocation -> new FSDataOutputStream(new ByteArrayOutputStream(), null));
+    when(dstFS.create(any(Path.class), anyBoolean())).thenAnswer(
+        invocation -> new FSDataOutputStream(new ByteArrayOutputStream(), null));
+    return dstFS;
+  }
+
+  private static FileStatus dirStatus(Path path) {
+    return new FileStatus(0, true, 1, 0, 0, path);
+  }
 
   @Test
   @Timeout(value = 30)

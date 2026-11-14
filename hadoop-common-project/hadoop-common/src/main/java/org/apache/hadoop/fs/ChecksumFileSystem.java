@@ -1062,7 +1062,10 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   public void copyToLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
     Configuration conf = getConf();
-    FileUtil.copy(this, src, getLocal(conf), dst, delSrc, conf);
+    if (!FileUtil.copy(this, src, getLocal(conf), dst, delSrc, conf)) {
+      throw new IOException("Failed to " + (delSrc ? "move " : "copy ")
+          + src + " to " + dst);
+    }
   }
 
   /**
