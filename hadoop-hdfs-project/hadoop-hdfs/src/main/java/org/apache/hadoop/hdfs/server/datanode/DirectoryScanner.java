@@ -75,6 +75,14 @@ public class DirectoryScanner implements Runnable {
   private final long throttleLimitMsPerSec;
   private final AtomicBoolean shouldRun = new AtomicBoolean();
 
+  /**
+   * Set once {@link #shutdown()} has been called. Unlike {@link #shouldRun},
+   * which is only true between {@link #start()} and {@link #shutdown()}, this
+   * lets a running {@link #reconcile()} tell a shutdown apart from a scanner
+   * that was never started.
+   */
+  private volatile boolean shutdownRequested = false;
+
   private boolean retainDiffs = false;
 
   /**
@@ -437,6 +445,7 @@ public class DirectoryScanner implements Runnable {
    */
   void shutdown() {
     LOG.info("Shutdown has been called");
+    shutdownRequested = true;
     if (!shouldRun.getAndSet(false)) {
       LOG.warn("Shutdown has been called, but periodic scanner not started");
     }
@@ -480,6 +489,14 @@ public class DirectoryScanner implements Runnable {
     int loopCount = 0;
     synchronized (diffs) {
       for (final Map.Entry<String, ScanInfo> entry : diffs.getEntries()) {
+        // shutdown() needs the diffs lock to finish. The remaining diffs are
+        // recomputed by the next scan, so give up instead of making the
+        // DataNode shutdown wait for the whole reconciliation.
+        if (shutdownRequested) {
+          LOG.warn("Shutdown has been called, aborting reconcile after {} diffs",
+              loopCount);
+          break;
+        }
         dataset.checkAndUpdate(entry.getKey(), entry.getValue());
 
         if (loopCount % reconcileBlocksBatchSize == 0) {
