@@ -56,6 +56,16 @@ public class FedBalanceContext implements Writable {
   private long delayDuration;
   /* The threshold of diff entries. */
   private int diffThreshold;
+  /* Whether to stop after the initial DistCp job succeeds. */
+  private boolean stopAfterInitialCopy;
+  /* Whether to start from the incremental DistCp stage. */
+  private boolean startFromIncremental;
+  /* Whether to stop when a small diff cannot move to final copy. */
+  private boolean stopOnSmallDiff;
+  /* Sentinel path that gates leaving the incremental DistCp stage. */
+  private String timeWindowSentinelPath;
+  /* Sentinel path that allows force-closing open files. */
+  private String forceCloseSentinelPath;
 
   private Configuration conf;
 
@@ -97,6 +107,51 @@ public class FedBalanceContext implements Writable {
     return diffThreshold;
   }
 
+  /**
+   * Get whether the job should stop after the initial copy.
+   *
+   * @return true if the job should stop after the initial copy.
+   */
+  public boolean getStopAfterInitialCopy() {
+    return stopAfterInitialCopy;
+  }
+
+  /**
+   * Get whether the job should start from the incremental DistCp stage.
+   *
+   * @return true if the job should start from the incremental DistCp stage.
+   */
+  public boolean getStartFromIncremental() {
+    return startFromIncremental;
+  }
+
+  /**
+   * Get whether the job should stop on a small diff that cannot finish.
+   *
+   * @return true if the job should stop on a small diff that cannot finish.
+   */
+  public boolean getStopOnSmallDiff() {
+    return stopOnSmallDiff;
+  }
+
+  /**
+   * Get the sentinel path that gates leaving the incremental DistCp stage.
+   *
+   * @return sentinel path, or null if disabled.
+   */
+  public String getTimeWindowSentinelPath() {
+    return timeWindowSentinelPath;
+  }
+
+  /**
+   * Get the sentinel path that allows force-closing open files.
+   *
+   * @return sentinel path, or null if disabled.
+   */
+  public String getForceCloseSentinelPath() {
+    return forceCloseSentinelPath;
+  }
+
   public TrashOption getTrashOpt() {
     return trashOpt;
   }
@@ -114,6 +169,13 @@ public class FedBalanceContext implements Writable {
     out.writeInt(trashOpt.ordinal());
     out.writeLong(delayDuration);
     out.writeInt(diffThreshold);
+    out.writeBoolean(stopAfterInitialCopy);
+    out.writeBoolean(startFromIncremental);
+    out.writeBoolean(stopOnSmallDiff);
+    Text.writeString(out, timeWindowSentinelPath == null ? ""
+        : timeWindowSentinelPath);
+    Text.writeString(out, forceCloseSentinelPath == null ? ""
+        : forceCloseSentinelPath);
   }
 
   @Override
@@ -130,6 +192,15 @@ public class FedBalanceContext implements Writable {
     trashOpt = TrashOption.values()[in.readInt()];
     delayDuration = in.readLong();
     diffThreshold = in.readInt();
+    stopAfterInitialCopy = in.readBoolean();
+    startFromIncremental = in.readBoolean();
+    stopOnSmallDiff = in.readBoolean();
+    timeWindowSentinelPath = emptyToNull(Text.readString(in));
+    forceCloseSentinelPath = emptyToNull(Text.readString(in));
+  }
+
+  private static String emptyToNull(String value) {
+    return value == null || value.isEmpty() ? null : value;
   }
 
   @Override
@@ -155,6 +226,11 @@ public class FedBalanceContext implements Writable {
         .append(trashOpt, bc.trashOpt)
         .append(delayDuration, bc.delayDuration)
         .append(diffThreshold, bc.diffThreshold)
+        .append(stopAfterInitialCopy, bc.stopAfterInitialCopy)
+        .append(startFromIncremental, bc.startFromIncremental)
+        .append(stopOnSmallDiff, bc.stopOnSmallDiff)
+        .append(timeWindowSentinelPath, bc.timeWindowSentinelPath)
+        .append(forceCloseSentinelPath, bc.forceCloseSentinelPath)
         .isEquals();
   }
 
@@ -171,6 +247,11 @@ public class FedBalanceContext implements Writable {
         .append(trashOpt)
         .append(delayDuration)
         .append(diffThreshold)
+        .append(stopAfterInitialCopy)
+        .append(startFromIncremental)
+        .append(stopOnSmallDiff)
+        .append(timeWindowSentinelPath)
+        .append(forceCloseSentinelPath)
         .build();
   }
 
@@ -204,6 +285,16 @@ public class FedBalanceContext implements Writable {
       break;
     }
     builder.append(" Delay duration is ").append(delayDuration).append("ms.");
+    builder.append(" Stop after initial copy is ")
+        .append(stopAfterInitialCopy).append(".");
+    builder.append(" Start from incremental stage is ")
+        .append(startFromIncremental).append(".");
+    builder.append(" Stop on small diff is ").append(stopOnSmallDiff)
+        .append(".");
+    builder.append(" Time window sentinel path is ")
+        .append(timeWindowSentinelPath).append(".");
+    builder.append(" Force close sentinel path is ")
+        .append(forceCloseSentinelPath).append(".");
     return builder.toString();
   }
 
@@ -219,6 +310,11 @@ public class FedBalanceContext implements Writable {
     private TrashOption trashOpt;
     private long delayDuration;
     private int diffThreshold;
+    private boolean stopAfterInitialCopy;
+    private boolean startFromIncremental;
+    private boolean stopOnSmallDiff;
+    private String timeWindowSentinelPath;
+    private String forceCloseSentinelPath;
 
     /**
      * This class helps building the FedBalanceContext.
@@ -306,6 +402,57 @@ public class FedBalanceContext implements Writable {
     }
 
     /**
+     * Specify whether to stop after the initial DistCp job succeeds.
+     * @param value true if stopping after initial copy.
+     * @return the builder.
+     */
+    public Builder setStopAfterInitialCopy(boolean value) {
+      this.stopAfterInitialCopy = value;
+      return this;
+    }
+
+    /**
+     * Specify whether to start from the incremental DistCp stage.
+     * @param value true if starting from the incremental DistCp stage.
+     * @return the builder.
+     */
+    public Builder setStartFromIncremental(boolean value) {
+      this.startFromIncremental = value;
+      return this;
+    }
+
+    /**
+     * Specify whether to stop when a small diff cannot move to final copy.
+     * @param value true if stopping on small diff.
+     * @return the builder.
+     */
+    public Builder setStopOnSmallDiff(boolean value) {
+      this.stopOnSmallDiff = value;
+      return this;
+    }
+
+    /**
+     * Specify the sentinel path that gates leaving the incremental DistCp
+     * stage.
+     * @param value the sentinel path.
+     * @return the builder.
+     */
+    public Builder setTimeWindowSentinelPath(String value) {
+      this.timeWindowSentinelPath = emptyToNull(value);
+      return this;
+    }
+
+    /**
+     * Specify the sentinel path that allows force-closing open files.
+     * @param value the sentinel path.
+     * @return the builder.
+     */
+    public Builder setForceCloseSentinelPath(String value) {
+      this.forceCloseSentinelPath = emptyToNull(value);
+      return this;
+    }
+
+    /**
      * Build the FedBalanceContext.
      *
      * @return the FedBalanceContext obj.
@@ -323,6 +470,11 @@ public class FedBalanceContext implements Writable {
       context.trashOpt = this.trashOpt;
       context.delayDuration = this.delayDuration;
       context.diffThreshold = this.diffThreshold;
+      context.stopAfterInitialCopy = this.stopAfterInitialCopy;
+      context.startFromIncremental = this.startFromIncremental;
+      context.stopOnSmallDiff = this.stopOnSmallDiff;
+      context.timeWindowSentinelPath = this.timeWindowSentinelPath;
+      context.forceCloseSentinelPath = this.forceCloseSentinelPath;
       return context;
     }
   }

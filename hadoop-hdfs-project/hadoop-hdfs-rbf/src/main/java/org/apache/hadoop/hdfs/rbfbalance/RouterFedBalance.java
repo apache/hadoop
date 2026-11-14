@@ -50,12 +50,21 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.tools.fedbalance.FedBalance.FED_BALANCE_DEFAULT_XML;
 import static org.apache.hadoop.tools.fedbalance.FedBalance.FED_BALANCE_SITE_XML;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.FORCE_CLOSE_SENTINEL_PATH;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.FORCE_CLOSE_SENTINEL_PATH_DEFAULT;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.TIME_WINDOW_SENTINEL_PATH;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.TIME_WINDOW_SENTINEL_PATH_DEFAULT;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.CLI_OPTIONS;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.FORCE_CLOSE_OPEN;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.FORCE_CLOSE_SENTINEL;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.MAP;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.BANDWIDTH;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.DELAY_DURATION;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.DIFF_THRESHOLD;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.START_FROM_INCREMENTAL;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.STOP_AFTER_INITIAL_COPY;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.STOP_ON_SMALL_DIFF;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.TIME_WINDOW_SENTINEL;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.TRASH;
 
 /**
@@ -92,6 +101,16 @@ public class RouterFedBalance extends Configured implements Tool {
     private long delayDuration = TimeUnit.SECONDS.toMillis(1);
     /* Specify the threshold of diff entries. */
     private int diffThreshold = 0;
+    /* Whether to stop after the initial DistCp job succeeds. */
+    private boolean stopAfterInitialCopy = false;
+    /* Whether to start from the incremental DistCp stage. */
+    private boolean startFromIncremental = false;
+    /* Whether to stop when a small diff cannot move to final copy. */
+    private boolean stopOnSmallDiff = false;
+    /* Sentinel path that gates leaving the incremental DistCp stage. */
+    private String timeWindowSentinelPath;
+    /* Sentinel path that allows force-closing open files. */
+    private String forceCloseSentinelPath;
     /* The source input. This specifies the source path. */
     private final String inputSrc;
     /* The dst input. This specifies the dst path. */
@@ -157,6 +176,52 @@ public class RouterFedBalance extends Configured implements Tool {
     }
 
     /**
+     * Specify whether to stop after the initial DistCp job succeeds.
+     * @param value true if stopping after initial copy.
+     */
+    public Builder setStopAfterInitialCopy(boolean value) {
+      this.stopAfterInitialCopy = value;
+      return this;
+    }
+
+    /**
+     * Specify whether to start from the incremental DistCp stage.
+     * @param value true if starting from the incremental DistCp stage.
+     */
+    public Builder setStartFromIncremental(boolean value) {
+      this.startFromIncremental = value;
+      return this;
+    }
+
+    /**
+     * Specify whether to stop when a small diff cannot move to final copy.
+     * @param value true if stopping on small diff.
+     */
+    public Builder setStopOnSmallDiff(boolean value) {
+      this.stopOnSmallDiff = value;
+      return this;
+    }
+
+    /**
+     * Specify the sentinel path that gates leaving the incremental DistCp
+     * stage.
+     * @param value the sentinel path.
+     */
+    public Builder setTimeWindowSentinelPath(String value) {
+      this.timeWindowSentinelPath = value;
+      return this;
+    }
+
+    /**
+     * Specify the sentinel path that allows force-closing open files.
+     * @param value the sentinel path.
+     */
+    public Builder setForceCloseSentinelPath(String value) {
+      this.forceCloseSentinelPath = value;
+      return this;
+    }
+
+    /**
      * Build the balance job.
      */
     public BalanceJob build() throws IOException {
@@ -172,6 +237,13 @@ public class RouterFedBalance extends Configured implements Tool {
           .setForceCloseOpenFiles(forceCloseOpen).setUseMountReadOnly(true)
           .setMapNum(map).setBandwidthLimit(bandwidth).setTrash(trashOpt)
           .setDelayDuration(delayDuration).setDiffThreshold(diffThreshold)
+          .setStopAfterInitialCopy(stopAfterInitialCopy)
+          .setStartFromIncremental(startFromIncremental)
+          .setStopOnSmallDiff(stopOnSmallDiff)
+          .setTimeWindowSentinelPath(getSentinelPath(timeWindowSentinelPath,
+              TIME_WINDOW_SENTINEL_PATH, TIME_WINDOW_SENTINEL_PATH_DEFAULT))
+          .setForceCloseSentinelPath(getSentinelPath(forceCloseSentinelPath,
+              FORCE_CLOSE_SENTINEL_PATH, FORCE_CLOSE_SENTINEL_PATH_DEFAULT))
           .build();
 
       LOG.info(context.toString());
@@ -281,6 +353,23 @@ public class RouterFedBalance extends Configured implements Tool {
       builder.setDiffThreshold(Integer.parseInt(
           command.getOptionValue(DIFF_THRESHOLD.getOpt())));
     }
+    if (command.hasOption(STOP_AFTER_INITIAL_COPY.getOpt())) {
+      builder.setStopAfterInitialCopy(true);
+    }
+    if (command.hasOption(START_FROM_INCREMENTAL.getOpt())) {
+      builder.setStartFromIncremental(true);
+    }
+    if (command.hasOption(STOP_ON_SMALL_DIFF.getOpt())) {
+      builder.setStopOnSmallDiff(true);
+    }
+    if (command.hasOption(TIME_WINDOW_SENTINEL.getOpt())) {
+      builder.setTimeWindowSentinelPath(command.getOptionValue(
+          TIME_WINDOW_SENTINEL.getOpt()));
+    }
+    if (command.hasOption(FORCE_CLOSE_SENTINEL.getOpt())) {
+      builder.setForceCloseSentinelPath(command.getOptionValue(
+          FORCE_CLOSE_SENTINEL.getOpt()));
+    }
     if (command.hasOption(TRASH.getOpt())) {
       String val = command.getOptionValue(TRASH.getOpt());
       if (val.equalsIgnoreCase("skip")) {
@@ -311,6 +400,12 @@ public class RouterFedBalance extends Configured implements Tool {
       scheduler.shutDown();
     }
     return 0;
+  }
+
+  private String getSentinelPath(String optionValue, String configKey,
+      String defaultValue) {
+    return optionValue == null ? getConf().getTrimmed(configKey, defaultValue)
+        : optionValue;
   }
 
   /**
