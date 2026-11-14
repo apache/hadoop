@@ -697,12 +697,36 @@ final class BlockChecksumHelper {
         throws IOException {
       LOG.debug("Recalculate checksum for the missing/failed block index {}",
           errBlkIndex);
-      byte[] errIndices = new byte[1];
-      errIndices[0] = (byte) errBlkIndex;
+      byte errIndex = (byte) errBlkIndex;
+
+      // A failed checksum RPC does not remove the block from the location
+      // list, but a reconstruction target cannot also be used as a source.
+      int numSources = 0;
+      for (byte blockIndex : blockIndices) {
+        if (blockIndex != errIndex) {
+          numSources++;
+        }
+      }
+
+      byte[] sourceIndices = new byte[numSources];
+      DatanodeInfo[] sourceDatanodes = new DatanodeInfo[numSources];
+
+      int sourcePos = 0;
+      for (int i = 0; i < blockIndices.length; i++) {
+        byte blockIndex = blockIndices[i];
+        if (blockIndex == errIndex) {
+          continue;
+        }
+
+        sourceIndices[sourcePos] = blockIndex;
+        sourceDatanodes[sourcePos] = datanodes[i];
+        sourcePos++;
+      }
 
       StripedReconstructionInfo stripedReconInfo =
           new StripedReconstructionInfo(
-              blockGroup, ecPolicy, blockIndices, datanodes, errIndices);
+              blockGroup, ecPolicy, sourceIndices, sourceDatanodes,
+              new byte[] {errIndex});
       BlockChecksumType groupChecksumType =
           getBlockChecksumOptions().getBlockChecksumType();
       try (StripedBlockChecksumReconstructor checksumRecon =
