@@ -21,6 +21,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -88,6 +90,38 @@ public class DatanodeUtil {
   }
 
   /** @return the unlink file. */
+  /**
+   * Convert a file that is known not to be a directory, such as a block or
+   * meta file, to a URI.
+   *
+   * This returns the same URI as {@link File#toURI()} does for a regular
+   * file, but {@link File#toURI()} has to stat the file to decide whether to
+   * append a trailing slash. That is a disk access for every call, which is
+   * too expensive for the per-block paths of the DataNode, many of which run
+   * while holding a dataset lock.
+   *
+   * @param f a file that is not a directory.
+   * @return the file URI of f, without a trailing slash.
+   */
+  public static URI fileToURI(File f) {
+    String path = f.getAbsolutePath();
+    if (File.separatorChar != '/') {
+      path = path.replace(File.separatorChar, '/');
+    }
+    if (!path.startsWith("/")) {
+      path = "/" + path;
+    }
+    if (path.startsWith("//")) {
+      path = "//" + path;
+    }
+    try {
+      return new URI("file", null, path, null);
+    } catch (URISyntaxException e) {
+      // Cannot happen for an absolute path; see File#toURI().
+      throw new IllegalStateException(e);
+    }
+  }
+
   public static File getUnlinkTmpFile(File f) {
     return new File(f.getParentFile(), f.getName()+UNLINK_BLOCK_SUFFIX);
   }
