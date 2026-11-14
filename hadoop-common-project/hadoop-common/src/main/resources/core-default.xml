@@ -772,6 +772,19 @@
       fs.gs.encryption.*
       fs.gs.proxy.*
       fs.gs.auth.*
+      fs.obs.secret.key
+      fs.obs.session.token
+      fs.oss.accessKeySecret
+      fs.oss.securityToken
+      fs.cosn.userinfo.secretKey
+      fs.tos.secret-access-key
+      fs.tos.*.secret-access-key
+      fs.tos.session-token
+      fs.tos.*.session-token
+      fs.bos.secret.access.key
+      fs.bos.*.secret.access.key
+      fs.bos.session.token.key
+      fs.bos.*.session.token.key
       credential$
       oauth.*secret
       oauth.*password
