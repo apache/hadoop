@@ -162,7 +162,7 @@ public class TestQueueConfigResolver {
     assertTrue(a.isFailed());
     NumberFormatException nfe =
         assertThrows(NumberFormatException.class, a::getValue);
-    assertEquals(a.getFailureMessage(), nfe.getMessage());
+    assertEquals("For input string: \"abc\"", nfe.getMessage());
 
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration(conf, false);

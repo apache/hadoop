@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Constants for {@code RMWebServiceProtocol}.
  */
@@ -65,6 +67,11 @@ public final class RMWSConsts {
    */
   public static final String SCHEDULER_CONF_VALIDATE
           = "/scheduler-conf/validate";
+
+  /** Path for {@code RMWebServices#validateSchedulerConfigurationV2}. */
+  @InterfaceAudience.Private
+  public static final String SCHEDULER_CONF_VALIDATE_V2
+      = "/scheduler-conf/validate/v2";
 
   /** Path for {@code RMWebServiceProtocol#getNodes}. */
   public static final String NODES = "/nodes";
@@ -223,6 +230,8 @@ public final class RMWSConsts {
   public static final String STATES = "states";
   public static final String NODEID = "nodeId";
   public static final String STATE = "state";
+  @InterfaceAudience.Private
+  public static final String EXPLAIN = "explain";
   public static final String FINAL_STATUS = "finalStatus";
   public static final String USER = "user";
   public static final String QUEUE = "queue";

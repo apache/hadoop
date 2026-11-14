@@ -85,14 +85,6 @@ public final class Resolved<T> {
     return failure != null;
   }
 
-  /**
-   * Returns the message of the parse failure.
-   * @return the failure message, or {@code null} when the value parsed
-   */
-  public String getFailureMessage() {
-    return failure == null ? null : failure.getMessage();
-  }
-
   @Override
   public String toString() {
     String shown = failure != null ? "failed: " + failure : String.valueOf(value);

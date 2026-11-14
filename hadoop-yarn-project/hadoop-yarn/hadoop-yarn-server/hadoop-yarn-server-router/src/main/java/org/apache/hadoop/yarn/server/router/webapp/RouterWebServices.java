@@ -125,6 +125,10 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public static final String DEFAULT_START_TIME = "0";
   public static final String DEFAULT_END_TIME = "-1";
   public static final String DEFAULT_INCLUDE_RESOURCE = "false";
+  @Private
+  public static final String VALIDATE_V2_UNSUPPORTED =
+      "Scheduler configuration validation (validate/v2) is not supported by"
+      + " the Router; send the request to the ResourceManager.";
 
   @Inject
   public RouterWebServices(final @Named("router") Router router,
@@ -915,6 +919,28 @@ public class RouterWebServices implements RMWebServiceProtocol {
     RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor()
         .updateSchedulerConfiguration(mutationInfo, hsr);
+  }
+
+  /**
+   * Structured scheduler configuration validation is served by the
+   * ResourceManager only. The Router answers with a clean unsupported
+   * response instead of a 404: a proposal can only be validated against the
+   * live state of one sub-cluster, which the Router does not hold.
+   *
+   * @param mutationInfo the proposed mutation, ignored
+   * @param hsr the servlet request
+   * @return 501 Not Implemented with a plain text message
+   */
+  @POST
+  @Path(RMWSConsts.SCHEDULER_CONF_VALIDATE_V2)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Private
+  public Response validateSchedulerConfigurationV2(
+      SchedConfUpdateInfo mutationInfo, @Context HttpServletRequest hsr) {
+    return Response.status(Response.Status.NOT_IMPLEMENTED)
+        .entity(VALIDATE_V2_UNSUPPORTED).build();
   }
 
   @GET

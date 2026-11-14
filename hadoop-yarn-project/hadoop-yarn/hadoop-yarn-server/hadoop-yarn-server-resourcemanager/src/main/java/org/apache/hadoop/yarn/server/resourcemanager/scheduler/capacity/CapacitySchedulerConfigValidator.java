@@ -18,13 +18,27 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.QueueState;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueHierarchyTransitionChecks.QueueSnapshot;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ConfigSnapshot;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperty.Kind;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.Resolved;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolvedQueueConfig;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validation.CSConfigValidator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validation.ClusterFacts;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validation.ValidationContext;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validation.ValidationIssue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validation.ValidationResult;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validation.rules.AllocationRule;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validation.rules.PlacementRulesRule;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,28 +55,113 @@ public final class CapacitySchedulerConfigValidator {
     throw new IllegalStateException("Utility class");
   }
 
+  /**
+   * Validates a new configuration against the queues of an old one, without
+   * building a scheduler or queues and without touching the live state the
+   * RMContext holds.
+   *
+   * @param oldConfParam the configuration the queues are currently built
+   *                     from
+   * @param newConf the new configuration
+   * @param rmContext the RMContext, for the cluster resource and node labels
+   * @return true if the new configuration is valid
+   * @throws IOException the exception a refresh to the new configuration
+   *         fails with
+   */
   public static boolean validateCSConfiguration(
           final Configuration oldConfParam, final Configuration newConf,
           final RMContext rmContext) throws IOException {
-    // ensure that the oldConf is deep copied
-    Configuration oldConf = new Configuration(oldConfParam);
-    QueueMetrics.setConfigurationValidation(oldConf, true);
-    QueueMetrics.setConfigurationValidation(newConf, true);
+    ClusterFacts baseline = baselineFacts(oldConfParam, rmContext);
+    throwIfInvalid(new CSConfigValidator().validate(
+        ConfigSnapshot.of(newConf), baseline));
+    return true;
+  }
 
-    CapacityScheduler liveScheduler = (CapacityScheduler) rmContext.getScheduler();
-    CapacityScheduler newCs = new CapacityScheduler();
-    try {
-      //TODO: extract all the validation steps and replace reinitialize with
-      //the specific validation steps
-      newCs.setConf(oldConf);
-      newCs.setRMContext(rmContext);
-      newCs.init(oldConf);
-      newCs.addNodes(liveScheduler.getAllNodes());
-      newCs.reinitialize(newConf, rmContext, true);
-      return true;
-    } finally {
-      newCs.stop();
+  /**
+   * Throws the exception a refresh fails with for the first ERROR of a
+   * validation result, the way the scheduler-conf validate endpoint has
+   * always reported failures. The failure a rule caught is the cause, as it
+   * is the cause of the refresh failure.
+   *
+   * @param result a validation result
+   * @throws IOException {@code Failed to re-init queues : <cause>} for a
+   *         failure of the queue refresh
+   * @throws RuntimeException the failure of an invalid scheduler allocation,
+   *         which is validated before the queues are refreshed
+   */
+  @InterfaceAudience.Private
+  public static void throwIfInvalid(ValidationResult result)
+      throws IOException {
+    ValidationIssue error = null;
+    for (ValidationIssue issue : result.getIssues()) {
+      if (issue.isError()) {
+        error = issue;
+        break;
+      }
     }
+    if (error == null) {
+      return;
+    }
+    String ruleId = error.getRuleId();
+    RuntimeException failure = error.getFailure();
+    if (ruleId.equals(AllocationRule.INVALID_MEMORY_ALLOCATION)
+        || ruleId.equals(AllocationRule.INVALID_VCORES_ALLOCATION)) {
+      throw failure != null ? failure
+          : new YarnRuntimeException(error.getMessage());
+    }
+    String cause = error.getMessage();
+    if (ruleId.equals(PlacementRulesRule.INVALID_MAPPING_RULE_TARGET)) {
+      // The placement rule wraps the YarnException of the rule
+      cause = "org.apache.hadoop.yarn.exceptions.YarnException: " + cause;
+    }
+    throw new IOException("Failed to re-init queues : " + cause,
+        failure != null ? failure : new IOException(error.getMessage()));
+  }
+
+  /**
+   * The queues as a scheduler built from a configuration has them: no
+   * dynamic queues, no applications, states as configured.
+   */
+  private static ClusterFacts baselineFacts(Configuration conf,
+      RMContext rmContext) {
+    ValidationContext baseline = new ValidationContext(
+        ConfigSnapshot.of(conf), ClusterFacts.empty());
+    ClusterFacts.Builder facts = new ClusterFacts.Builder();
+    Resource cluster = null;
+    if (rmContext != null
+        && rmContext.getScheduler() instanceof CapacityScheduler) {
+      cluster = rmContext.getScheduler().getClusterResource();
+    }
+    if (cluster == null) {
+      cluster = Resources.none();
+    }
+    facts.clusterResource(cluster);
+    // Like a refresh, the scheduler skips the hierarchy checks on a standby
+    // RM with a mutable configuration
+    facts.hierarchyChecksSkipped(ClusterFacts.isHierarchyChecksSkipped(
+        rmContext != null
+            && rmContext.getScheduler() instanceof CapacityScheduler
+            && ((CapacityScheduler) rmContext.getScheduler())
+                .isConfigurationMutable(), rmContext));
+    try {
+      facts.resourceCalculator(
+          baseline.getConfiguration().getResourceCalculator());
+    } catch (RuntimeException e) {
+      LOG.debug("Using the default resource calculator", e);
+    }
+    facts.clusterNodeLabels(rmContext, cluster);
+    for (ResolvedQueueConfig queue : baseline.getTree().getQueues()) {
+      Resolved<QueueState> state = queue.get(QueueProperties.STATE);
+      Resolved<Resource> maximumAllocation =
+          queue.get(QueueProperties.MAXIMUM_ALLOCATION);
+      facts.queue(new ClusterFacts.QueueFacts(
+          queue.getQueuePath().getFullPath(), baseline.getQueueKind(queue),
+          state == null || state.isFailed() ? QueueState.RUNNING
+              : state.getValue(), false, queue.getKind() == Kind.RESERVATION,
+          maximumAllocation == null || maximumAllocation.isFailed()
+              ? null : maximumAllocation.getValue()));
+    }
+    return facts.build();
   }
 
   public static Set<String> validatePlacementRules(

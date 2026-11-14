@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -32,6 +31,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlacementRuleChecks;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
@@ -60,18 +60,6 @@ public class CSMappingPlacementRule extends PlacementRule {
   private CapacitySchedulerQueueManager queueManager;
   private List<MappingRule> mappingRules;
 
-  /**
-   * These are the variables we associate a special meaning, these should be
-   * immutable for each variable context.
-   */
-  private ImmutableSet<String> immutableVariables = ImmutableSet.of(
-      "%user",
-      "%primary_group",
-      "%secondary_group",
-      "%application",
-      "%specified"
-      );
-
   private Groups groups;
   private boolean overrideWithQueueMappings;
   private boolean failOnConfigError = true;
@@ -91,30 +79,8 @@ public class CSMappingPlacementRule extends PlacementRule {
     Preconditions.checkNotNull(queueManager, "Queue manager must be " +
         "initialized before building validation a context!");
 
-    MappingRuleValidationContext validationContext =
-        new MappingRuleValidationContextImpl(queueManager);
-
-    //Adding all immutable variables to the known variable list
-    for (String var : immutableVariables) {
-      try {
-        validationContext.addImmutableVariable(var);
-      } catch (YarnException e) {
-        LOG.error("Error initializing placement variables, unable to register" +
-            " '{}': {}", var, e.getMessage());
-        throw new IOException(e);
-      }
-    }
-    //Immutables + %default are the only officially supported variables,
-    //We initialize the context with these, and let the rules to extend the list
-    try {
-      validationContext.addVariable("%default");
-    } catch (YarnException e) {
-      LOG.error("Error initializing placement variables, unable to register" +
-          " '%default': " + e.getMessage());
-      throw new IOException(e);
-    }
-
-    return validationContext;
+    return PlacementRuleChecks.newMappingRuleValidationContext(
+        PlacementRuleChecks.queueIndexOf(queueManager));
   }
 
   @Override
@@ -256,7 +222,7 @@ public class CSMappingPlacementRule extends PlacementRule {
       LOG.warn("Unable to setup groups: {}", e.getMessage());
     }
 
-    vctx.setImmutables(immutableVariables);
+    vctx.setImmutables(PlacementRuleChecks.IMMUTABLE_VARIABLES);
     return vctx;
   }
 

@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.server.router.webapp.RouterWebServices.RequestInte
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -282,6 +283,16 @@ public class TestRouterWebServices extends BaseRouterWebServicesTest {
 
     chain = pipelines.get("test2");
     assertNull(chain, "test2 should have been evicted");
+  }
+
+  @Test
+  public void testValidateV2IsNotSupportedByRouter() {
+    Response response = getRouterWebServices()
+        .validateSchedulerConfigurationV2(new SchedConfUpdateInfo(), null);
+    assertEquals(Response.Status.NOT_IMPLEMENTED.getStatusCode(),
+        response.getStatus());
+    assertEquals(RouterWebServices.VALIDATE_V2_UNSUPPORTED,
+        response.getEntity());
   }
 
   /**
