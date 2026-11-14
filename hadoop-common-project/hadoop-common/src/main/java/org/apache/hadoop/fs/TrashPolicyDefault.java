@@ -26,11 +26,13 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERV
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Objects;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -122,15 +124,22 @@ public class TrashPolicyDefault extends TrashPolicy {
   }
 
   /**
-   * @return true if {@code ancestor} is {@code path} or one of its ancestors,
-   *         comparing whole path components: "/user/al" is not an ancestor
-   *         of "/user/alice".
+   * Returns true if {@code ancestor} is {@code path} or one of its ancestors.
+   * The scheme and authority must be equal. The URI paths are compared on
+   * whole components, so "/user/al" is not an ancestor of "/user/alice", and
+   * any query or fragment is ignored.
    */
   private static boolean isAncestorOf(Path ancestor, Path path) {
-    String a = ancestor.toString();
-    String p = path.toString();
-    return p.equals(a) || p.startsWith(
-        a.endsWith(Path.SEPARATOR) ? a : a + Path.SEPARATOR);
+    URI a = ancestor.toUri();
+    URI p = path.toUri();
+    if (!Objects.equals(a.getScheme(), p.getScheme())
+        || !Objects.equals(a.getAuthority(), p.getAuthority())) {
+      return false;
+    }
+    String ap = a.getPath();
+    String pp = p.getPath();
+    return pp.equals(ap) || pp.startsWith(
+        ap.endsWith(Path.SEPARATOR) ? ap : ap + Path.SEPARATOR);
   }
 
   @Override

@@ -724,6 +724,38 @@ public class TestTrash {
     }
   }
 
+  /**
+   * A URI fragment, which the file system ignores when resolving a path,
+   * does not change whether the path is in or contains the trash.
+   */
+  @Test
+  public void testMoveToTrashPathWithFragment() throws Exception {
+    Path base = new Path(GenericTestUtils.getTempPath("testTrashFragment"));
+    Path home = new Path(base, "users/alice");
+    Configuration conf = new Configuration();
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 10);
+    try (FileSystem fs = newLocalFsWithHome(home, conf)) {
+      try {
+        Trash trash = new Trash(fs, conf);
+        Path trashRoot = fs.getTrashRoot(home);
+        Path trashCurrent = new Path(trashRoot, "Current");
+        fs.mkdirs(trashRoot);
+        Path trashAlias = new Path(URI.create(trashRoot.toUri() + "#alias"));
+        assertFalse(trash.moveToTrash(trashAlias));
+        assertTrue(fs.exists(trashRoot));
+        assertFalse(fs.exists(trashCurrent));
+
+        Path homeAlias = new Path(URI.create(
+            fs.makeQualified(home).toUri() + "#alias"));
+        intercept(IOException.class, "contains the trash",
+            () -> trash.moveToTrash(homeAlias));
+        assertFalse(fs.exists(trashCurrent));
+      } finally {
+        fs.delete(base, true);
+      }
+    }
+  }
+
   /** @return a local file system whose home directory is {@code home}. */
   private static FileSystem newLocalFsWithHome(Path home, Configuration conf)
       throws IOException {
