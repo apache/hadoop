@@ -1037,7 +1037,17 @@ public class NNStorage extends Storage implements Closeable,
       LOG.warn("Could not find ip address of \"default\" inteface.");
       throw e;
     }
-    
+    return newBlockPoolID(ip);
+  }
+
+  @VisibleForTesting
+  static String newBlockPoolID(String ip) {
+    // The ID is used in local file names, where IPv6 colons and scope IDs break Path parsing.
+    int scope = ip.indexOf('%');
+    if (scope >= 0) {
+      ip = ip.substring(0, scope);
+    }
+    ip = ip.replace(':', '_');
     int rand = DFSUtil.getSecureRandom().nextInt(Integer.MAX_VALUE);
     return "BP-" + rand + "-"+ ip + "-" + Time.now();
   }
