@@ -913,7 +913,7 @@
   <value>system-native</value>
   <description>The native-code library to be used for compression and
   decompression by the bzip2 codec.  This library could be specified
-  either by by name or the full pathname.  In the former case, the
+  either by name or the full pathname.  In the former case, the
   library is located by the dynamic linker, usually searching the
   directories specified in the environment variable LD_LIBRARY_PATH.
 
@@ -1319,7 +1319,7 @@
   <name>fs.creation.parallel.count</name>
   <value>64</value>
   <description>
-    This property sets a a semaphore to throttle the number of FileSystem
+    This property sets a semaphore to throttle the number of FileSystem
     instances which can be created simultaneously. This is designed to reduce
     the impact of many threads in an application calling FileSystem#get() on
     a filesystem which takes time to instantiate -for example to an object

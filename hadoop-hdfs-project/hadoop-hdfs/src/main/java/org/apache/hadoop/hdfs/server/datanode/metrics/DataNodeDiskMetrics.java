@@ -84,7 +84,7 @@ public class DataNodeDiskMetrics {
   /**
    * List of slow disks that need to be excluded.
    */
-  private List<String> slowDisksToExclude = new ArrayList<>();
+  private volatile List<String> slowDisksToExclude = Collections.emptyList();
 
   public DataNodeDiskMetrics(DataNode dn, long diskOutlierDetectionIntervalMs,
       Configuration conf) {
@@ -160,6 +160,8 @@ public class DataNodeDiskMetrics {
 
               slowDisksToExclude = diskLatencies.stream().limit(maxSlowDisksToExclude)
                   .map(DiskLatency::getSlowDisk).collect(Collectors.toList());
+            } else {
+              slowDisksToExclude = Collections.emptyList();
             }
           }
 
@@ -270,8 +272,16 @@ public class DataNodeDiskMetrics {
     }
   }
 
+  /**
+   * Returns the slow disks to exclude when choosing a volume. The list
+   * published by the detector thread may predate a reconfiguration of
+   * {@link DFSConfigKeys#DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY}, so the
+   * current limit is checked here: a non-positive value disables exclusion
+   * immediately.
+   */
   public List<String> getSlowDisksToExclude() {
-    return slowDisksToExclude;
+    return maxSlowDisksToExclude > 0 ?
+        slowDisksToExclude : Collections.emptyList();
   }
 
   public int getMaxSlowDisksToExclude() {

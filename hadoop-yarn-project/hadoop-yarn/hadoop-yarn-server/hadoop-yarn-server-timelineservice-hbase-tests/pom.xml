@@ -222,7 +222,7 @@
         </exclusion>
         <exclusion>
           <groupId>org.glassfish.jersey.test-framework.providers</groupId>
-          <artifactId>jersey-test-framework-provider-jetty</artifactId>
+          <artifactId>jersey-test-framework-provider-jdk-http</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.glassfish.jersey.test-framework</groupId>
@@ -242,12 +242,6 @@
       <groupId>org.xerial.snappy</groupId>
       <artifactId>snappy-java</artifactId>
       <scope>runtime</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>jsr311-api</artifactId>
-      <version>1.1.1</version>
     </dependency>
 
     <dependency>
