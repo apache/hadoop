@@ -29,7 +29,10 @@
                  "properties": {
                      "type": { "type": "string",
                           "enum": ["user", "group", "application"] },
-                     "matches": { "type": "string" },
+                     "matches": {
+                         "type": "string",
+                         "description": "For user rules: a single username, comma-separated usernames, or * for all users."
+                     },
                      "policy": { "type": "string",
                          "enum": [
                               "specified",
