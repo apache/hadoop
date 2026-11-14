@@ -200,8 +200,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override // FsDatasetSpi
   public Block getStoredBlock(String bpid, long blkid)
       throws IOException {
+    ReplicaInfo replicaForLock = volumeMap.get(bpid, blkid);
+    if (replicaForLock == null) {
+      return null;
+    }
     try (AutoCloseableLock lock = lockManager.readLock(LockLevel.DIR,
-        bpid, getReplicaInfo(bpid, blkid).getStorageUuid(),
+        bpid, replicaForLock.getStorageUuid(),
         datasetSubLockStrategy.blockIdToSubLock(blkid))) {
       ReplicaInfo r = volumeMap.get(bpid, blkid);
       if (r == null) {

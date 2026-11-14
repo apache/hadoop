@@ -432,7 +432,7 @@ public class VolumeScanner extends Thread {
           cblock, volume);
     } catch (IOException e) {
       LOG.warn("I/O error while finding block {} on volume {}",
-            cblock, volume);
+            cblock, volume, e);
     }
     if (block == null) {
       return -1; // block not found.
