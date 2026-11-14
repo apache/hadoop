@@ -27,6 +27,9 @@ on:
       - 'branch-*'
     paths:
       - 'dev-support/docker/**'
+      # No Linux image reads these, so they cannot change the cached images.
+      - '!dev-support/docker/Dockerfile_windows_10'
+      - '!dev-support/docker/vcpkg/**'
   workflow_dispatch:
 
 jobs:

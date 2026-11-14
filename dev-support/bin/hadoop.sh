@@ -28,7 +28,7 @@ WINDOWS_FLAGS=(
   "-Drequire.test.libhadoop"
   "-Dshell-executable=${BASH_EXECUTABLE}"
   "-Dopenssl.prefix=${VCPKG_INSTALLED_PACKAGES}"
-  "-Dcmake.prefix.path=${VCPKG_INSTALLED_PACKAGES}"
+  "-Dwindows.cmake.prefix.path=${VCPKG_INSTALLED_PACKAGES}"
   "-Dwindows.cmake.toolchain.file=${CMAKE_TOOLCHAIN_FILE}"
   "-Dwindows.cmake.build.type=RelWithDebInfo"
   "-Dwindows.build.hdfspp.dll=off"

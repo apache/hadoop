@@ -573,9 +573,11 @@ Building on Windows 10
 ----------------------------------------------------------------------------------
 Requirements:
 
-* Windows 10 or Windows 11. The Docker route below has been verified on a
-  Windows 11 host; since the build itself runs inside a Windows container, the
-  host version matters only for Docker's own requirements.
+* Windows 10, Windows 11 or Windows Server. The build runs in a Windows container whose image is
+  based on Windows Server Core ltsc2022 by default, which needs a Windows 11 or Windows Server 2022
+  (or newer) host; on Windows 10 or Windows Server 2019, build the image from ltsc2019 instead, as
+  shown below. The ltsc2019 image has been verified on a Windows 11 host, and the ltsc2022 image
+  on Windows Server 2022 and 2025 hosts.
 * JDK 17
 * Maven 3.9.15 or later (maven.apache.org, optional, a compatible version is automatically downloaded if using mvnw.cmd)
 * Boost 1.86.0 (boost.org)
@@ -605,20 +607,31 @@ still be immensely useful as a raw guide for all the steps involved in creating 
 needed to build Hadoop on Windows 10.
 
 Building using the Docker:
-Docker Desktop must first be switched to Windows containers. In the default Linux container mode
-every command below fails immediately with "no matching manifest for linux/amd64".
+On Windows 10 and 11, Docker Desktop must first be switched to Windows containers. In the default
+Linux container mode every command below fails immediately with "no matching manifest for
+linux/amd64".
 > "%ProgramFiles%\Docker\Docker\DockerCli.exe" -SwitchWindowsEngine
 
-Wait for the engine to restart, then confirm - this must print "windows" before proceeding.
+Docker Desktop is not supported on Windows Server. There, install Docker Engine instead (see
+Microsoft's "Prepare Windows operating system containers" guide); it runs only Windows containers,
+so there is nothing to switch.
+
+On any host, once the engine is up, confirm - this must print "windows" before proceeding.
 > docker info --format "{{.OSType}}"
 
-We first need to build the Docker image for building Hadoop on Windows 10. Run this command from
-the root of the Hadoop repository.
+We first need to build the Docker image for building Hadoop on Windows. Run one of these commands
+from the root of the Hadoop repository. On Windows 11, or Windows Server 2022 or newer -
 > docker build -t hadoop-windows-10-builder -m 8g -f .\dev-support\docker\Dockerfile_windows_10 .\dev-support\docker\
 
-The -m 8g is needed because the vcpkg step compiles Boost, Protocol Buffers, OpenSSL and Zlib from
-source and the default container memory is too small. Expect the image build to take a few hours
-and the resulting image to be around 23 GB. Note that -m and --isolation are options of the classic
+On Windows 10 or Windows Server 2019, which cannot run ltsc2022 containers, build the image from
+ltsc2019 instead -
+> docker build -t hadoop-windows-10-builder -m 8g --build-arg WINDOWS_BASE_IMAGE=mcr.microsoft.com/windows/servercore:ltsc2019 -f .\dev-support\docker\Dockerfile_windows_10 .\dev-support\docker\
+
+The -m 8g is needed under Hyper-V isolation, the default on Windows 10 and 11, because the vcpkg
+step compiles Boost, Protocol Buffers, OpenSSL and Zlib from source and Hyper-V's default container
+memory is too small. Process-isolated builds on Windows Server have no default limit, so there -m
+only caps the build. Expect the image build to take a few hours
+and the resulting image to be around 17 GB. Note that -m and --isolation are options of the classic
 builder, so DOCKER_BUILDKIT must not be set to 1. If it is set in your
 environment, clear it for the session first -
 > set DOCKER_BUILDKIT=            (cmd.exe)
@@ -628,10 +641,12 @@ Setting it to 0 works as well; BuildKit itself does not accept these options.
 Start the container with the image that we just built.
 > docker run --rm -m 8g --isolation=hyperv -it hadoop-windows-10-builder
 
-The -m 8g matters here too; the Hyper-V default is far too small for the Maven build. Hyper-V is
-already the default isolation on Windows client hosts, so --isolation=hyperv only makes it
-explicit - but do not use process isolation, which requires the container and the host to share a
-kernel build.
+The -m 8g matters here too; the Hyper-V default is far too small for the Maven build. On Windows
+10 and 11, Hyper-V is already the default isolation, so --isolation=hyperv only makes it explicit;
+keep it there, since process isolation of ltsc2022 on Windows 11 is a Microsoft preview and
+ltsc2019 cannot use it on a newer host. On Windows Server, omit --isolation to get process
+isolation, which is faster and works for ltsc2022 on Windows Server 2022 or 2025 and for ltsc2019
+on Windows Server 2019; --isolation=hyperv there needs the Hyper-V role.
 
 You can now clone the Hadoop repo inside this container and proceed with the build.
 
