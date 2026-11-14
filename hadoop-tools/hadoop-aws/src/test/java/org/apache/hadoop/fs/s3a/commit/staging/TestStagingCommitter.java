@@ -481,10 +481,16 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         "Should fail during init",
         () -> committer.commitTask(tac));
 
-    assertEquals(1, results.getUploads().size(),
-        "Should have initialized one file upload");
-    assertEquals(new HashSet<>(results.getUploads()),
-        getAbortedIds(results.getAborts()), "Should abort the upload");
+    assertThat(results.getUploads())
+        .describedAs("Should have initialized one file upload")
+        .hasSize(1);
+    assertThat(results.getAborts())
+        .describedAs("abort count")
+        .hasSize(1);
+    assertThat(results.getUploads())
+        .describedAs("upload list must match aborted list")
+        .containsExactlyElementsOf(getAbortedIds(results.getAborts()));
+
     assertPathDoesNotExist(fs,
         "Should remove the attempt path",
         attemptPath);
