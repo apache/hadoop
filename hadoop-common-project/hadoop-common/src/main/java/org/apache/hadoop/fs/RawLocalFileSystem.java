@@ -1349,7 +1349,7 @@ public class RawLocalFileSystem extends FileSystem {
           fs.getOwner(),
           fs.getGroup(),
           new Path(target),
-          f);
+          makeQualified(f));
     } catch (FileNotFoundException e) {
       /* The exists method in the File class returns false for dangling
        * links so we can get a FileNotFoundException for links that exist.
@@ -1359,7 +1359,7 @@ public class RawLocalFileSystem extends FileSystem {
        */
       if (!target.isEmpty()) {
         return new FileStatus(0, false, 0, 0, 0, 0, FsPermission.getDefault(),
-            "", "", new Path(target), f);
+            "", "", new Path(target), makeQualified(f));
       }
       // f refers to a file or directory that does not exist
       throw e;
