@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.SecurityUtilTestHelper;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -58,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.RegularContainerAllocator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -67,6 +69,8 @@ import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProv
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -178,6 +182,56 @@ public class TestContainerAllocation {
     assertTrue(alloc1Response.getAllocatedContainers().size() == 1);
 
     rm.stop();
+  }
+
+  @Test
+  @Timeout(value = 60)
+  public void testNodeCapacityMismatchLogging() throws Exception {
+    org.apache.log4j.Logger allocatorLog = LogManager.getLogger(
+        RegularContainerAllocator.class);
+    Level previousLevel = allocatorLog.getLevel();
+    GenericTestUtils.LogCapturer logs =
+        GenericTestUtils.LogCapturer.captureLogs(allocatorLog);
+    try (MockRM rm = new MockRM(conf)) {
+      rm.start();
+      MockNM smallNode = rm.registerNode("127.0.0.1:1234", 2 * GB, 4);
+      MockNM largeNode = rm.registerNode("127.0.0.1:2234", 4 * GB, 4);
+      RMApp app = MockRMAppSubmitter.submitWithMemory(GB, rm);
+      MockAM am = MockRM.launchAndRegisterAM(app, rm, smallNode);
+      am.allocate("*", 3 * GB, 1, new ArrayList<ContainerId>());
+      CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
+      FiCaSchedulerApp schedulerApp = scheduler.getApplicationAttempt(
+          am.getApplicationAttemptId());
+      RMNode smallRMNode = rm.getRMContext().getRMNodes()
+          .get(smallNode.getNodeId());
+
+      allocatorLog.setLevel(Level.INFO);
+      logs.clearOutput();
+      scheduler.handle(new NodeUpdateSchedulerEvent(smallRMNode));
+      assertEquals(1, schedulerApp.getLiveContainers().size());
+      assertTrue(schedulerApp.getReservedContainers().isEmpty());
+      assertFalse(logs.getOutput().contains(
+          "does not have sufficient resource for ask"));
+
+      allocatorLog.setLevel(Level.DEBUG);
+      logs.clearOutput();
+      scheduler.handle(new NodeUpdateSchedulerEvent(smallRMNode));
+      assertTrue(logs.getOutput().contains(
+          "does not have sufficient resource for ask"));
+      assertTrue(logs.getOutput().contains(smallNode.getNodeId().toString()));
+      assertEquals(1, schedulerApp.getLiveContainers().size());
+      assertTrue(schedulerApp.getReservedContainers().isEmpty());
+
+      scheduler.handle(new NodeUpdateSchedulerEvent(rm.getRMContext()
+          .getRMNodes().get(largeNode.getNodeId())));
+      assertEquals(2, schedulerApp.getLiveContainers().size());
+      assertTrue(schedulerApp.getLiveContainers().stream().anyMatch(container ->
+          container.getAllocatedNode().equals(largeNode.getNodeId())
+              && container.getAllocatedResource().getMemorySize() == 3 * GB));
+    } finally {
+      logs.stopCapturing();
+      allocatorLog.setLevel(previousLevel);
+    }
   }
 
   // This is to test container tokens are generated when the containers are
