@@ -99,9 +99,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Random;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -185,6 +188,25 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
   public void tearDown() {
     interceptor.shutdown();
     super.tearDown();
+  }
+
+  @Test
+  public void testShutdownThreadPool() throws Exception {
+    ThreadPoolExecutor executor = interceptor.getExecutorService();
+    try {
+      executor.submit(() -> { }).get(5, TimeUnit.SECONDS);
+      interceptor.shutdown();
+      assertTrue(executor.isShutdown());
+      assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+      interceptor.shutdown();
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
+  @Test
+  public void testShutdownBeforeInit() {
+    new FederationRMAdminInterceptor().shutdown();
   }
 
   @Test
