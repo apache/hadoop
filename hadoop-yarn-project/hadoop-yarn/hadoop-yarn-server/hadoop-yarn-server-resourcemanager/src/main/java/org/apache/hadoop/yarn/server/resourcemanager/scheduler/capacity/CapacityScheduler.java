@@ -550,16 +550,13 @@ public class CapacityScheduler extends
   static void schedule(CapacityScheduler cs) throws InterruptedException{
     // First randomize the start point
     int current = 0;
-    Collection<FiCaSchedulerNode> nodes = cs.nodeTracker.getAllNodes();
 
-    // If nodes size is 0 (when there are no node managers registered,
-    // we can return from here itself.
-    int nodeSize = nodes.size();
-    if(nodeSize == 0) {
-      return;
-    }
-
-    if (!cs.multiNodePlacementEnabled) {
+    if (!cs.isMultiNodePlacementEnabled()) {
+      Collection<FiCaSchedulerNode> nodes = cs.nodeTracker.getAllNodes();
+      int nodeSize = nodes.size();
+      if (nodeSize == 0) {
+        return;
+      }
       int start = random.nextInt(nodeSize);
 
       boolean printSkippedNodeLogging = isPrintSkippedNodeLogging(cs);
@@ -591,6 +588,9 @@ public class CapacityScheduler extends
         cs.printedVerboseLoggingForAsyncScheduling = true;
       }
     } else {
+      if (cs.nodeTracker.nodeCount() == 0) {
+        return;
+      }
       // Get all partitions
       List<String> partitions = cs.nodeTracker.getPartitions();
       int partitionSize = partitions.size();

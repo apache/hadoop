@@ -26,8 +26,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
@@ -62,6 +68,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ClusterNodeTracker;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
@@ -80,11 +87,15 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.MockedConstruction;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -116,6 +127,50 @@ public class TestCapacitySchedulerAsyncScheduling {
   @Timeout(value = 300)
   public void testSingleThreadAsyncContainerAllocation() throws Exception {
     testAsyncContainerAllocation(1);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  @SuppressWarnings("rawtypes")
+  public void testScheduleWithoutNodes(boolean multiNode) throws Exception {
+    try (MockedConstruction<ClusterNodeTracker> trackers =
+        mockConstruction(ClusterNodeTracker.class)) {
+      CapacityScheduler cs = spy(new CapacityScheduler());
+      ClusterNodeTracker<FiCaSchedulerNode> tracker = cs.getNodeTracker();
+      doReturn(multiNode).when(cs).isMultiNodePlacementEnabled();
+
+      CapacityScheduler.schedule(cs);
+
+      verify(tracker, never()).getPartitions();
+      if (multiNode) {
+        verify(tracker).nodeCount();
+        verify(tracker, never()).getAllNodes();
+      } else {
+        verify(tracker).getAllNodes();
+        verify(tracker, never()).nodeCount();
+      }
+    }
+  }
+
+  @Test
+  @SuppressWarnings("rawtypes")
+  public void testMultiNodeScheduleWithoutNodeSnapshot() throws Exception {
+    try (MockedConstruction<ClusterNodeTracker> trackers =
+        mockConstruction(ClusterNodeTracker.class)) {
+      CapacityScheduler cs = spy(new CapacityScheduler());
+      ClusterNodeTracker<FiCaSchedulerNode> tracker = cs.getNodeTracker();
+      doReturn(true).when(cs).isMultiNodePlacementEnabled();
+      doReturn(0L).when(cs).getAsyncScheduleInterval();
+      when(tracker.nodeCount()).thenReturn(1);
+      when(tracker.getPartitions()).thenReturn(Collections.singletonList(""));
+
+      CapacityScheduler.schedule(cs);
+
+      verify(tracker).nodeCount();
+      verify(tracker, never()).getAllNodes();
+      verify(tracker).getPartitions();
+      verify(tracker, atLeastOnce()).getNodesPerPartition("");
+    }
   }
 
   @Test
