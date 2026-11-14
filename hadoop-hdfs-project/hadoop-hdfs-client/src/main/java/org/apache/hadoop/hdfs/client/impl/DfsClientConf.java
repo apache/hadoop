@@ -34,6 +34,7 @@ import org.apache.hadoop.util.DataChecksum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -169,6 +170,18 @@ public class DfsClientConf {
   private final boolean recoverLeaseOnCloseException;
 
   public DfsClientConf(Configuration conf) {
+    this(conf, null);
+  }
+
+  /**
+   * Create the client configuration for the HDFS cluster at the given URI.
+   * Some defaults can be set for one cluster by adding its name as a suffix
+   * to the key: see {@link #getDefaultReplication(Configuration, URI)}.
+   *
+   * @param conf configuration.
+   * @param nameNodeUri URI of the cluster; may be null.
+   */
+  public DfsClientConf(Configuration conf, URI nameNodeUri) {
     // The hdfsTimeout is currently the same as the ipc timeout
     hdfsTimeout = Client.getRpcTimeout(conf);
 
@@ -227,8 +240,7 @@ public class DfsClientConf {
 
     defaultBlockSize = conf.getLongBytes(DFS_BLOCK_SIZE_KEY,
         DFS_BLOCK_SIZE_DEFAULT);
-    defaultReplication = (short) conf.getInt(
-        DFS_REPLICATION_KEY, DFS_REPLICATION_DEFAULT);
+    defaultReplication = getDefaultReplication(conf, nameNodeUri);
     taskId = conf.get("mapreduce.task.attempt.id", "NONMAPREDUCE");
     excludedNodesCacheExpiry = conf.getLong(
         Write.EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_KEY,
@@ -610,6 +622,31 @@ public class DfsClientConf {
    */
   public short getDefaultReplication() {
     return defaultReplication;
+  }
+
+  /**
+   * Get the default replication for files created in the cluster at the
+   * given URI. If {@code dfs.replication.<cluster>} is set, where
+   * {@code <cluster>} is the host of the URI (the nameservice ID for an HA
+   * or federated cluster), it takes precedence over {@code dfs.replication}.
+   * This lets one client write to clusters with different replication.
+   *
+   * @param conf configuration.
+   * @param nameNodeUri URI of the cluster; may be null.
+   * @return the default replication.
+   */
+  @VisibleForTesting
+  static short getDefaultReplication(Configuration conf, URI nameNodeUri) {
+    int replication = conf.getInt(DFS_REPLICATION_KEY,
+        DFS_REPLICATION_DEFAULT);
+    String cluster = nameNodeUri == null ? null : nameNodeUri.getHost();
+    if (cluster != null && !cluster.isEmpty()) {
+      String clusterKey = DFS_REPLICATION_KEY + "." + cluster;
+      replication = conf.getInt(clusterKey, replication);
+      LOG.debug("Default replication for {} is {}", nameNodeUri,
+          replication);
+    }
+    return (short) replication;
   }
 
   /**
