@@ -56,47 +56,141 @@ public class FedBalanceContext implements Writable {
   private long delayDuration;
   /* The threshold of diff entries. */
   private int diffThreshold;
+  /* Whether to preserve ACLs in submitted DistCp jobs. */
+  private boolean preserveAcl = true;
+  /* Whether to preserve modification/access times in submitted DistCp jobs. */
+  private boolean preserveTimes;
+  /* DistCp copy strategy. */
+  private String distCpStrategy;
+  /* Number of DistCp listStatus threads. */
+  private int numListstatusThreads;
 
   private Configuration conf;
 
   public FedBalanceContext() {}
 
+  /**
+   * Get the configuration used by this context.
+   *
+   * @return configuration used by this context.
+   */
   public Configuration getConf() {
     return conf;
   }
 
+  /**
+   * Get the source path.
+   *
+   * @return source path.
+   */
   public Path getSrc() {
     return src;
   }
 
+  /**
+   * Get the destination path.
+   *
+   * @return destination path.
+   */
   public Path getDst() {
     return dst;
   }
 
+  /**
+   * Get the mount point.
+   *
+   * @return mount point.
+   */
   public String getMount() {
     return mount;
   }
 
+  /**
+   * Get whether open files should be force closed.
+   *
+   * @return true if open files should be force closed.
+   */
   public boolean getForceCloseOpenFiles() {
     return forceCloseOpenFiles;
   }
 
+  /**
+   * Get whether the mount point should be made read-only.
+   *
+   * @return true if the mount point should be made read-only.
+   */
   public boolean getUseMountReadOnly() {
     return useMountReadOnly;
   }
 
+  /**
+   * Get the maximum number of maps for submitted DistCp jobs.
+   *
+   * @return maximum number of maps for submitted DistCp jobs.
+   */
   public int getMapNum() {
     return mapNum;
   }
 
+  /**
+   * Get the per-map bandwidth limit in MB.
+   *
+   * @return per-map bandwidth limit in MB.
+   */
   public int getBandwidthLimit() {
     return bandwidthLimit;
   }
 
+  /**
+   * Get the snapshot diff threshold.
+   *
+   * @return snapshot diff threshold.
+   */
   public int getDiffThreshold() {
     return diffThreshold;
   }
 
+  /**
+   * Get whether ACLs should be preserved when supported.
+   *
+   * @return true if ACLs should be preserved when supported.
+   */
+  public boolean getPreserveAcl() {
+    return preserveAcl;
+  }
+
+  /**
+   * Get whether file timestamps should be preserved.
+   *
+   * @return true if file timestamps should be preserved.
+   */
+  public boolean getPreserveTimes() {
+    return preserveTimes;
+  }
+
+  /**
+   * Get the DistCp copy strategy.
+   *
+   * @return DistCp copy strategy, or null to use the DistCp default.
+   */
+  public String getDistCpStrategy() {
+    return distCpStrategy;
+  }
+
+  /**
+   * Get the number of DistCp listStatus threads.
+   *
+   * @return number of DistCp listStatus threads, or 0 for DistCp default.
+   */
+  public int getNumListstatusThreads() {
+    return numListstatusThreads;
+  }
+
+  /**
+   * Get the source trash behavior.
+   *
+   * @return source trash behavior.
+   */
   public TrashOption getTrashOpt() {
     return trashOpt;
   }
@@ -114,6 +208,10 @@ public class FedBalanceContext implements Writable {
     out.writeInt(trashOpt.ordinal());
     out.writeLong(delayDuration);
     out.writeInt(diffThreshold);
+    out.writeBoolean(preserveAcl);
+    out.writeBoolean(preserveTimes);
+    Text.writeString(out, distCpStrategy == null ? "" : distCpStrategy);
+    out.writeInt(numListstatusThreads);
   }
 
   @Override
@@ -130,6 +228,14 @@ public class FedBalanceContext implements Writable {
     trashOpt = TrashOption.values()[in.readInt()];
     delayDuration = in.readLong();
     diffThreshold = in.readInt();
+    preserveAcl = in.readBoolean();
+    preserveTimes = in.readBoolean();
+    distCpStrategy = emptyToNull(Text.readString(in));
+    numListstatusThreads = in.readInt();
+  }
+
+  private static String emptyToNull(String value) {
+    return value == null || value.isEmpty() ? null : value;
   }
 
   @Override
@@ -155,6 +261,10 @@ public class FedBalanceContext implements Writable {
         .append(trashOpt, bc.trashOpt)
         .append(delayDuration, bc.delayDuration)
         .append(diffThreshold, bc.diffThreshold)
+        .append(preserveAcl, bc.preserveAcl)
+        .append(preserveTimes, bc.preserveTimes)
+        .append(distCpStrategy, bc.distCpStrategy)
+        .append(numListstatusThreads, bc.numListstatusThreads)
         .isEquals();
   }
 
@@ -171,6 +281,10 @@ public class FedBalanceContext implements Writable {
         .append(trashOpt)
         .append(delayDuration)
         .append(diffThreshold)
+        .append(preserveAcl)
+        .append(preserveTimes)
+        .append(distCpStrategy)
+        .append(numListstatusThreads)
         .build();
   }
 
@@ -204,6 +318,11 @@ public class FedBalanceContext implements Writable {
       break;
     }
     builder.append(" Delay duration is ").append(delayDuration).append("ms.");
+    builder.append(" Preserve ACL is ").append(preserveAcl).append(".");
+    builder.append(" Preserve times is ").append(preserveTimes).append(".");
+    builder.append(" DistCp strategy is ").append(distCpStrategy).append(".");
+    builder.append(" DistCp listStatus threads is ")
+        .append(numListstatusThreads).append(".");
     return builder.toString();
   }
 
@@ -219,6 +338,10 @@ public class FedBalanceContext implements Writable {
     private TrashOption trashOpt;
     private long delayDuration;
     private int diffThreshold;
+    private boolean preserveAcl = true;
+    private boolean preserveTimes;
+    private String distCpStrategy;
+    private int numListstatusThreads;
 
     /**
      * This class helps building the FedBalanceContext.
@@ -306,6 +429,46 @@ public class FedBalanceContext implements Writable {
     }
 
     /**
+     * Specify whether ACLs should be preserved by DistCp.
+     * @param value true if preserving ACLs.
+     * @return the builder.
+     */
+    public Builder setPreserveAcl(boolean value) {
+      this.preserveAcl = value;
+      return this;
+    }
+
+    /**
+     * Specify whether file times should be preserved by DistCp.
+     * @param value true if preserving file times.
+     * @return the builder.
+     */
+    public Builder setPreserveTimes(boolean value) {
+      this.preserveTimes = value;
+      return this;
+    }
+
+    /**
+     * Specify the DistCp copy strategy.
+     * @param value the DistCp copy strategy.
+     * @return the builder.
+     */
+    public Builder setDistCpStrategy(String value) {
+      this.distCpStrategy = emptyToNull(value);
+      return this;
+    }
+
+    /**
+     * Specify the DistCp listStatus thread count.
+     * @param value the DistCp listStatus thread count.
+     * @return the builder.
+     */
+    public Builder setNumListstatusThreads(int value) {
+      this.numListstatusThreads = value;
+      return this;
+    }
+
+    /**
      * Build the FedBalanceContext.
      *
      * @return the FedBalanceContext obj.
@@ -323,6 +486,10 @@ public class FedBalanceContext implements Writable {
       context.trashOpt = this.trashOpt;
       context.delayDuration = this.delayDuration;
       context.diffThreshold = this.diffThreshold;
+      context.preserveAcl = this.preserveAcl;
+      context.preserveTimes = this.preserveTimes;
+      context.distCpStrategy = this.distCpStrategy;
+      context.numListstatusThreads = this.numListstatusThreads;
       return context;
     }
   }

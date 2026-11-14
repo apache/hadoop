@@ -100,6 +100,10 @@ Command `submit` has the following options:
 | -delay | Specify the delayed duration(millie seconds) when the job needs to retry. | 1000 |
 | -moveToTrash | This options has 3 values: `trash` (move the source path to trash), `delete` (delete the source path directly) and `skip` (skip both trash and deletion). By default the server side trash interval is used. If the trash is disabled in the server side, the default trash interval 60 minutes is used. | trash |
 | -diffThreshold | Specify the threshold of the diff entries that used in incremental copy stage. If the diff entries size is no greater than the threshold and the open files check is satisfied(no open files or force close all open files), the fedBalance will go to the final round of distcp. Setting to 0 means waiting until there is no diff.| 0 |
+| -skipAclPreserve | Do not preserve ACLs in the DistCp jobs submitted by FedBalance. | ACLs are preserved when supported by the source filesystem. |
+| -preserveTimes | Preserve file timestamps in the DistCp jobs submitted by FedBalance. | File timestamps are not preserved. |
+| -distcpStrategy | Set the DistCp copy strategy for FedBalance submitted jobs. | DistCp default |
+| -numListstatusThreads | Set DistCp listStatus threads for FedBalance submitted jobs. | DistCp default |
 
 ### Configuration Options
 --------------------
@@ -110,6 +114,7 @@ Set configuration options at hdfs-fedbalance-site.xml.
 | ------------------------------ | ------------------------------------ | ------- |
 | hdfs.fedbalance.procedure.work.thread.num | The worker threads number of the BalanceProcedureScheduler. BalanceProcedureScheduler is responsible for scheduling a balance job, including submit, run, delay and recover. | 10 |
 | hdfs.fedbalance.procedure.scheduler.journal.uri | The uri of the journal, the journal file is used for handling the job persistence and recover. | hdfs://localhost:8020/tmp/procedure |
+| hdfs.fedbalance.preserve.acl.enabled | Whether FedBalance should preserve ACLs in the submitted DistCp jobs when ACLs are supported by the source and destination filesystems. | true |
 
 Architecture of HDFS Federation Balance
 ----------------------
