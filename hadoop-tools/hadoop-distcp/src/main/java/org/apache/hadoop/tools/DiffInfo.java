@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
  * This includes the source file/dir of the rename/delete op, and the target
  * file/dir of a rename op.
  */
-class DiffInfo {
+final class DiffInfo {
   static final Comparator<DiffInfo> sourceComparator = new Comparator<DiffInfo>() {
     @Override
     public int compare(DiffInfo d1, DiffInfo d2) {
