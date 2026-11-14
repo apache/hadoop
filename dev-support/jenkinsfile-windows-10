@@ -94,6 +94,7 @@ pipeline {
                     bat '''docker build --label org.apache.yetus=""^
                             --label org.apache.yetus.testpatch.project=hadoop^
                             --tag hadoop-windows-10-builder^
+                            --build-arg WINDOWS_BASE_IMAGE=mcr.microsoft.com/windows/servercore:ltsc2019^
                             -f %DOCKERFILE% %SOURCEDIR%\\dev-support\\docker'''
                     bat '''docker run --rm -v %WORKSPACE%\\out:C:\\out^
                             -v %WORKSPACE%\\src:C:\\src^
