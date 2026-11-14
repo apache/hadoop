@@ -17,6 +17,8 @@ import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.security.authentication.util.ResponseDetail;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.CookieHandler;
@@ -403,7 +405,7 @@ public class AuthenticatedURL {
       throw new AuthenticationException("Authentication failed" +
           ", URL: " + conn.getURL() +
           ", status: " + conn.getResponseCode() +
-          ", message: " + conn.getResponseMessage());
+          ", message: " + ResponseDetail.of(conn));
     }
   }
 
