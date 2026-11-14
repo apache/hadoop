@@ -167,6 +167,15 @@
       <artifactId>hadoop-common</artifactId>
     </dependency>
 
+    <!-- TimedOutTestsListener, registered as a surefire listener by the
+         hadoop-yarn parent pom. -->
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-annotations</artifactId>
