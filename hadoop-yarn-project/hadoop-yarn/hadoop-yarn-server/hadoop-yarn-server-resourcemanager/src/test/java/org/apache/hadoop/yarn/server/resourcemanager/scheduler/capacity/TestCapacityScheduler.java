@@ -28,6 +28,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupBlockedQueueConfiguration;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupOtherBlockedQueueConfiguration;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfiguration;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfigurationWithoutB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A1;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A2;
@@ -81,6 +82,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -102,6 +104,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.Groups;
@@ -137,6 +140,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -2702,6 +2706,82 @@ public class TestCapacityScheduler {
         ContainerAllocation.PRIORITY_SKIPPED.getAllocationState());
     assertEquals(AllocationState.QUEUE_SKIPPED,
         ContainerAllocation.QUEUE_SKIPPED.getAllocationState());
+    rm.stop();
+  }
+
+  /**
+   * When a RM is failing over (transitioning from STANDBY to ACTIVE),
+   * queue hierarchy validation must be skipped even when using a
+   * file-based (non-mutable) configuration provider, since the other RM
+   * may have already removed a queue without it going through the
+   * STOPPED state in this RM's in-memory view. See YARN-11833.
+   */
+  @Test
+  public void testQueueHierarchyValidationSkippedOnFailover() throws Exception {
+    // Set up a real HA-enabled RM that stays in the STANDBY state (auto
+    // failover disabled, no transitionToActive() call), reproducing the
+    // exact state this RM is in while reinitializeQueues() runs during a
+    // real failover.
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
+    for (String confKey : YarnConfiguration
+        .getServiceAddressConfKeys(conf)) {
+      conf.set(HAUtil.addSuffix(confKey, "rm1"), "1.1.1.1:1");
+      conf.set(HAUtil.addSuffix(confKey, "rm2"), "0.0.0.0:0");
+    }
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration(conf);
+    setupQueueConfiguration(csConf);
+    conf = new YarnConfiguration(csConf);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    ResourceManager rm = new MockRM(conf);
+    rm.start();
+    assertEquals(HAServiceProtocol.HAServiceState.STANDBY,
+        rm.getRMContext().getRMAdminService().getServiceStatus().getState(),
+        "RM should be Standby");
+
+    // Remove queue "b" (and its children) without stopping it first,
+    // simulating the other RM having already deleted it from its
+    // file-based configuration.
+    CapacitySchedulerConfiguration newConf =
+        setupQueueConfigurationWithoutB(new CapacitySchedulerConfiguration());
+
+    // Should not throw even though queue "b" was removed while not
+    // STOPPED, because validation is skipped while this RM is STANDBY.
+    rm.getResourceScheduler().reinitialize(newConf, rm.getRMContext());
+
+    assertNull(((CapacityScheduler) rm.getResourceScheduler()).getQueue(B_PATH),
+        "Queue B should have been removed after failover reinit");
+    rm.stop();
+  }
+
+  /**
+   * When the RM is not failing over, removing a queue that is not in the
+   * STOPPED state must continue to fail validation as before.
+   */
+  @Test
+  public void testQueueHierarchyValidationEnforcedWhenNotFailingOver()
+      throws Exception {
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration();
+    setupQueueConfiguration(csConf);
+    YarnConfiguration conf = new YarnConfiguration(csConf);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+    CapacitySchedulerConfiguration newConf =
+        setupQueueConfigurationWithoutB(new CapacitySchedulerConfiguration());
+
+    assertThrows(IOException.class,
+        () -> cs.reinitialize(newConf, cs.getRMContext()));
     rm.stop();
   }
 
