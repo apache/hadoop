@@ -26,11 +26,13 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERV
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Objects;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -121,6 +123,25 @@ public class TrashPolicyDefault extends TrashPolicy {
     return Path.mergePaths(basePath, rmFilePath);
   }
 
+  /**
+   * Returns true if {@code ancestor} is {@code path} or one of its ancestors.
+   * The scheme and authority must be equal. The URI paths are compared on
+   * whole components, so "/user/al" is not an ancestor of "/user/alice", and
+   * any query or fragment is ignored.
+   */
+  private static boolean isAncestorOf(Path ancestor, Path path) {
+    URI a = ancestor.toUri();
+    URI p = path.toUri();
+    if (!Objects.equals(a.getScheme(), p.getScheme())
+        || !Objects.equals(a.getAuthority(), p.getAuthority())) {
+      return false;
+    }
+    String ap = a.getPath();
+    String pp = p.getPath();
+    return pp.equals(ap) || pp.startsWith(
+        ap.endsWith(Path.SEPARATOR) ? ap : ap + Path.SEPARATOR);
+  }
+
   @Override
   public boolean isEnabled() {
     return deletionInterval > 0;
@@ -137,15 +158,15 @@ public class TrashPolicyDefault extends TrashPolicy {
 
     // check that path exists
     fs.getFileStatus(path);
-    String qpath = fs.makeQualified(path).toString();
+    Path qpath = fs.makeQualified(path);
 
     Path trashRoot = fs.getTrashRoot(path);
     Path trashCurrent = new Path(trashRoot, CURRENT);
-    if (qpath.startsWith(trashRoot.toString())) {
+    if (isAncestorOf(trashRoot, qpath)) {
       return false;                               // already in trash
     }
 
-    if (trashRoot.getParent().toString().startsWith(qpath)) {
+    if (isAncestorOf(qpath, trashRoot.getParent())) {
       throw new IOException("Cannot move \"" + path +
                             "\" to the trash, as it contains the trash");
     }

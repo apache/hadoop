@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -664,6 +665,108 @@ public class TestTrash {
     conf.setLong(FS_TRASH_INTERVAL_KEY, 1); // 1 min
     FileSystem fs = FileSystem.get(conf);
     verifyMoveEmptyDirToTrash(fs, conf);
+  }
+
+  /**
+   * A sibling of the trash root that only shares its name as a string
+   * prefix, such as ~/.Trashbackups next to ~/.Trash, is moved to the trash
+   * rather than treated as already being in it.
+   */
+  @Test
+  public void testMoveToTrashTrashRootPrefixSibling() throws Exception {
+    Path base = new Path(GenericTestUtils.getTempPath("testTrashRootPrefix"));
+    Path home = new Path(base, "users/alice");
+    Configuration conf = new Configuration();
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 10);
+    try (FileSystem fs = newLocalFsWithHome(home, conf)) {
+      try {
+        Trash trash = new Trash(fs, conf);
+        Path trashCurrent = new Path(fs.getTrashRoot(home), "Current");
+        Path prefixSibling = new Path(home, ".Trashbackups");
+        fs.mkdirs(prefixSibling);
+        assertTrue(trash.moveToTrash(prefixSibling));
+        assertFalse(fs.exists(prefixSibling));
+        checkTrash(fs, trashCurrent, fs.makeQualified(prefixSibling));
+
+        Path inTrash = new Path(trashCurrent, "fileInTrash");
+        writeFile(fs, inTrash, 10);
+        assertFalse(trash.moveToTrash(inTrash));
+      } finally {
+        fs.delete(base, true);
+      }
+    }
+  }
+
+  /**
+   * A directory whose name is a string prefix of the home directory, such
+   * as users/al for users/alice, does not contain the trash and is moved to
+   * it; the home directory itself still cannot be.
+   */
+  @Test
+  public void testMoveToTrashHomePrefixSibling() throws Exception {
+    Path base = new Path(GenericTestUtils.getTempPath("testHomePrefix"));
+    Path home = new Path(base, "users/alice");
+    Configuration conf = new Configuration();
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 10);
+    try (FileSystem fs = newLocalFsWithHome(home, conf)) {
+      try {
+        Trash trash = new Trash(fs, conf);
+        fs.mkdirs(home);
+        Path prefixOfHome = new Path(base, "users/al");
+        fs.mkdirs(prefixOfHome);
+        assertTrue(trash.moveToTrash(prefixOfHome));
+        assertFalse(fs.exists(prefixOfHome));
+        intercept(IOException.class, "contains the trash",
+            () -> trash.moveToTrash(home));
+      } finally {
+        fs.delete(base, true);
+      }
+    }
+  }
+
+  /**
+   * A URI fragment, which the file system ignores when resolving a path,
+   * does not change whether the path is in or contains the trash.
+   */
+  @Test
+  public void testMoveToTrashPathWithFragment() throws Exception {
+    Path base = new Path(GenericTestUtils.getTempPath("testTrashFragment"));
+    Path home = new Path(base, "users/alice");
+    Configuration conf = new Configuration();
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 10);
+    try (FileSystem fs = newLocalFsWithHome(home, conf)) {
+      try {
+        Trash trash = new Trash(fs, conf);
+        Path trashRoot = fs.getTrashRoot(home);
+        Path trashCurrent = new Path(trashRoot, "Current");
+        fs.mkdirs(trashRoot);
+        Path trashAlias = new Path(URI.create(trashRoot.toUri() + "#alias"));
+        assertFalse(trash.moveToTrash(trashAlias));
+        assertTrue(fs.exists(trashRoot));
+        assertFalse(fs.exists(trashCurrent));
+
+        Path homeAlias = new Path(URI.create(
+            fs.makeQualified(home).toUri() + "#alias"));
+        intercept(IOException.class, "contains the trash",
+            () -> trash.moveToTrash(homeAlias));
+        assertFalse(fs.exists(trashCurrent));
+      } finally {
+        fs.delete(base, true);
+      }
+    }
+  }
+
+  /** @return a local file system whose home directory is {@code home}. */
+  private static FileSystem newLocalFsWithHome(Path home, Configuration conf)
+      throws IOException {
+    FileSystem fs = new RawLocalFileSystem() {
+      @Override
+      public Path getHomeDirectory() {
+        return makeQualified(home);
+      }
+    };
+    fs.initialize(URI.create("file:///"), conf);
+    return fs;
   }
 
   /**
