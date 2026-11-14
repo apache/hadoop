@@ -1966,8 +1966,8 @@
   <value>100ms</value>
   <description>
     Initial between retry attempts on throttled requests, +/- 50%. chosen at random.
-    i.e. for an intial value of 3000ms, the initial delay would be in the range 1500ms to 4500ms.
-    Backoffs are exponential; again randomness is used to avoid the thundering heard problem.
+    i.e. for an initial value of 3000ms, the initial delay would be in the range 1500ms to 4500ms.
+    Backoffs are exponential; again randomness is used to avoid the thundering herd problem.
     500ms is the default value used by the AWS S3 Retry policy.
   </description>
 </property>
