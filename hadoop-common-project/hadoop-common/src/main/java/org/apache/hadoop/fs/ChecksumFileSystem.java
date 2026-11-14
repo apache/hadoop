@@ -471,7 +471,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       // If the stream doesn't have checksums, just delegate.
       if (dataStreamToHandleVectorIO()) {
         LOG.debug("No checksums for vectored read, delegating to inner stream");
-        datas.readVectored(ranges, allocate);
+        datas.readVectored(ranges, allocate, release);
         return;
       }
       LOG.debug("Checksum vectored read for {} ranges", ranges.size());
