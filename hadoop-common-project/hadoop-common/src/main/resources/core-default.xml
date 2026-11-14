@@ -2266,7 +2266,10 @@ The switch to turn S3A auditing on or off.
 AWS SDK client shared thread pool settings. When enabled, AWS SDK clients of a
 given type share a single scheduled thread pool instead of each client creating
 its own. This bounds thread growth when many S3A filesystem instances are
-created. Each pool is opt-in and disabled by default.
+created. Each pool is enabled by default; set its enabled key to false to use
+the SDK's per-client executor instead. The first client of each type created
+in a JVM fixes that pool's settings; later values, including per-bucket ones,
+are ignored.
 
 The default size of 5 matches the per-client default the AWS SDK would otherwise
 use (Executors.newScheduledThreadPool(5)). Unlike that SDK default, which keeps
@@ -2275,7 +2278,7 @@ are idle beyond the keepalive window.
 -->
 <property>
   <name>fs.s3a.aws.s3.client.shared.threadpool.enabled</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     Enable a shared scheduled thread pool for the AWS S3 synchronous client.
   </description>
@@ -2302,9 +2305,17 @@ are idle beyond the keepalive window.
 
 <property>
   <name>fs.s3a.aws.s3.async.client.shared.threadpool.enabled</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     Enable a shared scheduled thread pool for the AWS S3 asynchronous client.
+    Unlike the other shared pools, which only run timeout tasks, this pool also
+    runs SDK request processing: the start of each delayed attempt, such as a
+    retry, and the work that follows a timed-out request, which can include
+    issuing new requests. Custom credential providers, signers or execution
+    interceptors that read the current Hadoop user see there the user of the
+    thread that started the pool thread, which in a multi-user process may not
+    be the requesting user (see HADOOP-20041). S3A's own implementations only
+    read the user when they are created.
   </description>
 </property>
 
@@ -2329,7 +2340,7 @@ are idle beyond the keepalive window.
 
 <property>
   <name>fs.s3a.aws.sts.client.shared.threadpool.enabled</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     Enable a shared scheduled thread pool for the AWS STS client.
   </description>
@@ -2356,7 +2367,7 @@ are idle beyond the keepalive window.
 
 <property>
   <name>fs.s3a.aws.kms.client.shared.threadpool.enabled</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     Enable a shared scheduled thread pool for the AWS KMS client.
   </description>

@@ -47,6 +47,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.FileSystem;
@@ -724,18 +725,8 @@ public abstract class GenericTestUtils {
    * @return true if there is any thread that matches the pattern
    */
   public static boolean anyThreadMatching(Pattern pattern) {
-    ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
-
-    ThreadInfo[] infos =
-        threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
-    for (ThreadInfo info : infos) {
-      if (info == null)
-        continue;
-      if (pattern.matcher(info.getThreadName()).matches()) {
-        return true;
-      }
-    }
-    return false;
+    return getLiveThreadNames()
+        .anyMatch(name -> pattern.matcher(name).matches());
   }
 
   /**
@@ -744,20 +735,23 @@ public abstract class GenericTestUtils {
    * @return the number of live threads whose name matches the pattern
    */
   public static int countThreadsMatching(Pattern pattern) {
+    return (int) getLiveThreadNames()
+        .filter(name -> pattern.matcher(name).matches())
+        .count();
+  }
+
+  /**
+   * Helper method to fetch all live thread names as a Stream.
+   * @return the names of the live threads
+   */
+  private static Stream<String> getLiveThreadNames() {
     ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
 
     ThreadInfo[] infos =
-        threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
-    int count = 0;
-    for (ThreadInfo info : infos) {
-      if (info == null) {
-        continue;
-      }
-      if (pattern.matcher(info.getThreadName()).matches()) {
-        count++;
-      }
-    }
-    return count;
+        threadBean.getThreadInfo(threadBean.getAllThreadIds());
+    return Arrays.stream(infos)
+        .filter(Objects::nonNull)
+        .map(ThreadInfo::getThreadName);
   }
 
   /**
