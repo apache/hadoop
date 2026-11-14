@@ -929,6 +929,23 @@ public class ClientRMService extends AbstractService implements
         }
       }
 
+      if (tags != null && !tags.isEmpty()) {
+        Set<String> appTags = application.getApplicationTags();
+        if (appTags == null || appTags.isEmpty()) {
+          continue;
+        }
+        boolean match = false;
+        for (String tag : tags) {
+          if (appTags.contains(tag)) {
+            match = true;
+            break;
+          }
+        }
+        if (!match) {
+          continue;
+        }
+      }
+
       if (applicationStates != null && !applicationStates.isEmpty()) {
         if (!applicationStates.contains(application
             .createApplicationState())) {
@@ -949,21 +966,8 @@ public class ClientRMService extends AbstractService implements
         continue;
       }
 
-      if (tags != null && !tags.isEmpty()) {
-        Set<String> appTags = application.getApplicationTags();
-        if (appTags == null || appTags.isEmpty()) {
-          continue;
-        }
-        boolean match = false;
-        for (String tag : tags) {
-          if (appTags.contains(tag)) {
-            match = true;
-            break;
-          }
-        }
-        if (!match) {
-          continue;
-        }
+      if (name != null && !name.equals(application.getName())) {
+        continue;
       }
 
       // checkAccess can grab the scheduler lock so call it last
@@ -976,10 +980,6 @@ public class ClientRMService extends AbstractService implements
       // Given RM is configured to display apps per user, skip apps to which
       // this caller doesn't have access to view.
       if (filterAppsByUser && !allowAccess) {
-        continue;
-      }
-
-      if (name != null && !name.equals(application.getName())) {
         continue;
       }
 
