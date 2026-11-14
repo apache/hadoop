@@ -26,7 +26,9 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -78,6 +80,8 @@ public class TimelineEvent implements Comparable<TimelineEvent> {
    * @return the event type
    */
   @XmlElement(name = "eventtype")
+  @JsonProperty("eventtype")
+  @JsonAlias("eventType")
   public String getEventType() {
     return eventType;
   }
@@ -97,6 +101,8 @@ public class TimelineEvent implements Comparable<TimelineEvent> {
    * 
    * @return the information of the event
    */
+  @JsonProperty("eventinfo")
+  @JsonAlias("eventInfo")
   public Map<String, Object> getEventInfo() {
     return eventInfo;
   }

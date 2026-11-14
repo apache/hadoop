@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.api.records.timeline.writer;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 
@@ -41,7 +42,8 @@ import java.nio.charset.StandardCharsets;
 @Consumes(MediaType.APPLICATION_JSON)
 public class TimelineEntitiesWriter implements MessageBodyWriter<TimelineEntities> {
 
-  private ObjectMapper objectMapper = new ObjectMapper();
+  private ObjectMapper objectMapper =
+      new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
   @Override
   public boolean isWriteable(Class<?> type, Type genericType,
