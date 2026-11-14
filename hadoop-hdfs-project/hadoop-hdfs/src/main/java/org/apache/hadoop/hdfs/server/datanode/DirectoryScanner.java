@@ -68,6 +68,7 @@ public class DirectoryScanner implements Runnable {
   private static final int DEFAULT_MAP_SIZE = 32768;
   private final int reconcileBlocksBatchSize;
   private final long reconcileBlocksBatchInterval;
+  private final boolean regularFileCheck;
   private final FsDatasetSpi<?> dataset;
   private final ExecutorService reportCompileThreadPool;
   private final ScheduledExecutorService masterThread;
@@ -308,6 +309,15 @@ public class DirectoryScanner implements Runnable {
     }
 
     throttleLimitMsPerSec = throttle;
+
+    regularFileCheck = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_REGULAR_FILE_CHECK_KEY,
+        DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_REGULAR_FILE_CHECK_DEFAULT);
+    if (!regularFileCheck) {
+      LOG.info("{} is false, the scanner will not verify that block and meta "
+          + "files are regular files",
+          DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_REGULAR_FILE_CHECK_KEY);
+    }
 
     int threads =
         conf.getInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,
@@ -552,9 +562,14 @@ public class DirectoryScanner implements Runnable {
           continue;
         }
 
-        // Block and meta must be regular file
-        boolean isRegular = FileUtil.isRegularFile(info.getBlockFile(), false) &&
-                FileUtil.isRegularFile(info.getMetaFile(), false);
+        // Block and meta must be regular files. This check costs two extra
+        // lstat calls per block, issued in blockId order after all volumes
+        // have been listed, i.e. with no locality. On DataNodes with more
+        // files than the inode cache can hold it dominates the scan time,
+        // so it can be turned off.
+        boolean isRegular = !regularFileCheck
+            || (FileUtil.isRegularFile(info.getBlockFile(), false)
+                && FileUtil.isRegularFile(info.getMetaFile(), false));
         if (!isRegular) {
           statsRecord.mismatchBlocks++;
           addDifference(diffRecord, statsRecord, info);

@@ -32,6 +32,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
@@ -591,6 +592,61 @@ public class TestDirectoryScanner {
       String msg = "*DIR* reportBadBlocks for block: " + bpid + ":" +
           getBlockFile(block.getBlockId());
       assertTrue(logCapturer.getOutput().contains(msg));
+    } finally {
+      if (scanner != null) {
+        scanner.shutdown();
+        scanner = null;
+      }
+      cluster.shutdown();
+    }
+  }
+
+  @Test
+  @Timeout(value = 600)
+  public void testRegularBlockCheckEnabled() throws Exception {
+    assertEquals(1, scanSymlinkedBlock(true));
+  }
+
+  @Test
+  @Timeout(value = 600)
+  public void testRegularBlockCheckDisabled() throws Exception {
+    assertEquals(0, scanSymlinkedBlock(false));
+  }
+
+  /**
+   * Replace a block file with a symlink to a copy of itself that lives
+   * outside the scanned directories and run a scan. Length, meta file and
+   * generation stamp are unchanged, so the only thing the scanner can object
+   * to is that the block file is not a regular file.
+   *
+   * @return the number of mismatched blocks reported by the scan
+   */
+  private long scanSymlinkedBlock(boolean regularFileCheck) throws Exception {
+    Configuration conf = getConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_REGULAR_FILE_CHECK_KEY,
+        regularFileCheck);
+    cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitActive();
+      bpid = cluster.getNamesystem().getBlockPoolId();
+      fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
+      client = cluster.getFileSystem().getClient();
+      conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY, 1);
+      createFile(GenericTestUtils.getMethodName(), BLOCK_LENGTH * 5, false);
+
+      List<ReplicaInfo> infos = new ArrayList<>(FsDatasetTestUtil.getReplicas(fds, bpid));
+      File blockFile = new File(infos.get(0).getBlockURI().getPath());
+      File copy = new File(cluster.getDataDirectory(), blockFile.getName() + ".copy");
+      Files.copy(blockFile.toPath(), copy.toPath());
+      assertTrue(blockFile.delete());
+      assertEquals(0, FileUtil.symLink(copy.getAbsolutePath(), blockFile.getAbsolutePath()));
+
+      scanner = new DirectoryScanner(fds, conf);
+      scanner.setRetainDiffs(true);
+      scanner.reconcile();
+      DirectoryScanner.Stats stats = scanner.stats.get(bpid);
+      assertNotNull(stats);
+      return stats.mismatchBlocks;
     } finally {
       if (scanner != null) {
         scanner.shutdown();
