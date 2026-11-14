@@ -77,6 +77,73 @@
   </description>
 </property>
 
+<!-- MCP (Model Context Protocol) session management -->
+<property>
+  <name>hadoop.mcp.session.timeout.ms</name>
+  <value>1800000</value>
+  <description>
+    Idle timeout after which an MCP session with no activity
+    is evicted (in milliseconds). Requests carrying an expired session id
+    receive HTTP 404. Time unit suffixes such as 30m are also accepted.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.mcp.session.max</name>
+  <value>1000</value>
+  <description>
+    Maximum number of concurrent MCP sessions tracked by the server. An
+    initialize request received at this limit is rejected with a JSON-RPC
+    server error (-32000).
+  </description>
+</property>
+
+<property>
+  <name>hadoop.mcp.session.tool-call.limit</name>
+  <value>600</value>
+  <description>
+    Maximum number of MCP tool calls a session may make within one window of
+    hadoop.mcp.session.tool-call.window.ms. Further calls in the same window
+    are rejected with a JSON-RPC server error (-32002). 0 or less disables the
+    limit; the MCP specification requires servers to rate limit tool calls, so
+    only disable it if something else enforces a limit.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.mcp.session.tool-call.window.ms</name>
+  <value>60000</value>
+  <description>
+    Length of the window over which hadoop.mcp.session.tool-call.limit
+    is counted (in milliseconds). A window starts with the
+    first tool call after the previous window ended. Time unit suffixes such
+    as 1m are also accepted.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.mcp.tool-call.max-output-chars</name>
+  <value>1048576</value>
+  <description>
+    Maximum total length of the text returned by one MCP tool
+    call in characters. A larger result is replaced with an error result saying the output
+    was too large. 0 or less disables the limit.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.mcp.session.max-request-ids</name>
+  <value>10000</value>
+  <description>
+    Maximum number of requests an MCP session may make. The MCP specification
+    forbids reusing a request id within a session, so the server remembers
+    every id a session has used. A request beyond this limit gets HTTP 404 and
+    the session is removed, so the client must start a new session.
+    0 or less removes the limit, so memory grows with the number of requests per
+    session.
+  </description>
+</property>
+
 <!--- security properties -->
 
 <property>

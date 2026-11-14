@@ -19,8 +19,11 @@
 package org.apache.hadoop.mcp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Collections;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -58,5 +61,26 @@ public class TestMcpToolSchema {
     @SuppressWarnings("unchecked")
     Map<String, Object> items = (Map<String, Object>) states.get("items");
     assertEquals("string", items.get("type"));
+  }
+
+  @Test
+  public void testRequiredProperties() {
+    Map<String, Object> schema = McpToolSchema.object()
+        .string("user", "User filter")
+        .required("user")
+        .build();
+
+    assertEquals(Collections.singletonList("user"), schema.get("required"));
+  }
+
+  @Test
+  public void testNoRequiredKeyByDefault() {
+    assertFalse(McpToolSchema.emptyObject().containsKey("required"));
+  }
+
+  @Test
+  public void testRequiredUnknownPropertyRejected() {
+    assertThrows(IllegalArgumentException.class,
+        () -> McpToolSchema.object().string("user", "User").required("usr"));
   }
 }

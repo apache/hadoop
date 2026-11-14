@@ -1114,5 +1114,65 @@ public class CommonConfigurationKeysPublic {
    */
   public static final String JMX_NAN_FILTER = "hadoop.http.jmx.nan-filter.enabled";
   public static final boolean JMX_NAN_FILTER_DEFAULT = false;
+
+  /**
+   * Idle timeout after which an MCP session is evicted.
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_MCP_SESSION_TIMEOUT_MS_KEY =
+      "hadoop.mcp.session.timeout.ms";
+  public static final long HADOOP_MCP_SESSION_TIMEOUT_MS_DEFAULT = 30 * 60 * 1000L;
+
+  /**
+   * Maximum number of concurrent MCP sessions.
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_MCP_SESSION_MAX_KEY = "hadoop.mcp.session.max";
+  public static final int HADOOP_MCP_SESSION_MAX_DEFAULT = 1000;
+
+  /**
+   * Maximum number of MCP tool calls per session within one rate-limit window; 0 or less
+   * disables the limit.
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_MCP_SESSION_TOOL_CALL_LIMIT_KEY =
+      "hadoop.mcp.session.tool-call.limit";
+  public static final int HADOOP_MCP_SESSION_TOOL_CALL_LIMIT_DEFAULT = 600;
+
+  /**
+   * Length of the MCP tool-call rate-limit window.
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_MCP_SESSION_TOOL_CALL_WINDOW_MS_KEY =
+      "hadoop.mcp.session.tool-call.window.ms";
+  public static final long HADOOP_MCP_SESSION_TOOL_CALL_WINDOW_MS_DEFAULT = 60 * 1000L;
+
+  /**
+   * Maximum total length of the text one MCP tool call may return in characters.
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_MCP_TOOL_CALL_MAX_OUTPUT_CHARS_KEY =
+      "hadoop.mcp.tool-call.max-output-chars";
+  public static final int HADOOP_MCP_TOOL_CALL_MAX_OUTPUT_CHARS_DEFAULT = 1024 * 1024;
+
+  /**
+   * Maximum number of request ids an MCP session may use.
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_MCP_SESSION_MAX_REQUEST_IDS_KEY =
+      "hadoop.mcp.session.max-request-ids";
+  public static final int HADOOP_MCP_SESSION_MAX_REQUEST_IDS_DEFAULT = 10000;
 }
 

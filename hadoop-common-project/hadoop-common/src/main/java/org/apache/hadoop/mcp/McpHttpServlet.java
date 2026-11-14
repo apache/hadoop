@@ -55,7 +55,7 @@ public final class McpHttpServlet extends HttpServlet {
   }
 
   void close() {
-    // Stateless server; nothing to release.
+    requestHandler.closeSessionStore();
   }
 
   @Override
@@ -65,10 +65,26 @@ public final class McpHttpServlet extends HttpServlet {
   }
 
   @Override
+  protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
+      throws IOException {
+    resp.setCharacterEncoding(StandardCharsets.UTF_8.name());
+    if (hasOrigin(req)) {
+      writeResponse(objectMapper, resp, requestHandler.originNotAllowedResponse());
+      return;
+    }
+    writeResponse(objectMapper, resp, requestHandler.handleDelete(new McpCallContext(req)));
+  }
+
+  @Override
   protected void doPost(HttpServletRequest req, HttpServletResponse resp)
       throws ServletException, IOException {
     req.setCharacterEncoding(StandardCharsets.UTF_8.name());
     resp.setCharacterEncoding(StandardCharsets.UTF_8.name());
+    // Checked before the body is read, so a rejected caller learns nothing about the request.
+    if (hasOrigin(req)) {
+      writeResponse(objectMapper, resp, requestHandler.originNotAllowedResponse());
+      return;
+    }
 
     byte[] body = readRequestBody(req);
     if (body.length == 0 || body.length > McpJsonRpc.MAX_REQUEST_BODY_BYTES) {
@@ -88,6 +104,10 @@ public final class McpHttpServlet extends HttpServlet {
 
     writeResponse(objectMapper, resp,
         requestHandler.handle(requestNode, new McpCallContext(req)));
+  }
+
+  private static boolean hasOrigin(HttpServletRequest req) {
+    return req.getHeader(McpJsonRpc.ORIGIN_HEADER) != null;
   }
 
   private byte[] readRequestBody(HttpServletRequest req) throws IOException {
