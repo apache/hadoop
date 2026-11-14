@@ -33,6 +33,7 @@ import java.util.function.Supplier;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
 import org.apache.hadoop.hdfs.server.datanode.DataSetLockManager;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
 import org.apache.hadoop.hdfs.server.datanode.LocalReplica;
@@ -80,6 +81,7 @@ import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.TestName;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.FakeTimer;
 import org.apache.hadoop.util.Lists;
@@ -922,6 +924,30 @@ public class TestFsDatasetImpl {
     long dfsUsed = newVolume.getDfsUsed();
 
     return dfsUsed;
+  }
+
+  /**
+   * createTemporary() only reads the replica map before it takes the dir
+   * lock, so it must not wait for the holders of the block pool read lock,
+   * e.g. the dir level operations which are doing disk IO.
+   */
+  @Test
+  @Timeout(value = 60)
+  public void testCreateTemporaryNotBlockedByBlockPoolReadLock()
+      throws Exception {
+    final String bpid = BLOCK_POOL_IDS[0];
+    final ExtendedBlock eb = new ExtendedBlock(bpid, 1000, 0, 1001);
+    final ExecutorService executor = Executors.newSingleThreadExecutor();
+    try (AutoCloseableLock lock = dataset.acquireDatasetLockManager()
+        .readLock(LockLevel.BLOCK_POOl, bpid)) {
+      Future<ReplicaHandler> future = executor.submit(() ->
+          dataset.createTemporary(StorageType.DEFAULT, null, eb, false));
+      try (ReplicaHandler handler = future.get(10, TimeUnit.SECONDS)) {
+        assertNotNull(handler.getReplica());
+      }
+    } finally {
+      executor.shutdownNow();
+    }
   }
 
   @Test
