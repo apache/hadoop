@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.net.Node;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
@@ -74,7 +75,12 @@ class ErasureCodingWork extends BlockReconstructionWork {
     } else {
       LOG.warn("ErasureCodingWork could not need choose targets for {}", getBlock());
     }
-    setTargets(chosenTargets);
+    if (chosenTargets.length > getAdditionalReplRequired()) {
+      setTargets(Arrays.copyOfRange(chosenTargets, 0, getAdditionalReplRequired()));
+    } else {
+      setTargets(chosenTargets);
+    }
+
   }
 
   /**
