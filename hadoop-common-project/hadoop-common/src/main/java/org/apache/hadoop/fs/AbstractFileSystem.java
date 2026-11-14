@@ -630,7 +630,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
       createParent = false;
     }
 
-    if (blockSize % bytesPerChecksum != 0) {
+    if (blockSize % checksumOpt.getBytesPerChecksum() != 0) {
       throw new HadoopIllegalArgumentException(
              "blockSize should be a multiple of checksumsize");
     }
