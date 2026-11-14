@@ -2888,6 +2888,28 @@
         </plugins>
       </build>
     </profile>
+    <!-- Run tests on a dual-stack JVM that prefers IPv6, instead of the
+         IPv4-only default above, so IPv6 code paths can be exercised. -->
+    <profile>
+      <id>ipv6-test</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <systemPropertyVariables>
+                <java.net.preferIPv4Stack>false</java.net.preferIPv4Stack>
+                <java.net.preferIPv6Addresses>true</java.net.preferIPv6Addresses>
+              </systemPropertyVariables>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 
   <repositories>
