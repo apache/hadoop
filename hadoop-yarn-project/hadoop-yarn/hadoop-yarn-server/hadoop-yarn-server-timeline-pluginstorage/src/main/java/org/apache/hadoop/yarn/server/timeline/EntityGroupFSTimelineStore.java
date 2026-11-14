@@ -87,6 +87,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -147,6 +148,9 @@ public class EntityGroupFSTimelineStore extends CompositeService
 
   private List<TimelineEntityGroupPlugin> cacheIdPlugins;
   private Map<TimelineEntityGroupId, EntityCacheItem> cachedLogs;
+  /** Queue of cache items pending asynchronous release. */
+  private final ConcurrentLinkedQueue<EntityCacheItem> evictionQueue =
+      new ConcurrentLinkedQueue<>();
   private boolean aclsEnabled;
 
   @VisibleForTesting
@@ -193,8 +197,8 @@ public class EntityGroupFSTimelineStore extends CompositeService
               TimelineEntityGroupId groupId = eldest.getKey();
               LOG.debug("Evicting {} due to space limitations", groupId);
               EntityCacheItem cacheItem = eldest.getValue();
-              LOG.debug("Force release cache {}.", groupId);
-              cacheItem.forceRelease();
+              LOG.debug("Queuing async release for cache {}.", groupId);
+              evictionQueue.add(cacheItem);
               if (cacheItem.getAppLogs().isDone()) {
                 appIdLogMap.remove(groupId.getApplicationId());
               }
@@ -351,6 +355,10 @@ public class EntityGroupFSTimelineStore extends CompositeService
         TimeUnit.SECONDS);
     executor.scheduleAtFixedRate(new EntityLogCleaner(), cleanerIntervalSecs,
         cleanerIntervalSecs, TimeUnit.SECONDS);
+    // Drain eviction queue every second — forceRelease() runs outside the
+    // global map lock held by removeEldestEntry().
+    executor.scheduleAtFixedRate(this::drainEvictionQueue,
+        1, 1, TimeUnit.SECONDS);
   }
 
   @Override
@@ -375,8 +383,26 @@ public class EntityGroupFSTimelineStore extends CompositeService
         ServiceOperations.stopQuietly(cacheItem.getStore());
       }
     }
+    // Release any evicted-but-not-yet-drained items so their stores (LevelDB)
+    // are closed before shutdown completes instead of at JVM exit.
+    drainEvictionQueue();
     CallerContext.setCurrent(null);
     super.serviceStop();
+  }
+
+  // Runs on the executor thread at a fixed 1s rate. Releasing here, outside
+  // the global map lock, can reset log offsets of an AppLogs still shared with
+  // a freshly re-created cache item for the same group; that only forces a
+  // re-parse on the next read, never data loss.
+  private void drainEvictionQueue() {
+    EntityCacheItem item;
+    while ((item = evictionQueue.poll()) != null) {
+      try {
+        item.forceRelease();
+      } catch (Exception e) {
+        LOG.warn("Error releasing evicted cache item", e);
+      }
+    }
   }
 
   /* Returns Map of SummaryLog files. The Value Pair has
