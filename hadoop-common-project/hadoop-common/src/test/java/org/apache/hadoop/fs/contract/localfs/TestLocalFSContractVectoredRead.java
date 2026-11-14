@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.fs.contract.localfs;
 
+import java.io.EOFException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.assertj.core.api.Assertions;
@@ -36,9 +39,12 @@ import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.impl.TrackingByteBufferPool;
+import org.apache.hadoop.fs.impl.VectorIOBufferPool;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
@@ -46,6 +52,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatSt
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ParameterizedClass(name = "buffer-{0}")
@@ -123,6 +130,109 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
       intercept(ChecksumException.class,
           () -> validateVectoredReadResult(ranges, datasetCorrupted, 0));
     }
+  }
+
+  /**
+   * When the checksum file exists but its header cannot be read, reads
+   * proceed without checksum verification. Vectored reads must do the same
+   * instead of failing against the unusable checksum file.
+   */
+  @Test
+  public void testVectoredReadWithCorruptChecksumHeader() throws Exception {
+    // garbage header
+    verifyVectoredReadWithUnreadableChecksumHeader(
+        new byte[]{0x0, 0x1, 0x2, 0x3});
+  }
+
+  /**
+   * A zero-length checksum file, as left behind by a writer that died
+   * before flushing the checksum header.
+   */
+  @Test
+  public void testVectoredReadWithEmptyChecksumFile() throws Exception {
+    verifyVectoredReadWithUnreadableChecksumHeader(new byte[0]);
+  }
+
+  private void verifyVectoredReadWithUnreadableChecksumHeader(
+      byte[] checksumFileContent) throws Exception {
+    Path testPath = path("corrupt_crc_header_file");
+    final int length = 1024;
+    LocalFileSystem localFs = (LocalFileSystem) getFileSystem();
+    final byte[] dataset =
+        createFileWithChecksumContent(testPath, length, checksumFileContent);
+    try (FSDataInputStream in = localFs.openFile(testPath).build().get()) {
+      byte[] buffer = new byte[length];
+      in.readFully(buffer);
+      assertThat(buffer).describedAs("read data").isEqualTo(dataset);
+    }
+    List<FileRange> ranges = new ArrayList<>();
+    ranges.add(FileRange.createFileRange(10, 100));
+    ranges.add(FileRange.createFileRange(200, 150));
+    CompletableFuture<FSDataInputStream> fis = localFs.openFile(testPath).build();
+    try (FSDataInputStream in = fis.get()) {
+      assertThat(in.hasCapability(StreamCapabilities.VECTOREDIO_BUFFERS_SLICED))
+          .describedAs("sliced buffers without checksum verification")
+          .isFalse();
+      in.readVectored(ranges, getAllocate());
+      validateVectoredReadResult(ranges, dataset, 0);
+    }
+  }
+
+  /**
+   * With an empty checksum file the vectored read is delegated to the data
+   * stream. A range that fails there must hand its buffer back through the
+   * caller's release callback.
+   */
+  @Test
+  public void testEmptyChecksumFileReleasesBufferOnEOF() throws Exception {
+    Path testPath = path("empty_crc_eof_file");
+    final int length = 1024;
+    createFileWithChecksumContent(testPath, length, new byte[0]);
+    // the buffer is allocated, then the read fails with EOFException
+    List<FileRange> ranges = new ArrayList<>();
+    ranges.add(FileRange.createFileRange(length - 24, 100));
+    // VectorIOBufferPool ignores the direct flag and uses the test allocator
+    TrackingByteBufferPool trackerPool = TrackingByteBufferPool.wrap(
+        new VectorIOBufferPool(getAllocate(), getPool()::putBuffer));
+    try (FSDataInputStream in = getFileSystem().openFile(testPath).build().get()) {
+      in.readVectored(ranges, size -> trackerPool.getBuffer(false, size),
+          trackerPool::putBuffer);
+      interceptFuture(EOFException.class, "",
+          ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS,
+          ranges.get(0).getData());
+    }
+    assertThat(trackerPool.getBufferAllocations())
+        .describedAs("buffers allocated for the range past EOF")
+        .isEqualTo(1);
+    assertThat(trackerPool.size())
+        .describedAs("unreleased buffers: allocated %d, released %d",
+            trackerPool.getBufferAllocations(), trackerPool.getBufferReleases())
+        .isZero();
+  }
+
+  /**
+   * Create a checksummed file, then overwrite its checksum file.
+   * @param testPath path of the file
+   * @param length length of the file
+   * @param checksumFileContent new content of the checksum file
+   * @return the data written to the file
+   * @throws IOException failure
+   */
+  private byte[] createFileWithChecksumContent(Path testPath, int length,
+      byte[] checksumFileContent) throws IOException {
+    LocalFileSystem localFs = (LocalFileSystem) getFileSystem();
+    final byte[] dataset = ContractTestUtils.dataset(length, 'a', 32);
+    try (FSDataOutputStream out = localFs.create(testPath, true)) {
+      out.write(dataset);
+    }
+    Path checksumPath = localFs.getChecksumFile(testPath);
+    Assertions.assertThat(localFs.exists(checksumPath))
+        .describedAs("Checksum file should be present")
+        .isTrue();
+    try (FSDataOutputStream out = localFs.getRaw().create(checksumPath, true)) {
+      out.write(checksumFileContent);
+    }
+    return dataset;
   }
 
   @Test
