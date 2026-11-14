@@ -246,6 +246,18 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       new DFSHedgedReadMetrics();
   private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
   private static volatile ThreadPoolExecutor STRIPED_READ_THREAD_POOL;
+  // Shared (per-JVM) infrastructure for sequential read-ahead prefetch.
+  private static volatile ThreadPoolExecutor PREFETCH_THREAD_POOL;
+  // Remaining global prefetch byte budget; initialized on first prefetch use.
+  private static final java.util.concurrent.atomic.AtomicLong
+      PREFETCH_BUDGET_REMAINING =
+          new java.util.concurrent.atomic.AtomicLong(0);
+  // Total global prefetch byte budget (high-water mark of max.bytes requested
+  // across all clients). Guarded by the initPrefetch class lock.
+  private static long PREFETCH_BUDGET_TOTAL;
+  // Lazily-created scheduler for periodic prefetch metric logging.
+  private static java.util.concurrent.ScheduledExecutorService
+      PREFETCH_METRICS_EXECUTOR;
   private final long serverDefaultsValidityPeriod;
 
   /**
@@ -405,6 +417,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     if (dfsClientConf.getHedgedReadThreadpoolSize() > 0) {
       this.initThreadsNumForHedgedReads(dfsClientConf.
           getHedgedReadThreadpoolSize());
+    }
+
+    if (dfsClientConf.isPrefetchEnabled()
+        && dfsClientConf.getPrefetchThreadpoolSize() > 0) {
+      initPrefetch(dfsClientConf.getPrefetchThreadpoolSize(),
+          dfsClientConf.getPrefetchMaxBytes());
     }
 
     this.initThreadsNumForStripedReads(dfsClientConf.
@@ -3181,6 +3199,124 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   ThreadPoolExecutor getHedgedReadsThreadPool() {
     return HEDGED_READ_THREAD_POOL;
+  }
+
+  /**
+   * Create the shared prefetch thread pool and seed the global byte budget,
+   * if not already created. The pool uses a {@link SynchronousQueue} with an
+   * abort policy so that, when every worker is busy, a prefetch submission is
+   * rejected (and silently skipped by the caller) instead of running on — and
+   * thereby blocking — the foreground reader thread.
+   *
+   * <p>The pool and the byte budget are process-wide shared resources. When
+   * more than one {@link DFSClient} enables prefetch with different
+   * configurations, the shared resources grow (never shrink) to the largest
+   * value requested across all clients, so that no client is silently capped
+   * below its own configured {@code max.bytes} / {@code threadpool.size}.
+   * Shrinking is intentionally avoided because another client may already hold
+   * reservations that a smaller cap could not account for.
+   *
+   * @param num       Number of prefetch worker threads.
+   * @param maxBytes  Global cap on bytes held across all prefetch buffers.
+   */
+  private static synchronized void initPrefetch(int num, long maxBytes) {
+    if (num <= 0) {
+      return;
+    }
+    long normalizedMax = Math.max(0, maxBytes);
+    if (PREFETCH_THREAD_POOL != null) {
+      // Already initialized by an earlier client: honor a later client that
+      // asks for a larger budget or more workers by growing to it.
+      if (normalizedMax > PREFETCH_BUDGET_TOTAL) {
+        PREFETCH_BUDGET_REMAINING.addAndGet(normalizedMax - PREFETCH_BUDGET_TOTAL);
+        PREFETCH_BUDGET_TOTAL = normalizedMax;
+      }
+      if (num > PREFETCH_THREAD_POOL.getMaximumPoolSize()) {
+        PREFETCH_THREAD_POOL.setMaximumPoolSize(num);
+      }
+      return;
+    }
+    PREFETCH_BUDGET_TOTAL = normalizedMax;
+    PREFETCH_BUDGET_REMAINING.set(normalizedMax);
+    PREFETCH_THREAD_POOL = new ThreadPoolExecutor(0, num, 60,
+        TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),
+        new Daemon.DaemonFactory() {
+          private final AtomicInteger threadIndex = new AtomicInteger(0);
+          @Override
+          public Thread newThread(Runnable r) {
+            Thread t = super.newThread(r);
+            t.setName("prefetch-" + threadIndex.getAndIncrement());
+            return t;
+          }
+        },
+        new ThreadPoolExecutor.AbortPolicy());
+    PREFETCH_THREAD_POOL.allowCoreThreadTimeOut(true);
+    LOG.debug("Using read-ahead prefetch; pool threads={}, maxBytes={}",
+        num, maxBytes);
+  }
+
+  ThreadPoolExecutor getPrefetchThreadPool() {
+    return PREFETCH_THREAD_POOL;
+  }
+
+  boolean isPrefetchEnabled() {
+    return PREFETCH_THREAD_POOL != null
+        && PREFETCH_THREAD_POOL.getMaximumPoolSize() > 0;
+  }
+
+  /**
+   * Try to reserve {@code n} bytes of the global prefetch budget.
+   * @return true if reserved; false if insufficient budget remains.
+   */
+  boolean tryReservePrefetchBytes(long n) {
+    if (n <= 0) {
+      return true;
+    }
+    while (true) {
+      long cur = PREFETCH_BUDGET_REMAINING.get();
+      if (cur < n) {
+        return false;
+      }
+      if (PREFETCH_BUDGET_REMAINING.compareAndSet(cur, cur - n)) {
+        return true;
+      }
+    }
+  }
+
+  /** Return {@code n} bytes to the global prefetch budget. */
+  void releasePrefetchBytes(long n) {
+    if (n > 0) {
+      PREFETCH_BUDGET_REMAINING.addAndGet(n);
+    }
+  }
+
+  /**
+   * Shared single-threaded scheduler used to periodically log per-stream
+   * read-cache metrics when {@code dfs.client.prefetch.metrics.log.enabled} is
+   * set. Created lazily; uses a daemon thread.
+   */
+  static synchronized java.util.concurrent.ScheduledExecutorService
+      getPrefetchMetricsExecutor() {
+    if (PREFETCH_METRICS_EXECUTOR == null) {
+      java.util.concurrent.ScheduledThreadPoolExecutor exec =
+          new java.util.concurrent.ScheduledThreadPoolExecutor(1,
+              new Daemon.DaemonFactory() {
+                @Override
+                public Thread newThread(Runnable runnable) {
+                  Thread t = super.newThread(runnable);
+                  t.setName("prefetch-metrics-logger");
+                  return t;
+                }
+              });
+      // Per-stream metrics tasks are cancelled when a stream closes; remove
+      // them from the delay queue immediately (instead of leaving cancelled
+      // nodes, and the stream state they reference, pinned until the next
+      // scheduled tick) and do not run any delayed tasks after shutdown.
+      exec.setRemoveOnCancelPolicy(true);
+      exec.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
+      PREFETCH_METRICS_EXECUTOR = exec;
+    }
+    return PREFETCH_METRICS_EXECUTOR;
   }
 
   ThreadPoolExecutor getStripedReadsThreadPool() {
