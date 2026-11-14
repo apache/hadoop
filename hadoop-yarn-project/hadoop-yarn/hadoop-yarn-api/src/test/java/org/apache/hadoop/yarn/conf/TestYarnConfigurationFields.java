@@ -93,6 +93,11 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         .add(YarnConfiguration.ROUTER_RMADMIN_ADDRESS);
     configurationPropsToSkipCompare
         .add(YarnConfiguration.ROUTER_WEBAPP_DEFAULT_INTERCEPTOR_CLASS);
+    // Prefixes of the per-SubCluster Router application history configs
+    configurationPropsToSkipCompare
+        .add(YarnConfiguration.ROUTER_APPLICATION_HISTORY_ADDRESS_PREFIX);
+    configurationPropsToSkipCompare
+        .add(YarnConfiguration.ROUTER_APPLICATION_HISTORY_WEBAPP_ADDRESS_PREFIX);
 
     // Federation policies configs to be ignored
     configurationPropsToSkipCompare
