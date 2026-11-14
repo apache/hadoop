@@ -1,0 +1,38 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Store texts that NEVER ship in the tarball's licenses-binary/
+# directory (requirement 13, emitter in generate-archive-manifest.py;
+# staleness gate in check-asset-manifest.py). These are resolve-store
+# generics: the R5/R6 resolution store keeps them for license-NAME
+# lookup, but LICENSE-binary does not reference them per component, so
+# the R13 emitter skips them and the R53 staleness gate does not demand
+# a manifest reference. One slug per line. A slug listed here must not
+# carry a licenses-binary-aliases row.
+#
+# apache-2.0: the Apache text is the manifest template itself.
+# go: Google's plain Go license; kept for name resolution ("The Go
+#   license" name resolves here) — the re2j component ships its own
+#   RE2-derived text (texts/LICENSE-re2j.txt).
+# json: the JSON.org text; no component currently ships under it (the
+#   'json' word inside the javax.json coordinate would otherwise
+#   falsely match).
+# lgpl-2.1, mpl-1.1, w3c: no component currently ships under these.
+apache-2.0
+go
+json
+lgpl-2.1
+mpl-1.1
+w3c

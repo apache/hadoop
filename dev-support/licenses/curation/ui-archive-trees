@@ -1,0 +1,12 @@
+# R7 stage C: UI modules whose committed LOCK FILES are accepted as
+# version evidence for manifest-assets.txt package-style entries (gate
+# tier d), mapped to the archive tree their built WAR ships as.
+# <repo-relative module path> <archive tree prefix>
+# The dist build (-Pyarn-ui) installs each module's dependencies from
+# exactly these lock files before bundling, so a pin in the lock is what
+# ships; minified bundles carry no probeable version string.
+# Self-cleaning both ways: a row whose module dir is gone from the repo
+# fails at parse time; a row whose tree ships nowhere in the archive
+# fails after enumeration. Prune the row when the UI disappears.
+hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui webapps/ui2
+hadoop-yarn-project/hadoop-yarn/hadoop-yarn-capacity-scheduler-ui webapps/scheduler-ui

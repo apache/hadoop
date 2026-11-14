@@ -1,0 +1,8 @@
+The JSR-305 reference implementation (lib/jsr305.jar) is
+distributed under the terms of the New BSD license:
+
+  http://www.opensource.org/licenses/bsd-license.php
+
+See the JSR-305 home page for more information:
+
+  http://code.google.com/p/jsr-305/

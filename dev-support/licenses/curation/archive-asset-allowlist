@@ -1,0 +1,102 @@
+# R7 stage C allowlist: archive asset paths exempt from manifest-assets.txt
+# coverage, one pattern per line (component globs allowed, matched as a
+# contiguous path-component subsequence; '#' starts a comment).
+#
+# Classes exempted here, each backed by source-tree evidence:
+# 1. Hadoop-authored webapp UI code (src/main/webapps/<app>/*.{js,html},
+#    robots.txt, WEB-INF/web.xml, static helper js/css written by Hadoop).
+# 2. Dist-build artifacts: the .gz twins the tarball step creates next to
+#    every webapp static file (source tree carries only the plain file).
+# 3. Third-party jars' self-description pages (about/license/readme/package
+#    .html, jetty-dir.css) — licensed jar-side by their LICENSE-binary entry.
+# 4. The YARN API service's webapp marker and the container-executor
+#    TERMINAL files not under the curated TERMINAL source path.
+# Self-cleaning: an entry that matches no shipped asset fails the gate —
+# prune the row when the asset class disappears.
+#
+# --- 1. Hadoop-authored webapp UI files ---
+webapps/*/dfshealth.js
+webapps/*/dfshealth.html
+webapps/*/explorer.js
+webapps/*/explorer.html
+webapps/*/federationhealth.js
+webapps/*/federationhealth.html
+webapps/*/balancer.js
+webapps/*/balancer.html
+webapps/*/dn.js
+webapps/*/datanode.html
+webapps/*/snn.js
+webapps/*/status.html
+webapps/*/jn.js
+webapps/*/journalnode.html
+webapps/*/robots.txt
+webapps/*/index.html
+webapps/*/WEB-INF/web.xml
+webapps/static/hadoop.css
+webapps/static/hadoop.css.gz
+webapps/static/dfs-dust.js
+webapps/static/rest-csrf.js
+webapps/static/json-bignum.js
+webapps/static/histogram-hostip.js
+webapps/static/rbf.css
+webapps/static/busy.gif
+webapps/static/index.html
+webapps/*/.keep
+webapps/api-server/app
+webapps/static/federation/federation.js
+webapps/static/hadoop-st.png
+webapps/static/yarn.css
+webapps/static/yarn.dt.plugins.js
+webapps/static/dt-sorting/natural.js
+# hadoop-common's test jar ships its test webapp stylesheet
+webapps/static/test.css
+html/showSimulationTrace.html
+html/*.template
+# --- 1b. the YARN application-catalog WAR's own UI code (Hadoop-authored
+# angular app; the WAR's third-party vendor/ tree stays UNEXEMPTED and must
+# be covered by manifest-assets.txt) ---
+WEB-INF/classes/*.js
+js/app.js
+js/controllers.js
+js/filters.js
+js/routes.js
+js/services.js
+js/bootstrap-hadoop.js
+js/bootstrap-hadoop.min.js
+css/bootstrap-hadoop.css
+css/bootstrap-hadoop.min.css
+css/specific.css
+css/theme.css
+css/img/*
+index.html
+theme.html
+partials/*.html
+# --- 2. dist-built gzip twins of webapp static files ---
+*.gz
+# --- 2b. the release-shaped YARN UIs (-Pyarn-ui): compiled bundle output
+# of each module's lock-pinned dependency set (see ui-archive-trees). The
+# per-package license statements are the manifest's package-style entries,
+# validated against the modules' committed lock files; the bundle files
+# themselves (hashed chunks, sourcemaps, compiled css, bundled fonts and
+# images, ember/vite build output) are that build's artifacts, not
+# individually curated assets. Hadoop-authored support files below.
+# A dependency change re-renders these paths but is caught by the lock
+# evidence check on the package entries; upstream REMOVING a UI makes
+# these rows stale and fails the gate until pruned.
+webapps/ui2/assets/*
+webapps/ui2/fonts/*
+webapps/ui2/config/configs.env
+webapps/ui2/crossdomain.xml
+webapps/scheduler-ui/assets/*
+webapps/scheduler-ui/mock/*
+webapps/scheduler-ui/mockServiceWorker.js
+webapps/scheduler-ui/favicon.ico
+# WAR packaging metadata of the exploded UI WARs (jar-side licensing)
+WEB-INF/classes/META-INF/LICENSE.txt
+WEB-INF/classes/META-INF/NOTICE.txt
+# --- 3. third-party jars' self-description pages ---
+about.html
+license.html
+readme.html
+package.html
+jetty-dir.css

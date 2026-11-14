@@ -1,0 +1,142 @@
+# Curated archive-jar mappings (requirement 36 of
+# dev-support/licenses/License-Management.md).
+#
+# Jars in the assembled archive that resist automatic g:a normalization:
+# shaded jars whose own pom.properties is absent, and jars published
+# without Maven metadata at all (Gradle-built artifacts — guice, caffeine,
+# okhttp, kafka-clients, jna, objenesis — carry no META-INF/maven).
+# The archive gate (check-archive-licenses.sh) promotes matching rows
+# before any check runs; a mapped jar is classified by its real group
+# like any other (own org.apache.hadoop jars are exempt from third-party
+# checks, everything else must be licensed in LICENSE-binary).
+#
+# Format: `stem g:a # justification` — stem is the jar filename without
+# the version and .jar (the manifest/filename artifactId the enumeration
+# reports). The version comes from the jar itself; the mapping pins only
+# the identity, so version bumps do not rot entries.
+#
+# Every entry is confirmed by the next ground-truth run: a mapping whose
+# jar stops shipping, or whose stem now resolves automatically, is stale
+# and must be pruned. Entries below were curated from the first
+# ground-truth run (42374519973, 2026-11-07; record:
+# 2026-11-07-1430-Archive-Ground-Truth-First-Run.md).
+
+hadoop-client-runtime org.apache.hadoop:hadoop-client-runtime # shaded client jar: keeps 71 embedded pom.properties but none of its own; our artifact, covered by the archive's top-level Apache LICENSE
+
+# --- our sources/test-sources jars (no pom.properties, module jars) ---
+
+hadoop-common org.apache.hadoop:hadoop-common # -sources/-test-sources jars the dist assembly ships
+hadoop-hdfs org.apache.hadoop:hadoop-hdfs # sources jar
+hadoop-hdfs-client org.apache.hadoop:hadoop-hdfs-client # sources jar
+hadoop-hdfs-native-client org.apache.hadoop:hadoop-hdfs-native-client # sources jar
+hadoop-hdfs-rbf org.apache.hadoop:hadoop-hdfs-rbf # sources jar
+hadoop-mapreduce-client-app org.apache.hadoop:hadoop-mapreduce-client-app # sources jar
+hadoop-mapreduce-client-common org.apache.hadoop:hadoop-mapreduce-client-common # sources jar
+hadoop-mapreduce-client-core org.apache.hadoop:hadoop-mapreduce-client-core # sources jar
+hadoop-mapreduce-client-hs org.apache.hadoop:hadoop-mapreduce-client-hs # sources jar
+hadoop-mapreduce-client-hs-plugins org.apache.hadoop:hadoop-mapreduce-client-hs-plugins # sources jar
+hadoop-mapreduce-client-jobclient org.apache.hadoop:hadoop-mapreduce-client-jobclient # sources jar
+hadoop-mapreduce-client-nativetask org.apache.hadoop:hadoop-mapreduce-client-nativetask # sources jar
+hadoop-mapreduce-client-shuffle org.apache.hadoop:hadoop-mapreduce-client-shuffle # sources jar
+hadoop-mapreduce-examples org.apache.hadoop:hadoop-mapreduce-examples # sources jar
+hadoop-archive-logs org.apache.hadoop:hadoop-archive-logs # sources jar
+hadoop-archives org.apache.hadoop:hadoop-archives # sources jar
+hadoop-datajoin org.apache.hadoop:hadoop-datajoin # sources jar
+hadoop-distcp org.apache.hadoop:hadoop-distcp # sources jar
+hadoop-dynamometer-blockgen org.apache.hadoop:hadoop-dynamometer-blockgen # sources jar
+hadoop-dynamometer-infra org.apache.hadoop:hadoop-dynamometer-infra # sources jar
+hadoop-dynamometer-workload org.apache.hadoop:hadoop-dynamometer-workload # sources jar
+hadoop-extras org.apache.hadoop:hadoop-extras # sources jar
+hadoop-federation-balance org.apache.hadoop:hadoop-federation-balance # sources jar
+hadoop-gridmix org.apache.hadoop:hadoop-gridmix # sources jar
+hadoop-resourceestimator org.apache.hadoop:hadoop-resourceestimator # sources jar
+hadoop-rumen org.apache.hadoop:hadoop-rumen # sources jar
+hadoop-sls org.apache.hadoop:hadoop-sls # sources jar
+hadoop-streaming org.apache.hadoop:hadoop-streaming # sources jar
+hadoop-yarn-api org.apache.hadoop:hadoop-yarn-api # sources jar
+hadoop-yarn-applications-distributedshell org.apache.hadoop:hadoop-yarn-applications-distributedshell # sources jar
+hadoop-yarn-applications-unmanaged-am-launcher org.apache.hadoop:hadoop-yarn-applications-unmanaged-am-launcher # sources jar
+hadoop-yarn-client org.apache.hadoop:hadoop-yarn-client # sources jar
+hadoop-yarn-common org.apache.hadoop:hadoop-yarn-common # sources jar
+hadoop-yarn-server-applicationhistoryservice org.apache.hadoop:hadoop-yarn-server-applicationhistoryservice # sources jar
+hadoop-yarn-server-common org.apache.hadoop:hadoop-yarn-server-common # sources jar
+hadoop-yarn-server-nodemanager org.apache.hadoop:hadoop-yarn-server-nodemanager # sources jar
+hadoop-yarn-server-resourcemanager org.apache.hadoop:hadoop-yarn-server-resourcemanager # sources jar
+hadoop-yarn-server-tests org.apache.hadoop:hadoop-yarn-server-tests # sources jar
+hadoop-yarn-server-timelineservice-hbase-coprocessor org.apache.hadoop:hadoop-yarn-server-timelineservice-hbase-coprocessor # shaded coprocessor jar, own artifact
+hadoop-yarn-server-web-proxy org.apache.hadoop:hadoop-yarn-server-web-proxy # sources jar
+hadoop-yarn-services-api org.apache.hadoop:hadoop-yarn-services-api # sources jar
+hadoop-yarn-services-core org.apache.hadoop:hadoop-yarn-services-core # sources jar
+
+# --- third-party jars published without Maven metadata ---
+
+analyticsaccelerator-s3 software.amazon.s3.analyticsaccelerator:analyticsaccelerator-s3 # AWS S3 analytics accelerator, Gradle-built
+aopalliance aopalliance:aopalliance # pre-Maven-metadata artifact
+asm-commons org.ow2.asm:asm-commons # upstream jar without META-INF/maven
+asm-tree org.ow2.asm:asm-tree # upstream jar without META-INF/maven
+bcprov-jdk18on org.bouncycastle:bcprov-jdk18on # bouncycastle jars carry no Maven metadata
+bcpkix-jdk18on org.bouncycastle:bcpkix-jdk18on # bouncycastle jars carry no Maven metadata
+bcutil-jdk18on org.bouncycastle:bcutil-jdk18on # bouncycastle jars carry no Maven metadata
+caffeine com.github.ben-manes.caffeine:caffeine # Gradle-built
+grpc-api io.grpc:grpc-api # csi/lib copies published without Maven metadata
+grpc-context io.grpc:grpc-context # csi/lib
+grpc-core io.grpc:grpc-core # csi/lib
+grpc-netty io.grpc:grpc-netty # csi/lib
+grpc-protobuf io.grpc:grpc-protobuf # csi/lib
+grpc-protobuf-lite io.grpc:grpc-protobuf-lite # csi/lib
+grpc-stub io.grpc:grpc-stub # csi/lib
+grpc-util io.grpc:grpc-util # csi/lib
+guice com.google.inject:guice # Gradle-built
+guice-servlet com.google.inject.extensions:guice-servlet # Gradle-built
+javax.inject javax.inject:javax.inject # pre-Maven-metadata artifact
+jna net.java.dev.jna:jna # published without Maven metadata
+jspecify org.jspecify:jspecify # published without Maven metadata
+kafka-clients org.apache.kafka:kafka-clients # published without Maven metadata
+objenesis org.objenesis:objenesis # published without Maven metadata; ships via guice (R39)
+opentelemetry-api io.opentelemetry:opentelemetry-api # timelineservice lib copy without Maven metadata
+opentelemetry-context io.opentelemetry:opentelemetry-context # timelineservice lib copy
+opentelemetry-semconv io.opentelemetry.semconv:opentelemetry-semconv # timelineservice lib copy
+org.eclipse.persistence.core org.eclipse.persistence:org.eclipse.persistence.core # OSGi bundle, no Maven metadata
+org.eclipse.persistence.moxy org.eclipse.persistence:org.eclipse.persistence.moxy # OSGi bundle, no Maven metadata
+perfmark-api io.perfmark:perfmark-api # published without Maven metadata
+rxjava io.reactivex:rxjava # published without Maven metadata
+rxjava-string io.reactivex:rxjava-string # published without Maven metadata
+rxnetty io.reactivex:rxnetty # published without Maven metadata
+snappy-java org.xerial.snappy:snappy-java # published without Maven metadata
+solr-solrj org.apache.solr:solr-solrj # catalog webapp WAR-nested copy without Maven metadata
+zstd-jni com.github.luben:zstd-jni # published without Maven metadata
+
+# --- second ground-truth run (42405080846): the -Dhadoop-*-package SDK
+# --- trees ship in both tarballs; same Gradle/no-Maven-metadata causes
+
+api-common com.google.api:api-common # cloud SDK tree, no Maven metadata
+checker-qual org.checkerframework:checker-qual # published without Maven metadata
+conscrypt-openjdk-uber org.conscrypt:conscrypt-openjdk-uber # published without Maven metadata
+detector-resources-support com.google.cloud.opentelemetry:detector-resources-support # cloud SDK tree, Gradle-built
+dom4j org.dom4j:dom4j # published without Maven metadata
+exporter-metrics com.google.cloud.opentelemetry:exporter-metrics # cloud SDK tree, Gradle-built
+google-api-services-storage-v1-rev20250420 com.google.apis:google-api-services-storage # cloud SDK tree; the -rev suffix defeats the filename parse
+grpc-alts io.grpc:grpc-alts # gcp stack copy without Maven metadata
+grpc-auth io.grpc:grpc-auth # gcp stack copy
+grpc-googleapis io.grpc:grpc-googleapis # gcp stack copy
+grpc-grpclb io.grpc:grpc-grpclb # gcp stack copy
+grpc-inprocess io.grpc:grpc-inprocess # gcp stack copy
+grpc-netty-shaded io.grpc:grpc-netty-shaded # gcp stack copy
+grpc-opentelemetry io.grpc:grpc-opentelemetry # gcp stack copy
+grpc-rls io.grpc:grpc-rls # gcp stack copy
+grpc-services io.grpc:grpc-services # gcp stack copy
+grpc-xds io.grpc:grpc-xds # gcp stack copy
+jdom2 org.jdom:jdom2 # published without Maven metadata
+opencensus-api io.opencensus:opencensus-api # gcp stack copy
+opencensus-contrib-http-util io.opencensus:opencensus-contrib-http-util # gcp stack copy
+opentelemetry-gcp-resources io.opentelemetry.contrib:opentelemetry-gcp-resources # gcp stack copy
+opentelemetry-sdk io.opentelemetry:opentelemetry-sdk # gcp stack copy
+opentelemetry-sdk-common io.opentelemetry:opentelemetry-sdk-common # gcp stack copy
+opentelemetry-sdk-extension-autoconfigure-spi io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi # gcp stack copy
+opentelemetry-sdk-logs io.opentelemetry:opentelemetry-sdk-logs # gcp stack copy
+opentelemetry-sdk-metrics io.opentelemetry:opentelemetry-sdk-metrics # gcp stack copy
+opentelemetry-sdk-trace io.opentelemetry:opentelemetry-sdk-trace # gcp stack copy
+org.jacoco.agent org.jacoco:org.jacoco.agent # jacoco runtime agent jar, classifier-form filename; ships via the aliyun SDK tree (R39)
+protobuf-java-util com.google.protobuf:protobuf-java-util # published without Maven metadata
+reactive-streams org.reactivestreams:reactive-streams # published without Maven metadata
+shared-resourcemapping com.google.cloud.opentelemetry:shared-resourcemapping # cloud SDK tree, Gradle-built

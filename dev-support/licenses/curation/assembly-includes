@@ -1,0 +1,22 @@
+# Artifacts that ship in the binary distribution via assembly includes but
+# are absent from the generated THIRD-PARTY inventory, because the consuming
+# poms declare them test- or provided-scoped (the inventory covers the
+# compile/runtime graph only, requirement 2).
+#
+# Format: one `g:a` per line, a `#` justification after each entry. The
+# parity gate (check-licenses-parity.sh, requirement 25) treats these as
+# expected absences; an entry that later shows up in the generated inventory
+# is stale and fails the gate so it gets pruned from here.
+#
+# Ground truth is the assembled archive (requirement 26): the Stage-2 dist
+# run must confirm each of these actually ships; one that does not ship
+# shall be removed from LICENSE-binary (requirement 32).
+#
+# No entries currently: the first ground-truth run (42380708044,
+# 2026-11-07) enumerated 637 jars and found NO hsqldb — the
+# hadoop-mapreduce-dist.xml lib-examples include does not resolve the
+# provided-scope dependency, so the jar never reaches the tarball. The
+# former hsqldb exception and LICENSE-binary listing were pruned on that
+# evidence (record: 2026-11-07-1430-Archive-Ground-Truth-First-Run.md);
+# if a future run ships hsqldb, the archive gate fails it as unlicensed
+# and the entry comes back with evidence.
