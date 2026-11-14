@@ -60,6 +60,7 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -405,9 +406,9 @@ public class DelegationTokenRenewer extends AbstractService {
         } catch (InterruptedException ie) {
           return;
         } catch (Throwable t) {
-          LOG.warn("Got exception " + StringUtils.stringifyException(t) + 
-                   ". Exiting..");
-          System.exit(-1);
+          LOG.error("Delegation Token Canceler thread received unexpected"
+              + " exception. Exiting..", t);
+          ExitUtil.terminate(-1, t);
         }
       }
     }
