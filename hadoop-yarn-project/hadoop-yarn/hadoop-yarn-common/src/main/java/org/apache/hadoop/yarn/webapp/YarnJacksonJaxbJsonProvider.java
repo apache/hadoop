@@ -45,17 +45,21 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 @Private
 public class YarnJacksonJaxbJsonProvider extends JacksonJaxbJsonProvider {
 
-  public YarnJacksonJaxbJsonProvider() {
-    super();
-  }
+  private final ObjectMapper mapper = newMapper();
+  // Only TimelineAbout is root-wrapped, so it gets a mapper of its own: Jackson
+  // caches a writer per type, and enabling the feature on a shared mapper would
+  // wrap every type first written afterwards.
+  private final ObjectMapper aboutMapper =
+      newMapper().enable(SerializationFeature.WRAP_ROOT_VALUE);
 
   @Override
   public ObjectMapper locateMapper(Class<?> type, MediaType mediaType) {
-    ObjectMapper mapper = super.locateMapper(type, mediaType);
+    return type == TimelineAbout.class ? aboutMapper : mapper;
+  }
+
+  private static ObjectMapper newMapper() {
+    ObjectMapper mapper = new ObjectMapper();
     configObjectMapper(mapper);
-    if (type == TimelineAbout.class) {
-      mapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
-    }
     return mapper;
   }
 

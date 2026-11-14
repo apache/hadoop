@@ -378,13 +378,15 @@ Here is a non-normative description of the API.
 Returns a JSON object describing the server instance and version information.
 
      {
-       About: "Timeline API",
-       timeline-service-version: "3.0.0-SNAPSHOT",
-       timeline-service-build-version: "3.0.0-SNAPSHOT from fcd0702c10ce574b887280476aba63d6682d5271 by zshen source checksum e9ec74ea3ff7bc9f3d35e9cac694fb",
-       timeline-service-version-built-on: "2015-05-13T19:45Z",
-       hadoop-version: "3.0.0-SNAPSHOT",
-       hadoop-build-version: "3.0.0-SNAPSHOT from fcd0702c10ce574b887280476aba63d6682d5271 by zshen source checksum 95874b192923b43cdb96a6e483afd60",
-       hadoop-version-built-on: "2015-05-13T19:44Z"
+       "about": {
+         About: "Timeline API",
+         timeline-service-version: "3.0.0-SNAPSHOT",
+         timeline-service-build-version: "3.0.0-SNAPSHOT from fcd0702c10ce574b887280476aba63d6682d5271 by zshen source checksum e9ec74ea3ff7bc9f3d35e9cac694fb",
+         timeline-service-version-built-on: "2015-05-13T19:45Z",
+         hadoop-version: "3.0.0-SNAPSHOT",
+         hadoop-build-version: "3.0.0-SNAPSHOT from fcd0702c10ce574b887280476aba63d6682d5271 by zshen source checksum 95874b192923b43cdb96a6e483afd60",
+         hadoop-version-built-on: "2015-05-13T19:44Z"
+       }
      }
 
 
@@ -974,13 +976,15 @@ Response Header:
 Response Body:
 
     {
-      About: "Generic History Service API",
-      timeline-service-version: "3.0.0-SNAPSHOT",
-      timeline-service-build-version: "3.0.0-SNAPSHOT from fcd0702c10ce574b887280476aba63d6682d5271 by zshen source checksum e9ec74ea3ff7bc9f3d35e9cac694fb",
-      timeline-service-version-built-on: "2015-05-13T19:45Z",
-      hadoop-version: "3.0.0-SNAPSHOT",
-      hadoop-build-version: "3.0.0-SNAPSHOT from fcd0702c10ce574b887280476aba63d6682d5271 by zshen source checksum 95874b192923b43cdb96a6e483afd60",
-      hadoop-version-built-on: "2015-05-13T19:44Z"
+      "about": {
+        About: "Generic History Service API",
+        timeline-service-version: "3.0.0-SNAPSHOT",
+        timeline-service-build-version: "3.0.0-SNAPSHOT from fcd0702c10ce574b887280476aba63d6682d5271 by zshen source checksum e9ec74ea3ff7bc9f3d35e9cac694fb",
+        timeline-service-version-built-on: "2015-05-13T19:45Z",
+        hadoop-version: "3.0.0-SNAPSHOT",
+        hadoop-build-version: "3.0.0-SNAPSHOT from fcd0702c10ce574b887280476aba63d6682d5271 by zshen source checksum 95874b192923b43cdb96a6e483afd60",
+        hadoop-version-built-on: "2015-05-13T19:44Z"
+      }
     }
 
 #### XML response
@@ -1954,6 +1958,7 @@ None
 | `elapsedTime` | long | The elapsed time since the container started (in ms) |
 | `allocatedMB` | int | The memory in MB allocated to the container |
 | `allocatedVCores` | int | The virtual cores allocated to the container |
+| `allocatedResources` | map | The resources allocated to the container, as a map of resource name to value that includes memory and virtual cores, for example `{"memory-mb":1024,"vcores":1,"yarn.io/gpu":2}` |
 | `priority` | int  | The priority of the container |
 | `assignedNodeId` | string | The assigned node host and port of the container |
 
