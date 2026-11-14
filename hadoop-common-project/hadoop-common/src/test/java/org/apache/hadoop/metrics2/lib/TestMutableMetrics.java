@@ -36,10 +36,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.util.Quantile;
 import org.apache.hadoop.thirdparty.com.google.common.math.Stats;
+import org.apache.hadoop.metrics2.util.SampleQuantiles;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -417,6 +421,7 @@ public class TestMutableMetrics {
       quantiles.add(i);
       quantiles.add(1001 - i);
     }
+
     long endTimeMS = System.currentTimeMillis();
 
     Thread.sleep(SLEEP_TIME_MS - (endTimeMS - startTimeMS));
@@ -443,6 +448,127 @@ public class TestMutableMetrics {
       long expected = (long) (q.quantile * 1000);
       verify(mb).addGauge(eq(info(n, d)), leq(expected + error));
       verify(mb).addGauge(eq(info(n, d)), geq(expected - error));
+    }
+  }
+
+  @Test
+  @Timeout(value = 30)
+  public void testRolloverWaitsForInFlightInsert() throws Exception {
+    MutableQuantiles quantiles = new MutableQuantiles(
+        "foo", "stat", "Ops", "Latency", 3600);
+    CountDownLatch insertEntered = new CountDownLatch(1);
+    CountDownLatch releaseInsert = new CountDownLatch(1);
+    SampleQuantiles gated = new SampleQuantiles(MutableQuantiles.QUANTILES) {
+      @Override
+      public void insert(long value) {
+        insertEntered.countDown();
+        try {
+          releaseInsert.await();
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new AssertionError(e);
+        }
+
+        super.insert(value);
+      }
+    };
+    quantiles.setEstimator(gated);
+
+    Thread producer = new Thread(() -> quantiles.add(42));
+    Thread rollover = new Thread(quantiles::runRolloverForTesting);
+    try {
+      producer.start();
+      assertEquals(true, insertEntered.await(10, TimeUnit.SECONDS));
+      rollover.start();
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+      while (rollover.getState() != Thread.State.WAITING
+          && System.nanoTime() < deadline) {
+        Thread.yield();
+      }
+      assertEquals(Thread.State.WAITING, rollover.getState());
+      assertEquals(0L, quantiles.getPreviousCount());
+      releaseInsert.countDown();
+      producer.join(TimeUnit.SECONDS.toMillis(10));
+      rollover.join(TimeUnit.SECONDS.toMillis(10));
+
+      assertEquals(false, producer.isAlive());
+      assertEquals(false, rollover.isAlive());
+      assertEquals(1L, quantiles.getPreviousCount());
+      assertEquals(Long.valueOf(42),
+          quantiles.getPreviousSnapshot().get(MutableQuantiles.QUANTILES[0]));
+      assertEquals(0L, gated.getCount());
+    } finally {
+      releaseInsert.countDown();
+      quantiles.stop();
+      producer.join(TimeUnit.SECONDS.toMillis(10));
+      rollover.join(TimeUnit.SECONDS.toMillis(10));
+    }
+  }
+
+  @Test
+  @Timeout(value = 30)
+  public void testRolloverConservesConcurrentInsertions() throws Exception {
+    MutableQuantiles quantiles = new MutableQuantiles(
+        "foo", "stat", "Ops", "Latency", 3600);
+    final int producerCount = 4;
+    final int valuesPerProducer = 1000;
+    CountDownLatch start = new CountDownLatch(1);
+    CountDownLatch done = new CountDownLatch(producerCount);
+    AtomicLong rolledCount = new AtomicLong();
+    AtomicReference<Throwable> failure = new AtomicReference<>();
+    Thread rollover = new Thread(() -> {
+      try {
+        start.await();
+        while (done.getCount() > 0) {
+          quantiles.runRolloverForTesting();
+          rolledCount.addAndGet(quantiles.getPreviousCount());
+        }
+        quantiles.runRolloverForTesting();
+        rolledCount.addAndGet(quantiles.getPreviousCount());
+      } catch (Throwable t) {
+        failure.compareAndSet(null, t);
+      }
+    });
+    Thread[] producers = new Thread[producerCount];
+    for (int p = 0; p < producerCount; p++) {
+      final int producerId = p;
+      producers[p] = new Thread(() -> {
+        try {
+          start.await();
+          for (int i = 0; i < valuesPerProducer; i++) {
+            quantiles.add(producerId * valuesPerProducer + i);
+          }
+        } catch (Throwable t) {
+          failure.compareAndSet(null, t);
+        } finally {
+          done.countDown();
+        }
+      });
+    }
+
+    try {
+      rollover.start();
+      for (Thread producer : producers) {
+        producer.start();
+      }
+      start.countDown();
+      for (Thread producer : producers) {
+        producer.join(TimeUnit.SECONDS.toMillis(10));
+        assertEquals(false, producer.isAlive());
+      }
+      rollover.join(TimeUnit.SECONDS.toMillis(10));
+      assertEquals(false, rollover.isAlive());
+      assertEquals(null, failure.get());
+      quantiles.runRolloverForTesting();
+      rolledCount.addAndGet(quantiles.getPreviousCount());
+      assertEquals(producerCount * valuesPerProducer, rolledCount.get());
+    } finally {
+      quantiles.stop();
+      start.countDown();
+      for (Thread producer : producers) {
+        producer.join(TimeUnit.SECONDS.toMillis(10));
+      }
+      rollover.join(TimeUnit.SECONDS.toMillis(10));
     }
   }
 
