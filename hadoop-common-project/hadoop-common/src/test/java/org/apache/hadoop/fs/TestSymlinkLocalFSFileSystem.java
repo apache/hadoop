@@ -19,6 +19,7 @@ package org.apache.hadoop.fs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Options.Rename;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -96,6 +98,44 @@ public class TestSymlinkLocalFSFileSystem extends TestSymlinkLocalFS {
       // Todo: Fix this test when HADOOP-9819 is fixed.
       assertTrue(unwrapException(e) instanceof FileAlreadyExistsException ||
                  unwrapException(e) instanceof FileNotFoundException);
+    }
+  }
+
+  @Test
+  @Timeout(value = 10)
+  /**
+   * lstat symlinks with relative targets using paths relative to the working
+   * directory, forcing the deprecated (non-Stat) implementation of
+   * getFileLinkStatus. The returned link path must be qualified, as the Stat
+   * implementation does, so that the relative target can be qualified.
+   */
+  public void testGetLinkStatusRelPathDeprecated() throws IOException {
+    assumeNotWindows();
+    Path dir = new Path(testBaseDir1());
+    createAndWriteFile(new Path(dir, "file"));
+    wrapper.createSymlink(new Path("file"), new Path(dir, "linkToFile"), false);
+    // "missing" is never created so this link dangles
+    wrapper.createSymlink(new Path("missing"), new Path(dir, "danglingLink"),
+        false);
+    RawLocalFileSystem rawFs = new RawLocalFileSystem();
+    rawFs.initialize(URI.create("file:///"), new Configuration());
+    Path dirQual = rawFs.makeQualified(dir);
+    rawFs.setWorkingDirectory(dir);
+    RawLocalFileSystem.setUseDeprecatedFileStatus(true);
+    try {
+      FileStatus linkStatus = rawFs.getFileLinkStatus(new Path("linkToFile"));
+      assertTrue(linkStatus.isSymlink());
+      assertEquals(new Path(dirQual, "linkToFile"), linkStatus.getPath());
+      assertEquals(new Path(dirQual, "file"), linkStatus.getSymlink());
+
+      FileStatus danglingStatus =
+          rawFs.getFileLinkStatus(new Path("danglingLink"));
+      assertTrue(danglingStatus.isSymlink());
+      assertEquals(new Path(dirQual, "danglingLink"), danglingStatus.getPath());
+      assertEquals(new Path(dirQual, "missing"), danglingStatus.getSymlink());
+    } finally {
+      RawLocalFileSystem.useStatIfAvailable();
+      rawFs.close();
     }
   }
 }
