@@ -72,6 +72,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStati
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.ExcludeRootJSONProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.IncludeRootJSONProvider;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ConflictException;
@@ -110,7 +112,8 @@ public final class RouterWebServiceUtil {
    * @param additionalParam the query parameters as input for a specific REST
    *          call in case the call has no servlet request
    * @param conf configuration.
-   * @param client same client used to reduce number of clients created
+   * @param client same client used to reduce number of clients created;
+   *          the caller owns it and closes it
    * @return the retrieved entity from the REST call
    */
   protected static <T> T genericForward(final String webApp,
@@ -193,7 +196,8 @@ public final class RouterWebServiceUtil {
    * @param formParam the form parameters as input for a specific REST call
    * @param mediaType Media type for Servlet request call
    * @param conf to support http and https
-   * @param client same client used to reduce number of clients created
+   * @param client same client used to reduce number of clients created;
+   *          the caller owns it and closes it
    * @return Client response to REST call
    */
   @SuppressWarnings("checkstyle:parameternumber")
@@ -206,8 +210,7 @@ public final class RouterWebServiceUtil {
     String scheme = YarnConfiguration.useHttps(conf) ? "https://" : "http://";
     String webAddress = scheme + socketAddress.getHostName() + ":"
         + socketAddress.getPort();
-    Client client1 = ClientBuilder.newClient();
-    WebTarget webResource = client1.target(webAddress);
+    WebTarget webResource = client.target(webAddress);
 
     if (additionalPath != null && !additionalPath.isEmpty()) {
       webResource = webResource.path(additionalPath);
@@ -232,25 +235,21 @@ public final class RouterWebServiceUtil {
 
     Response response = null;
 
-    try {
-      switch (method) {
-      case DELETE:
-        response = builder.delete(Response.class);
-        break;
-      case GET:
-        response = builder.get(Response.class);
-        break;
-      case POST:
-        response = builder.post(Entity.entity(formParam, mediaType));
-        break;
-      case PUT:
-        response = builder.put(Entity.entity(formParam, mediaType), Response.class);
-        break;
-      default:
-        break;
-      }
-    } finally {
-      client.close();
+    switch (method) {
+    case DELETE:
+      response = builder.delete(Response.class);
+      break;
+    case GET:
+      response = builder.get(Response.class);
+      break;
+    case POST:
+      response = builder.post(Entity.entity(formParam, mediaType));
+      break;
+    case PUT:
+      response = builder.put(Entity.entity(formParam, mediaType), Response.class);
+      break;
+    default:
+      break;
     }
     return response;
   }
@@ -362,6 +361,10 @@ public final class RouterWebServiceUtil {
           YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
     }
     client.property(ClientProperties.READ_TIMEOUT, readTimeout);
+
+    // Read and write JSON as the RM web services do, see RMWebApp#resourceConfig.
+    client.register(new IncludeRootJSONProvider(conf), 2001);
+    client.register(new ExcludeRootJSONProvider(conf), 2002);
 
     return client;
   }

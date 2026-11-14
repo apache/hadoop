@@ -494,8 +494,8 @@ public class TestZKDelegationTokenSecretManager {
     // Set the update interval to trigger background thread to run. The thread
     // is hard-coded to sleep at least 5 seconds.
     conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, 5);
-    // Set token expire time to 5 seconds.
-    conf.setLong(DelegationTokenManager.RENEW_INTERVAL, 5);
+    // Set token expire time to 10 seconds.
+    conf.setLong(DelegationTokenManager.RENEW_INTERVAL, 10);
 
     DelegationTokenManager tm =
         new DelegationTokenManager(conf, new Text("bla"));
@@ -530,6 +530,7 @@ public class TestZKDelegationTokenSecretManager {
           return dtinfo == null;
         }
       }, 100, 5000);
+      tm.renewToken(token, "good");
     } finally {
       tm.destroy();
     }
@@ -553,11 +554,18 @@ public class TestZKDelegationTokenSecretManager {
 
       // The good token should be loaded on startup, and removed after expiry.
       id = smNew.decodeTokenIdentifier(token);
+      final AbstractDelegationTokenIdentifier idToLoad = id;
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return zksmNew.getTokenInfoFromMemory(idToLoad) != null;
+        }
+      }, 100, 5000);
       dtinfo = zksmNew.getTokenInfoFromMemory(id);
       assertNotNull(dtinfo, "good dt should be in memory!");
 
       // Wait for the good token to expire.
-      Thread.sleep(5000);
+      Thread.sleep(10000);
       final ZKDelegationTokenSecretManager zksm1 = zksmNew;
       final AbstractDelegationTokenIdentifier id1 = id;
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
