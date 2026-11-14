@@ -116,18 +116,15 @@ public class TestBackupNode {
     return bn;
   }
 
-  void waitCheckpointDone(MiniDFSCluster cluster, long txid) {
-    long thisCheckpointTxId;
-    do {
-      try {
-        LOG.info("Waiting checkpoint to complete... " +
-            "checkpoint txid should increase above " + txid);
-        Thread.sleep(1000);
-      } catch (Exception e) {}
-      // The checkpoint is not done until the nn has received it from the bn
-      thisCheckpointTxId = cluster.getNameNode().getFSImage().getStorage()
+  void waitCheckpointDone(MiniDFSCluster cluster, long txid)
+      throws Exception {
+    GenericTestUtils.waitFor(
+        () -> cluster.getNameNode().getFSImage().getStorage()
+            .getMostRecentCheckpointTxId() >= txid,
+        1000, 60000,
+        "Checkpoint txid did not advance above " + txid);
+    long thisCheckpointTxId = cluster.getNameNode().getFSImage().getStorage()
         .getMostRecentCheckpointTxId();
-    } while (thisCheckpointTxId < txid);
     // Check that the checkpoint got uploaded to NN successfully
     FSImageTestUtil.assertNNHasCheckpoints(cluster,
         Collections.singletonList((int)thisCheckpointTxId));
@@ -504,7 +501,7 @@ public class TestBackupNode {
    * Verify that a file can be read both from NameNode and BackupNode.
    */
   @Test
-  public void testCanReadData() throws IOException {
+  public void testCanReadData() throws Exception {
     Path file1 = new Path("/fileToRead.dat");
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
