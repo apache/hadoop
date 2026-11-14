@@ -201,6 +201,9 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
           ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS,
           ranges.get(0).getData());
     }
+    assertThat(trackerPool.getBufferAllocations())
+        .describedAs("buffers allocated for the range past EOF")
+        .isEqualTo(1);
     assertThat(trackerPool.size())
         .describedAs("unreleased buffers: allocated %d, released %d",
             trackerPool.getBufferAllocations(), trackerPool.getBufferReleases())
