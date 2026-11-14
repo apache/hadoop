@@ -31,7 +31,6 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
@@ -2282,11 +2281,11 @@ public class FileContext implements PathCapabilities {
   // If the destination is a subdirectory of the source, then
   // generate exception
   //
-  private static void checkDependencies(Path qualSrc, Path qualDst)
+  private void checkDependencies(Path qualSrc, Path qualDst)
     throws IOException {
     if (isSameFS(qualSrc, qualDst)) {
-      String srcq = qualSrc.toString() + Path.SEPARATOR;
-      String dstq = qualDst.toString() + Path.SEPARATOR;
+      String srcq = qualSrc.toUri().getPath() + Path.SEPARATOR;
+      String dstq = qualDst.toUri().getPath() + Path.SEPARATOR;
       if (dstq.startsWith(srcq)) {
         if (srcq.length() == dstq.length()) {
           throw new IOException("Cannot copy " + qualSrc + " to itself.");
@@ -2299,17 +2298,23 @@ public class FileContext implements PathCapabilities {
   }
   
   /**
-   * Are qualPath1 and qualPath2 on the same file system, i.e. do they have
-   * the same scheme and authority?
+   * Check whether qualPath1 and qualPath2 are on the same file system. The
+   * file system of qualPath1 decides with
+   * {@link AbstractFileSystem#checkPath(Path)}, so a host that differs only
+   * in case or an omitted default port still counts as the same.
    * @param qualPath1 - fully qualified path
    * @param qualPath2 - fully qualified path
    * @return true if the two paths are on the same file system, else false.
+   * @throws IOException if the file system of qualPath1 cannot be created.
    */
-  private static boolean isSameFS(Path qualPath1, Path qualPath2) {
-    URI srcUri = qualPath1.toUri();
-    URI dstUri = qualPath2.toUri();
-    return srcUri.getScheme().equals(dstUri.getScheme())
-        && Objects.equals(srcUri.getAuthority(), dstUri.getAuthority());
+  private boolean isSameFS(Path qualPath1, Path qualPath2)
+      throws IOException {
+    try {
+      getFSofPath(qualPath1).checkPath(qualPath2);
+      return true;
+    } catch (InvalidPathException e) {
+      return false;
+    }
   }
 
   /**

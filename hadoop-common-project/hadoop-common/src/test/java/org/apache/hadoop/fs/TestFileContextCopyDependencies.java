@@ -23,15 +23,18 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -54,6 +57,25 @@ public class TestFileContextCopyDependencies {
   }
 
   @Test
+  public void testCopyToSubdirectoryWithDefaultPortOmitted()
+      throws Exception {
+    AbstractFileSystem afs = mockFileSystem("hdfs://nn:8020", SRC);
+    intercept(IOException.class, "to its subdirectory",
+        () -> newFileContext(afs).util()
+            .copy(SRC, new Path("hdfs://nn/a/b")));
+    verify(afs, never()).mkdir(any(), any(), anyBoolean());
+  }
+
+  @Test
+  public void testCopyToSubdirectoryWithUpperCaseHost() throws Exception {
+    AbstractFileSystem afs = mockFileSystem("hdfs://nn:8020", SRC);
+    intercept(IOException.class, "to its subdirectory",
+        () -> newFileContext(afs).util()
+            .copy(SRC, new Path("hdfs://NN:8020/a/b")));
+    verify(afs, never()).mkdir(any(), any(), anyBoolean());
+  }
+
+  @Test
   public void testCopyToItselfSameAuthority() throws Exception {
     AbstractFileSystem afs = mockFileSystem("hdfs://nn:8020", SRC);
     intercept(IOException.class, "to itself",
@@ -64,9 +86,16 @@ public class TestFileContextCopyDependencies {
   @Test
   public void testCopyToOtherAuthorityIsAllowed() throws Exception {
     AbstractFileSystem afs = mockFileSystem("hdfs://nn:8020", SRC);
+    AbstractFileSystem otherFs = mockFileSystem("hdfs://other:8020");
     Path dst = new Path("hdfs://other:8020/a/b");
-    assertTrue(newFileContext(afs).util().copy(SRC, dst));
-    verify(afs).mkdir(eq(dst), any(), eq(true));
+    // FileContext creates the file system of dst through this factory.
+    try (MockedStatic<AbstractFileSystem> factory =
+        mockStatic(AbstractFileSystem.class)) {
+      factory.when(() -> AbstractFileSystem.get(any(URI.class),
+          any(Configuration.class))).thenReturn(otherFs);
+      assertTrue(newFileContext(afs).util().copy(SRC, dst));
+    }
+    verify(otherFs).mkdir(eq(dst), any(), eq(true));
   }
 
   @Test
@@ -79,17 +108,28 @@ public class TestFileContextCopyDependencies {
   }
 
   /**
-   * @return a mock file system on which {@code dir} is an empty directory
-   * and no other path exists.
+   * Mock a file system on which each of {@code dirs} is an empty directory
+   * and no other path exists. Its URI carries the default port, as the URI
+   * of a real file system does, and it accepts paths with the real
+   * {@link AbstractFileSystem#checkPath(Path)}.
+   * @param uri the URI of the file system.
+   * @param dirs the directories that exist.
+   * @return the mock file system.
+   * @throws Exception if stubbing fails.
    */
-  private static AbstractFileSystem mockFileSystem(String uri, Path dir)
+  private static AbstractFileSystem mockFileSystem(String uri, Path... dirs)
       throws Exception {
+    URI fsUri = URI.create(uri);
     AbstractFileSystem afs = mock(AbstractFileSystem.class);
-    doReturn(URI.create(uri)).when(afs).getUri();
+    doReturn(fsUri).when(afs).getUri();
+    doReturn(fsUri.getPort()).when(afs).getUriDefaultPort();
+    doCallRealMethod().when(afs).checkPath(any(Path.class));
     doThrow(new FileNotFoundException()).when(afs)
         .getFileStatus(any(Path.class));
-    doReturn(new FileStatus(0, true, 1, 0, 0, dir)).when(afs)
-        .getFileStatus(dir);
+    for (Path dir : dirs) {
+      doReturn(new FileStatus(0, true, 1, 0, 0, dir)).when(afs)
+          .getFileStatus(dir);
+    }
     doReturn(new FileStatus[0]).when(afs).listStatus(any(Path.class));
     return afs;
   }
