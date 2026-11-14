@@ -2251,6 +2251,7 @@ public class DatanodeManager {
     this.heartbeatExpireInterval = 2L * recheckInterval + 10 * 1000
         * intervalSeconds;
     this.blockInvalidateLimit = getBlockInvalidateLimit(blockInvalidateLimit);
+    heartbeatManager.setHeartbeatRecheckInterval(heartbeatRecheckInterval);
   }
 
   private int getBlockInvalidateLimitFromHBInterval() {
