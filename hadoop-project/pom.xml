@@ -2221,6 +2221,11 @@
         <artifactId>google-cloud-storage</artifactId>
         <version>2.52.0</version>
     </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-redis</artifactId>
+        <version>4.2.20.Final</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
