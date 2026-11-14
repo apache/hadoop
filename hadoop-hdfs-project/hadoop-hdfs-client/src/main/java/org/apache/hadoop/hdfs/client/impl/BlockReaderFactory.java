@@ -622,6 +622,9 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
         // it's not a socket communication problem, we return null rather than
         // throwing an exception.
         LOG.warn("{}: error creating ShortCircuitReplica.", this, e);
+        if (slot != null) {
+          cache.freeSlot(slot);
+        }
         return null;
       } finally {
         if (replica == null) {
@@ -638,6 +641,9 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
         LOG.warn("short-circuit read access for the file " +
             "{} is disabled for DataNode {}" +
             ".  reason: {}", fileName, datanode, resp.getMessage());
+      }
+      if (slot != null) {
+        cache.freeSlot(slot);
       }
       return null;
     case ERROR_ACCESS_TOKEN:
@@ -663,6 +669,9 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
           disableMsg, DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_KEY);
       clientContext.getDomainSocketFactory()
           .disableShortCircuitForPath(pathInfo.getPath());
+      if (slot != null) {
+        cache.freeSlot(slot);
+      }
       return null;
     }
   }
