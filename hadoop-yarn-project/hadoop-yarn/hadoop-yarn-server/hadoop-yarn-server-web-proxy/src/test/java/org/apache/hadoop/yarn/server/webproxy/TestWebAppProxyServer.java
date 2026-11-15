@@ -99,6 +99,18 @@ public class TestWebAppProxyServer {
   }
 
   @Test
+  void testIPv6BindHost() {
+    conf.set(YarnConfiguration.PROXY_ADDRESS, "[2001:db8::1]:" + port);
+    conf.set(YarnConfiguration.PROXY_BIND_HOST, "[::1]");
+    webAppProxy.init(conf);
+    for (Service service : webAppProxy.getServices()) {
+      if (service instanceof WebAppProxy) {
+        assertEquals("[::1]:" + port, ((WebAppProxy) service).getBindAddress());
+      }
+    }
+  }
+
+  @Test
   void testBindAddress() {
     conf = new YarnConfiguration();
 
