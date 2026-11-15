@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.shell;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -436,6 +437,27 @@ public class TestCount {
         + "   SNAPSHOT_LENGTH      SNAPSHOT_FILE_COUNT      "
         + " SNAPSHOT_DIR_COUNT      SNAPSHOT_SPACE_CONSUMED PATHNAME";
     verify(out).println(withSnapshotHeader);
+    verifyNoMoreInteractions(out);
+  }
+
+  // -e on a file system that reports no erasure coding policy fails with
+  // an error for that path instead of a NullPointerException
+  @Test
+  public void processPathECPolicyNotSupported() throws Exception {
+    Path path = new Path("mockfs:/test");
+    when(mockFs.getFileStatus(eq(path))).thenReturn(fileStat);
+    when(mockFs.getUri()).thenReturn(URI.create("mockfs:///"));
+    PathData pathData = new PathData(path.toString(), conf);
+    PrintStream out = mock(PrintStream.class);
+    Count count = new Count();
+    count.out = out;
+    LinkedList<String> options = new LinkedList<String>();
+    options.add("-e");
+    options.add("dummy");
+    count.processOptions(options);
+    intercept(IOException.class,
+        "FileSystem mockfs:/// does not support Erasure Coding",
+        () -> count.processPath(pathData));
     verifyNoMoreInteractions(out);
   }
 
