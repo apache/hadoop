@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.service.ServiceOperations;
@@ -35,6 +36,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineR
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestTimelineReaderServer {
@@ -72,31 +74,28 @@ public class TestTimelineReaderServer {
    * executor, whose threads are not daemons.
    */
   @Test
-  @Timeout(60000)
+  @Timeout(60)
   void testChildServicesStoppedWhenWebAppStopFails() throws Exception {
-    Configuration config = new YarnConfiguration();
-    config.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
-    config.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
-    config.set(YarnConfiguration.TIMELINE_SERVICE_READER_WEBAPP_ADDRESS,
-        "localhost:0");
-    config.setClass(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
-        FileSystemTimelineReaderImpl.class, TimelineReader.class);
+    final IOException webAppFailure =
+        new IOException("simulated web server stop failure");
 
     @SuppressWarnings("resource")
     TimelineReaderServer server = new TimelineReaderServer() {
       @Override
       void stopTimelineReaderWebApp() throws Exception {
         super.stopTimelineReaderWebApp();
-        throw new IOException("simulated web server stop failure");
+        throw webAppFailure;
       }
     };
     try {
-      server.init(config);
+      server.init(createStartStopConfig());
       server.start();
       List<Service> children = server.getServices();
       assertEquals(2, children.size());
 
-      assertThrows(ServiceStateException.class, server::stop);
+      ServiceStateException thrown =
+          assertThrows(ServiceStateException.class, server::stop);
+      assertSame(webAppFailure, thrown.getCause());
 
       for (Service child : children) {
         assertEquals(STATE.STOPPED, child.getServiceState(),
@@ -105,6 +104,64 @@ public class TestTimelineReaderServer {
     } finally {
       // stop() here would rethrow the simulated failure and mask any earlier
       // one; it is a no-op anyway once the service has reached STOPPED.
+      ServiceOperations.stopQuietly(server);
+    }
+  }
+
+  /**
+   * When both the web server and a child service fail to stop, the web
+   * server's failure is the one reported, with the child's attached as
+   * suppressed, and the remaining child services are still stopped.
+   */
+  @Test
+  @Timeout(60)
+  void testWebAppStopFailureKeptWhenChildStopAlsoFails() throws Exception {
+    final IOException webAppFailure =
+        new IOException("simulated web server stop failure");
+    final IllegalStateException childFailure =
+        new IllegalStateException("simulated child service stop failure");
+    final Service failingChild = new AbstractService("FailingChild") {
+      @Override
+      protected void serviceStop() throws Exception {
+        throw childFailure;
+      }
+    };
+
+    @SuppressWarnings("resource")
+    TimelineReaderServer server = new TimelineReaderServer() {
+      @Override
+      protected void serviceInit(Configuration conf) throws Exception {
+        super.serviceInit(conf);
+        // Added last, so it is stopped first: the reader and the manager
+        // must still be stopped after it fails.
+        failingChild.init(conf);
+        addService(failingChild);
+      }
+
+      @Override
+      void stopTimelineReaderWebApp() throws Exception {
+        super.stopTimelineReaderWebApp();
+        throw webAppFailure;
+      }
+    };
+    try {
+      server.init(createStartStopConfig());
+      server.start();
+      List<Service> children = server.getServices();
+      assertEquals(3, children.size());
+
+      ServiceStateException thrown =
+          assertThrows(ServiceStateException.class, server::stop);
+      assertSame(webAppFailure, thrown.getCause());
+      Throwable[] suppressed = webAppFailure.getSuppressed();
+      assertEquals(1, suppressed.length);
+      assertSame(childFailure, suppressed[0]);
+
+      for (Service child : children) {
+        assertEquals(STATE.STOPPED, child.getServiceState(),
+            child.getName() + " was left running by the failed stop");
+      }
+    } finally {
       ServiceOperations.stopQuietly(server);
     }
   }
@@ -139,6 +196,21 @@ public class TestTimelineReaderServer {
           nonexistentTimelineReaderClass);
       runTimelineReaderServerWithConfig(conf);
     });
+  }
+
+  /**
+   * @return a configuration for a server that starts and stops cleanly,
+   *     backed by the file system timeline reader
+   */
+  private static Configuration createStartStopConfig() {
+    Configuration config = new YarnConfiguration();
+    config.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    config.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+    config.set(YarnConfiguration.TIMELINE_SERVICE_READER_WEBAPP_ADDRESS,
+        "localhost:0");
+    config.setClass(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
+        FileSystemTimelineReaderImpl.class, TimelineReader.class);
+    return config;
   }
 
   /**
