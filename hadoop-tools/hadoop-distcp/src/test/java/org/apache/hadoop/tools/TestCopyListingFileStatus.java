@@ -33,8 +33,9 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -103,11 +104,16 @@ public class TestCopyListingFileStatus {
     Map<String, byte[]> xAttrs = new HashMap<>();
     byte[] value = new byte[] {1, 2, 3};
     xAttrs.put("user.a", value);
+    xAttrs.put("user.empty", null);
     status.setXAttrs(xAttrs);
     xAttrs.put("user.b", new byte[] {4});
-    assertEquals(1, status.getXAttrs().size(),
+    assertEquals(2, status.getXAttrs().size(),
         "changing the map passed to setXAttrs() changed the status");
-    assertSame(value, status.getXAttrs().get("user.a"));
+    value[0] = 9;
+    assertArrayEquals(new byte[] {1, 2, 3}, status.getXAttrs().get("user.a"),
+        "changing a value passed to setXAttrs() changed the status");
+    assertTrue(status.getXAttrs().containsKey("user.empty"));
+    assertNull(status.getXAttrs().get("user.empty"));
 
     status.setAclEntries(null);
     status.setXAttrs(null);

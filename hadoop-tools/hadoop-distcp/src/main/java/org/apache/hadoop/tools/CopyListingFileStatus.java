@@ -257,7 +257,16 @@ public final class CopyListingFileStatus implements Writable {
    * @param xAttrs Map containing all xAttrs
    */
   public void setXAttrs(Map<String, byte[]> xAttrs) {
-    this.xAttrs = xAttrs == null ? null : new LinkedHashMap<>(xAttrs);
+    if (xAttrs == null) {
+      this.xAttrs = null;
+      return;
+    }
+    Map<String, byte[]> copy = new LinkedHashMap<>(xAttrs.size());
+    for (Entry<String, byte[]> entry : xAttrs.entrySet()) {
+      byte[] value = entry.getValue();
+      copy.put(entry.getKey(), value == null ? null : value.clone());
+    }
+    this.xAttrs = copy;
   }
 
   public long getChunkOffset() {
