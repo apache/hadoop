@@ -169,10 +169,12 @@ public class TestDirectoryScanner {
     final long slowScanMs = 1500L;
     final int expectedScans = 3;
     Configuration conf = getConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, -1);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
     try {
       cluster.waitActive();
+      assertNull(cluster.getDataNodes().get(0).getDirectoryScanner());
       fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
       GenericTestUtils.LogCapturer logCapturer =
           GenericTestUtils.LogCapturer.captureLogs(
