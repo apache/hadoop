@@ -21,7 +21,7 @@
 # upstream pull request. Contributors run build_and_test.yml in their own fork
 # (on `push` or `workflow_dispatch`); this bridge finds the run for the PR's
 # head branch and commit and reports it as the "Build" check.
-# See https://github.com/apache/infrastructure-actions/tree/fork-ci/v1.0.0/fork-ci
+# See https://github.com/apache/infrastructure-actions/tree/fork-ci/v1.0.1/fork-ci
 name: "Fork CI status"
 
 # Security: this privileged (checks: write) workflow is only triggered via
@@ -61,7 +61,7 @@ jobs:
       pull-requests: read  # list open PRs and re-read them before writing
     steps:
       - name: "Mirror build_and_test.yml as Build"
-        uses: apache/infrastructure-actions/fork-ci@36e391618baf31f50c5a7a7347faf00cba6cf085 # fork-ci/v1.0.0
+        uses: apache/infrastructure-actions/fork-ci@adff9de8b5e0386b4a2315f298ca9c2679cbb700 # fork-ci/v1.0.1
         with:
           workflow: build_and_test.yml
           check-name: Build
