@@ -335,6 +335,21 @@ public class TestRegistryDNS extends Assertions {
 
   @Test
   public void testMissingReverseLookup() throws Exception {
+    // A name missing from the local zones is forwarded to the host's DNS
+    // servers. Whether they answer a PTR query for this private address
+    // depends on the environment (e.g. Docker networks on CI runners), so
+    // stub out the upstream lookup to make it report the name as missing.
+    getRegistryDNS().stopExecutor();
+    setRegistryDNS(new RegistryDNS("TestRegistry") {
+      @Override
+      protected Record[] getRecords(Name name, int type) {
+        return null;
+      }
+    });
+    Configuration conf = createConfiguration();
+    getRegistryDNS().setDomainName(conf);
+    getRegistryDNS().initializeZones(conf);
+
     ServiceRecord record = getMarshal().fromBytes("somepath",
         CONTAINER_RECORD.getBytes());
     getRegistryDNS().register(

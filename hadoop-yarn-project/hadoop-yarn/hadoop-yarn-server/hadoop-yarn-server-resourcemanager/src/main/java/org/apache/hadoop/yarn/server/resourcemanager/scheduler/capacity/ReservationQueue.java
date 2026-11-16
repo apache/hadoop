@@ -23,6 +23,8 @@ import java.io.IOException;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolvedQueueConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,10 +46,7 @@ public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
     super.setupQueueConfigs(queueContext.getClusterResource());
 
     // the following parameters are common to all reservation in the plan
-    updateQuotas(parent.getUserLimitForReservation(),
-        parent.getUserLimitFactor(),
-        parent.getMaxApplicationsForReservations(),
-        parent.getMaxApplicationsPerUserForReservation());
+    updateQuotas(parent);
     this.parent = parent;
   }
 
@@ -67,10 +66,7 @@ public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
           this, labelManager, null);
 
-      updateQuotas(parent.getUserLimitForReservation(),
-          parent.getUserLimitFactor(),
-          parent.getMaxApplicationsForReservations(),
-          parent.getMaxApplicationsPerUserForReservation());
+      updateQuotas(parent);
     } finally {
       writeLock.unlock();
     }
@@ -80,12 +76,31 @@ public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
     setEntitlement(new QueueEntitlement(1.0f, 1.0f));
   }
 
-  private void updateQuotas(float userLimit, float userLimitFactor,
-      int maxAppsForReservation, int maxAppsPerUserForReservation) {
-    setUserLimit(userLimit);
-    setUserLimitFactor(userLimitFactor);
-    setMaxApplications(maxAppsForReservation);
-    maxApplicationsPerUser = maxAppsPerUserForReservation;
+  private void updateQuotas(PlanQueue plan) {
+    // The resolved user limits of a reservation queue are the plan's. The
+    // plan's application limits scale with its absolute capacity, so they
+    // are taken from the plan queue.
+    ResolvedQueueConfig resolved = getResolvedQueueConfig();
+    setUserLimit(resolved.get(QueueProperties.USER_LIMIT).getValue());
+    setUserLimitFactor(
+        resolved.get(QueueProperties.USER_LIMIT_FACTOR).getValue());
+    setMaxApplications(plan.getMaxApplicationsForReservations());
+    maxApplicationsPerUser = plan.getMaxApplicationsPerUserForReservation();
+  }
+
+  // The plan's user limits replace the ones the queue is set up with, which
+  // are read for the queue's own path first, as the queue setup always did;
+  // its resolved configuration holds the plan's values.
+
+  @Override
+  protected float getConfiguredUserLimit(ResolvedQueueConfig resolved) {
+    return queueContext.getConfiguration().getUserLimit(getQueuePathObject());
+  }
+
+  @Override
+  protected float getConfiguredUserLimitFactor(ResolvedQueueConfig resolved) {
+    return queueContext.getConfiguration().getUserLimitFactor(
+        getQueuePathObject());
   }
 
   @Override

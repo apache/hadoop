@@ -17,11 +17,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolvedQueueConfig;
 
 /**
- * This class determines application lifetime and max parallel apps settings based on the
- * {@link CapacitySchedulerConfiguration} and other queue
- * properties.
+ * This class holds the application lifetime and max parallel apps settings of a queue, taken
+ * from its resolved configuration, in which a queue inherits the lifetimes of its parent.
  **/
 public class QueueAppLifetimeAndLimitSettings {
   // -1 indicates lifetime is disabled
@@ -30,84 +31,28 @@ public class QueueAppLifetimeAndLimitSettings {
 
   // Indicates if this queue's default lifetime was set by a config property,
   // either at this level or anywhere in the queue's hierarchy.
-  private boolean defaultAppLifetimeWasSpecifiedInConfig = false;
+  private final boolean defaultAppLifetimeWasSpecifiedInConfig;
 
   private int maxParallelApps;
 
-  public QueueAppLifetimeAndLimitSettings(CapacitySchedulerConfiguration configuration,
-      AbstractCSQueue q, QueuePath queuePath) {
+  public QueueAppLifetimeAndLimitSettings(ResolvedQueueConfig resolved, QueuePath queuePath) {
     // Store max parallel apps property
-    this.maxParallelApps = configuration.getMaxParallelAppsForQueue(queuePath);
-    this.maxApplicationLifetime = getInheritedMaxAppLifetime(q, configuration);
-    this.defaultApplicationLifetime = setupInheritedDefaultAppLifetime(q, queuePath, configuration,
-        maxApplicationLifetime);
-  }
-
-  private long getInheritedMaxAppLifetime(CSQueue q, CapacitySchedulerConfiguration conf) {
-    CSQueue parentQ = q.getParent();
-    long maxAppLifetime = conf.getMaximumLifetimePerQueue(q.getQueuePathObject());
-
-    // If q is the root queue, then get max app lifetime from conf.
-    if (q.getQueuePathObject().isRoot()) {
-      return maxAppLifetime;
-    }
-
-    // If this is not the root queue, get this queue's max app lifetime
-    // from the conf. The parent's max app lifetime will be used if it's
-    // not set for this queue.
-    // A value of 0 will override the parent's value and means no max lifetime.
-    // A negative value means that the parent's max should be used.
-    long parentsMaxAppLifetime = parentQ.getMaximumApplicationLifetime();
-    return (maxAppLifetime >= 0) ? maxAppLifetime : parentsMaxAppLifetime;
-  }
-
-  private long setupInheritedDefaultAppLifetime(CSQueue q,
-      QueuePath queuePath, CapacitySchedulerConfiguration conf, long myMaxAppLifetime) {
-    CSQueue parentQ = q.getParent();
-    long defaultAppLifetime = conf.getDefaultLifetimePerQueue(queuePath);
-    defaultAppLifetimeWasSpecifiedInConfig =
-        (defaultAppLifetime >= 0
-            || (!queuePath.isRoot() &&
-            parentQ.getDefaultAppLifetimeWasSpecifiedInConfig()));
-
-    // If q is the root queue, then get default app lifetime from conf.
-    if (queuePath.isRoot()) {
-      return defaultAppLifetime;
-    }
-
-    // If this is not the root queue, get the parent's default app lifetime. The
-    // parent's default app lifetime will be used if not set for this queue.
-    long parentsDefaultAppLifetime = parentQ.getDefaultApplicationLifetime();
-
-    // Negative value indicates default lifetime was not set at this level.
-    // If default lifetime was not set at this level, calculate it based on
-    // parent's default lifetime or current queue's max lifetime.
-    if (defaultAppLifetime < 0) {
-      // If default lifetime was not set at this level but was set somewhere in
-      // the parent's hierarchy, set default lifetime to parent queue's default
-      // only if parent queue's lifetime is less than current queue's max
-      // lifetime. Otherwise, use current queue's max lifetime value for its
-      // default lifetime.
-      if (defaultAppLifetimeWasSpecifiedInConfig) {
-        defaultAppLifetime =
-            Math.min(parentsDefaultAppLifetime, myMaxAppLifetime);
-      } else {
-        // Default app lifetime value was not set anywhere in this queue's
-        // hierarchy. Use current queue's max lifetime as its default.
-        defaultAppLifetime = myMaxAppLifetime;
+    this.maxParallelApps = resolved.get(QueueProperties.MAX_PARALLEL_APPS).getValue();
+    this.maxApplicationLifetime =
+        resolved.get(QueueProperties.MAXIMUM_APPLICATION_LIFETIME).getValue();
+    // The resolved default lifetime is already replaced by the maximum lifetime when it is not
+    // positive, which does not change the outcome of the check below
+    long defaultAppLifetime =
+        resolved.get(QueueProperties.DEFAULT_APPLICATION_LIFETIME).getValue();
+    this.defaultAppLifetimeWasSpecifiedInConfig = resolved.isDefaultLifetimeSpecified();
+    if (!queuePath.isRoot()) {
+      String lifetimeError = QueueLimitChecks.checkDefaultAppLifetime(
+          maxApplicationLifetime, defaultAppLifetime);
+      if (lifetimeError != null) {
+        throw new YarnRuntimeException(lifetimeError);
       }
-    } // else if >= 0, default lifetime was set at this level. Just use it.
-
-    String lifetimeError = QueueLimitChecks.checkDefaultAppLifetime(
-        myMaxAppLifetime, defaultAppLifetime);
-    if (lifetimeError != null) {
-      throw new YarnRuntimeException(lifetimeError);
     }
-
-    if (defaultAppLifetime <= 0) {
-      defaultAppLifetime = myMaxAppLifetime;
-    }
-    return defaultAppLifetime;
+    this.defaultApplicationLifetime = defaultAppLifetime;
   }
 
   public int getMaxParallelApps() {

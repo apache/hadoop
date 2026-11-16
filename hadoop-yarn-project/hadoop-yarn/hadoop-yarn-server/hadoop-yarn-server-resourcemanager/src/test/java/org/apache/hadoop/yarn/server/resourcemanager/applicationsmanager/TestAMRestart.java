@@ -37,6 +37,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -1117,6 +1118,97 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
 
     rm1.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
     rm1.stop();
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getParameters")
+  @Timeout(value = 120)
+  public void testContainerReportForAttemptRemovedFromStateStore(
+      SchedulerType type) throws Exception {
+    // Configure RM recovery and a short AM failure validity interval.
+    initTestAMRestart(type);
+    getConf().setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
+    getConf().setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
+    getConf().setBoolean(
+        YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, true);
+    getConf().setLong(
+        YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS, 0);
+    getConf().set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
+    final long failureWindow = 1000;
+
+    MockRM rm1 = new MockRM(getConf());
+    try {
+      rm1.start();
+      MemoryRMStateStore stateStore =
+          (MemoryRMStateStore) rm1.getRMStateStore();
+      MockNM nm = rm1.registerNode("127.0.0.1:1234", 8000);
+      RMApp app = MockRMAppSubmitter.submit(rm1,
+          MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+              .withUser(UserGroupInformation.getCurrentUser().getShortUserName())
+              .withKeepContainers(true)
+              .withAttemptFailuresValidityInterval(failureWindow)
+              .build());
+
+      // Start a container in attempt 1 and keep its original container ID.
+      MockAM am = MockRM.launchAndRegisterAM(app, rm1, nm);
+      ApplicationAttemptId originalAttemptId = am.getApplicationAttemptId();
+      allocateContainers(nm, am, 1);
+      ContainerId containerId = ContainerId.newContainerId(originalAttemptId, 2);
+      nm.nodeHeartbeat(originalAttemptId, 2, ContainerState.RUNNING);
+      assertTrue(rm1.waitForState(nm, containerId, RMContainerState.RUNNING),
+          "The retained container should be running before RM recovery");
+
+      // Fail attempts 1-3, each outside the validity window. Failing attempt 3
+      // deletes attempt 1 from the state store (removeExcessAttempts).
+      for (int i = 1; i <= 3; i++) {
+        RMAppAttempt failedAttempt =
+            app.getRMAppAttempt(am.getApplicationAttemptId());
+        nm.nodeHeartbeat(am.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
+        rm1.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+        rm1.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
+        if (i < 3) {
+          GenericTestUtils.waitFor(
+              () -> !failedAttempt.shouldCountTowardsMaxAttemptRetry(),
+              100, 10000);
+          am = MockRM.launchAndRegisterAM(app, rm1, nm);
+        }
+      }
+
+      // Attempt 1 is removed from the store, but the running RM still knows it.
+      GenericTestUtils.waitFor(() -> !stateStore.getState().getApplicationState()
+          .get(app.getApplicationId()).attempts.containsKey(originalAttemptId),
+          100, 10000);
+      assertNotNull(app.getRMAppAttempt(originalAttemptId),
+          "The original attempt should still exist in the running RM");
+      GetContainerReportRequest reportRequest =
+          GetContainerReportRequest.newInstance(containerId);
+      assertEquals(containerId, rm1.getClientRMService()
+          .getContainerReport(reportRequest).getContainerReport().getContainerId());
+
+      // Recover a new RM from the same store and re-register the running container.
+      MockRM rm2 = new MockRM(getConf(), stateStore);
+      try {
+        rm2.start();
+        nm.setResourceTrackerService(rm2.getResourceTrackerService());
+        nm.registerNode(Collections.singletonList(
+            TestRMRestart.createNMContainerStatus(originalAttemptId, 2,
+                ContainerState.RUNNING)), null);
+        assertTrue(rm2.waitForState(nm, containerId, RMContainerState.RUNNING),
+            "The retained container should be running after RM recovery");
+
+        // The same query must succeed even though attempt 1 was not recovered.
+        RMApp recoveredApp =
+            rm2.getRMContext().getRMApps().get(app.getApplicationId());
+        assertFalse(recoveredApp.getAppAttempts().containsKey(originalAttemptId),
+            "The original attempt should not be recovered from the store");
+        assertEquals(containerId, rm2.getClientRMService()
+            .getContainerReport(reportRequest).getContainerReport().getContainerId());
+      } finally {
+        rm2.stop();
+      }
+    } finally {
+      rm1.stop();
+    }
   }
 
   /**

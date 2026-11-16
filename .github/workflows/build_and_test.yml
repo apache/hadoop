@@ -20,11 +20,19 @@
 name: "Build"
 
 # Security: write privileges are safe since this is triggered
-# only by `push` (implying user has write access).
+# only by `push` or `workflow_dispatch` (both imply user has write access).
+#
+# fork_ci_status.yml mirrors this workflow's runs in a contributor's fork as
+# the "Build" check on their upstream PR. `workflow_dispatch` lets the
+# contributor rerun it on the PR branch without pushing a new commit. GitHub
+# only offers the dispatch once the fork's default branch contains this
+# version of the workflow, so the contributor must sync their fork's trunk
+# first. See .github/pr-build-check.md.
 on:
   push:
     branches:
       - "**"
+  workflow_dispatch:
 
 jobs:
   default:

@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCap
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueStateHelper;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperty.Kind;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolutionInputs.DynamicQueue;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -269,6 +270,63 @@ public final class QueueConfigResolver {
   }
 
   /**
+   * Resolves a queue that is set up while the tree does not hold it with the
+   * given kind, and adds it to the tree, replacing the previous entry of the
+   * path. These are dynamic queues created after the tree was resolved, which
+   * are resolved with {@link #resolveDynamicQueue}, ReservationQueues added
+   * to a plan, and queues built outside the configured hierarchy. Queues
+   * created later under the added queue resolve against it.
+   * <p>
+   * A parent missing from the tree, for example the plan of a
+   * ReservationQueue the plan follower adds after a concurrent refresh
+   * removed the plan, is resolved from the snapshot first, as the getters
+   * read the configuration installed by that refresh.
+   * @param tree the resolved tree
+   * @param path the queue path
+   * @param kind the kind of the queue
+   * @param dynamic whether the queue receives template entries
+   * @return the resolved configuration of the queue
+   */
+  public static ResolvedQueueConfig resolveQueue(ResolvedQueueTree tree,
+      QueuePath path, Kind kind, boolean dynamic) {
+    ResolvedQueueConfig parent =
+        path.isRoot() ? null : tree.get(path.getParentObject());
+    if (parent == null && !path.isRoot()) {
+      QueuePath parentPath = path.getParentObject();
+      parent = resolveQueue(tree, parentPath, parentPath.isRoot() ? Kind.ROOT
+          : kind == Kind.RESERVATION ? Kind.PLAN : Kind.PARENT, false);
+    }
+    ResolvedQueueConfig queue;
+    if (dynamic && parent != null && kind != Kind.RESERVATION) {
+      queue = resolveDynamicQueue(tree, path, kind != Kind.PARENT);
+    } else {
+      ResolvedQueueConfig root = tree.getRoot();
+      Resolved<Set<String>> rootLabels =
+          root == null ? null : root.get(CONFIGURED_NODE_LABELS);
+      RuntimeException labelFailure =
+          rootLabels != null && rootLabels.isFailed()
+              ? failureOf(rootLabels) : null;
+      if (dynamic && parent != null) {
+        queue = resolveDynamic(tree, parent, path, kind, false, labelFailure);
+      } else {
+        Resolved<Set<String>> labels = labelFailure != null
+            ? Resolved.<Set<String>>failed(labelFailure, ValueSource.DERIVED,
+                null)
+            : labels(path.isRoot() ? allLabels(tree.getConfiguredNodeLabels())
+                : labelsOf(tree.getConfiguredNodeLabels(),
+                    path.getFullPath()));
+        queue = resolveQueue(tree, parent, path, kind, false, labels, null);
+      }
+    }
+    tree.add(queue);
+    // Derived with the siblings in the tree, which no longer include a
+    // replaced entry of the path
+    derive(tree, queue, isLegacyQueueMode(tree.getSnapshot()), parent == null
+        ? null : weightSums(tree.getChildren(parent.getQueuePath())));
+    return queue;
+  }
+
+  /**
    * Indexes the labels of every queue path that has
    * {@code <path>.accessible-node-labels.<label>.<property>} keys, including
    * template pseudo-queues; every indexed path also gets the empty label.
@@ -437,8 +495,8 @@ public final class QueueConfigResolver {
   }
 
   /**
-   * @param labels the configured node labels of the queue; a failure to
-   *               index them leaves only the empty label
+   * @param labeled the configured node labels of the queue; a failure to
+   *                index them leaves only the empty label
    */
   private static ResolvedQueueConfig resolveQueue(ResolvedQueueTree tree,
       ResolvedQueueConfig parent, QueuePath path, Kind kind, boolean dynamic,
@@ -543,12 +601,12 @@ public final class QueueConfigResolver {
     Resolved<QueueState> state = read(lookup, STATE, path, none, null);
     if (!state.isFailed() && state.getValue() == null) {
       if (parent == null) {
-        state = Resolved.of(QueueState.RUNNING, ValueSource.DEFAULT, null);
+        state = Resolved.of(QueueStateHelper.getInitialState(null, null),
+            ValueSource.DEFAULT, null);
       } else {
         Resolved<QueueState> parentState = parent.get(STATE);
         state = parentState.isFailed() ? parentState : Resolved.of(
-            parentState.getValue() == QueueState.DRAINING
-                ? QueueState.STOPPED : parentState.getValue(),
+            QueueStateHelper.getInitialState(null, parentState.getValue()),
             ValueSource.PARENT, parent.getQueuePath().getFullPath());
       }
     }
@@ -1174,9 +1232,14 @@ public final class QueueConfigResolver {
         failed.getSourceDetail());
   }
 
+  /**
+   * Like CapacitySchedulerQueueManager.parseQueue, root is a managed parent
+   * too when it enables AQC v1.
+   */
   private static boolean isManagedParent(ResolvedQueueConfig queue) {
     Resolved<Boolean> enabled = queue.get(AUTO_CREATE_CHILD_QUEUE_ENABLED);
-    return queue.getKind() == Kind.PARENT && enabled != null
+    Kind kind = queue.getKind();
+    return (kind == Kind.PARENT || kind == Kind.ROOT) && enabled != null
         && !enabled.isFailed() && enabled.getValue();
   }
 
