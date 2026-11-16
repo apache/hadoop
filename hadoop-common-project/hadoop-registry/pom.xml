@@ -164,29 +164,6 @@
   </dependencies>
 
   <build>
-    <!--
-    Include all files in src/main/resources.  By default, do not apply property
-    substitution (filtering=false), but do apply property substitution to
-    yarn-version-info.properties (filtering=true).  This will substitute the
-    version information correctly, but prevent Maven from altering other files
-    like yarn-default.xml.
-    -->
-    <resources>
-      <resource>
-        <directory>${basedir}/src/main/resources</directory>
-        <excludes>
-          <exclude>yarn-version-info.properties</exclude>
-        </excludes>
-        <filtering>false</filtering>
-      </resource>
-      <resource>
-        <directory>${basedir}/src/main/resources</directory>
-        <includes>
-          <include>yarn-version-info.properties</include>
-        </includes>
-        <filtering>true</filtering>
-      </resource>
-    </resources>
     <plugins>
       <plugin>
         <groupId>com.github.spotbugs</groupId>
@@ -210,30 +187,6 @@
             <exclude>src/main/resources/.keep</exclude>
           </excludes>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-maven-plugins</artifactId>
-        <executions>
-          <execution>
-            <id>version-info</id>
-            <phase>generate-resources</phase>
-            <goals>
-              <goal>version-info</goal>
-            </goals>
-            <configuration>
-              <source>
-                <directory>${basedir}/src/main</directory>
-                <includes>
-                  <include>java/**/*.java</include>
-                  <!--
-                  <include>proto/**/*.proto</include>
-                    -->
-                </includes>
-              </source>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>

@@ -186,7 +186,12 @@
                 <!-- Using Unix script to preserve symlinks -->
                 <echo file="${project.build.directory}/dist-maketar.sh">
                   cd "${project.build.directory}"
-                  tar cf - ${project.artifactId}-${project.version} | gzip > ${project.artifactId}-${project.version}.tar.gz
+                  # a pom module with no dist layout has nothing to package
+                  [ -d "${project.artifactId}-${project.version}" ] || exit 0
+                  "${maven.multiModuleProjectDirectory}/dev-support/bin/hadoop-maketar" \
+                    "${project.build.outputTimestamp}" \
+                    "${project.artifactId}-${project.version}.tar.gz" \
+                    "${project.artifactId}-${project.version}"
                 </echo>
                 <exec executable="${shell-executable}" dir="${project.build.directory}" failonerror="true">
                   <arg line="./dist-maketar.sh"/>

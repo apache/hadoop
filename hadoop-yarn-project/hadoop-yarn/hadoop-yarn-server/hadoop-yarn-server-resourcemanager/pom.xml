@@ -371,12 +371,6 @@
      <testResource>
        <directory>${basedir}/src/test/resources</directory>
      </testResource>
-     <testResource>
-       <directory>${basedir}/conf</directory>
-       <includes>
-         <include>capacity-scheduler.xml</include>
-       </includes>
-     </testResource>
     </testResources>
 
 

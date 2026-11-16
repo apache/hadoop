@@ -21,6 +21,9 @@ VERSION=$1
 # project.build.directory
 BASEDIR=$2
 
+# project.build.outputTimestamp; a value of one character or less means unset
+TIMESTAMP=${3:--}
+
 function run()
 {
   declare res
@@ -37,8 +40,8 @@ function run()
 }
 
 
-run tar cf "hadoop-${VERSION}.tar" "hadoop-${VERSION}"
-run gzip -f "hadoop-${VERSION}.tar"
+run "$(dirname "$0")/hadoop-maketar" "${TIMESTAMP}" \
+  "hadoop-${VERSION}.tar.gz" "hadoop-${VERSION}"
 echo
 echo "Hadoop dist tar available at: ${BASEDIR}/hadoop-${VERSION}.tar.gz"
 echo

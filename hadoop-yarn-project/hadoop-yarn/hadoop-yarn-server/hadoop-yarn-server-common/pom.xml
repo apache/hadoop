@@ -221,7 +221,8 @@
           </execution>
           <execution>
             <id>copy-sql</id>
-            <phase>test</phase>
+            <!-- Copy before packaging so they get included in source distributions. -->
+            <phase>process-test-resources</phase>
             <goals>
               <goal>run</goal>
             </goals>
