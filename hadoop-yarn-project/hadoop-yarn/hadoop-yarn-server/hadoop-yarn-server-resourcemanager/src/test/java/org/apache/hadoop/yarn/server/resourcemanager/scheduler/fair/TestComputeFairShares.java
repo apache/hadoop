@@ -19,7 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -237,6 +239,33 @@ public class TestComputeFairShares {
     verifyCPUShares(20, 5, 5, 15);
   }
   
+  /**
+   * The weight of a reservation queue can be set to 0 by the plan follower
+   * while the update thread is computing fair shares. If that happens after
+   * the fixed fair shares have been handled, no weight-to-resource ratio can
+   * fill the share, and the computation must still terminate.
+   */
+  @Test
+  public void testWeightChangedToZeroDuringComputation() {
+    scheds.add(new FakeSchedulable(0, 1.0f) {
+      private boolean weightRead = false;
+
+      @Override
+      public float getWeight() {
+        if (!weightRead) {
+          weightRead = true;
+          return super.getWeight();
+        }
+        return 0f;
+      }
+    });
+    assertTimeoutPreemptively(Duration.ofSeconds(30),
+        () -> ComputeFairShares.computeShares(scheds,
+            Resources.createResource(40),
+            ResourceInformation.MEMORY_MB.getName()));
+    verifyMemoryShares(0);
+  }
+
   /**
    * Check that a given list of shares have been assigned to this.scheds.
    */

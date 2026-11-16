@@ -37,6 +37,14 @@ public final class ComputeFairShares {
   
   private static final int COMPUTE_FAIR_SHARES_ITERATIONS = 25;
 
+  /**
+   * Upper bound for the weight-to-resource ratio R. It is far above any ratio
+   * a valid weight needs to fill a share, and doubling a value below it cannot
+   * overflow.
+   */
+  private static final double MAX_WEIGHT_TO_RESOURCE_RATIO =
+      Double.MAX_VALUE / 2.0;
+
   private ComputeFairShares() {
   }
 
@@ -140,8 +148,13 @@ public final class ComputeFairShares {
         takenResources), 0);
     totalResource = Math.min(totalMaxShare, totalResource);
 
+    // The weights and shares are read again on every iteration. If they are
+    // lowered after the checks above, for example a weight dropping to 0, the
+    // resources used may never reach totalResource, so bound the search
+    // instead of doubling R forever.
     double rMax = 1.0;
-    while (resourceUsedWithWeightToResourceRatio(rMax, schedulables, type)
+    while (rMax < MAX_WEIGHT_TO_RESOURCE_RATIO
+        && resourceUsedWithWeightToResourceRatio(rMax, schedulables, type)
         < totalResource) {
       rMax *= 2.0;
     }
