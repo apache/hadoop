@@ -397,11 +397,12 @@ public class TestIPC {
         // The server is stopped while the call is in flight.
         callFailed.set(true);
       }
-    });
+    }, "testSendingThreadExitsWhenConnectionClosed-caller");
+    caller.setDaemon(true);
     try {
       caller.start();
       assertTrue(callReceived.await(10, TimeUnit.SECONDS), "server never received the call");
-      assertTrue(countThreadsNamed(senderName) > 0, "sending thread should exist while connected");
+      GenericTestUtils.waitFor(() -> countThreadsNamed(senderName) > 0, 100, 10000);
 
       server.stop();
 
@@ -416,6 +417,14 @@ public class TestIPC {
       neverReleased.countDown();
       client.stop();
       server.stop();
+      // Best-effort cleanup so an assertion failing before caller.join()
+      // (e.g. callReceived.await timing out) can't leave the caller behind.
+      caller.interrupt();
+      try {
+        caller.join(10000);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
     }
   }
 
