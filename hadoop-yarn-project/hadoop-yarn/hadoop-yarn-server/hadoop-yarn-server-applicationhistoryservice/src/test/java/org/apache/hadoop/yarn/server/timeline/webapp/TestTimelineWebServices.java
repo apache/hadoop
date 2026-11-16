@@ -24,6 +24,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -188,6 +191,25 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   public TestTimelineWebServices() {
+  }
+
+  @Test
+  void testErrorResponseBodyIsNotWrapped() throws Exception {
+    Response response = target().path("ws").path("v1").path("timeline")
+        .path("nonexistenttype").path("nonexistentid")
+        .request(MediaType.APPLICATION_JSON).get(Response.class);
+    assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus(),
+        "A missing timeline entity should answer 404");
+    String body = response.readEntity(String.class);
+    JsonNode root = new ObjectMapper().readTree(body);
+    assertNotNull(root.get("exception"),
+        "The error body must keep the RemoteException fields at the top level: " + body);
+    assertNotNull(root.get("message"),
+        "The error body must keep the RemoteException fields at the top level: " + body);
+    assertNotNull(root.get("javaClassName"),
+        "The error body must keep the RemoteException fields at the top level: " + body);
+    assertNull(root.get("RemoteException"),
+        "The error body must not be wrapped in a RemoteException object: " + body);
   }
 
   @Test
