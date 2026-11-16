@@ -1653,7 +1653,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
                 blocks, context));
         }
       } else {
-        throw new InvalidBlockReportLeaseException(context.getReportId(), context.getLeaseId());
+        if (bm.shouldRejectInvalidBlockReportLease()) {
+          throw new InvalidBlockReportLeaseException(
+              context.getReportId(), context.getLeaseId());
+        }
       }
     } catch (UnregisteredNodeException une) {
       LOG.warn("Datanode {} is attempting to report but not register yet.",
