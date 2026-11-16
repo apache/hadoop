@@ -29,9 +29,9 @@ and in collaboration with other projects.
 Configuration Options
 
 
-| Property                   | Permitted Values                                        | Default   | Meaning                    |
-|----------------------------|---------------------------------------------------------|-----------|----------------------------|
-| `fs.s3a.input.stream.type` | `default`, `classic`, `analytics`, `prefetch`, `custom` | `classic` | Name of stream type to use |
+| Property                   | Permitted Values                                        | Default     | Meaning                    |
+|----------------------------|---------------------------------------------------------|-------------|----------------------------|
+| `fs.s3a.input.stream.type` | `default`, `classic`, `analytics`, `prefetch`, `custom` | `analytics` | Name of stream type to use |
 
 ### Stream type `default`
 
@@ -46,7 +46,7 @@ The default implementation for this release of Hadoop.
 
 The choice of which stream type to use by default may change in future releases.
 
-It is currently `classic`.
+It is currently `analytics`.
 
 ### Stream type `classic`
 
