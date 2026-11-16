@@ -149,10 +149,14 @@ endif (NOT THREAD_LOCAL_SUPPORTED)
 # Check if PROTOC library was compiled with the compatible compiler by trying
 # to compile some dummy code
 unset (PROTOC_IS_COMPATIBLE CACHE)
+# Save whatever the checks above left in place; the Protobuf check below needs
+# its own requirements, and they are restored once it is done.
+set (SAVED_CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES})
+set (SAVED_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
 set (CMAKE_REQUIRED_INCLUDES ${PROTOBUF_INCLUDE_DIRS})
 set (CMAKE_REQUIRED_LIBRARIES
-  ${PROTOBUF_LIBRARY}
-  ${PROTOBUF_PROTOC_LIBRARY}
+  protobuf::libprotobuf
+  protobuf::libprotoc
   ${protobuf_ABSL_USED_TARGETS})
 check_cxx_source_compiles(
     "#include <google/protobuf/io/printer.h>
@@ -170,6 +174,16 @@ if (NOT PROTOC_IS_COMPATIBLE)
   with the same (or compatible) compiler. Normally only the same major versions of the same \
   compiler are compatible with each other.")
 endif (NOT PROTOC_IS_COMPATIBLE)
+
+# The check above leaves CMAKE_REQUIRED_INCLUDES and CMAKE_REQUIRED_LIBRARIES
+# pointing at the Protobuf and Abseil targets. Abseil carries C++ feature
+# requirements, which a C-language check_symbol_exists() below cannot satisfy
+# under the Visual Studio generator. Restore the previous values so later
+# checks run against the state they expect.
+set (CMAKE_REQUIRED_INCLUDES ${SAVED_CMAKE_REQUIRED_INCLUDES})
+set (CMAKE_REQUIRED_LIBRARIES ${SAVED_CMAKE_REQUIRED_LIBRARIES})
+unset (SAVED_CMAKE_REQUIRED_INCLUDES)
+unset (SAVED_CMAKE_REQUIRED_LIBRARIES)
 
 find_program(MEMORYCHECK_COMMAND valgrind HINTS ${VALGRIND_DIR} )
 set(MEMORYCHECK_COMMAND_OPTIONS "--trace-children=no --leak-check=full --error-exitcode=1 --suppressions=${PROJECT_SOURCE_DIR}/tests/memcheck.supp")
@@ -343,7 +357,7 @@ if (HADOOP_BUILD AND NOT MSVC)
   hadoop_add_dual_library(hdfspp ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
   hadoop_target_link_dual_libraries(hdfspp
     ${LIB_DL}
-    ${PROTOBUF_LIBRARY}
+    protobuf::libprotobuf
     ${protobuf_ABSL_USED_TARGETS}
     ${OPENSSL_LIBRARIES}
     ${SASL_LIBRARIES}
@@ -355,7 +369,7 @@ else (HADOOP_BUILD AND NOT MSVC)
   add_library(hdfspp_static STATIC ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
   target_link_libraries(hdfspp_static PUBLIC
     ${LIB_DL}
-    ${PROTOBUF_LIBRARY}
+    protobuf::libprotobuf
     ${protobuf_ABSL_USED_TARGETS}
     ${OPENSSL_LIBRARIES}
     ${SASL_LIBRARIES}

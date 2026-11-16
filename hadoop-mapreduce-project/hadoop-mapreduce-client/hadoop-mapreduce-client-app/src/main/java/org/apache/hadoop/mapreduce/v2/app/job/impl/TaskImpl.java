@@ -80,6 +80,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptKilledEvent;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerFailedEvent;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringInterner;
@@ -696,9 +697,10 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
           .newRecordInstance(TaskAttemptCompletionEvent.class);
       tce.setEventId(-1);
       String scheme = (encryptedShuffle) ? "https://" : "http://";
+      String host = NetUtils.createSocketAddrUnresolved(
+          attempt.getNodeHttpAddress()).getHostString();
       tce.setMapOutputServerAddress(StringInterner.weakIntern(scheme
-         + attempt.getNodeHttpAddress().split(":")[0] + ":"
-         + attempt.getShufflePort()));
+          + NetUtils.getHostPortString(host, attempt.getShufflePort())));
       tce.setStatus(status);
       tce.setAttemptId(attempt.getID());
       int runTime = 0;

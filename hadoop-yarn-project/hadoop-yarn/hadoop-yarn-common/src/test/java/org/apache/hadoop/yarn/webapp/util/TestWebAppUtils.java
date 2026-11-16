@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.webapp.util;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
@@ -91,6 +93,21 @@ public class TestWebAppUtils {
     String rmLocalUrl = WebAppUtils.getResolvedRMWebAppURLWithoutScheme(configuration);
     assertEquals(rmAddress, rmLocalUrl,
         "ResolvedRMWebAppUrl should resolve to the default RM webapp address");
+  }
+
+  @Test
+  void testGetResolvedAddress() throws UnknownHostException {
+    assertEquals("1.2.3.4:8088",
+        WebAppUtils.getResolvedAddress(literalSocketAddr("1.2.3.4", 8088)));
+    assertEquals("[2001:db8::1]:8088",
+        WebAppUtils.getResolvedAddress(literalSocketAddr("2001:db8::1", 8088)));
+  }
+
+  /** Socket address whose host name is the given IP literal, so no reverse lookup happens. */
+  private static InetSocketAddress literalSocketAddr(String ip, int port)
+      throws UnknownHostException {
+    InetAddress addr = InetAddress.getByAddress(ip, InetAddress.getByName(ip).getAddress());
+    return new InetSocketAddress(addr, port);
   }
 
   @Test

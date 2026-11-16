@@ -42,6 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
@@ -401,8 +402,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.commandPort = cmPort;
     this.httpPort = httpPort;
     this.totalCapability = capability; 
-    this.nodeAddress = hostName + ":" + cmPort;
-    this.httpAddress = hostName + ":" + httpPort;
+    this.nodeAddress = NetUtils.getHostPortString(hostName, cmPort);
+    this.httpAddress = NetUtils.getHostPortString(hostName, httpPort);
     this.node = node;
     this.healthReport = "Healthy";
     this.lastHealthReportTime = System.currentTimeMillis();

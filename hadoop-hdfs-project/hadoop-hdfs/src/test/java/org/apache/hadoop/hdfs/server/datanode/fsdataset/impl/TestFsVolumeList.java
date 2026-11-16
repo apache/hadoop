@@ -35,9 +35,11 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeDiskMetrics;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
@@ -50,6 +52,7 @@ import org.mockito.Mockito;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -725,5 +728,81 @@ public class TestFsVolumeList {
           .filter(v -> (v.getPath() + "/").equals(slowDisk0OnDn2))
           .collect(Collectors.toList()).get(0).getNumBlocks());
     }
+  }
+
+  /**
+   * Reconfiguring dfs.datanode.max.slowdisks.to.exclude to 0 must stop
+   * excluding the slow disks that were published while exclusion was enabled.
+   */
+  @Test
+  @Timeout(value = 120)
+  public void testReconfigureMaxSlowDisksToExcludeToZero() throws Exception {
+    conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    // Set datanode outliers report interval to 1s.
+    conf.setStrings(DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY, "1s");
+    // Enable datanode disk metrics collector.
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY, 30);
+    // Enable excluding slow disks when choosing volume.
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY, 1);
+    long[] capacities = new long[STORAGES_PER_DATANODE];
+    Arrays.fill(capacities, 10L * DEFAULT_BLOCK_SIZE);
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1)
+        .storagesPerDatanode(STORAGES_PER_DATANODE)
+        .storageCapacities(capacities).build()) {
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+      DataNode dn = cluster.getDataNodes().get(0);
+      DataNodeDiskMetrics diskMetrics = dn.getDiskMetrics();
+
+      String slowDisk;
+      try (FsDatasetSpi.FsVolumeReferences volumes =
+          dn.getFSDataset().getFsVolumeReferences()) {
+        slowDisk = volumes.get(0).getBaseURI().getPath();
+      }
+      diskMetrics.addSlowDiskForTesting(slowDisk, ImmutableMap.of(
+          SlowDiskReports.DiskOp.READ, 1.0, SlowDiskReports.DiskOp.WRITE, 1.5,
+          SlowDiskReports.DiskOp.METADATA, 2.0));
+      GenericTestUtils.waitFor(() -> diskMetrics.getSlowDisksToExclude()
+          .equals(Collections.singletonList(slowDisk)), 100, 10000);
+
+      // While exclusion is enabled, no block is placed on the slow disk.
+      Path excludedFile = new Path("/excluded");
+      DFSTestUtil.createFile(fs, excludedFile, BUFFER_LENGTH,
+          STORAGES_PER_DATANODE * DEFAULT_BLOCK_SIZE, DEFAULT_BLOCK_SIZE,
+          (short) 1, 0);
+      assertEquals(0, countBlocksOnVolume(fs, excludedFile, dn, slowDisk));
+
+      // Disabling exclusion takes effect immediately, without waiting for
+      // the detector thread.
+      dn.reconfigureProperty(
+          DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY, "0");
+      assertEquals(0, diskMetrics.getMaxSlowDisksToExclude());
+      assertTrue(diskMetrics.getSlowDisksToExclude().isEmpty());
+
+      // The round-robin chooser now places one of these blocks on the
+      // former slow disk.
+      Path includedFile = new Path("/included");
+      DFSTestUtil.createFile(fs, includedFile, BUFFER_LENGTH,
+          STORAGES_PER_DATANODE * DEFAULT_BLOCK_SIZE, DEFAULT_BLOCK_SIZE,
+          (short) 1, 0);
+      assertTrue(countBlocksOnVolume(fs, includedFile, dn, slowDisk) > 0);
+
+      // Re-enabling exclusion lets the detector publish the slow disk again.
+      dn.reconfigureProperty(
+          DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY, "1");
+      GenericTestUtils.waitFor(() -> diskMetrics.getSlowDisksToExclude()
+          .equals(Collections.singletonList(slowDisk)), 100, 10000);
+    }
+  }
+
+  private static long countBlocksOnVolume(FileSystem fs, Path file,
+      DataNode dn, String volumePath) throws IOException {
+    return DFSTestUtil.getAllBlocks(fs, file).stream()
+        .filter(lb -> volumePath.equals(dn.getFSDataset()
+            .getVolume(lb.getBlock()).getBaseURI().getPath()))
+        .count();
   }
 }

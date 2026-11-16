@@ -61,7 +61,7 @@ import java.util.Iterator;
  *   iterator, the application should extend the key with the secondary
  *   key and define a grouping comparator. The keys will be sorted using the
  *   entire key, but will be grouped using the grouping comparator to decide
- *   which keys and values are sent in the same call to reduce.The grouping 
+ *   which keys and values are sent in the same call to reduce. The grouping
  *   comparator is specified via 
  *   {@link Job#setGroupingComparatorClass(Class)}. The sort order is
  *   controlled by 

@@ -207,8 +207,12 @@ public class ZKDelegationTokenSecretManagerImpl extends
   @Override
   protected void addOrUpdateToken(AbstractDelegationTokenIdentifier ident,
       DelegationTokenInformation info, boolean isUpdate) throws Exception {
-    // Store the data in local memory first
-    currentTokens.put(ident, info);
+    // Creation persists outside apiLock. Do not expose an unpersisted token
+    // or publish it after persistence, potentially undoing a cancellation.
+    // Watchers, rebuilds, and cache-miss reads populate newly created tokens.
+    if (isUpdate) {
+      currentTokens.put(ident, info);
+    }
     super.addOrUpdateToken(ident, info, isUpdate);
   }
 

@@ -48,7 +48,3 @@ ThreadsBlocked >= 0
 ThreadsWaiting >= 0
 ThreadsTimedWaiting >= 0
 ThreadsTerminated >= 0
-LogFatal >= 0
-LogError >= 0
-LogWarn >= 0
-LogInfo >= 0

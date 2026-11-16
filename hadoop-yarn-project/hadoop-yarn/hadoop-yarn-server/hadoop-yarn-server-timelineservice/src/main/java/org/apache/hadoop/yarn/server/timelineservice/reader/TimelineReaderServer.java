@@ -54,7 +54,6 @@ import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.glassfish.jersey.jettison.JettisonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -258,7 +257,7 @@ public class TimelineReaderServer extends CompositeService {
     config.register(TimelineEntitySetWriter.class);
     config.register(TimelineEntityWriter.class);
     config.register(TimelineHealthWriter.class);
-    config.register(new JettisonFeature()).register(YarnJacksonJaxbJsonProvider.class);
+    config.register(YarnJacksonJaxbJsonProvider.class);
     return config;
   }
 

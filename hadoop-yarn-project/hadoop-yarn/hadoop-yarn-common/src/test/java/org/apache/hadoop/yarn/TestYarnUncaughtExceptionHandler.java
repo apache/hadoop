@@ -72,19 +72,24 @@ public class TestYarnUncaughtExceptionHandler {
   void testUncaughtExceptionHandlerWithError()
       throws InterruptedException {
     ExitUtil.disableSystemExit();
-    final YarnUncaughtExceptionHandler spyErrorHandler = spy(exHandler);
-    final java.lang.Error error = new java.lang.Error("test-error");
-    final Thread errorThread = new Thread(new Runnable() {
-      @Override
-      public void run() {
-        throw error;
-      }
-    });
-    errorThread.setUncaughtExceptionHandler(spyErrorHandler);
-    assertSame(spyErrorHandler, errorThread.getUncaughtExceptionHandler());
-    errorThread.start();
-    errorThread.join();
-    verify(spyErrorHandler).uncaughtException(errorThread, error);
+    try {
+      final YarnUncaughtExceptionHandler spyErrorHandler = spy(exHandler);
+      final java.lang.Error error = new java.lang.Error("test-error");
+      final Thread errorThread = new Thread(new Runnable() {
+        @Override
+        public void run() {
+          throw error;
+        }
+      });
+      errorThread.setUncaughtExceptionHandler(spyErrorHandler);
+      assertSame(spyErrorHandler, errorThread.getUncaughtExceptionHandler());
+      errorThread.start();
+      errorThread.join();
+      verify(spyErrorHandler).uncaughtException(errorThread, error);
+    } finally {
+      ExitUtil.enableSystemExit();
+      ExitUtil.resetFirstExitException();
+    }
   }
 
   /**

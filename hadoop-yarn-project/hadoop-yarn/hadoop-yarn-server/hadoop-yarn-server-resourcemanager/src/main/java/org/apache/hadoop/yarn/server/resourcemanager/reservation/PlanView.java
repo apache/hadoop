@@ -35,7 +35,7 @@ interface PlanView extends PlanContext {
    * Return a set of {@link ReservationAllocation} identified by the user who
    * made the reservation.
    *
-   * @param reservationID the unqiue id to identify the
+   * @param reservationID the unique id to identify the
    *          {@link ReservationAllocation}
    * @param interval the time interval used to retrieve the reservation
    *          allocations from. Only reservations with start time no greater
@@ -51,7 +51,7 @@ interface PlanView extends PlanContext {
   /**
    * Return a set of {@link ReservationAllocation} identified by any user.
    *
-   * @param reservationID the unqiue id to identify the
+   * @param reservationID the unique id to identify the
    *          {@link ReservationAllocation}
    * @param interval the time interval used to retrieve the reservation
    *          allocations from. Only reservations with start time no greater
