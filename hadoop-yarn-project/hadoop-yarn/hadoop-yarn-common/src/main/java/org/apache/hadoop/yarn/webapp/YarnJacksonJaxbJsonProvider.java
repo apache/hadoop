@@ -25,13 +25,11 @@ import javax.ws.rs.ext.Provider;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 
 
 /**
@@ -46,15 +44,10 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 public class YarnJacksonJaxbJsonProvider extends JacksonJaxbJsonProvider {
 
   private final ObjectMapper mapper = newMapper();
-  // Only TimelineAbout is root-wrapped, so it gets a mapper of its own: Jackson
-  // caches a writer per type, and enabling the feature on a shared mapper would
-  // wrap every type first written afterwards.
-  private final ObjectMapper aboutMapper =
-      newMapper().enable(SerializationFeature.WRAP_ROOT_VALUE);
 
   @Override
   public ObjectMapper locateMapper(Class<?> type, MediaType mediaType) {
-    return type == TimelineAbout.class ? aboutMapper : mapper;
+    return mapper;
   }
 
   private static ObjectMapper newMapper() {

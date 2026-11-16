@@ -35,15 +35,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class TestYarnJacksonJaxbJsonProvider {
 
   /**
-   * The provider caches a writer per type on first use, so the put response
-   * has to be written for the first time after the TimelineAbout to show
-   * whether the root wrapping of TimelineAbout leaks.
+   * Every type is written with the one mapper, so the about response is not
+   * root-wrapped and the put response is not affected by the about shape.
    */
   @Test
-  void testRootWrappingOfAboutDoesNotLeak() throws IOException {
+  void testAboutAndPutResponseAreNotRootWrapped() throws IOException {
     YarnJacksonJaxbJsonProvider provider = new YarnJacksonJaxbJsonProvider();
 
-    assertEquals("{\"about\":{\"About\":\"test\"}}",
+    assertEquals("{\"About\":\"test\"}",
         write(provider, new TimelineAbout("test")));
     assertEquals("{\"errors\":[]}", write(provider, new TimelinePutResponse()));
   }
