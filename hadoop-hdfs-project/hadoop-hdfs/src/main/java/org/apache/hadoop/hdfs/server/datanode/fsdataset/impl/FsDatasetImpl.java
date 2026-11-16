@@ -396,7 +396,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     maxDirScannerNotifyCount = conf.getLong(
         DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_MAX_NOTIFY_COUNT_KEY,
         DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_MAX_NOTIFY_COUNT_DEFAULT);
-    lastDirScannerNotifyTime = System.currentTimeMillis();
+    lastDirScannerNotifyTime = Time.monotonicNow();
     this.datasetSubLockStrategy = new DataNodeLayoutSubLockStrategy();
   }
 
