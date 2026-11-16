@@ -42,11 +42,14 @@ import org.junit.jupiter.api.Test;
  * {@code hadoop.security.token.service.use_ip} is false and the DNS search
  * domain keeps the trailing dot that dnsjava {@code Name.toString()} emits.
  *
- * <p>A short NameNode host such as {@code SERVER} is expanded to
- * {@code server.example.com.} (note the final dot), so the client looks up
- * a token for {@code server.example.com.:8020}. The token held for the FQDN
- * has service {@code server.example.com:8020}; token selection requires an
- * exact match, so the client fails with
+ * <p>{@link SecurityUtil#buildTokenService(java.net.InetSocketAddress)}
+ * lower-cases {@link java.net.InetSocketAddress#getHostName()}. Stored
+ * hostnames must not end in {@code '.'}; otherwise a short URI such as
+ * {@code hdfs://SERVER:8020} yields token service
+ * {@code server.example.com.:8020} while the delegation token acquired on the
+ * FQDN is {@code server.example.com:8020}. Token selection, as in
+ * {@link AbstractDelegationTokenSelector}, requires an exact match, so no
+ * token is found and the RPC client fails with
  * "Client cannot authenticate via:[TOKEN, KERBEROS]".
  */
 public class TestTrailingDotSearchDomainDelegationToken {

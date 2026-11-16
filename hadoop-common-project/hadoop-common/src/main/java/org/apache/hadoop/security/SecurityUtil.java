@@ -691,9 +691,22 @@ public final class SecurityUtil {
    *    with an IP, then that IP is all that should ever be contacted.
    *    
    * NOTE: this resolver is only used if:
-   *       hadoop.security.token.service.use_ip=false 
+   *       hadoop.security.token.service.use_ip=false
+   *
+   * <p>Since HADOOP-15764 the search list is read from dnsjava
+   * {@link ResolverConfig#searchPath()}. Search suffixes are stored without a
+   * trailing dot, and hostnames returned by this resolver are never rooted
+   * (never {@code host.domain.}), because
+   * {@link SecurityUtil#buildTokenService(java.net.InetSocketAddress)} and
+   * Kerberos principal matching expect unrooted names. DNS queries are still
+   * sent rooted; see {@code getByExactName(String)}.
    */
   protected static class QualifiedHostResolver extends CacheableHostResolver {
+    /**
+     * The DNS root as a search-list entry, e.g. {@code search .} in
+     * {@code resolv.conf}. A host is then looked up as {@code host.} but
+     * stored as {@code host}.
+     */
     private static final String ROOT_DOMAIN = ".";
 
     private List<String> searchDomains =
@@ -790,8 +803,8 @@ public final class SecurityUtil {
         for (String domain : searchDomains) {
           String candidate;
           if (ROOT_DOMAIN.equals(domain)) {
-            // the root suffix means the host itself; pass it unrooted so the
-            // stored hostname has no trailing dot
+            // Root search entry: query via getByExactName (adds "." for DNS)
+            // but store the unrooted host; "host." would break token service.
             candidate = host;
           } else {
             String dot = !domain.startsWith(".") ? "." : "";
@@ -805,9 +818,15 @@ public final class SecurityUtil {
     }
 
     /**
-     * Convert the dnsjava search path to search-list suffixes.
-     * {@link Name#toString()} is absolute ({@code example.com.}), so the
-     * relative form is used instead.
+     * Convert dnsjava {@link ResolverConfig#searchPath()} names to suffixes
+     * used when expanding unqualified hosts.
+     *
+     * <p>Before HADOOP-15764 the JDK returned suffixes as written in
+     * {@code resolv.conf}, normally {@code example.com}; dnsjava
+     * {@link Name#toString()} is absolute ({@code example.com.}). The
+     * relative form {@link Name#toString(boolean) toString(true)} restores
+     * suffixes the resolver expects, except the root name which is kept as
+     * {@link #ROOT_DOMAIN}.
      */
     @VisibleForTesting
     static List<String> toSearchDomains(List<Name> names) {
@@ -822,10 +841,10 @@ public final class SecurityUtil {
     }
 
     /**
-     * Search-list suffixes must not end in '.', except the root domain
-     * itself; a rooted suffix makes getByExactName store hostnames like
-     * {@code nn.example.com.} and breaks delegation token service name
-     * matching.
+     * Normalize one DNS search suffix for {@link #searchDomains}.
+     *
+     * @return the suffix without its trailing dot, {@link #ROOT_DOMAIN} for
+     *         the DNS root, or {@code null} if null or empty
      */
     private static String stripRootDotFromSearchDomain(String domain) {
       if (domain == null || domain.isEmpty()) {
@@ -845,6 +864,10 @@ public final class SecurityUtil {
       return InetAddress.getByName(host);
     }
 
+    /**
+     * Replace the search list (tests only); each suffix is normalized like the
+     * dnsjava search path from {@link #toSearchDomains}.
+     */
     void setSearchDomains(String ... domains) {
       searchDomains = new ArrayList<>();
       for (String domain : domains) {
