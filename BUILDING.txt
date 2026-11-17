@@ -631,7 +631,7 @@ The -m 8g is needed under Hyper-V isolation, the default on Windows 10 and 11, b
 step compiles Boost, Protocol Buffers, OpenSSL and Zlib from source and Hyper-V's default container
 memory is too small. Process-isolated builds on Windows Server have no default limit, so there -m
 only caps the build. Expect the image build to take a few hours
-and the resulting image to be around 17 GB. Note that -m and --isolation are options of the classic
+and the resulting image to be around 14 GB. Note that -m and --isolation are options of the classic
 builder, so DOCKER_BUILDKIT must not be set to 1. If it is set in your
 environment, clear it for the session first -
 > set DOCKER_BUILDKIT=            (cmd.exe)
