@@ -18,10 +18,14 @@
 
 package org.apache.hadoop.yarn.server.webproxy.amfilter;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +37,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -52,7 +57,7 @@ public class TestAmFilterInitializer {
   }
 
   @Test
-  void testInitFilter() {
+  void testInitFilter() throws MalformedURLException {
     // Check PROXY_ADDRESS
     MockFilterContainer con = new MockFilterContainer();
     Configuration conf = new Configuration(false);
@@ -117,6 +122,25 @@ public class TestAmFilterInitializer {
     assertEquals("http://host4:4000/foo", proxyBases[2]);
     assertEquals("host2:2000,host3:3000,host4:4000",
         con.givenParameters.get(AmFilterInitializer.RM_HA_URLS));
+
+    // Check IPv6 RM_WEBAPP_ADDRESSes (RM HA): AmIpFilter looks up each RM_HA_URLS entry
+    // by the host:port of a PROXY_URI_BASES URL, so both must use the same form.
+    con = new MockFilterContainer();
+    conf = new Configuration(false);
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
+    conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS + ".rm1", "[2001:db8::1]:2000");
+    conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS + ".rm2", "[2001:db8::2]:3000");
+    afi = new MockAmFilterInitializer();
+    afi.initFilter(con, conf);
+    Set<String> proxyUriBaseKeys = new HashSet<>();
+    for (String base : con.givenParameters.get(AmIpFilter.PROXY_URI_BASES)
+        .split(AmIpFilter.PROXY_URI_BASES_DELIMITER)) {
+      URL url = new URL(base);
+      proxyUriBaseKeys.add(url.getHost() + ":" + url.getPort());
+    }
+    assertThat(proxyUriBaseKeys).hasSize(2).containsExactlyInAnyOrder(
+        con.givenParameters.get(AmFilterInitializer.RM_HA_URLS).split(","));
 
     // Check multiple RM_WEBAPP_ADDRESSes (RM HA) with HTTPS
     con = new MockFilterContainer();
