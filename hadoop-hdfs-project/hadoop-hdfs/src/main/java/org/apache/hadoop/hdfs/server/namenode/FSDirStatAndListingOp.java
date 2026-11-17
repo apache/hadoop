@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext.TimeLimitExceededException;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -51,6 +52,9 @@ import java.util.EnumSet;
 import static org.apache.hadoop.util.Time.now;
 
 class FSDirStatAndListingOp {
+
+  /** Test only: run for every entry added to a listing page. */
+  static volatile Runnable listingEntryHookForTests = null;
   static DirectoryListing getListingInt(FSDirectory fsd, FSPermissionChecker pc,
       final String srcArg, byte[] startAfter, boolean needLocation)
       throws IOException {
@@ -248,7 +252,21 @@ class FSDirStatAndListingOp {
       int locationBudget = fsd.getLsLimit();
       int listingCnt = 0;
       HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
+      // Optional time budget for building this page under the read lock
+      // (dfs.namenode.listing.max-lock-hold-ms). Not applied to paths inside a
+      // snapshot: there every page first rebuilds the snapshot view of the
+      // directory, so shorter pages would cost more in total.
+      final long budgetNanos = snapshot == Snapshot.CURRENT_STATE_ID
+          ? fsd.getListingMaxLockHoldNanos() : 0;
+      final long pageStartNanos = budgetNanos > 0 ? System.nanoTime() : 0;
+      final Runnable entryHook = listingEntryHookForTests;
+      boolean cutByTime = false;
       for (int i = 0; i < numOfListing && locationBudget > 0; i++) {
+        if (budgetNanos > 0 && i > 0
+            && System.nanoTime() - pageStartNanos > budgetNanos) {
+          cutByTime = true;     // always at least one entry per page
+          break;
+        }
         INode child = contents.get(startChild+i);
         byte childStoragePolicy =
             !child.isSymlink()
@@ -267,6 +285,12 @@ class FSDirStatAndListingOp {
             locationBudget -= (blks == null) ? 0 :
                blks.locatedBlockCount() * listing[i].getReplication();
         }
+        if (entryHook != null) {
+          entryHook.run();
+        }
+      }
+      if (cutByTime && NameNode.getNameNodeMetrics() != null) {
+        NameNode.getNameNodeMetrics().incrListingPagesCutByTime();
       }
       // truncate return array if necessary
       if (listingCnt < numOfListing) {
@@ -518,9 +542,23 @@ class FSDirStatAndListingOp {
         // processed. 0 means disabled. I.e. blocking for the entire duration.
         ContentSummaryComputationContext cscc =
             new ContentSummaryComputationContext(fsd, fsd.getFSNamesystem(),
-                fsd.getContentCountLimit(), fsd.getContentSleepMicroSec(), pc);
-        ContentSummary cs = targetNode.computeAndConvertContentSummary(
-            iip.getPathSnapshotId(), cscc);
+                fsd.getContentCountLimit(), fsd.getContentSleepMicroSec(), pc,
+                fsd.getContentMaxLockHoldMs(), fsd.getContentMaxTimeMs());
+        final ContentSummary cs;
+        try {
+          cs = targetNode.computeAndConvertContentSummary(
+              iip.getPathSnapshotId(), cscc);
+        } catch (TimeLimitExceededException e) {
+          // read-only computation: nothing to undo
+          fsd.addYieldCount(cscc.getYieldCount());
+          if (NameNode.getNameNodeMetrics() != null) {
+            NameNode.getNameNodeMetrics().incrContentSummaryTimedOut();
+          }
+          FSDirectory.LOG.warn("getContentSummary of {} aborted: {}",
+              iip.getPath(), e.getMessage());
+          throw new IOException("getContentSummary of " + iip.getPath()
+              + " aborted: " + e.getMessage());
+        }
         fsd.addYieldCount(cscc.getYieldCount());
         return cs;
       }

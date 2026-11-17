@@ -159,6 +159,10 @@ public class FSDirectory implements Closeable {
   private final int lsLimit;  // max list limit
   private final int contentCountLimit; // max content summary counts per run
   private final long contentSleepMicroSec;
+  // time limits, 0 = disabled
+  private final long contentMaxLockHoldMs;
+  private final long contentMaxTimeMs;
+  private final long listingMaxLockHoldNanos;
   private final INodeMap inodeMap; // Synchronized by dirLock
   private long yieldCount = 0; // keep track of lock yield count.
   private int quotaInitThreads;
@@ -371,6 +375,23 @@ public class FSDirectory implements Closeable {
     this.contentSleepMicroSec = conf.getLong(
         DFSConfigKeys.DFS_CONTENT_SUMMARY_SLEEP_MICROSEC_KEY,
         DFSConfigKeys.DFS_CONTENT_SUMMARY_SLEEP_MICROSEC_DEFAULT);
+    this.contentMaxLockHoldMs = Math.max(0, conf.getLong(
+        DFSConfigKeys.DFS_CONTENT_SUMMARY_MAX_LOCK_HOLD_MS_KEY,
+        DFSConfigKeys.DFS_CONTENT_SUMMARY_MAX_LOCK_HOLD_MS_DEFAULT));
+    this.contentMaxTimeMs = Math.max(0, conf.getLong(
+        DFSConfigKeys.DFS_CONTENT_SUMMARY_MAX_TIME_MS_KEY,
+        DFSConfigKeys.DFS_CONTENT_SUMMARY_MAX_TIME_MS_DEFAULT));
+    this.listingMaxLockHoldNanos = Math.max(0, conf.getLong(
+        DFSConfigKeys.DFS_NAMENODE_LISTING_MAX_LOCK_HOLD_MS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_LISTING_MAX_LOCK_HOLD_MS_DEFAULT))
+        * 1_000_000L;
+    LOG.info("Time limits: "
+        + DFSConfigKeys.DFS_NAMENODE_LISTING_MAX_LOCK_HOLD_MS_KEY + "="
+        + listingMaxLockHoldNanos / 1_000_000L + " ms, "
+        + DFSConfigKeys.DFS_CONTENT_SUMMARY_MAX_LOCK_HOLD_MS_KEY + "="
+        + contentMaxLockHoldMs + " ms, "
+        + DFSConfigKeys.DFS_CONTENT_SUMMARY_MAX_TIME_MS_KEY + "="
+        + contentMaxTimeMs + " ms (0 = disabled)");
     
     // filesystem limits
     this.maxComponentLength = (int) conf.getLongBytes(
@@ -631,6 +652,18 @@ public class FSDirectory implements Closeable {
 
   long getContentSleepMicroSec() {
     return contentSleepMicroSec;
+  }
+
+  long getContentMaxLockHoldMs() {
+    return contentMaxLockHoldMs;
+  }
+
+  long getContentMaxTimeMs() {
+    return contentMaxTimeMs;
+  }
+
+  long getListingMaxLockHoldNanos() {
+    return listingMaxLockHoldNanos;
   }
 
   int getInodeXAttrsLimit() {

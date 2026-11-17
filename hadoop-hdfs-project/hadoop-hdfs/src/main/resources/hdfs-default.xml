@@ -4589,6 +4589,46 @@
 </property>
 
 <property>
+  <name>dfs.content-summary.max-lock-hold-ms</name>
+  <value>0</value>
+  <description>
+    If greater than 0, a content summary computation (getContentSummary, du,
+    count) also relinquishes the namesystem read lock once it has held it for
+    this many milliseconds, in addition to every dfs.content-summary.limit
+    entries. With this set, the check is also made between the children of a
+    directory, so a single large directory does not keep the lock until it is
+    fully counted. 0 (default) disables it: only dfs.content-summary.limit
+    applies, as before.
+  </description>
+</property>
+
+<property>
+  <name>dfs.content-summary.max-time-ms</name>
+  <value>0</value>
+  <description>
+    If greater than 0, a content summary computation that runs longer than this
+    many milliseconds is aborted and the client receives an IOException. The
+    computation is read-only, so aborting it changes nothing in the namespace.
+    0 (default) means no limit.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.listing.max-lock-hold-ms</name>
+  <value>0</value>
+  <description>
+    If greater than 0, a getListing call stops adding entries to its page once
+    it has spent this many milliseconds building the page under the namesystem
+    read lock, and returns the entries built so far (at least one) with
+    remainingEntries greater than 0. Clients continue the listing from the last
+    returned name, as they do for every page. Not applied to paths inside a
+    snapshot, where each page first rebuilds the snapshot view of the directory
+    and shorter pages would cost more in total. 0 (default) disables it: pages
+    are limited by dfs.ls.limit only, as before.
+  </description>
+</property>
+
+<property>
   <name>dfs.data.transfer.client.tcpnodelay</name>
   <value>true</value>
   <description>

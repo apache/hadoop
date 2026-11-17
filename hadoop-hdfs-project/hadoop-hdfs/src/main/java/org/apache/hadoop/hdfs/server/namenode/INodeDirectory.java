@@ -719,6 +719,12 @@ public class INodeDirectory extends INodeWithAdditionalFields
 
       long lastYieldCount = summary.getYieldCount();
       child.computeContentSummary(snapshotId, summary);
+      // With a time limit, also check between children, so that one large
+      // directory does not keep the lock until it is fully counted. A yield
+      // here is handled by the repositioning below, like a yield in a subtree.
+      if (summary.hasTimeLimits()) {
+        summary.yield();
+      }
 
       // Check whether the computation was paused in the subtree.
       // The counts may be off, but traversing the rest of children

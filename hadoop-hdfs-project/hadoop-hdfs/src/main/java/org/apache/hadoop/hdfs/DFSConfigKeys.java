@@ -430,6 +430,15 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_CONTENT_SUMMARY_LIMIT_DEFAULT = 5000;
   public static final String  DFS_CONTENT_SUMMARY_SLEEP_MICROSEC_KEY = "dfs.content-summary.sleep-microsec";
   public static final long    DFS_CONTENT_SUMMARY_SLEEP_MICROSEC_DEFAULT = 500;
+  public static final String  DFS_CONTENT_SUMMARY_MAX_LOCK_HOLD_MS_KEY =
+      "dfs.content-summary.max-lock-hold-ms";
+  public static final long    DFS_CONTENT_SUMMARY_MAX_LOCK_HOLD_MS_DEFAULT = 0;
+  public static final String  DFS_CONTENT_SUMMARY_MAX_TIME_MS_KEY =
+      "dfs.content-summary.max-time-ms";
+  public static final long    DFS_CONTENT_SUMMARY_MAX_TIME_MS_DEFAULT = 0;
+  public static final String  DFS_NAMENODE_LISTING_MAX_LOCK_HOLD_MS_KEY =
+      "dfs.namenode.listing.max-lock-hold-ms";
+  public static final long    DFS_NAMENODE_LISTING_MAX_LOCK_HOLD_MS_DEFAULT = 0;
   public static final String  DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY = "dfs.datanode.failed.volumes.tolerated";
   public static final int     DFS_DATANODE_FAILED_VOLUMES_TOLERATED_DEFAULT = 0;
   public static final String

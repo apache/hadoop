@@ -59,6 +59,12 @@ public class NameNodeMetrics {
   @Metric MutableCounterLong createSymlinkOps;
   @Metric MutableCounterLong getLinkTargetOps;
   @Metric MutableCounterLong filesInGetListingOps;
+  @Metric("Number of getListing pages cut short by " +
+      "dfs.namenode.listing.max-lock-hold-ms")
+  MutableCounterLong listingPagesCutByTime;
+  @Metric("Number of getContentSummary calls aborted by " +
+      "dfs.content-summary.max-time-ms")
+  MutableCounterLong contentSummaryTimedOut;
   @Metric ("Number of successful re-replications")
   MutableCounterLong successfulReReplications;
   @Metric ("Number of times we failed to schedule a block re-replication.")
@@ -284,6 +290,14 @@ public class NameNodeMetrics {
 
   public void incrGetListingOps() {
     getListingOps.incr();
+  }
+
+  public void incrListingPagesCutByTime() {
+    listingPagesCutByTime.incr();
+  }
+
+  public void incrContentSummaryTimedOut() {
+    contentSummaryTimedOut.incr();
   }
 
   public void incrFilesInGetListingOps(int delta) {
