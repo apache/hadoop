@@ -82,9 +82,9 @@ RUN powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPr
     && where cl.exe \
     && if not exist "%ProgramFiles(x86)%\Windows Kits\10\Include\10.0.19041.0" (echo Windows SDK 10.0.19041 is missing & exit 1)
 
-# Install Git for Windows 2.56.0(4) as PortableGit, in C:\Git.
+# Install Git for Windows 2.56.1 as PortableGit, in C:\Git.
 # Git for Windows publishes SHA-256
-# b1f3e52216e2ed6882d1bebfd4d3fdf319bec40d2edbbf9fd26ec4fd3fce7ed1 for this file.
+# 9dd04a608ceb5f6ab32a73709e0ecb159d211da71b697c45ff81f6dd0c6b49c7 for this file.
 # The self-extractor exits non-zero only when extraction fails. It then runs
 # post-install.bat, which Git needs, and exits 0 whatever that does, so check
 # that post-install.bat, which deletes itself last, and its hooks in
@@ -93,11 +93,11 @@ RUN powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPr
 # times out.
 # Chocolatey's git.install, which this replaces, also set the two settings
 # below. PortableGit's own default credential helper opens a dialog.
-ENV PORTABLEGIT_SHA512 269c0e87747e14de7f8ab0b523a591e4bf2b476790193c8b884831488348ceb5bc778600f3910f2d19056aa3cbe5bbf116b23c42e2a377dc3b02e4616f8b7a35
+ENV PORTABLEGIT_SHA512 7225f00b4b9a1c56791978c663f7fa8ee5a0ed4bcd7745f868404efa78e04d61af064c0c987a96881bd526447328c4c305f19812ac70b6f6e6b776b5fa5e5d98
 RUN powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; \
-    $f = Join-Path $Env:TEMP 'PortableGit-2.56.0.4-64-bit.7z.exe'; \
-    Invoke-WebRequest -UseBasicParsing -Uri https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.4/PortableGit-2.56.0.4-64-bit.7z.exe -OutFile $f; \
-    if ((Get-FileHash $f -Algorithm sha512).Hash -ne $Env:PORTABLEGIT_SHA512) { throw 'PortableGit-2.56.0.4-64-bit.7z.exe SHA-512 mismatch' }; \
+    $f = Join-Path $Env:TEMP 'PortableGit-2.56.1-64-bit.7z.exe'; \
+    Invoke-WebRequest -UseBasicParsing -Uri https://github.com/git-for-windows/git/releases/download/v2.56.1.windows.1/PortableGit-2.56.1-64-bit.7z.exe -OutFile $f; \
+    if ((Get-FileHash $f -Algorithm sha512).Hash -ne $Env:PORTABLEGIT_SHA512) { throw 'PortableGit-2.56.1-64-bit.7z.exe SHA-512 mismatch' }; \
     $p = Start-Process -FilePath $f -ArgumentList '-y', '-oC:\Git' -PassThru; $null = $p.Handle; \
     if (-not $p.WaitForExit(900000)) { $p.Kill(); throw 'PortableGit extraction timed out' }; \
     if ($p.ExitCode -ne 0) { throw ('PortableGit extraction exited with ' + $p.ExitCode) }; \
