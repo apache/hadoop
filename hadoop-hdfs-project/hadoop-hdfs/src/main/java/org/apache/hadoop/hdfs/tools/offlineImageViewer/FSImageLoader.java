@@ -37,16 +37,22 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.XAttrNotFoundException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf;
 import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.ErasureCodingSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.namenode.SerialNumberManager;
+import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.resources.XAttrEncodingParam;
 import org.apache.hadoop.io.IOUtils;
@@ -176,6 +182,9 @@ class FSImageLoader {
           case INODE_DIR:
             dirmap = loadINodeDirectorySection(is, refIdList);
             break;
+          case ERASURE_CODING:
+            loadErasureCodingSection(is);
+            break;
           default:
             break;
         }
@@ -230,6 +239,23 @@ class FSImageLoader {
     }
     LOG.info("Loaded " + counter + " inode references");
     return builder.build();
+  }
+
+  static void loadErasureCodingSection(InputStream in) throws IOException {
+    ErasureCodingSection s = ErasureCodingSection.parseDelimitedFrom(in);
+    if (s == null) {
+      return;
+    }
+    List<ErasureCodingPolicyInfo> ecPolicies =
+        Lists.newArrayListWithCapacity(s.getPoliciesCount());
+    for (int i = 0; i < s.getPoliciesCount(); ++i) {
+      ecPolicies.add(PBHelperClient.convertErasureCodingPolicyInfo(s.getPolicies(i)));
+    }
+    Configuration conf = new Configuration();
+    ErasureCodingPolicyManager erasureCodingPolicyManager =
+        ErasureCodingPolicyManager.getInstance();
+    erasureCodingPolicyManager.init(conf);
+    erasureCodingPolicyManager.loadPolicies(ecPolicies, conf);
   }
 
   private static byte[][] loadINodeSection(InputStream in)
@@ -344,7 +370,7 @@ class FSImageLoader {
       data[1] = 1;
       data[2] = getFileSize(f);
       nsQuota = -1;
-      data[3] = data[2] * f.getReplication();
+      data[3] = getStorageSpaceConsumed(f);
       spaceQuota = -1;
       return fillSummaryMap(spaceQuota, nsQuota, data);
     case DIRECTORY:
@@ -396,7 +422,7 @@ class FSImageLoader {
         long curLength = getFileSize(f);
         data[1]++;
         data[2] += curLength;
-        data[3] += (curLength) * (f.getReplication());
+        data[3] += getStorageSpaceConsumed(f);
         break;
       case SYMLINK:
         data[1]++;
@@ -658,6 +684,43 @@ class FSImageLoader {
     long size = 0;
     for (HdfsProtos.BlockProto p : f.getBlocksList()) {
       size += p.getNumBytes();
+    }
+    return size;
+  }
+
+  static long getStorageSpaceConsumed(FsImageProto.INodeSection.INodeFile f) {
+    long size = 0;
+    if (!f.hasErasureCodingPolicyID()) {
+      // Replicated file: each block consumes numBytes * replication.
+      for (HdfsProtos.BlockProto p : f.getBlocksList()) {
+        size += p.getNumBytes() * f.getReplication();
+      }
+      return size;
+    }
+
+    // Striped (erasure-coded) file: consumed space is the logical data bytes
+    // plus parity bytes, rounded up to whole stripes per block.
+    ErasureCodingPolicyManager ecManager =
+        ErasureCodingPolicyManager.getInstance();
+    ErasureCodingPolicy ecPolicy = null;
+    if (ecManager.getPolicies() != null) {
+      ecPolicy = ecManager.getByID((byte) f.getErasureCodingPolicyID());
+    }
+    if (ecPolicy == null) {
+      // Should not happen after the ERASURE_CODING section is loaded, but
+      // degrade gracefully instead of NPE-ing on a policy we don't know.
+      LOG.warn("Unknown erasure coding policy ID {} for striped file; "
+          + "counting only logical data bytes",
+          f.getErasureCodingPolicyID());
+      for (HdfsProtos.BlockProto p : f.getBlocksList()) {
+        size += p.getNumBytes();
+      }
+      return size;
+    }
+    for (HdfsProtos.BlockProto p : f.getBlocksList()) {
+      size += StripedBlockUtil.spaceConsumedByStripedBlock(p.getNumBytes(),
+          ecPolicy.getNumDataUnits(), ecPolicy.getNumParityUnits(),
+          ecPolicy.getCellSize());
     }
     return size;
   }
