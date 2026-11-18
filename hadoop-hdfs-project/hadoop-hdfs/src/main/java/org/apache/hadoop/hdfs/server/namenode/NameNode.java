@@ -2467,20 +2467,21 @@ public class NameNode extends ReconfigurableBase implements
       if (newVal == null) {
         // set to default
         datanodeManager.setHeartbeatInterval(DFS_HEARTBEAT_INTERVAL_DEFAULT);
+        return String.valueOf(DFS_HEARTBEAT_INTERVAL_DEFAULT);
       } else {
         long newInterval = getConf()
             .getTimeDurationHelper(DFS_HEARTBEAT_INTERVAL_KEY,
                 newVal, TimeUnit.SECONDS);
         datanodeManager.setHeartbeatInterval(newInterval);
+        return String.valueOf(datanodeManager.getHeartbeatInterval());
       }
-      LOG.info("RECONFIGURE* changed heartbeatInterval to {}",
-          datanodeManager.getHeartbeatInterval());
-      return String.valueOf(datanodeManager.getHeartbeatInterval());
     } catch (NumberFormatException nfe) {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property), nfe);
     } finally {
       namesystem.writeUnlock(RwLockMode.BM, "reconfHeartbeatInterval");
+      LOG.info("RECONFIGURE* changed heartbeatInterval to "
+          + datanodeManager.getHeartbeatInterval());
     }
   }
 
@@ -2493,17 +2494,18 @@ public class NameNode extends ReconfigurableBase implements
         // set to default
         datanodeManager.setHeartbeatRecheckInterval(
             DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT);
+        return String.valueOf(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT);
       } else {
         datanodeManager.setHeartbeatRecheckInterval(Integer.parseInt(newVal));
+        return String.valueOf(datanodeManager.getHeartbeatRecheckInterval());
       }
-      LOG.info("RECONFIGURE* changed heartbeatRecheckInterval to {}",
-          datanodeManager.getHeartbeatRecheckInterval());
-      return String.valueOf(datanodeManager.getHeartbeatRecheckInterval());
     } catch (NumberFormatException nfe) {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property), nfe);
     } finally {
       namesystem.writeUnlock(RwLockMode.BM, "reconfHeartbeatRecheckInterval");
+      LOG.info("RECONFIGURE* changed heartbeatRecheckInterval to "
+          + datanodeManager.getHeartbeatRecheckInterval());
     }
   }
 
