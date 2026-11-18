@@ -567,19 +567,14 @@ public class TestStandbyCheckpoints {
     for (int i = 0; i < NUM_NNS; i++) {
       cluster.restartNameNode(i);
     }
-
     // update references to each of the nns
     setNNs();
-
     cluster.transitionToActive(0);
-
     doEdits(0, 100);
-
     for (int i = 1; i < NUM_NNS; i++) {
       HATestUtil.waitForStandbyToCatchUp(nns[0], nns[i]);
       HATestUtil.waitForCheckpoint(cluster, i, ImmutableList.of(104));
     }
-
     // Once the uploads finish, the executors must be shut down and all their
     // threads must exit; otherwise every checkpoint leaks upload threads that
     // park on the pool's queue forever.
