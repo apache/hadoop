@@ -41,11 +41,11 @@ fi
 if [ "$version_to_install" == "3.25.5" ]; then
   # hadolint ignore=DL3003
   mkdir -p /opt/protobuf-src &&
-    curl -L -s -S \
+    curl -f -L -s -S --retry 5 --retry-delay 5 \
       https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.25.5.tar.gz \
       -o /opt/protobuf.tar.gz &&
     tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src &&
-    curl -L -s -S \
+    curl -f -L -s -S --retry 5 --retry-delay 5 \
       https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz \
       -o /opt/abseil-cpp.tar.gz &&
     tar xzf /opt/abseil-cpp.tar.gz --strip-components 1 -C /opt/protobuf-src/third_party/abseil-cpp &&
