@@ -2521,6 +2521,14 @@ public class NameNode extends ReconfigurableBase implements
       callerContextEnabled = Boolean.parseBoolean(newVal);
     }
     namesystem.setCallerContextEnabled(callerContextEnabled);
+    // Keep the slow RPC log of the RPC servers consistent with the audit log.
+    rpcServer.getClientRpcServer().setCallerContextEnabled(callerContextEnabled);
+    if (rpcServer.getServiceRpcServer() != null) {
+      rpcServer.getServiceRpcServer().setCallerContextEnabled(callerContextEnabled);
+    }
+    if (rpcServer.getLifelineRpcServer() != null) {
+      rpcServer.getLifelineRpcServer().setCallerContextEnabled(callerContextEnabled);
+    }
     return Boolean.toString(callerContextEnabled);
   }
 

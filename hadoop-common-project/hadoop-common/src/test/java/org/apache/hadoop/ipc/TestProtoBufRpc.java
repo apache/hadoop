@@ -415,8 +415,52 @@ public class TestProtoBufRpc extends TestRpcBase {
       // The log carries the user and the truncated caller context.
       assertThat(logs.getOutput())
           .contains("Slow RPC : sleep")
-          .contains("user " + UserGroupInformation.getCurrentUser().getShortUserName())
-          .contains("callerContext " + expectedContext + ",");
+          .contains("user " + UserGroupInformation.getCurrentUser().getUserName()
+              + " (auth:SIMPLE)")
+          .contains("callerContext " + expectedContext + ".");
+    } finally {
+      CallerContext.setCurrent(null);
+      logs.stopCapturing();
+    }
+  }
+
+  @ParameterizedTest
+  @Timeout(value = 12)
+  @MethodSource("params")
+  public void testLogSlowRPCWithoutCallerContext(boolean pTestWithLegacy,
+      boolean pTestWithLegacyFirst) throws IOException, ServiceException,
+      TimeoutException, InterruptedException {
+    initTestProtoBufRpc(pTestWithLegacy, pTestWithLegacyFirst);
+    //No test with legacy
+    assumeFalse(testWithLegacy);
+    server.setLogSlowRPCThresholdTime(SLEEP_DURATION);
+    // The caller context is not logged by default.
+    server.setCallerContextEnabled(
+        CommonConfigurationKeys.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT);
+    TestRpcService2 client = getClient2();
+    // make 2 K fast calls to pass the minimum sample size
+    for (int x = 0; x < 2000; x++) {
+      client.ping2(null, newEmptyRequest());
+    }
+
+    RpcMetrics rpcMetrics = server.getRpcMetrics();
+    long before = rpcMetrics.getRpcSlowCalls();
+
+    GenericTestUtils.LogCapturer logs =
+        GenericTestUtils.LogCapturer.captureLogs(Server.LOG);
+    CallerContext.setCurrent(new CallerContext.Builder("slowRpcContext").build());
+    try {
+      client.sleep(null, newSleepRequest(SLEEP_DURATION * 3));
+
+      // Ensure slow call is logged.
+      GenericTestUtils.waitFor(()
+          -> rpcMetrics.getRpcSlowCalls() == before + 1L, 10, 1000);
+      // The log carries the user but no caller context.
+      assertThat(logs.getOutput())
+          .contains("Slow RPC : sleep")
+          .contains("user " + UserGroupInformation.getCurrentUser().getUserName()
+              + " (auth:SIMPLE).")
+          .doesNotContain("callerContext");
     } finally {
       CallerContext.setCurrent(null);
       logs.stopCapturing();
