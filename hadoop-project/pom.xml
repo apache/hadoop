@@ -2231,6 +2231,11 @@
         <artifactId>grpc-netty-shaded</artifactId>
         <version>1.75.0</version>
       </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-redis</artifactId>
+        <version>4.2.21.Final</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
