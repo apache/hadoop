@@ -24,8 +24,6 @@
 # hadoop-hdfs
 **/org/apache/hadoop/fs/viewfs/TestViewFileSystemHdfs.java
 **/org/apache/hadoop/hdfs/TestBlockStoragePolicy.java
-**/org/apache/hadoop/hdfs/TestDecommission.java
-**/org/apache/hadoop/hdfs/TestDecommissionWithBackoffMonitor.java
 **/org/apache/hadoop/hdfs/TestDecommissionWithStriped.java
 **/org/apache/hadoop/hdfs/TestDFSClientRetries.java
 **/org/apache/hadoop/hdfs/TestDFSUtil.java
