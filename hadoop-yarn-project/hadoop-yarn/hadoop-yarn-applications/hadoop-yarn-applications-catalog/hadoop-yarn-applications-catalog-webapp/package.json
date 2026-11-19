@@ -1,4 +1,7 @@
 {
+  "overrides": {
+    "logform": "2.73.11"
+  },
     "name": "AppCatalog",
     "private": true,
     "version": "0.0.0",
