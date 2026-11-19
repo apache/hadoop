@@ -125,6 +125,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public static final String DEFAULT_START_TIME = "0";
   public static final String DEFAULT_END_TIME = "-1";
   public static final String DEFAULT_INCLUDE_RESOURCE = "false";
+  /** Response body of validate/v2, which the Router does not serve. */
   @Private
   public static final String VALIDATE_V2_UNSUPPORTED =
       "Scheduler configuration validation (validate/v2) is not supported by"
