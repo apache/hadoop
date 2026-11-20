@@ -184,6 +184,10 @@ jobs:
           distribution: zulu
           java-version: ${{ inputs.java }}
 
+      - name: Download Maven wrapper
+        shell: bash
+        run: dev-support/bin/mvnw-bootstrap
+
       - name: Maven Build
         shell: bash
         run: |
