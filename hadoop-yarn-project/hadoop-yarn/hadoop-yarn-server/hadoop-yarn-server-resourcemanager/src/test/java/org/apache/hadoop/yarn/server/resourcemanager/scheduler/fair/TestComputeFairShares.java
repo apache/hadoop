@@ -19,9 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -247,22 +245,32 @@ public class TestComputeFairShares {
    */
   @Test
   public void testWeightChangedToZeroDuringComputation() {
+    // With the bound on the search for R, getWeight() is read 1,050 times
+    // here: once while handling the fixed fair shares, 1,023 times while
+    // doubling R from 1 up to Double.MAX_VALUE / 2, 25 times in the binary
+    // search and once when setting the share. Without the bound the doubling
+    // loop never ends and does not check for interrupts, so a timeout could
+    // not stop it. Failing once the cap is exceeded ends the loop instead.
+    final int maxWeightReads = 10_000;
     scheds.add(new FakeSchedulable(0, 1.0f) {
-      private boolean weightRead = false;
+      private int weightReads = 0;
 
       @Override
       public float getWeight() {
-        if (!weightRead) {
-          weightRead = true;
+        weightReads++;
+        if (weightReads > maxWeightReads) {
+          throw new AssertionError("getWeight() was read more than "
+              + maxWeightReads + " times, the fair share computation does"
+              + " not terminate");
+        }
+        if (weightReads == 1) {
           return super.getWeight();
         }
         return 0f;
       }
     });
-    assertTimeoutPreemptively(Duration.ofSeconds(30),
-        () -> ComputeFairShares.computeShares(scheds,
-            Resources.createResource(40),
-            ResourceInformation.MEMORY_MB.getName()));
+    ComputeFairShares.computeShares(scheds, Resources.createResource(40),
+        ResourceInformation.MEMORY_MB.getName());
     verifyMemoryShares(0);
   }
 
