@@ -26,10 +26,17 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.anyFloat;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 
 import org.apache.hadoop.conf.Configuration;
@@ -40,8 +47,12 @@ import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.junit.jupiter.api.Timeout;
+import org.mockito.MockedStatic;
 
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -85,6 +96,71 @@ public class TestJvmMetrics {
         verify(rb).addGauge(eq(info), anyInt());
       }
     }
+  }
+
+  private static GarbageCollectorMXBean mockGcBean(String name, long count,
+      long timeMs) {
+    GarbageCollectorMXBean bean = mock(GarbageCollectorMXBean.class);
+    when(bean.getName()).thenReturn(name);
+    when(bean.getCollectionCount()).thenReturn(count);
+    when(bean.getCollectionTime()).thenReturn(timeMs);
+    return bean;
+  }
+
+  /**
+   * Makes ManagementFactory#getGarbageCollectorMXBeans() return the GC beans
+   * of non-generational and generational ZGC on the current thread, until
+   * the returned mock is closed. Only the "Pauses" beans measure pauses:
+   * count 30 + 60 + 6 = 96, time 60 + 90 + 12 = 162 ms.
+   */
+  private static MockedStatic<ManagementFactory> mockZgcBeans() {
+    List<GarbageCollectorMXBean> beans = Arrays.asList(
+        mockGcBean("ZGC Cycles", 10, 5000),
+        mockGcBean("ZGC Pauses", 30, 60),
+        mockGcBean("ZGC Minor Cycles", 20, 8000),
+        mockGcBean("ZGC Minor Pauses", 60, 90),
+        mockGcBean("ZGC Major Cycles", 2, 3000),
+        mockGcBean("ZGC Major Pauses", 6, 12));
+    MockedStatic<ManagementFactory> mf =
+        mockStatic(ManagementFactory.class, CALLS_REAL_METHODS);
+    mf.when(ManagementFactory::getGarbageCollectorMXBeans).thenReturn(beans);
+    return mf;
+  }
+
+  private static final long ZGC_PAUSE_COUNT = 96;
+  private static final long ZGC_PAUSE_TIME_MS = 162;
+
+  @Test
+  public void testGcUsageSkipsZgcCycles() {
+    JvmMetrics jvmMetrics;
+    // JvmMetrics reads the GC beans when it is constructed.
+    try (MockedStatic<ManagementFactory> ignored = mockZgcBeans()) {
+      jvmMetrics = new JvmMetrics("test", "test", false);
+    }
+    MetricsRecordBuilder rb = getMetrics(jvmMetrics);
+
+    assertCounter("GcCount", ZGC_PAUSE_COUNT, rb);
+    assertCounter("GcTimeMillis", ZGC_PAUSE_TIME_MS, rb);
+    assertCounter("GcCountZGC Pauses", 30L, rb);
+    assertCounter("GcTimeMillisZGC Minor Pauses", 90L, rb);
+    assertCounter("GcTimeMillisZGC Major Pauses", 12L, rb);
+    verify(rb, never()).addCounter(
+        argThat(info -> info.name().endsWith("Cycles")), anyLong());
+  }
+
+  @Test
+  public void testGcTimeMonitorSkipsZgcCycles() throws Exception {
+    // GcTimeMonitor reads the GC beans when it is constructed.
+    try (MockedStatic<ManagementFactory> ignored = mockZgcBeans()) {
+      gcTimeMonitor = new GcTimeMonitor(10000, 100, 100, null);
+    }
+    gcTimeMonitor.start();
+    GenericTestUtils.waitFor(
+        () -> gcTimeMonitor.getLatestGcData().getAccumulatedGcCount() > 0,
+        10, 10000);
+    GcTimeMonitor.GcData data = gcTimeMonitor.getLatestGcData();
+    assertEquals(ZGC_PAUSE_COUNT, data.getAccumulatedGcCount());
+    assertEquals(ZGC_PAUSE_TIME_MS, data.getAccumulatedGcTime());
   }
 
   @Test
