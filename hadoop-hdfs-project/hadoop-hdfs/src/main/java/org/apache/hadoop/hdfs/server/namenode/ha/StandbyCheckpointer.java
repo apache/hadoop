@@ -202,19 +202,10 @@ public class StandbyCheckpointer {
       assert namesystem.getEditLog().isOpenForRead() :
         "Standby Checkpointer should only attempt a checkpoint when " +
         "NN is in standby mode, but the edit logs are in an unexpected state";
-
       FSImage img = namesystem.getFSImage();
-
       long prevCheckpointTxId = img.getStorage().getMostRecentCheckpointTxId();
       long thisCheckpointTxId = img.getCorrectLastAppliedOrWrittenTxId();
       assert thisCheckpointTxId >= prevCheckpointTxId;
-      if (thisCheckpointTxId == prevCheckpointTxId) {
-        LOG.info("A checkpoint was triggered but the Standby Node has not " +
-            "received any transactions since the last checkpoint at txid {}. " +
-            "Skipping...", thisCheckpointTxId);
-        return;
-      }
-
       if (namesystem.isRollingUpgrade()
           && !namesystem.getFSImage().hasRollbackFSImage()) {
         // if we will do rolling upgrade but have not created the rollback image
@@ -223,11 +214,22 @@ public class StandbyCheckpointer {
       } else {
         imageType = NameNodeFile.IMAGE;
       }
+      if (imageType == NameNodeFile.IMAGE_ROLLBACK
+          && !namesystem.getEditLogTailer().isRollbackCheckpointReady()) {
+        LOG.info("Waiting for a finalized segment boundary before saving rollback image");
+        return;
+      }
+      if (thisCheckpointTxId == prevCheckpointTxId
+          && imageType != NameNodeFile.IMAGE_ROLLBACK) {
+        LOG.info("A checkpoint was triggered but the Standby Node has not " +
+            "received any transactions since the last checkpoint at txid {}. " +
+            "Skipping...", thisCheckpointTxId);
+        return;
+      }
       img.saveNamespace(namesystem, imageType, canceler);
       txid = img.getStorage().getMostRecentCheckpointTxId();
       assert txid == thisCheckpointTxId : "expected to save checkpoint at txid=" +
           thisCheckpointTxId + " but instead saved at txid=" + txid;
-
       // Save the legacy OIV image, if the output dir is defined.
       String outputDir = checkpointConf.getLegacyOivImageDir();
       if (outputDir != null && !outputDir.isEmpty()) {
@@ -241,7 +243,6 @@ public class StandbyCheckpointer {
     } finally {
       namesystem.cpUnlock();
     }
-
     // Upload the saved checkpoint back to remote NNs
     // Do this in a separate thread to avoid blocking transition to active, but don't allow more
     // than the expected number of tasks to run or queue up
@@ -316,7 +317,6 @@ public class StandbyCheckpointer {
     // cleaner than copying code for multiple catch statements and better than catching all
     // exceptions, so we just handle the ones we expect.
     if (ie != null) {
-
       // cancel the rest of the tasks, and close the pool
       for (Map.Entry<String, Future<TransferFsImage.TransferResult>> entry :
           uploads.entrySet()) {
@@ -475,6 +475,12 @@ public class StandbyCheckpointer {
             // on all nodes, we build the checkpoint. However, we only ship the checkpoint if have a
             // rollback request, are the checkpointer, are outside the quiet period.
             doCheckpoint();
+            if (needRollbackCheckpoint && !namesystem.getFSImage().hasRollbackFSImage()) {
+              // The tailer must reach END first. Release cpLock and avoid a
+              // busy loop starving replay, even with one transaction per batch.
+              Thread.sleep(1000);
+              continue;
+            }
 
             // reset needRollbackCheckpoint to false only when we finish a ckpt
             // for rollback image
