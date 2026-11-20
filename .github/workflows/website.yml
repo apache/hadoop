@@ -36,6 +36,8 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
           check-latest: false
+      - name: Download Maven wrapper
+        run: dev-support/bin/mvnw-bootstrap
       - name: Build Hadoop maven plugins
         run: cd hadoop-maven-plugins && ../mvnw --batch-mode install
       - name: Build Hadoop

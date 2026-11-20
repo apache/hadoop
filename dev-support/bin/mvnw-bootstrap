@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Downloads what ./mvnw needs before its first real use, with retries.
+#
+# mvnw fetches maven-wrapper.jar once and without retry. When that download
+# fails, it deletes the jar and then reports the misleading
+# "Failed to validate Maven wrapper SHA-256" error. maven-wrapper.jar in turn
+# downloads the Maven distribution, also without retry. This script does both
+# downloads up front and retries each of them, so that a transient failure to
+# reach the Maven repository does not fail the build.
+#
+# Environment variables:
+#   MVNW_BOOTSTRAP_ATTEMPTS  number of attempts per download (default 5)
+#   MVNW_BOOTSTRAP_DELAY     seconds to wait between attempts (default 10)
+
+attempts=${MVNW_BOOTSTRAP_ATTEMPTS:-5}
+delay=${MVNW_BOOTSTRAP_DELAY:-10}
+
+basedir=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P) || exit 1
+props="${basedir}/.mvn/wrapper/maven-wrapper.properties"
+jar="${basedir}/.mvn/wrapper/maven-wrapper.jar"
+
+function property
+{
+  sed -n "s/^$1=//p" "${props}" | tr -d '[:space:]'
+}
+
+function sha256
+{
+  if command -v sha256sum >/dev/null; then
+    sha256sum "$1" | cut -d' ' -f1
+  else
+    shasum -a 256 "$1" | cut -d' ' -f1
+  fi
+}
+
+function download
+{
+  if command -v curl >/dev/null; then
+    curl -f -L -sS -o "$2" "$1"
+  else
+    wget --no-verbose -O "$2" "$1"
+  fi
+}
+
+## @description  Run a command until it succeeds, up to ${attempts} times
+## @param        description of the command, for the log
+## @param        command and its arguments
+function retry
+{
+  local what=$1
+  local attempt
+  shift
+
+  for ((attempt = 1; attempt <= attempts; attempt++)); do
+    if "$@"; then
+      return 0
+    fi
+    echo "Attempt ${attempt}/${attempts} to ${what} failed" >&2
+    if [[ ${attempt} -lt ${attempts} ]]; then
+      sleep "${delay}"
+    fi
+  done
+  echo "ERROR: Failed to ${what}" >&2
+  return 1
+}
+
+function fetch_wrapper_jar
+{
+  rm -f "${jar}.tmp"
+  # compare the checksums ourselves: `sha256sum -c` skips a malformed line
+  # and still exits 0
+  if download "${wrapper_url}" "${jar}.tmp"; then
+    if [[ "$(sha256 "${jar}.tmp")" == "${wrapper_sha}" ]]; then
+      mv "${jar}.tmp" "${jar}"
+      return 0
+    fi
+    echo "SHA-256 of the downloaded file is not ${wrapper_sha}" >&2
+  fi
+  rm -f "${jar}.tmp"
+  return 1
+}
+
+wrapper_url=$(property wrapperUrl)
+wrapper_sha=$(property wrapperSha256Sum)
+if [[ -z "${wrapper_url}" || -z "${wrapper_sha}" ]]; then
+  echo "ERROR: wrapperUrl or wrapperSha256Sum is not set in ${props}" >&2
+  exit 1
+fi
+
+if [[ -f "${jar}" && "$(sha256 "${jar}")" == "${wrapper_sha}" ]]; then
+  echo "Found ${jar}"
+else
+  retry "download ${wrapper_url}" fetch_wrapper_jar || exit 1
+fi
+
+# maven-wrapper.jar downloads and verifies the Maven distribution
+cd "${basedir}" || exit 1
+retry "run ./mvnw --version" ./mvnw --version

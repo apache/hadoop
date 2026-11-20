@@ -176,6 +176,9 @@ jobs:
           java-version: ${{ inputs.java }}
           cache: 'maven'
           check-latest: false
+      - name: Download Maven wrapper
+        shell: bash
+        run: dev-support/bin/mvnw-bootstrap
       - name: Build
         shell: bash
         run: ./mvnw $MAVEN_ARGS clean install -DskipTests
@@ -309,6 +312,9 @@ jobs:
           java-version: ${{ inputs.java }}
           cache: 'maven'
           check-latest: false
+      - name: Download Maven wrapper
+        shell: bash
+        run: dev-support/bin/mvnw-bootstrap
       - name: Build (Java ${{ inputs.java }}) ${{ inputs.os }}-${{ inputs.branch }}
         shell: bash
         run: ./mvnw $MAVEN_ARGS ${{ matrix.modules }} clean install -am -DskipTests
