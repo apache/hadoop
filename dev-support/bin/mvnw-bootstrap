@@ -23,6 +23,11 @@
 # downloads up front and retries each of them, so that a transient failure to
 # reach the Maven repository does not fail the build.
 #
+# TODO: This is a temporary workaround. Remove this script, and the
+# "Download Maven wrapper" steps that call it in .github/workflows/, once
+# mvnw retries failed downloads itself and Hadoop has upgraded to that
+# maven-wrapper release. See https://github.com/apache/maven-wrapper/pull/445
+#
 # Environment variables:
 #   MVNW_BOOTSTRAP_ATTEMPTS  number of attempts per download (default 5)
 #   MVNW_BOOTSTRAP_DELAY     seconds to wait between attempts (default 10)
