@@ -551,6 +551,38 @@ public class TestStandbyCheckpoints {
   }
 
   /**
+   * Verify that the upload thread pool is shut down after each checkpoint
+   * round, so that repeated checkpoints do not leak TransferFsImageUpload
+   * threads when parallel upload is enabled. Core pool threads never time
+   * out, so without an explicit shutdown they would park on the pool's work
+   * queue forever.
+   */
+  @Test
+  @Timeout(value = 300)
+  public void testUploadThreadsTerminatedAfterCheckpoint() throws Exception {
+    for (int i = 1; i < NUM_NNS; i++) {
+      cluster.getConfiguration(i).setBoolean(
+          DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PARALLEL_UPLOAD_ENABLED_KEY, true);
+    }
+    for (int i = 0; i < NUM_NNS; i++) {
+      cluster.restartNameNode(i);
+    }
+    // update references to each of the nns
+    setNNs();
+    cluster.transitionToActive(0);
+    doEdits(0, 100);
+    for (int i = 1; i < NUM_NNS; i++) {
+      HATestUtil.waitForStandbyToCatchUp(nns[0], nns[i]);
+      HATestUtil.waitForCheckpoint(cluster, i, ImmutableList.of(104));
+    }
+    // Once the uploads finish, the executors must be shut down and all their
+    // threads must exit; otherwise every checkpoint leaks upload threads that
+    // park on the pool's queue forever.
+    GenericTestUtils.waitForThreadTermination(
+        ".*TransferFsImageUpload.*", 1000, 30000);
+  }
+
+  /**
    * Make sure that clients will receive StandbyExceptions even when a
    * checkpoint is in progress on the SBN, and therefore the StandbyCheckpointer
    * thread will have FSNS lock. Regression test for HDFS-4591.
