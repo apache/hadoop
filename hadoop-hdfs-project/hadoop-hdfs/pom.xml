@@ -87,6 +87,13 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>jetty-util</artifactId>
       <scope>compile</scope>
     </dependency>
+    <!-- Optional: see hadoop-common; dependents get it through jetty-server. -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-io</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-common</artifactId>
