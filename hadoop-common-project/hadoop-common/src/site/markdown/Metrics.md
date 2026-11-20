@@ -294,6 +294,7 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `NumDeadDataNodes` | Number of datanodes which are currently dead |
 | `NumDecomLiveDataNodes` | Number of datanodes which have been decommissioned and are now live |
 | `NumDecomDeadDataNodes` | Number of datanodes which have been decommissioned and are now dead |
+| `DecommissioningLowRedundancyBlocks` | Number of low redundancy blocks on datanodes in decommissioning state, i.e. blocks that still have to be sufficiently replicated before those datanodes can be decommissioned |
 | `NumDecommissioningDataNodes` | Number of datanodes in decommissioning state |
 | `VolumeFailuresTotal` | Total number of volume failures across all Datanodes |
 | `EstimatedCapacityLostTotal` | An estimate of the total capacity lost due to volume failures |

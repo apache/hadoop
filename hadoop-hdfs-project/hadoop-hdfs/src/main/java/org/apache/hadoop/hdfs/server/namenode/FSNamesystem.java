@@ -5922,6 +5922,24 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         .size();
   }
 
+  /**
+   * Sum of the low redundancy blocks tracked for each datanode that is in
+   * decommissioning state, i.e. the blocks that still have to be sufficiently
+   * replicated before the decommissioning datanodes can be decommissioned.
+   * This is the total of the per node value reported by
+   * {@link #getDecomNodes()}.
+   */
+  @Metric({"DecommissioningLowRedundancyBlocks",
+      "Number of low redundancy blocks on datanodes in decommissioning state"})
+  public long getDecommissioningLowRedundancyBlocks() {
+    long blocks = 0;
+    for (DatanodeDescriptor node :
+        getBlockManager().getDatanodeManager().getDecommissioningNodes()) {
+      blocks += node.getLeavingServiceStatus().getUnderReplicatedBlocks();
+    }
+    return blocks;
+  }
+
   @Override // FSNamesystemMBean
   @Metric({"StaleDataNodes", 
     "Number of datanodes marked stale due to delayed heartbeat"})
