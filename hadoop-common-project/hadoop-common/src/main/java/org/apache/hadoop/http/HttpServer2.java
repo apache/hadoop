@@ -113,7 +113,6 @@ import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlet.ServletMapping;
 import org.eclipse.jetty.util.ArrayUtil;
-import org.eclipse.jetty.util.MultiException;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.webapp.WebAppContext;
@@ -1464,9 +1463,6 @@ public final class HttpServer2 implements FilterContainer {
       } catch (IOException ex) {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);
         throw ex;
-      } catch (MultiException ex) {
-        LOG.info("HttpServer.start() threw a MultiException", ex);
-        throw ex;
       }
       // Make sure there is no handler failures.
       Handler[] hs = webServer.getHandlers();
@@ -1619,7 +1615,7 @@ public final class HttpServer2 implements FilterContainer {
    * @throws Exception exception.
    */
   public void stop() throws Exception {
-    MultiException exception = null;
+    List<Exception> exceptions = new ArrayList<>();
     if (this.configurationChangeMonitor.isPresent()) {
       try {
         this.configurationChangeMonitor.get().cancel();
@@ -1627,7 +1623,7 @@ public final class HttpServer2 implements FilterContainer {
         LOG.error(
             "Error while canceling configuration monitoring timer for webapp"
                 + webAppContext.getDisplayName(), e);
-        exception = addMultiException(exception, e);
+        exceptions.add(e);
       }
     }
     for (ServerConnector c : listeners) {
@@ -1637,7 +1633,7 @@ public final class HttpServer2 implements FilterContainer {
         LOG.error(
             "Error while stopping listener for webapp"
                 + webAppContext.getDisplayName(), e);
-        exception = addMultiException(exception, e);
+        exceptions.add(e);
       }
     }
 
@@ -1650,7 +1646,7 @@ public final class HttpServer2 implements FilterContainer {
     } catch (Exception e) {
       LOG.error("Error while stopping web app context for webapp "
           + webAppContext.getDisplayName(), e);
-      exception = addMultiException(exception, e);
+      exceptions.add(e);
     }
 
     try {
@@ -1661,21 +1657,15 @@ public final class HttpServer2 implements FilterContainer {
     } catch (Exception e) {
       LOG.error("Error while stopping web server for webapp "
           + webAppContext.getDisplayName(), e);
-      exception = addMultiException(exception, e);
+      exceptions.add(e);
     }
 
-    if (exception != null) {
-      exception.ifExceptionThrow();
+    if (exceptions.isEmpty()) {
+      return;
     }
-
-  }
-
-  private MultiException addMultiException(MultiException exception, Exception e) {
-    if(exception == null){
-      exception = new MultiException();
-    }
-    exception.add(e);
-    return exception;
+    Exception first = exceptions.get(0);
+    exceptions.subList(1, exceptions.size()).forEach(first::addSuppressed);
+    throw first;
   }
 
   public void join() throws InterruptedException {
@@ -1960,10 +1950,7 @@ public final class HttpServer2 implements FilterContainer {
      */
     private String inferMimeType(ServletRequest request) {
       String path = ((HttpServletRequest)request).getRequestURI();
-      ServletContextHandler.Context sContext =
-          (ServletContextHandler.Context)config.getServletContext();
-      String mime = sContext.getMimeType(path);
-      return (mime == null) ? null : mime;
+      return config.getServletContext().getMimeType(path);
     }
 
     private void initHttpHeaderMap() {

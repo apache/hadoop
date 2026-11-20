@@ -54,6 +54,14 @@ public class TestMachineList {
 
   class TestAddressFactory extends MachineList.InetAddressFactory {
     private Map<String, InetAddress> cache = new HashMap<>();
+    private Map<String, InetAddress[]> allAddresses = new HashMap<>();
+    void putAll(String host, String... ips) throws UnknownHostException {
+      InetAddress[] addrs = new InetAddress[ips.length];
+      for (int i = 0; i < ips.length; i++) {
+        addrs[i] = InetAddress.getByAddress(host, InetAddress.getByName(ips[i]).getAddress());
+      }
+      allAddresses.put(host, addrs);
+    }
     InetAddress put(String ip) throws UnknownHostException {
       return put(ip, ip);
     }
@@ -79,6 +87,12 @@ public class TestMachineList {
         addr = InetAddress.getByAddress(host, addr.getAddress());
       }
       return addr;
+    }
+    @Override
+    public InetAddress[] getAllByName(String host) throws UnknownHostException {
+      InetAddress[] addrs = allAddresses.get(host);
+      // otherwise resolves through getByName, as a subclass that does not override this
+      return addrs != null ? addrs : super.getAllByName(host);
     }
   }
 
@@ -149,6 +163,24 @@ public class TestMachineList {
 
     //test for exclusion with an unknown IP
     assertFalse(ml.includes("1.2.3.5"));
+  }
+
+  @Test
+  public void testHostNameWithSeveralAddresses() throws UnknownHostException {
+    TestAddressFactory addressFactory = new TestAddressFactory();
+    addressFactory.putAll("host1", "1.2.3.1", "1.2.3.2", "2001:db8::1");
+    addressFactory.put("1.2.3.4", "host4");
+
+    MachineList ml = new MachineList(HOST_LIST, addressFactory);
+
+    assertThat(ml.includes("1.2.3.1")).isTrue();
+    assertThat(ml.includes("1.2.3.2")).isTrue();
+    assertThat(ml.includes("2001:db8::1")).isTrue();
+    assertThat(ml.includes(InetAddress.getByName("2001:db8:0:0:0:0:0:1"))).isTrue();
+    assertThat(ml.includes("1.2.3.4")).isTrue();
+
+    assertThat(ml.includes("1.2.3.3")).isFalse();
+    assertThat(ml.includes("2001:db8::2")).isFalse();
   }
 
   @Test

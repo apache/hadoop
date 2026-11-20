@@ -142,12 +142,14 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
       chooseOnce(numOfReplicas, writer, excludedNodes, blocksize,
           maxNodesPerRack, results, avoidStaleNodes, storageTypes);
     } catch (NotEnoughReplicasException e) {
-      LOG.warn("Only able to place {} of total expected {}"
-              + " (maxNodesPerRack={}, numOfReplicas={}) nodes "
-              + "evenly across racks, falling back to evenly place on the "
-              + "remaining racks. This may not guarantee rack-level fault "
-              + "tolerance. Please check if the racks are configured properly.",
-          results.size(), totalReplicaExpected, maxNodesPerRack, numOfReplicas);
+      if (!results.isEmpty()) {
+        LOG.warn("Only able to place {} of total expected {}"
+                + " (maxNodesPerRack={}, numOfReplicas={}) nodes "
+                + "evenly across racks, falling back to evenly place on the "
+                + "remaining racks. This may not guarantee rack-level fault "
+                + "tolerance. Please check if the racks are configured properly.",
+            results.size(), totalReplicaExpected, maxNodesPerRack, numOfReplicas);
+      }
       LOG.debug("Caught exception was:", e);
       chooseEvenlyFromRemainingRacks(writer, excludedNodes, blocksize,
           maxNodesPerRack, results, avoidStaleNodes, storageTypes,
@@ -195,6 +197,10 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
       // To improve performance, the maximum value of 'bestEffortMaxNodesPerRack'
       // is calculated only when it is not possible to select a node.
       if (numResultsOflastChoose == results.size()) {
+        if (results.isEmpty()) {
+          // No node can be chosen at all, relaxing maxNodesPerRack won't help.
+          break;
+        }
         Map<String, Integer> nodesPerRack = new HashMap<>();
         for (DatanodeStorageInfo dsInfo : results) {
           String rackName = dsInfo.getDatanodeDescriptor().getNetworkLocation();

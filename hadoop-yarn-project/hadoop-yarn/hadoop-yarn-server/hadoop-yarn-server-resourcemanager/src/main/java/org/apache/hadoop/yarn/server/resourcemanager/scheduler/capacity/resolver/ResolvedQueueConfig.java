@@ -260,7 +260,12 @@ public final class ResolvedQueueConfig {
     byLabel.put(label, value);
   }
 
-  boolean isDefaultLifetimeSpecified() {
+  /**
+   * Whether a default application lifetime is set for this queue or for one
+   * of its ancestors; such a default is inherited by the queue.
+   * @return true if a default application lifetime is set in the hierarchy
+   */
+  public boolean isDefaultLifetimeSpecified() {
     return defaultLifetimeSpecified;
   }
 

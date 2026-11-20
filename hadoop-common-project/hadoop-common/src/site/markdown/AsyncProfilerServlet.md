@@ -56,7 +56,7 @@ Usage
 Once the prerequisites have been satisfied, access to the async-profiler
 is available by using Namenode or ResourceManager UI.
 
-Following options from async-profiler can be specified as query paramater.
+Following options from async-profiler can be specified as query parameters.
 *  `-e event`          profiling event: cpu|alloc|lock|cache-misses etc.
 *  `-d duration`       run profiling for 'duration' seconds (integer)
 *  `-i interval`       sampling interval in nanoseconds (long)

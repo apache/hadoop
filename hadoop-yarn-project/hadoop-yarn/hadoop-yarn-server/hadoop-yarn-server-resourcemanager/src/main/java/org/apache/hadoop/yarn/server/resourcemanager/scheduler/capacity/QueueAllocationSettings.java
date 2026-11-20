@@ -17,18 +17,22 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.Resolved;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolvedQueueConfig;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ValueSource;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.UNDEFINED;
-
 /**
- * This class determines minimum and maximum allocation settings based on the
- * {@link CapacitySchedulerConfiguration} and other queue
- * properties.
+ * This class holds the minimum and maximum allocation settings of a queue. The maximum
+ * allocation is taken from the queue's resolved configuration, in which a queue inherits the
+ * maximum allocation of its parent and root starts from the cluster maximum allocation.
  **/
 public class QueueAllocationSettings {
+  private static final String MAXIMUM_ALLOCATION_KEY_SUFFIX =
+      CapacitySchedulerConfiguration.DOT + CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION;
+
   private final Resource minimumAllocation;
   private Resource maximumAllocation;
 
@@ -36,44 +40,47 @@ public class QueueAllocationSettings {
     this.minimumAllocation = minimumAllocation;
   }
 
-  void setupMaximumAllocation(CapacitySchedulerConfiguration configuration, QueuePath queuePath,
-      CSQueue parent) {
+  void setupMaximumAllocation(CapacitySchedulerConfiguration configuration,
+      ResolvedQueueConfig resolved, QueuePath queuePath) {
     Resource clusterMax = ResourceUtils
         .fetchMaximumAllocationFromConfig(configuration);
-    Resource queueMax = configuration.getQueueMaximumAllocation(queuePath);
+    Resolved<Resource> queueMax = resolved.get(QueueProperties.MAXIMUM_ALLOCATION);
+    Resource maximum = Resources.clone(queueMax.getValue());
 
-    maximumAllocation = Resources.clone(
-        parent == null ? clusterMax : parent.getMaximumAllocation());
-
-    if (queueMax == Resources.none()) {
+    if (!isSetByMaximumAllocationKey(queueMax)) {
       // Handle backward compatibility
-      long queueMemory = configuration.getQueueMaximumAllocationMb(queuePath);
-      int queueVcores = configuration.getQueueMaximumAllocationVcores(queuePath);
-      if (queueMemory != UNDEFINED) {
-        maximumAllocation.setMemorySize(queueMemory);
-      }
-
-      if (queueVcores != UNDEFINED) {
-        maximumAllocation.setVirtualCores(queueVcores);
-      }
-
+      long queueMemory = resolved.get(QueueProperties.MAXIMUM_ALLOCATION_MB).getValue();
+      int queueVcores = resolved.get(QueueProperties.MAXIMUM_ALLOCATION_VCORES).getValue();
       String error = QueueAllocationChecks.checkLegacyQueueMaximumAllocation(
           String.valueOf(queuePath), queueMemory, queueVcores, clusterMax,
-          maximumAllocation);
+          maximum);
       if (error != null) {
         throw new IllegalArgumentException(error);
       }
     } else {
-      // Queue level maximum-allocation can't be larger than cluster setting
+      // Queue level maximum-allocation can't be larger than cluster setting.
+      // The resolved value overlays every resource of the configured one, so
+      // it equals the configured value.
       String error = QueueAllocationChecks.checkQueueMaximumAllocation(
-          String.valueOf(queuePath), queueMax, clusterMax);
+          String.valueOf(queuePath), maximum, clusterMax);
       if (error != null) {
         throw new IllegalArgumentException(error);
       }
-      for (ResourceInformation ri : queueMax.getResources()) {
-        maximumAllocation.setResourceInformation(ri.getName(), ri);
-      }
     }
+    maximumAllocation = maximum;
+  }
+
+  /**
+   * Whether the resolved maximum allocation was set by the queue's
+   * {@code maximum-allocation} key, directly or through a template, rather
+   * than inherited or set by the per resource keys.
+   */
+  private static boolean isSetByMaximumAllocationKey(Resolved<Resource> queueMax) {
+    ValueSource source = queueMax.getSource();
+    String sourceKey = queueMax.getSourceDetail();
+    return (source == ValueSource.QUEUE || source == ValueSource.TEMPLATE_V1
+        || source == ValueSource.TEMPLATE_V2) && sourceKey != null
+        && sourceKey.endsWith(MAXIMUM_ALLOCATION_KEY_SUFFIX);
   }
 
   public Resource getMinimumAllocation() {

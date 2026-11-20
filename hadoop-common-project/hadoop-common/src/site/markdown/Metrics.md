@@ -49,10 +49,6 @@ Each metrics record contains tags such as ProcessName, SessionID and Hostname as
 | `GcInfo` | Total GC count and GC time in msec, grouped by the kind of GC.  ex.) GcCountPS Scavenge=6, GCTimeMillisPS Scavenge=40, GCCountPS MarkSweep=0, GCTimeMillisPS MarkSweep=0 |
 | `GcCount` | Total GC count |
 | `GcTimeMillis` | Total GC time in msec |
-| `LogFatal` | Total number of FATAL logs |
-| `LogError` | Total number of ERROR logs |
-| `LogWarn` | Total number of WARN logs |
-| `LogInfo` | Total number of INFO logs |
 | `GcNumWarnThresholdExceeded` | Number of times that the GC warn threshold is exceeded |
 | `GcNumInfoThresholdExceeded` | Number of times that the GC info threshold is exceeded |
 | `GcTotalExtraSleepTime` | Total GC extra sleep time in msec |
@@ -298,6 +294,7 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `NumDeadDataNodes` | Number of datanodes which are currently dead |
 | `NumDecomLiveDataNodes` | Number of datanodes which have been decommissioned and are now live |
 | `NumDecomDeadDataNodes` | Number of datanodes which have been decommissioned and are now dead |
+| `DecommissioningLowRedundancyBlocks` | Number of low redundancy blocks on datanodes in decommissioning state, i.e. blocks that still have to be sufficiently replicated before those datanodes can be decommissioned |
 | `NumDecommissioningDataNodes` | Number of datanodes in decommissioning state |
 | `VolumeFailuresTotal` | Total number of volume failures across all Datanodes |
 | `EstimatedCapacityLostTotal` | An estimate of the total capacity lost due to volume failures |

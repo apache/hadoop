@@ -128,6 +128,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
@@ -156,7 +157,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -531,6 +534,152 @@ public class TestClientRMService {
     } catch (ApplicationNotFoundException ex) {
       fail(ex.getMessage());
     }
+  }
+
+  @Test
+  public void testGetContainerReportWhenAttemptMissingWithKeepContainers()
+      throws Exception {
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(123456, 1), 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    final boolean keepContainers = true;
+    final boolean includeAttempt = false;
+    final boolean includeContainer = true;
+    final boolean allowAccess = true;
+    ClientRMService rmService = createRMServiceForContainerReport(
+        containerId, keepContainers, includeAttempt, includeContainer,
+        allowAccess);
+
+    GetContainerReportResponse response = rmService.getContainerReport(
+        GetContainerReportRequest.newInstance(containerId));
+
+    assertEquals(containerId, response.getContainerReport().getContainerId());
+  }
+
+  @Test
+  public void testGetContainerReportWithExistingAttemptAndKeepContainers()
+      throws Exception {
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(123456, 1), 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    final boolean keepContainers = true;
+    final boolean includeAttempt = true;
+    final boolean includeContainer = true;
+    final boolean allowAccess = true;
+    ClientRMService rmService = createRMServiceForContainerReport(
+        containerId, keepContainers, includeAttempt, includeContainer,
+        allowAccess);
+
+    GetContainerReportResponse response = rmService.getContainerReport(
+        GetContainerReportRequest.newInstance(containerId));
+
+    assertEquals(containerId, response.getContainerReport().getContainerId());
+  }
+
+  @Test
+  public void testGetContainerReportRejectsMissingAttemptWithoutKeepContainers()
+      throws Exception {
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(123456, 1), 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    final boolean keepContainers = false;
+    final boolean includeAttempt = false;
+    final boolean includeContainer = true;
+    final boolean allowAccess = true;
+    ClientRMService rmService = createRMServiceForContainerReport(
+        containerId, keepContainers, includeAttempt, includeContainer,
+        allowAccess);
+
+    assertThrows(ApplicationAttemptNotFoundException.class,
+        () -> rmService.getContainerReport(
+            GetContainerReportRequest.newInstance(containerId)));
+  }
+
+  @Test
+  public void testGetContainerReportWithMissingAttemptAndContainer()
+      throws Exception {
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(123456, 1), 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    final boolean keepContainers = true;
+    final boolean includeAttempt = false;
+    final boolean includeContainer = false;
+    final boolean allowAccess = true;
+    ClientRMService rmService = createRMServiceForContainerReport(
+        containerId, keepContainers, includeAttempt, includeContainer,
+        allowAccess);
+
+    assertThrows(ContainerNotFoundException.class,
+        () -> rmService.getContainerReport(
+            GetContainerReportRequest.newInstance(containerId)));
+  }
+
+  @Test
+  public void testGetContainerReportRejectsUnauthorizedUserWithKeepContainers()
+      throws Exception {
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(123456, 1), 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    final boolean keepContainers = true;
+    final boolean includeAttempt = false;
+    final boolean includeContainer = true;
+    final boolean allowAccess = false;
+    ClientRMService rmService = createRMServiceForContainerReport(
+        containerId, keepContainers, includeAttempt, includeContainer,
+        allowAccess);
+
+    YarnException exception = assertThrows(YarnException.class,
+        () -> rmService.getContainerReport(
+            GetContainerReportRequest.newInstance(containerId)));
+    assertThat(exception.getMessage()).contains("does not have privilege");
+  }
+
+  private ClientRMService createRMServiceForContainerReport(
+      ContainerId containerId, boolean keepContainersAcrossAttempts,
+      boolean includeAttempt, boolean includeContainer, boolean allowAccess) {
+    ApplicationAttemptId attemptId = containerId.getApplicationAttemptId();
+    ApplicationId applicationId = attemptId.getApplicationId();
+    ResourceScheduler scheduler = mock(ResourceScheduler.class);
+    RMContext rmContext = mock(RMContext.class);
+    RMApp application = mock(RMApp.class);
+
+    ConcurrentHashMap<ApplicationId, RMApp> applications =
+        new ConcurrentHashMap<>();
+    applications.put(applicationId, application);
+    when(rmContext.getRMApps()).thenReturn(applications);
+    when(rmContext.getScheduler()).thenReturn(scheduler);
+    when(application.getApplicationId()).thenReturn(applicationId);
+    when(application.getUser()).thenReturn("test-user");
+
+    ApplicationSubmissionContext submissionContext =
+        mock(ApplicationSubmissionContext.class);
+    when(submissionContext.getKeepContainersAcrossApplicationAttempts())
+        .thenReturn(keepContainersAcrossAttempts);
+    when(application.getApplicationSubmissionContext())
+        .thenReturn(submissionContext);
+
+    Map<ApplicationAttemptId, RMAppAttempt> attempts = new HashMap<>();
+    if (includeAttempt) {
+      attempts.put(attemptId, mock(RMAppAttempt.class));
+    }
+    when(application.getAppAttempts()).thenReturn(attempts);
+
+    if (includeContainer) {
+      RMContainer rmContainer = mock(RMContainer.class);
+      ContainerReport containerReport = mock(ContainerReport.class);
+      when(containerReport.getContainerId()).thenReturn(containerId);
+      when(rmContainer.createContainerReport()).thenReturn(containerReport);
+      when(scheduler.getRMContainer(containerId)).thenReturn(rmContainer);
+    }
+
+    ApplicationACLsManager applicationACLsManager =
+        mock(ApplicationACLsManager.class);
+    QueueACLsManager queueACLsManager = mock(QueueACLsManager.class);
+    when(queueACLsManager.checkAccess(any(UserGroupInformation.class),
+        any(QueueACL.class), any(RMApp.class), any(), any()))
+        .thenReturn(allowAccess);
+    return new ClientRMService(rmContext, scheduler, null,
+        applicationACLsManager, queueACLsManager, null);
   }
 
   @Test

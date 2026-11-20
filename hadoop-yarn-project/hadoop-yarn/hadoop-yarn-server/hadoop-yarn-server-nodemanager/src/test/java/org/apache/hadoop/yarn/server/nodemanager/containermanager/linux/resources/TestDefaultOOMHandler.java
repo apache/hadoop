@@ -348,7 +348,7 @@ public class TestDefaultOOMHandler {
 
     verify(ex, times(1)).signalContainer(
         new ContainerSignalContext.Builder()
-            .setPid("1235")
+            .setPid("1234")
             .setContainer(c2)
             .setSignal(ContainerExecutor.Signal.KILL)
             .build()
@@ -410,7 +410,7 @@ public class TestDefaultOOMHandler {
 
     verify(ex, times(1)).signalContainer(
         new ContainerSignalContext.Builder()
-            .setPid("1235")
+            .setPid("1234")
             .setContainer(c1)
             .setSignal(ContainerExecutor.Signal.KILL)
             .build()
@@ -479,7 +479,7 @@ public class TestDefaultOOMHandler {
 
     verify(ex, times(1)).signalContainer(
         new ContainerSignalContext.Builder()
-            .setPid("1235")
+            .setPid("1234")
             .setContainer(c3)
             .setSignal(ContainerExecutor.Signal.KILL)
             .build()
@@ -956,14 +956,14 @@ public class TestDefaultOOMHandler {
 
     verify(ex, times(1)).signalContainer(
         new ContainerSignalContext.Builder()
-            .setPid("1235")
+            .setPid("1234")
             .setContainer(c1)
             .setSignal(ContainerExecutor.Signal.KILL)
             .build()
     );
     verify(ex, times(1)).signalContainer(
         new ContainerSignalContext.Builder()
-            .setPid("1234")
+            .setPid("1235")
             .setContainer(c2)
             .setSignal(ContainerExecutor.Signal.KILL)
             .build()
@@ -1051,14 +1051,14 @@ public class TestDefaultOOMHandler {
     verify(ex, times(1)).signalContainer(
         new ContainerSignalContext.Builder()
             .setPid("1235")
-            .setContainer(c1)
+            .setContainer(c2)
             .setSignal(ContainerExecutor.Signal.KILL)
             .build()
     );
     verify(ex, times(1)).signalContainer(
         new ContainerSignalContext.Builder()
             .setPid("1236")
-            .setContainer(c1)
+            .setContainer(c3)
             .setSignal(ContainerExecutor.Signal.KILL)
             .build()
     );
@@ -1137,14 +1137,14 @@ public class TestDefaultOOMHandler {
     verify(ex, times(1)).signalContainer(
         new ContainerSignalContext.Builder()
             .setPid("1234")
-            .setContainer(c2)
+            .setContainer(c1)
             .setSignal(ContainerExecutor.Signal.KILL)
             .build()
     );
     verify(ex, times(1)).signalContainer(
         new ContainerSignalContext.Builder()
             .setPid("1235")
-            .setContainer(c1)
+            .setContainer(c2)
             .setSignal(ContainerExecutor.Signal.KILL)
             .build()
     );

@@ -103,8 +103,9 @@ public final class ResolvedQueueTree {
     return configuredNodeLabels;
   }
 
+  /** Adds a queue, replacing the entry of its path if there is one. */
   void add(ResolvedQueueConfig queue) {
-    queues.put(queue.getQueuePath(), queue);
+    ResolvedQueueConfig previous = queues.put(queue.getQueuePath(), queue);
     if (!queue.getQueuePath().isRoot()) {
       QueuePath parent = queue.getQueuePath().getParentObject();
       List<ResolvedQueueConfig> list = children.get(parent);
@@ -112,7 +113,12 @@ public final class ResolvedQueueTree {
         list = new ArrayList<>();
         children.put(parent, list);
       }
-      list.add(queue);
+      int index = previous == null ? -1 : list.indexOf(previous);
+      if (index >= 0) {
+        list.set(index, queue);
+      } else {
+        list.add(queue);
+      }
     }
   }
 }
