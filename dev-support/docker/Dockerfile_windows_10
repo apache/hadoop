@@ -30,150 +30,232 @@
 ARG WINDOWS_BASE_IMAGE=mcr.microsoft.com/windows/servercore:ltsc2022@sha256:593cf4a5ef08cfff00a03637e45eba073b8fe9dc90b80af4449bc5f427c7cdcd
 FROM ${WINDOWS_BASE_IMAGE}
 
-# Need to disable the progress bar for speeding up the downloads.
-# hadolint ignore=SC2086
-RUN powershell $Global:ProgressPreference = 'SilentlyContinue'
-
 # Restore the default Windows shell for correct batch processing.
 SHELL ["cmd", "/S", "/C"]
 
-# Install Visual Studio 2019 Build Tools.
-RUN curl -SL --output vs_buildtools.exe https://aka.ms/vs/16/release/vs_buildtools.exe \
-    && (start /w vs_buildtools.exe --quiet --wait --norestart --nocache \
-    --installPath "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\BuildTools" \
-    --add Microsoft.VisualStudio.Workload.VCTools \
-    --add Microsoft.VisualStudio.Component.VC.ASAN \
-    --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 \
-    --add Microsoft.VisualStudio.Component.Windows10SDK.19041 \
-    || IF "%ERRORLEVEL%"=="3010" EXIT 0) \
-    && del /q vs_buildtools.exe
+# Every file downloaded below is pinned by version and SHA-512, except
+# get-pip.py and the packages in requirements-windows.txt, which are pinned by
+# SHA-256; vcpkg is pinned by commit. Where the publisher distributes its own
+# digest, the value here was cross-checked against it; the rest are pinned from
+# a verified download. Two tools download more themselves: the Visual Studio
+# bootstrapper fetches its release's packages and checks them against
+# Microsoft's signed manifest for that release, and vcpkg checks each source it
+# downloads against the SHA-512 in its port.
+# When bumping a non-ASF pin, take a release at least 7 days old (SECURITY.md
+# requires a cooldown for non-ASF dependencies; .github/dependabot.yml uses 7
+# days).
+# Each tool is downloaded, checked, installed and cleaned up in one RUN, so no
+# installer or archive is left in a lower layer. PowerShell does not fail on a
+# non-zero exit code from a program it runs, so each RUN checks the exit code
+# itself, and then checks that the tool is in place.
 
-# start /w reports success to || whatever the installer returns, so the 3010
-# test above never runs and that RUN passes even when the install fails.
-# Check the result instead.
-RUN call "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" \
+# Install Visual Studio 2019 Build Tools 16.11.63.
+# This is the fixed-version bootstrapper from the release history page,
+# https://learn.microsoft.com/en-us/visualstudio/releases/2019/history
+# Unlike https://aka.ms/vs/16/release/vs_buildtools.exe, it installs this
+# release and not whatever is newest when the image is built. Microsoft
+# publishes no digest for it, but the SHA-256 in its download URL matches the
+# file. To update, take a newer row of that page and recompute the SHA-512.
+# 0 is success and 3010 is success with a reboot pending, which --norestart
+# defers. WaitForExit() waits for the bootstrapper alone; Start-Process -Wait
+# would also wait for any process it leaves running. Reading $p.Handle first
+# keeps the exit code readable after the process exits. $q is a double quote:
+# Start-Process does not quote an argument that has spaces, and a literal one
+# would end cmd's quoted -Command string. vcvars64.bat does not reliably exit
+# non-zero on failure, so check for cl.exe and the SDK as well.
+ENV VS_BUILDTOOLS_SHA512 29748d1635696c8f5f5ec79deeb1c759bcc81ca51f44cd9b8734fefa3acbd7ef837c5b8f1a60c652ea87693111d1c0b0c723da4ee1a90bcfb4c164534c3abb6c
+RUN powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; \
+    $f = Join-Path $Env:TEMP 'vs_buildtools.exe'; \
+    Invoke-WebRequest -UseBasicParsing -Uri https://download.visualstudio.microsoft.com/download/pr/9dacffc2-1f48-4c30-82da-123d3fe0e842/94dc84b671b72a5c40fc18a5b211adc6b51554aa185dc09ace0d4adf2b3cd4e4/vs_BuildTools.exe -OutFile $f; \
+    if ((Get-FileHash $f -Algorithm sha512).Hash -ne $Env:VS_BUILDTOOLS_SHA512) { throw 'vs_BuildTools.exe SHA-512 mismatch' }; \
+    $q = [char]34; \
+    $p = Start-Process -FilePath $f -PassThru -ArgumentList '--quiet', '--wait', '--norestart', '--nocache', \
+        '--installPath', ($q + ${Env:ProgramFiles(x86)} + '\Microsoft Visual Studio\2019\BuildTools' + $q), \
+        '--add', 'Microsoft.VisualStudio.Workload.VCTools', \
+        '--add', 'Microsoft.VisualStudio.Component.VC.ASAN', \
+        '--add', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64', \
+        '--add', 'Microsoft.VisualStudio.Component.Windows10SDK.19041'; \
+    $null = $p.Handle; $p.WaitForExit(); \
+    if (($p.ExitCode -ne 0) -and ($p.ExitCode -ne 3010)) { throw ('vs_BuildTools.exe exited with ' + $p.ExitCode) }; \
+    Remove-Item $f -Force" \
+    && call "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" \
     && where cl.exe \
     && if not exist "%ProgramFiles(x86)%\Windows Kits\10\Include\10.0.19041.0" (echo Windows SDK 10.0.19041 is missing & exit 1)
 
-# Install Chocolatey.
-ENV chocolateyVersion=1.4.0
-RUN powershell -NoProfile -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
+# Install Git for Windows 2.56.1 as PortableGit, in C:\Git.
+# Git for Windows publishes SHA-256
+# 9dd04a608ceb5f6ab32a73709e0ecb159d211da71b697c45ff81f6dd0c6b49c7 for this file.
+# The self-extractor exits non-zero only when extraction fails. It then runs
+# post-install.bat, which Git needs, and exits 0 whatever that does, so check
+# that post-install.bat, which deletes itself last, and its hooks in
+# etc\post-install, which the last hook removes, are gone. Give up after 15
+# minutes rather than let a hung post-install hold the build until the CI job
+# times out.
+# Chocolatey's git.install, which this replaces, also set the two settings
+# below. PortableGit's own default credential helper opens a dialog.
+ENV PORTABLEGIT_SHA512 7225f00b4b9a1c56791978c663f7fa8ee5a0ed4bcd7745f868404efa78e04d61af064c0c987a96881bd526447328c4c305f19812ac70b6f6e6b776b5fa5e5d98
+RUN powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; \
+    $f = Join-Path $Env:TEMP 'PortableGit-2.56.1-64-bit.7z.exe'; \
+    Invoke-WebRequest -UseBasicParsing -Uri https://github.com/git-for-windows/git/releases/download/v2.56.1.windows.1/PortableGit-2.56.1-64-bit.7z.exe -OutFile $f; \
+    if ((Get-FileHash $f -Algorithm sha512).Hash -ne $Env:PORTABLEGIT_SHA512) { throw 'PortableGit-2.56.1-64-bit.7z.exe SHA-512 mismatch' }; \
+    $p = Start-Process -FilePath $f -ArgumentList '-y', '-oC:\Git' -PassThru; $null = $p.Handle; \
+    if (-not $p.WaitForExit(900000)) { $p.Kill(); throw 'PortableGit extraction timed out' }; \
+    if ($p.ExitCode -ne 0) { throw ('PortableGit extraction exited with ' + $p.ExitCode) }; \
+    if (Test-Path C:\Git\post-install.bat) { throw 'PortableGit post-install.bat did not finish' }; \
+    if (Test-Path C:\Git\etc\post-install) { throw 'PortableGit post-install hooks did not finish' }; \
+    C:\Git\cmd\git.exe --version; if ($LASTEXITCODE -ne 0) { throw 'git --version failed' }; \
+    C:\Git\bin\bash.exe --version; if ($LASTEXITCODE -ne 0) { throw 'bash --version failed' }; \
+    C:\Git\cmd\git.exe config --system http.sslBackend schannel; if ($LASTEXITCODE -ne 0) { throw 'git config failed' }; \
+    C:\Git\cmd\git.exe config --system credential.helper manager; if ($LASTEXITCODE -ne 0) { throw 'git config failed' }; \
+    Remove-Item $f -Force"
 
-# Install git.
-RUN choco install git.install -y
-RUN powershell Copy-Item -Recurse -Path 'C:\Program Files\Git' -Destination C:\Git
-
-# Install vcpkg.
-# hadolint ignore=DL3003
-RUN powershell git clone https://github.com/microsoft/vcpkg.git \
-    && cd vcpkg \
-    && git fetch --all \
-    && git checkout 2026.07.29 \
-    && .\bootstrap-vcpkg.bat
+# Install vcpkg at the commit that the 2026.07.29 tag names, which is also the
+# builtin-baseline in vcpkg/vcpkg.json. This needs a full clone: vcpkg reads the
+# port versions that vcpkg.json overrides from older commits.
+# bootstrap-vcpkg.bat would download vcpkg.exe with scripts\tls12-download.exe,
+# which checks only that it carries a trusted signature, not whose, so download
+# it here instead. This is the vcpkg-tool release that
+# scripts/vcpkg-tool-metadata.txt names at that commit; GitHub publishes SHA-256
+# 13b8175e99a884c5ad34249218754b45541a1a63f216e92603aee57a285ac741 for it.
+# To update, take a newer vcpkg tag, set builtin-baseline in vcpkg/vcpkg.json to
+# its commit, and take the vcpkg-tool release that commit names.
+ENV VCPKG_COMMIT 9e593bb18ea69cc5095e012465dcd675a822ed0d
+ENV VCPKG_EXE_SHA512 5bb79a4d25657b11dddfe30ad87507518406f29d3829c7b3d4673d6366b7353570510efce4eeeb771d0c77fb98d25d38994602e8758f873b3c40677844152644
+RUN C:\Git\cmd\git.exe clone --quiet --no-checkout https://github.com/microsoft/vcpkg.git C:\vcpkg \
+    && C:\Git\cmd\git.exe -C C:\vcpkg -c advice.detachedHead=false checkout --quiet --detach %VCPKG_COMMIT% \
+    && powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; \
+    Invoke-WebRequest -UseBasicParsing -Uri https://github.com/microsoft/vcpkg-tool/releases/download/2026-07-27/vcpkg.exe -OutFile C:\vcpkg\vcpkg.exe; \
+    if ((Get-FileHash C:\vcpkg\vcpkg.exe -Algorithm sha512).Hash -ne $Env:VCPKG_EXE_SHA512) { throw 'vcpkg.exe SHA-512 mismatch' }" \
+    && C:\vcpkg\vcpkg.exe version --disable-metrics
 
 ADD vcpkg/vcpkg.json .
 
 # Remove vcpkg's build trees, downloads and packages in the same layer, and
 # turn off its binary cache, which would keep a second copy of every package.
 # This takes about 7.5 GB off the image.
-RUN set "VCPKG_BINARY_SOURCES=clear" \
+# vcpkg needs git, and would download a copy of its own if git is not on PATH.
+RUN set "PATH=C:\Git\cmd;%PATH%" \
+    && set "VCPKG_BINARY_SOURCES=clear" \
     && C:\vcpkg\vcpkg.exe install --x-install-root C:\vcpkg\installed --clean-after-build \
     && (if exist C:\vcpkg\buildtrees rmdir /s /q C:\vcpkg\buildtrees) \
     && (if exist C:\vcpkg\downloads rmdir /s /q C:\vcpkg\downloads) \
     && (if exist C:\vcpkg\packages rmdir /s /q C:\vcpkg\packages)
 
-# Install Microsoft Build of OpenJDK 17.
-# Every artifact downloaded below is pinned by SHA-512. Where the publisher
-# distributes its own digest, the value here was cross-checked against it
-# (Microsoft publishes SHA-256 for the JDK, cmake.org for CMake, and the ASF
-# publishes SHA-512 for Maven); the rest are pinned from a verified download.
+# Install Microsoft Build of OpenJDK 17. Microsoft publishes a SHA-256 for it.
 ENV JDK17_SHA512 391836ae41b75890ac92ef83939488ab4ceff7e3067d085e4e204b994d61abde0f32ac7a1bc1b41ea14fccd15d267e88ff4149aafba8fccee5eb4ea85676a56b
-RUN powershell Invoke-WebRequest -URI https://aka.ms/download-jdk/microsoft-jdk-17.0.20.1-windows-x64.msi -OutFile C:\jdk17.msi
-RUN powershell if ((Get-FileHash C:\jdk17.msi -Algorithm sha512).Hash -ne $Env:JDK17_SHA512) { throw 'jdk17.msi SHA-512 mismatch' }
-RUN powershell Start-Process msiexec.exe -ArgumentList '/i','C:\jdk17.msi','INSTALLDIR=C:\Java\jdk17\','/quiet','/norestart' -Wait
-RUN powershell if (-not (Test-Path 'C:\Java\jdk17\bin\javac.exe')) { throw 'JDK 17 installation failed' }
-RUN powershell Remove-Item C:\jdk17.msi -Force
+RUN powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; \
+    $f = Join-Path $Env:TEMP 'microsoft-jdk-17.0.20.1-windows-x64.msi'; \
+    Invoke-WebRequest -UseBasicParsing -Uri https://aka.ms/download-jdk/microsoft-jdk-17.0.20.1-windows-x64.msi -OutFile $f; \
+    if ((Get-FileHash $f -Algorithm sha512).Hash -ne $Env:JDK17_SHA512) { throw 'microsoft-jdk-17.0.20.1-windows-x64.msi SHA-512 mismatch' }; \
+    $p = Start-Process msiexec.exe -ArgumentList '/i', $f, 'INSTALLDIR=C:\Java\jdk17\', '/quiet', '/norestart' -Wait -PassThru; \
+    if (($p.ExitCode -ne 0) -and ($p.ExitCode -ne 3010)) { throw ('msiexec exited with ' + $p.ExitCode) }; \
+    if (-not (Test-Path C:\Java\jdk17\bin\javac.exe)) { throw 'JDK 17 installation failed' }; \
+    Remove-Item $f -Force"
 
-# Install Apache Maven.
+# Install Apache Maven 3.9.15. The ASF publishes this SHA-512.
 ENV MAVEN_SHA512 251c676eb88684d6dd86c666817979d256a335c31ad34ab0e1df17eeca1cd504a6c890e906a46d04e51cc7a4fb02f33a75971ef750558034e0a81c257be02267
-RUN powershell Invoke-WebRequest -URI https://archive.apache.org/dist/maven/maven-3/3.9.15/binaries/apache-maven-3.9.15-bin.zip -OutFile $Env:TEMP\apache-maven-3.9.15-bin.zip
-RUN powershell if ((Get-FileHash $Env:TEMP\apache-maven-3.9.15-bin.zip -Algorithm sha512).Hash -ne $Env:MAVEN_SHA512) { throw 'apache-maven-3.9.15-bin.zip SHA-512 mismatch' }
-RUN powershell Expand-Archive -Path $Env:TEMP\apache-maven-3.9.15-bin.zip -DestinationPath "C:\Maven"
+RUN powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; \
+    $f = Join-Path $Env:TEMP 'apache-maven-3.9.15-bin.zip'; \
+    Invoke-WebRequest -UseBasicParsing -Uri https://archive.apache.org/dist/maven/maven-3/3.9.15/binaries/apache-maven-3.9.15-bin.zip -OutFile $f; \
+    if ((Get-FileHash $f -Algorithm sha512).Hash -ne $Env:MAVEN_SHA512) { throw 'apache-maven-3.9.15-bin.zip SHA-512 mismatch' }; \
+    Expand-Archive -Path $f -DestinationPath C:\Maven; \
+    if (-not (Test-Path C:\Maven\apache-maven-3.9.15\bin\mvn.cmd)) { throw 'Maven installation failed' }; \
+    Remove-Item $f -Force"
 
-# Install CMake 3.30.2.
+# Install CMake 3.30.2. cmake.org publishes a SHA-256 for it.
 ENV CMAKE_SHA512 7ec8fde26fc56ef7be0bb00cc3f67be55277fc9bf9ab1a04023b49e0babdd92512915fda457c18b25c4294b3b864dda642ce8326e56508150c893a60532ad44e
-RUN powershell Invoke-WebRequest -URI https://cmake.org/files/v3.30/cmake-3.30.2-windows-x86_64.zip -OutFile $Env:TEMP\cmake-3.30.2-windows-x86_64.zip
-RUN powershell if ((Get-FileHash $Env:TEMP\cmake-3.30.2-windows-x86_64.zip -Algorithm sha512).Hash -ne $Env:CMAKE_SHA512) { throw 'cmake-3.30.2-windows-x86_64.zip SHA-512 mismatch' }
-RUN powershell Expand-Archive -Path $Env:TEMP\cmake-3.30.2-windows-x86_64.zip -DestinationPath "C:\CMake"
+RUN powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; \
+    $f = Join-Path $Env:TEMP 'cmake-3.30.2-windows-x86_64.zip'; \
+    Invoke-WebRequest -UseBasicParsing -Uri https://cmake.org/files/v3.30/cmake-3.30.2-windows-x86_64.zip -OutFile $f; \
+    if ((Get-FileHash $f -Algorithm sha512).Hash -ne $Env:CMAKE_SHA512) { throw 'cmake-3.30.2-windows-x86_64.zip SHA-512 mismatch' }; \
+    Expand-Archive -Path $f -DestinationPath C:\CMake; \
+    if (-not (Test-Path C:\CMake\cmake-3.30.2-windows-x86_64\bin\cmake.exe)) { throw 'CMake installation failed' }; \
+    Remove-Item $f -Force"
 
 # Install zstd 1.5.4. The zstd CLI is needed to unpack the MSYS2 *.pkg.tar.zst
 # archives below; it is unrelated to Hadoop's zstd codec, which HADOOP-19855
 # replaced with zstd-jni.
 ENV ZSTD_SHA512 32a9265d39dab9880cc5305bd0287da4534d3fdb21b3b470722d0b0b3aa3c6ea46f7d79da20e13e4b26b1382b75f908feb59b45f737f2e1cd2f1c1224c468cf8
-RUN powershell Invoke-WebRequest -Uri https://github.com/facebook/zstd/releases/download/v1.5.4/zstd-v1.5.4-win64.zip -OutFile $Env:TEMP\zstd-v1.5.4-win64.zip
-RUN powershell if ((Get-FileHash $Env:TEMP\zstd-v1.5.4-win64.zip -Algorithm sha512).Hash -ne $Env:ZSTD_SHA512) { throw 'zstd-v1.5.4-win64.zip SHA-512 mismatch' }
-RUN powershell Expand-Archive -Path $Env:TEMP\zstd-v1.5.4-win64.zip -DestinationPath "C:\ZStd"
-RUN setx PATH "%PATH%;C:\ZStd"
+RUN powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; \
+    $f = Join-Path $Env:TEMP 'zstd-v1.5.4-win64.zip'; \
+    Invoke-WebRequest -UseBasicParsing -Uri https://github.com/facebook/zstd/releases/download/v1.5.4/zstd-v1.5.4-win64.zip -OutFile $f; \
+    if ((Get-FileHash $f -Algorithm sha512).Hash -ne $Env:ZSTD_SHA512) { throw 'zstd-v1.5.4-win64.zip SHA-512 mismatch' }; \
+    Expand-Archive -Path $f -DestinationPath C:\ZStd; \
+    C:\ZStd\zstd.exe --version; if ($LASTEXITCODE -ne 0) { throw 'zstd --version failed' }; \
+    Remove-Item $f -Force"
 
-# Install libopenssl 3.5.2-1 needed for rsync 3.5.1.
-ENV LIBOPENSSL_SHA512 62ed995c350f8419eafb59c1aaaa4ff06657a33352917d84ccadd04f8904162ababdf075a7130c861b8d85098225866d8bc5c2b830fea54250386ed48dc130d0
-RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libopenssl-3.5.2-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libopenssl-3.5.2-1-x86_64.pkg.tar.zst
-RUN powershell if ((Get-FileHash $Env:TEMP\libopenssl-3.5.2-1-x86_64.pkg.tar.zst -Algorithm sha512).Hash -ne $Env:LIBOPENSSL_SHA512) { throw 'libopenssl-3.5.2-1-x86_64.pkg.tar.zst SHA-512 mismatch' }
-RUN powershell zstd -d $Env:TEMP\libopenssl-3.5.2-1-x86_64.pkg.tar.zst -o $Env:TEMP\libopenssl-3.5.2-1-x86_64.pkg.tar
-RUN powershell mkdir "C:\LibOpenSSL"
-RUN powershell tar -xvf $Env:TEMP\libopenssl-3.5.2-1-x86_64.pkg.tar -C "C:\LibOpenSSL"
-
-# Install libxxhash 0.8.3 needed for rsync 3.5.1.
+# Install rsync 3.5.1 from MSYS2 into Git's usr\bin, whose MSYS2 runtime and
+# DLLs rsync uses. Git for Windows has all of rsync's DLLs except those of
+# libxxhash and popt, so install those packages too. MSYS2 publishes
+# SHA-256 b402bd1d03815c5e28b7ab415d8e20f487eff2460ae0271a99674eeb0d77194f for
+# popt-1.19-1. A Git for Windows update can change the DLLs it ships, and a
+# missing one only shows when rsync starts, so check that it starts and can
+# copy files, which is what Yetus uses it for.
 ENV LIBXXHASH_SHA512 a6d7a05aa94836abf0b5bc611db08217b4d1207feb539d9c18692fa9269bb255d6ee877bc146a2b2a177299bc0456c370af3356cd4dfbcf212e2182773494b2f
-RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libxxhash-0.8.3-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar.zst
-RUN powershell if ((Get-FileHash $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar.zst -Algorithm sha512).Hash -ne $Env:LIBXXHASH_SHA512) { throw 'libxxhash-0.8.3-1-x86_64.pkg.tar.zst SHA-512 mismatch' }
-RUN powershell zstd -d $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar.zst -o $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar
-RUN powershell mkdir "C:\LibXXHash"
-RUN powershell tar -xvf $Env:TEMP\libxxhash-0.8.3-1-x86_64.pkg.tar -C "C:\LibXXHash"
-
-# Install libzstd 1.5.7 needed for rsync 3.5.1.
-ENV LIBZSTD_SHA512 02cf577567773f7f93f4df404d3b0a62d0cab4b2b63c76d572ef3af591e9fe6571b3d7e79e868ae5d7967b8f540941489a4004367c64113e1688f392827fc6cd
-RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/libzstd-1.5.7-1-x86_64.pkg.tar.zst -OutFile $Env:TEMP\libzstd-1.5.7-1-x86_64.pkg.tar.zst
-RUN powershell if ((Get-FileHash $Env:TEMP\libzstd-1.5.7-1-x86_64.pkg.tar.zst -Algorithm sha512).Hash -ne $Env:LIBZSTD_SHA512) { throw 'libzstd-1.5.7-1-x86_64.pkg.tar.zst SHA-512 mismatch' }
-RUN powershell zstd -d $Env:TEMP\libzstd-1.5.7-1-x86_64.pkg.tar.zst -o $Env:TEMP\libzstd-1.5.7-1-x86_64.pkg.tar
-RUN powershell mkdir "C:\LibZStd"
-RUN powershell tar -xvf $Env:TEMP\libzstd-1.5.7-1-x86_64.pkg.tar -C "C:\LibZStd"
-
-# Install rsync 3.5.1.
+ENV POPT_SHA512 a4addf138fe7d5bd7d6ae1e6eee79151ddc6da9cf6e0394298f800eee6554f204beaaaee48975c153f3e5047b81e3f4218f70b9c35a433a9d37f100d9de24eae
 ENV RSYNC_SHA512 a8da994228c325027a20e0c8bf71a177faf038624e5be06e752b8a0d93f52ade7c594956d63178a75f3010b153d883238048fd76fee49ec2562989b8e97b080c
-RUN powershell Invoke-WebRequest -Uri https://repo.msys2.org/msys/x86_64/rsync-3.5.1-2-x86_64.pkg.tar.zst -OutFile $Env:TEMP\rsync-3.5.1-2-x86_64.pkg.tar.zst
-RUN powershell if ((Get-FileHash $Env:TEMP\rsync-3.5.1-2-x86_64.pkg.tar.zst -Algorithm sha512).Hash -ne $Env:RSYNC_SHA512) { throw 'rsync-3.5.1-2-x86_64.pkg.tar.zst SHA-512 mismatch' }
-RUN powershell zstd -d $Env:TEMP\rsync-3.5.1-2-x86_64.pkg.tar.zst -o $Env:TEMP\rsync-3.5.1-2-x86_64.pkg.tar
-RUN powershell mkdir "C:\RSync"
-RUN powershell tar -xvf $Env:TEMP\rsync-3.5.1-2-x86_64.pkg.tar -C "C:\RSync"
-# Copy the dependencies of rsync 3.5.1.
-RUN powershell Copy-Item -Path "C:\LibOpenSSL\usr\bin\*.dll" -Destination "C:\Program` Files\Git\usr\bin"
-RUN powershell Copy-Item -Path "C:\LibXXHash\usr\bin\*.dll" -Destination "C:\Program` Files\Git\usr\bin"
-RUN powershell Copy-Item -Path "C:\LibZStd\usr\bin\*.dll" -Destination "C:\Program` Files\Git\usr\bin"
-RUN powershell Copy-Item -Path "C:\RSync\usr\bin\*" -Destination "C:\Program` Files\Git\usr\bin"
-
-COPY pkg-resolver pkg-resolver
+RUN powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; \
+    $packages = [ordered]@{ 'libxxhash-0.8.3-1' = $Env:LIBXXHASH_SHA512; 'popt-1.19-1' = $Env:POPT_SHA512; 'rsync-3.5.1-2' = $Env:RSYNC_SHA512 }; \
+    foreach ($name in $packages.Keys) { \
+        $file = $name + '-x86_64.pkg.tar.zst'; $zst = Join-Path $Env:TEMP $file; $tar = Join-Path $Env:TEMP ($name + '.tar'); $dir = Join-Path $Env:TEMP $name; \
+        Invoke-WebRequest -UseBasicParsing -Uri ('https://repo.msys2.org/msys/x86_64/' + $file) -OutFile $zst; \
+        if ((Get-FileHash $zst -Algorithm sha512).Hash -ne $packages[$name]) { throw ($file + ' SHA-512 mismatch') }; \
+        C:\ZStd\zstd.exe -q -d $zst -o $tar; if ($LASTEXITCODE -ne 0) { throw ('zstd failed on ' + $file) }; \
+        $null = New-Item -ItemType Directory -Path $dir; \
+        tar -xf $tar -C $dir; if ($LASTEXITCODE -ne 0) { throw ('tar failed on ' + $file) }; \
+        Copy-Item -Path (Join-Path $dir 'usr\bin\*') -Destination C:\Git\usr\bin; \
+        Remove-Item -Path $zst, $tar, $dir -Recurse -Force \
+    }; \
+    C:\Git\usr\bin\rsync.exe --version; if ($LASTEXITCODE -ne 0) { throw 'rsync --version failed' }; \
+    C:\Git\bin\bash.exe -ec 'rsync -a /etc/profile.d/ /tmp/rsync-check/; rm -rf /tmp/rsync-check'; if ($LASTEXITCODE -ne 0) { throw 'rsync could not copy files' }"
 
 ## Install Python 3.11.8.
 # The Python installation steps below are derived from -
 # https://github.com/docker-library/python/blob/105d6f34e7d70aad6f8c3e249b8208efa591916a/3.11/windows/windowsservercore-ltsc2022/Dockerfile
+# python.org lists only an MD5 digest for this installer, plus a Sigstore
+# bundle that carries its SHA-256; PYTHON_SHA512 is from a download that
+# matched both.
+# get-pip.py installs pip and setuptools offline from the two wheels below,
+# not from PyPI by version alone. PyPI publishes SHA-256
+# ba0d021a166865d2265246961bec0152ff124de910c5cc39f1156ce3fa7c69dc and
+# d0b9a8433464d5800cbe05094acf5c6d52a91bfac9b52bcfc4d41382be5d5d31 for them.
+COPY pkg-resolver/install-python.ps1 pkg-resolver/install-pip.ps1 pkg-resolver/
 ENV PYTHONIOENCODING UTF-8
 ENV PYTHON_VERSION 3.11.8
+ENV PYTHON_SHA512 e6bdbae1affd161e62fc87407c912462dfe875f535ba9f344d0c4ade13715c947cd3ae832eff60f1bad4161938311d06ac8bc9b52ef203f7b0d9de1409f052a5
 ENV PYTHON_PIP_VERSION 24.0
+ENV PYTHON_PIP_URL https://files.pythonhosted.org/packages/8a/6a/19e9fe04fca059ccf770861c7d5721ab4c2aebc539889e97c7977528a53b/pip-24.0-py3-none-any.whl
+ENV PYTHON_PIP_SHA512 5d7462a584105bccaa9cf376f5a8c5827ead099c813c8af7392d478a4398f373d9e8cac7bbad2db51b335411ab966b21e119b1b1234c9a7ab70c6ddfc9306da6
 ENV PYTHON_SETUPTOOLS_VERSION 65.5.1
+ENV PYTHON_SETUPTOOLS_URL https://files.pythonhosted.org/packages/b6/40/353c051f77ee5618adaf1fd96f4f6bae9714ed0a22c7142c01c24eb77fe4/setuptools-65.5.1-py3-none-any.whl
+ENV PYTHON_SETUPTOOLS_SHA512 8fe0472001b1589caf81f1e0fe17777e524f003fc414d0a17a431209ba5aa8292741bdf13ae4346227afba2491099ea7369bf767ce621ef3fa38dda7b304b5c0
 ENV PYTHON_GET_PIP_URL https://github.com/pypa/get-pip/raw/dbf0c85f76fb6e1ab42aa672ffca6f0a675d9ee4/public/get-pip.py
 ENV PYTHON_GET_PIP_SHA256 dfe9fd5c28dc98b5ac17979a953ea550cec37ae1b47a5116007395bfacff2ab9
 RUN powershell Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 RUN powershell pkg-resolver\install-python.ps1
 RUN powershell pkg-resolver\install-pip.ps1
-RUN powershell pip install python-dateutil
+
+# python-dateutil is imported by Apache Yetus releasedocmaker, which
+# -Preleasedocs runs. requirements-windows.txt pins and hashes every package,
+# dependencies included: --no-deps keeps pip from installing anything else,
+# and pip check fails if a dependency is missing.
+COPY pkg-resolver/requirements-windows.txt pkg-resolver/
+RUN powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; \
+    pip install --disable-pip-version-check --no-cache-dir --require-hashes --no-deps --only-binary :all: -r pkg-resolver\requirements-windows.txt; \
+    if ($LASTEXITCODE -ne 0) { throw 'pip install failed' }; \
+    pip check; if ($LASTEXITCODE -ne 0) { throw 'pip check failed' }; \
+    python -c 'import dateutil.parser'; if ($LASTEXITCODE -ne 0) { throw 'python-dateutil cannot be imported' }"
 
 ## Install the Microsoft Visual C++ 2010 Redistributable to link leveldbjni native library
 ENV VCREDIST_SHA512 3af3dcaad4fc9651dce75c75a85bca0b15782a190f0fbb4ae21a6182cbc2f78138aa8ff26b350efef302f95c74b1808b2436aa199d43a5ee17fd0796a79c405b
-RUN powershell -Command Invoke-WebRequest -Uri https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe -OutFile vcredist_x64.exe
-RUN powershell if ((Get-FileHash vcredist_x64.exe -Algorithm sha512).Hash -ne $Env:VCREDIST_SHA512) { throw 'vcredist_x64.exe SHA-512 mismatch' }
-RUN powershell -Command Start-Process -FilePath .\vcredist_x64.exe -ArgumentList '/quiet', '/norestart' -Wait
-RUN powershell -Command Remove-Item vcredist_x64.exe
+RUN powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; \
+    $f = Join-Path $Env:TEMP 'vcredist_x64.exe'; \
+    Invoke-WebRequest -UseBasicParsing -Uri https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe -OutFile $f; \
+    if ((Get-FileHash $f -Algorithm sha512).Hash -ne $Env:VCREDIST_SHA512) { throw 'vcredist_x64.exe SHA-512 mismatch' }; \
+    $p = Start-Process -FilePath $f -ArgumentList '/quiet', '/norestart' -Wait -PassThru; \
+    if (($p.ExitCode -ne 0) -and ($p.ExitCode -ne 3010)) { throw ('vcredist_x64.exe exited with ' + $p.ExitCode) }; \
+    if (-not (Test-Path C:\Windows\System32\msvcr100.dll)) { throw 'msvcr100.dll is missing' }; \
+    Remove-Item $f -Force"
 
 # Create a user HadoopBuilder with basic privileges and use it for building Hadoop on Windows.
 # Windows Server Core enables password complexity by default (unlike the
@@ -198,19 +280,24 @@ RUN powershell Remove-Item -Force "C:\secpol.cfg" -Confirm:$false
 # every user, like /tmp on Linux. S-1-5-32-545 is the Users group.
 RUN mkdir C:\tmp && icacls C:\tmp /grant "*S-1-5-32-545:(OI)(CI)M"
 
-# Login as HadoopBuilder and set the necessary environment and PATH variables.
+# Add the tools to the system PATH, after the Windows directories, in one place.
+# The Python installer has already put C:\Python and C:\Python\Scripts first.
+# Edit the registry value directly, so that it stays REG_EXPAND_SZ, and skip
+# directories already on it, such as the JDK's.
+RUN powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; \
+    $key = Get-Item 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment'; \
+    $path = $key.GetValue('Path', '', 'DoNotExpandEnvironmentNames').TrimEnd(';'); \
+    foreach ($dir in 'C:\Git\cmd', 'C:\Java\jdk17\bin', 'C:\Maven\apache-maven-3.9.15\bin', 'C:\CMake\cmake-3.30.2-windows-x86_64\bin', 'C:\ZStd', 'C:\Git\usr\bin') { \
+        if (($path -split ';' | ForEach-Object { $_.TrimEnd('\') }) -notcontains $dir) { $path += ';' + $dir } \
+    }; \
+    Set-ItemProperty -Path $key.PSPath -Name Path -Value $path -Type ExpandString"
+
+# Login as HadoopBuilder and set the necessary environment variables.
 USER HadoopBuilder
 ENV PROTOBUF_HOME "C:\vcpkg\installed\x64-windows"
 ENV JAVA_HOME "C:\Java\jdk17"
 ENV MAVEN_OPTS '-Xmx2048M -Xss128M'
 ENV IS_WINDOWS 1
-RUN setx PATH "%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
-RUN setx PATH "%PATH%;%JAVA_HOME%\bin"
-RUN setx PATH "%PATH%;C:\Maven\apache-maven-3.9.15\bin"
-RUN setx PATH "%PATH%;C:\CMake\cmake-3.30.2-windows-x86_64\bin"
-RUN setx PATH "%PATH%;C:\ZStd"
-RUN setx PATH "%PATH%;C:\Program Files\Git\usr\bin"
-RUN setx PATH "%PATH%;C:\Python"
 
 # The mvnsite module runs a bash script and somewhere down in the invocation, it resorts to call
 # /usr/bin/env python3. Thus, we need to create the following symbolic link to satisfy this need.

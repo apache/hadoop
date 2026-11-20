@@ -16,11 +16,23 @@
 
 # The code lines below are derived from -
 # https://github.com/docker-library/python/blob/105d6f34e7d70aad6f8c3e249b8208efa591916a/3.11/windows/windowsservercore-ltsc2022/Dockerfile
+# That Dockerfile runs these lines with $ErrorActionPreference = 'Stop' and
+# $ProgressPreference = 'SilentlyContinue', set by its SHELL.
+# Dockerfile_windows_10 runs this script from cmd, so set them here: the first
+# so that a failed download stops the script, the second so that the Windows
+# PowerShell progress bar does not slow the download down.
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 
 $url = ('https://www.python.org/ftp/python/{0}/python-{1}-amd64.exe' -f ($Env:PYTHON_VERSION -replace '[a-z]+[0-9]*$', ''), $Env:PYTHON_VERSION)
 Write-Host ('Downloading {0} ...' -f $url)
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Invoke-WebRequest -Uri $url -OutFile 'python.exe'
+Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile 'python.exe'
+Write-Host ('Verifying sha512 ({0}) ...' -f $Env:PYTHON_SHA512)
+if ((Get-FileHash 'python.exe' -Algorithm sha512).Hash -ne $Env:PYTHON_SHA512) {
+    Write-Host 'FAILED!'
+    exit 1
+}
 
 Write-Host 'Installing ...'
 $exitCode = (Start-Process python.exe -Wait -NoNewWindow -PassThru `
@@ -38,14 +50,19 @@ $exitCode = (Start-Process python.exe -Wait -NoNewWindow -PassThru `
 if ($exitCode -ne 0) {
     Write-Host ('Running python installer failed with exit code: {0}' -f $exitCode)
     Get-ChildItem $Env:TEMP | Sort-Object -Descending -Property LastWriteTime | Select-Object -First 1 | Get-Content
-    exit $exitCode
+    exit 1
 }
 
 # the installer updated PATH, so we should refresh our local value
 $Env:PATH = [Environment]::GetEnvironmentVariable('PATH', [EnvironmentVariableTarget]::Machine)
 
 Write-Host 'Verifying install ...'
-Write-Host "python --version $(python --version)"
+$version = python --version
+Write-Host $version
+if ($version -ne ('Python {0}' -f $Env:PYTHON_VERSION)) {
+    Write-Host 'FAILED!'
+    exit 1
+}
 
 Write-Host 'Removing ...'
 Remove-Item python.exe -Force
