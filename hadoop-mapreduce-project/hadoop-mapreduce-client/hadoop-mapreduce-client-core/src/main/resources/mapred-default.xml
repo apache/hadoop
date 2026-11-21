@@ -2322,4 +2322,16 @@
     </description>
   </property>
 
+  <property>
+    <name>mapreduce.security.allowed-groups</name>
+    <value></value>
+    <description>
+      A comma-separated list of allowed group names. If the submitting user belongs to one of
+      these groups, the deny-list (mapreduce.security.denied-tasks) is ignored for their tasks,
+      just like mapreduce.security.allowed-users. This list is evaluated after the allowed-users
+      list, and group membership is determined by an exact name match via the Hadoop groups
+      provider.
+    </description>
+  </property>
+
 </configuration>
