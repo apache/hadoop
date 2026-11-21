@@ -1910,7 +1910,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     ReplicaInfo lastFoundReplicaInfo = null;
     boolean isInPipeline = false;
     do {
-      try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
+      try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
           b.getBlockPoolId())) {
         ReplicaInfo currentReplicaInfo =
             volumeMap.get(b.getBlockPoolId(), b.getBlockId());
