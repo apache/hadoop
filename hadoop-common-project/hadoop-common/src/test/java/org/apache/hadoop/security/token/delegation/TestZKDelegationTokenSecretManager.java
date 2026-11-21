@@ -19,6 +19,7 @@
 package org.apache.hadoop.security.token.delegation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,6 +32,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -42,6 +44,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.api.ACLProvider;
 import org.apache.curator.framework.api.CreateBuilder;
 import org.apache.curator.framework.api.ProtectACLCreateModeStatPathAndBytesable;
+import org.apache.curator.framework.listen.ListenerManager;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
@@ -125,17 +128,19 @@ public class TestZKDelegationTokenSecretManager {
   }
 
   protected Configuration getSecretConf(String connectString) {
-   Configuration conf = new Configuration();
-   conf.setBoolean(DelegationTokenManager.ENABLE_ZK_KEY, true);
-   conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CONNECTION_STRING, connectString);
-   conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH, "testPath");
-   conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_AUTH_TYPE, "none");
-   conf.setLong(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_SHUTDOWN_TIMEOUT, 100);
-   conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, DAY_IN_SECS);
-   conf.setLong(DelegationTokenManager.MAX_LIFETIME, DAY_IN_SECS);
-   conf.setLong(DelegationTokenManager.RENEW_INTERVAL, DAY_IN_SECS);
-   conf.setLong(DelegationTokenManager.REMOVAL_SCAN_INTERVAL, DAY_IN_SECS);
-   return conf;
+    Configuration conf = new Configuration();
+    conf.setBoolean(DelegationTokenManager.ENABLE_ZK_KEY, true);
+    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CONNECTION_STRING, connectString);
+    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH, "testPath");
+    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_AUTH_TYPE, "none");
+    conf.setLong(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_SHUTDOWN_TIMEOUT, 100);
+    conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, DAY_IN_SECS);
+    conf.setLong(DelegationTokenManager.MAX_LIFETIME, DAY_IN_SECS);
+    conf.setLong(DelegationTokenManager.RENEW_INTERVAL, DAY_IN_SECS);
+    conf.setLong(DelegationTokenManager.REMOVAL_SCAN_INTERVAL, DAY_IN_SECS);
+    // Fail instead of hanging if the cache never initializes.
+    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CACHE_INIT_TIMEOUT, "10s");
+    return conf;
   }
 
   @SuppressWarnings("unchecked")
@@ -585,22 +590,29 @@ public class TestZKDelegationTokenSecretManager {
         .build();
     curatorFramework.start();
     ZKDelegationTokenSecretManager.setCurator(curatorFramework);
-    DelegationTokenManager tm1 = new DelegationTokenManager(conf, new Text("foo"));
+    DelegationTokenManager tm1 = null;
+    try {
+      tm1 = new DelegationTokenManager(conf, new Text("foo"));
 
-    // When the init method is called,
-    // the ZKDelegationTokenSecretManager#startThread method will be called,
-    // and the creatingParentContainersIfNeeded will be called to create the nameSpace.
-    tm1.init();
+      // When the init method is called,
+      // the ZKDelegationTokenSecretManager#startThread method will be called,
+      // and the creatingParentContainersIfNeeded will be called to create the nameSpace.
+      tm1.init();
 
-    String workingPath = "/" + conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH,
-        ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT) + "/ZKDTSMRoot";
+      String workingPath = "/" + conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH,
+          ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT) + "/ZKDTSMRoot";
 
-    // Check if the created NameSpace exists.
-    Stat stat = curatorFramework.checkExists().forPath(workingPath);
-    assertNotNull(stat);
-
-    tm1.destroy();
-    curatorFramework.close();
+      // Check if the created NameSpace exists.
+      Stat stat = curatorFramework.checkExists().forPath(workingPath);
+      assertNotNull(stat);
+    } finally {
+      if (tm1 != null) {
+        tm1.destroy();
+      }
+      // Restore the default curator so later tests do not see a closed client.
+      ZKDelegationTokenSecretManager.setCurator(null);
+      curatorFramework.close();
+    }
   }
 
   @Test
@@ -650,36 +662,251 @@ public class TestZKDelegationTokenSecretManager {
 
     DelegationTokenManager tm1 = new DelegationTokenManager(conf, new Text("foo"));
     DelegationTokenManager tm2 = new DelegationTokenManager(conf, new Text("bar"));
-    // When the init method is called,
-    // the ZKDelegationTokenSecretManager#startThread method will be called,
-    // and the creatingParentContainersIfNeeded will be called to create the nameSpace.
-    ExecutorService executorService = Executors.newFixedThreadPool(2);
+    ExecutorService executorService = null;
+    try {
+      // When the init method is called,
+      // the ZKDelegationTokenSecretManager#startThread method will be called,
+      // and the creatingParentContainersIfNeeded will be called to create the nameSpace.
+      executorService = Executors.newFixedThreadPool(2);
 
-    Callable<Boolean> tm1Callable = () -> {
-      tm1.init();
-      return true;
-    };
-    Callable<Boolean> tm2Callable = () -> {
-      tm2.init();
-      return true;
-    };
-    List<Future<Boolean>> futures = executorService.invokeAll(
-        Arrays.asList(tm1Callable, tm2Callable));
-    for(Future<Boolean> future : futures) {
-      assertTrue(future.get());
+      Callable<Boolean> tm1Callable = () -> {
+        tm1.init();
+        return true;
+      };
+      Callable<Boolean> tm2Callable = () -> {
+        tm2.init();
+        return true;
+      };
+      List<Future<Boolean>> futures = executorService.invokeAll(
+          Arrays.asList(tm1Callable, tm2Callable));
+      for (Future<Boolean> future : futures) {
+        assertTrue(future.get());
+      }
+
+      String workingPath = "/" + conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH,
+          ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT) + "/ZKDTSMRoot";
+
+      // Check if the created NameSpace exists.
+      Stat stat = curatorFramework.checkExists().forPath(workingPath);
+      assertNotNull(stat);
+    } finally {
+      if (executorService != null) {
+        executorService.shutdownNow();
+        executorService.awaitTermination(1, TimeUnit.SECONDS);
+      }
+      tm1.destroy();
+      tm2.destroy();
+      // Restore the default curator so later tests do not see a closed client.
+      ZKDelegationTokenSecretManager.setCurator(null);
+      curatorFramework.close();
     }
-    executorService.shutdownNow();
-    assertTrue(executorService.awaitTermination(1, TimeUnit.SECONDS));
-    tm1.destroy();
-    tm2.destroy();
+  }
 
-    String workingPath = "/" + conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH,
-        ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT) + "/ZKDTSMRoot";
+  /**
+   * A token canceled by a peer while this instance starts must not be
+   * restored by an older copy that the starting thread applies.
+   */
+  @Test
+  public void testPeerCancelDuringStartup() throws Exception {
+    verifyPeerChangeDuringStartup(true);
+  }
 
-    // Check if the created NameSpace exists.
-    Stat stat = curatorFramework.checkExists().forPath(workingPath);
-    assertNotNull(stat);
+  /**
+   * A token renewed by a peer while this instance starts must not get its
+   * older renew date back from a copy that the starting thread applies.
+   */
+  @Test
+  public void testPeerRenewDuringStartup() throws Exception {
+    verifyPeerChangeDuringStartup(false);
+  }
 
-    curatorFramework.close();
+  @SuppressWarnings("unchecked")
+  private void verifyPeerChangeDuringStartup(boolean cancel) throws Exception {
+    Configuration conf = getSecretConf(zkServer.getConnectString());
+    // Leave room for a renewal to move the renewal date forward.
+    conf.setLong(DelegationTokenManager.MAX_LIFETIME, 2 * DAY_IN_SECS);
+    Text kind = new Text("bla");
+    DelegationTokenManager peer = new DelegationTokenManager(conf, kind);
+    StartupHookSecretManager sm = null;
+    try {
+      peer.init();
+      Token<DelegationTokenIdentifier> token =
+          (Token<DelegationTokenIdentifier>) peer.createToken(
+              UserGroupInformation.getCurrentUser(), "renewer");
+      DelegationTokenIdentifier id = (DelegationTokenIdentifier) peer
+          .getDelegationTokenSecretManager().decodeTokenIdentifier(token);
+      long[] newRenewDate = new long[1];
+
+      sm = new StartupHookSecretManager(conf, kind);
+      final StartupHookSecretManager restarted = sm;
+      // Change the token through the peer, then wait until the listener of
+      // the starting instance has applied the change.
+      Callable<Void> peerChange = () -> {
+        if (cancel) {
+          peer.cancelToken(token, "renewer");
+          GenericTestUtils.waitFor(
+              () -> restarted.getTokenInfoFromMemory(id) == null, 10, 10000);
+        } else {
+          Thread.sleep(10);
+          newRenewDate[0] = peer.renewToken(token, "renewer");
+          GenericTestUtils.waitFor(() -> {
+            AbstractDelegationTokenSecretManager.DelegationTokenInformation
+                info = restarted.getTokenInfoFromMemory(id);
+            return info != null && info.getRenewDate() == newRenewDate[0];
+          }, 10, 10000);
+        }
+        return null;
+      };
+      // Runs if the starting thread applies a token itself, between reading
+      // its bytes and putting it into memory.
+      sm.startupHook = peerChange;
+      sm.startThreads();
+      if (sm.startupHook != null) {
+        sm.startupHook = null;
+        peerChange.call();
+      }
+
+      if (cancel) {
+        assertNull(sm.getTokenInfoFromMemory(id),
+            "cancelled dt should not be in memory");
+        LambdaTestUtils.intercept(SecretManager.InvalidToken.class,
+            () -> restarted.verifyToken(id, token.getPassword()));
+      } else {
+        assertEquals(newRenewDate[0],
+            sm.getTokenInfoFromMemory(id).getRenewDate(),
+            "renewed dt should keep the new renew date");
+      }
+    } finally {
+      if (sm != null) {
+        sm.stopThreads();
+      }
+      peer.destroy();
+    }
+  }
+
+  /**
+   * A start that times out waiting for the cache must fail, and release the
+   * counters and caches it has already started.
+   */
+  @Test
+  public void testCacheInitTimeoutReleasesResources() throws Exception {
+    String connectString = zkServer.getConnectString();
+    Configuration conf = getSecretConf(connectString);
+    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CACHE_INIT_TIMEOUT, "1s");
+    CuratorFramework curatorFramework = CuratorFrameworkFactory.builder()
+        .connectString(connectString)
+        .retryPolicy(new ExponentialBackoffRetry(1000, 3))
+        .build();
+    curatorFramework.start();
+    ZKDelegationTokenSecretManager.setCurator(curatorFramework);
+    CountDownLatch unblock = new CountDownLatch(1);
+    StartupHookSecretManager sm = null;
+    try {
+      sm = new StartupHookSecretManager(conf, new Text("bla"));
+      ListenerManager<?, ?> connectionListeners =
+          (ListenerManager<?, ?>) curatorFramework.getConnectionStateListenable();
+      int listenersBefore = connectionListeners.size();
+      // Cache listeners run on the client's single runSafe thread; keep it
+      // busy so the cache never reports initialized.
+      curatorFramework.runSafe(() -> {
+        try {
+          unblock.await();
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      });
+
+      final StartupHookSecretManager starting = sm;
+      IOException e = LambdaTestUtils.intercept(IOException.class,
+          starting::startThreads);
+      GenericTestUtils.assertExceptionContains(
+          ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CACHE_INIT_TIMEOUT, e.getCause());
+      assertFalse(sm.isRunning());
+      // The counters and the cache watcher remove their connection
+      // listeners when closed.
+      assertEquals(listenersBefore, connectionListeners.size(),
+          "counters and caches should be closed after a failed start");
+    } finally {
+      unblock.countDown();
+      if (sm != null) {
+        sm.stopThreads();
+      }
+      ZKDelegationTokenSecretManager.setCurator(null);
+      curatorFramework.close();
+    }
+  }
+
+  /**
+   * Roots created before empty data was used carry Curator's default payload
+   * (the local address); the listeners must not parse them.
+   */
+  @Test
+  public void testRootPayloadNotParsed() throws Exception {
+    String ns = "/testPath/ZKDTSMRoot";
+    byte[] payload = "127.0.0.1".getBytes(StandardCharsets.UTF_8);
+    try (CuratorFramework zk = CuratorFrameworkFactory.newClient(
+        zkServer.getConnectString(), new ExponentialBackoffRetry(1000, 3))) {
+      zk.start();
+      zk.create().creatingParentsIfNeeded()
+          .forPath(ns + "/ZKDTSMMasterKeyRoot", payload);
+      zk.create().creatingParentsIfNeeded()
+          .forPath(ns + "/ZKDTSMTokensRoot", payload);
+    }
+    GenericTestUtils.LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+        LoggerFactory.getLogger(ZKDelegationTokenSecretManager.class));
+    DelegationTokenManager tm = new DelegationTokenManager(
+        getSecretConf(zkServer.getConnectString()), new Text("bla"));
+    try {
+      tm.init();
+      assertFalse(logs.getOutput().contains("Error while processing Curator"),
+          logs.getOutput());
+    } finally {
+      tm.destroy();
+      logs.stopCapturing();
+    }
+  }
+
+  @Test
+  public void testNegativeCacheInitTimeoutRejected() throws Exception {
+    Configuration conf = getSecretConf(zkServer.getConnectString());
+    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CACHE_INIT_TIMEOUT, "-1");
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CACHE_INIT_TIMEOUT,
+        () -> new StartupHookSecretManager(conf, new Text("bla")));
+  }
+
+  /**
+   * Runs a hook once when the starting thread applies a token itself.
+   */
+  private static final class StartupHookSecretManager
+      extends ZKDelegationTokenSecretManager<DelegationTokenIdentifier> {
+    private final Text tokenKind;
+    private final Thread startingThread = Thread.currentThread();
+    private volatile Callable<Void> startupHook;
+
+    StartupHookSecretManager(Configuration conf, Text tokenKind) {
+      super(conf);
+      this.tokenKind = tokenKind;
+    }
+
+    @Override
+    public DelegationTokenIdentifier createIdentifier() {
+      return new DelegationTokenIdentifier(tokenKind);
+    }
+
+    @Override
+    protected DelegationTokenIdentifier processTokenAddOrUpdate(byte[] data)
+        throws IOException {
+      Callable<Void> hook = startupHook;
+      if (hook != null && Thread.currentThread() == startingThread) {
+        startupHook = null;
+        try {
+          hook.call();
+        } catch (Exception e) {
+          throw new IOException(e);
+        }
+      }
+      return super.processTokenAddOrUpdate(data);
+    }
   }
 }

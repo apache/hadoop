@@ -24,8 +24,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
@@ -46,6 +46,8 @@ import org.apache.hadoop.security.SecurityUtil.TruststoreKeystore;
 import org.apache.hadoop.security.authentication.util.ZookeeperClient;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.Time;
 
 import static org.apache.hadoop.security.SecurityUtil.getServerPrincipal;
 import static org.apache.hadoop.util.Time.now;
@@ -96,6 +98,13 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   public static final String ZK_DTSM_TOKEN_WATCHER_ENABLED = ZK_CONF_PREFIX
       + "token.watcher.enabled";
   public static final boolean ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT = true;
+  /**
+   * Bound on the wait for the initial load, per cache (keys, then tokens);
+   * 0 waits indefinitely.
+   */
+  public static final String ZK_DTSM_ZK_CACHE_INIT_TIMEOUT = ZK_CONF_PREFIX
+      + "zkCacheInitTimeout";
+  public static final long ZK_DTSM_ZK_CACHE_INIT_TIMEOUT_DEFAULT = 0;
 
   public static final String ZK_DTSM_ZK_SSL_ENABLED = ZK_CONF_PREFIX + "ssl.enabled";
   public static final String ZK_DTSM_ZK_SSL_KEYSTORE_LOCATION =
@@ -134,6 +143,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private static final ThreadLocal<CuratorFramework> CURATOR_TL =
       new ThreadLocal<CuratorFramework>();
 
+  private static final long CACHE_INIT_WARN_INTERVAL_MS = 60_000;
+
   public static void setCurator(CuratorFramework curator) {
     CURATOR_TL.set(curator);
   }
@@ -151,6 +162,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private CuratorCacheBridge tokenCache;
   private final int seqNumBatchSize;
   private final Object sequenceNumberLock = new Object();
+  private final long cacheInitTimeoutMs;
   private int currentSeqNum;
   private int currentMaxSeqNum;
 
@@ -169,6 +181,11 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT);
     isTokenWatcherEnabled = conf.getBoolean(ZK_DTSM_TOKEN_WATCHER_ENABLED,
         ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT);
+    cacheInitTimeoutMs = conf.getTimeDuration(ZK_DTSM_ZK_CACHE_INIT_TIMEOUT,
+        ZK_DTSM_ZK_CACHE_INIT_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);
+    Preconditions.checkArgument(cacheInitTimeoutMs >= 0,
+        "%s must not be negative: %s", ZK_DTSM_ZK_CACHE_INIT_TIMEOUT,
+        cacheInitTimeoutMs);
     
     String workPath = conf.get(ZK_DTSM_ZNODE_WORKING_PATH, ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT);
     String nameSpace = workPath + "/" + ZK_DTSM_NAMESPACE;
@@ -241,6 +258,23 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   @Override
   public void startThreads() throws IOException {
+    // Fail fast so the cleanup below never tears down a running instance.
+    Preconditions.checkState(!isRunning(), "Secret manager is already running");
+    try {
+      doStartThreads();
+    } catch (IOException | RuntimeException e) {
+      // The caller does not invoke stopThreads() after a failed start, so
+      // release the caches, counters and Curator client here.
+      try {
+        stopThreads();
+      } catch (RuntimeException ce) {
+        e.addSuppressed(ce);
+      }
+      throw e;
+    }
+  }
+
+  private void doStartThreads() throws IOException {
     if (!isExternalClient) {
       try {
         zkClient.start();
@@ -290,21 +324,28 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     try {
       keyCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_MASTER_KEY_ROOT)
           .build();
+      CountDownLatch keyCacheInitialized = new CountDownLatch(1);
       CuratorCacheListener keyCacheListener = CuratorCacheListener.builder()
           .forCreatesAndChanges((oldNode, node) -> {
+            if (ZK_DTSM_MASTER_KEY_ROOT.equals(node.getPath())) {
+              // The root node itself is a container, not a key.
+              return;
+            }
             try {
               processKeyAddOrUpdate(node.getData());
             } catch (IOException e) {
               LOG.error("Error while processing Curator keyCacheListener "
-                  + "NODE_CREATED / NODE_CHANGED event");
+                  + "NODE_CREATED / NODE_CHANGED event for {}", node.getPath());
               throw new UncheckedIOException(e);
             }
           })
           .forDeletes(childData -> processKeyRemoved(childData.getPath()))
+          .forInitialized(keyCacheInitialized::countDown)
           .build();
       keyCache.listenable().addListener(keyCacheListener);
       keyCache.start();
-      loadFromZKCache(false);
+      awaitCacheInitialized(keyCacheInitialized, "key");
+      LOG.info("Loaded {} keys from key cache.", allKeys.size());
     } catch (Exception e) {
       throw new IOException("Could not start Curator keyCacheListener for keys",
           e);
@@ -314,13 +355,18 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       try {
         tokenCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_TOKENS_ROOT)
             .build();
+        CountDownLatch tokenCacheInitialized = new CountDownLatch(1);
         CuratorCacheListener tokenCacheListener = CuratorCacheListener.builder()
             .forCreatesAndChanges((oldNode, node) -> {
+              if (ZK_DTSM_TOKENS_ROOT.equals(node.getPath())) {
+                // The root node itself is a container, not a token.
+                return;
+              }
               try {
                 processTokenAddOrUpdate(node.getData());
               } catch (IOException e) {
                 LOG.error("Error while processing Curator tokenCacheListener "
-                    + "NODE_CREATED / NODE_CHANGED event");
+                    + "NODE_CREATED / NODE_CHANGED event for {}", node.getPath());
                 throw new UncheckedIOException(e);
               }
             })
@@ -329,14 +375,17 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
                 processTokenRemoved(childData);
               } catch (IOException e) {
                 LOG.error("Error while processing Curator tokenCacheListener "
-                    + "NODE_DELETED event");
+                    + "NODE_DELETED event for {}", childData.getPath());
                 throw new UncheckedIOException(e);
               }
             })
+            .forInitialized(tokenCacheInitialized::countDown)
             .build();
         tokenCache.listenable().addListener(tokenCacheListener);
         tokenCache.start();
-        loadFromZKCache(true);
+        awaitCacheInitialized(tokenCacheInitialized, "token");
+        syncTokenOwnerStats();
+        LOG.info("Loaded {} tokens from token cache.", currentTokens.size());
       } catch (Exception e) {
         throw new IOException(
             "Could not start Curator tokenCacheListener for tokens", e);
@@ -346,44 +395,44 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   /**
-   * Load the CuratorCache into the in-memory map. Possible caches to be
-   * loaded are keyCache and tokenCache.
-   *
-   * @param isTokenCache true if loading tokenCache, false if loading keyCache.
+   * Wait until the cache listener has applied the initial nodes.
+   * <p>
+   * The listener applies the initial nodes, later changes and the
+   * initialized event in order on the Curator SafeNotifyService thread, so
+   * when the latch opens the in-memory map holds the initial state plus
+   * every change before it, and no older snapshot can be applied after
+   * that. CuratorCache counts a failed read during the initial load as
+   * done, so the in-memory map may be partial; the listener applies those
+   * nodes on their next change.
    */
-  private void loadFromZKCache(final boolean isTokenCache) {
-    final String cacheName = isTokenCache ? "token" : "key";
-    LOG.info("Starting to load {} cache.", cacheName);
-    final Stream<ChildData> children;
-    if (isTokenCache) {
-      children = tokenCache.stream();
-    } else {
-      children = keyCache.stream();
-    }
-
-    final AtomicInteger count = new AtomicInteger(0);
-    children.forEach(childData -> {
-      try {
-        if (isTokenCache) {
-          processTokenAddOrUpdate(childData.getData());
-        } else {
-          processKeyAddOrUpdate(childData.getData());
+  private void awaitCacheInitialized(CountDownLatch initialized,
+      String cacheName) throws IOException {
+    final long start = Time.monotonicNow();
+    try {
+      long waited = 0;
+      while (true) {
+        long wait = CACHE_INIT_WARN_INTERVAL_MS;
+        if (cacheInitTimeoutMs > 0) {
+          wait = Math.min(wait, cacheInitTimeoutMs - waited);
         }
-      } catch (Exception e) {
-        LOG.info("Ignoring node {} because it failed to load.",
-            childData.getPath());
-        LOG.debug("Failure exception:", e);
-        count.getAndIncrement();
+        if (initialized.await(wait, TimeUnit.MILLISECONDS)) {
+          return;
+        }
+        waited = Time.monotonicNow() - start;
+        if (cacheInitTimeoutMs > 0 && waited >= cacheInitTimeoutMs) {
+          throw new IOException("Timed out after " + waited + " ms waiting for "
+              + cacheName + " cache initialization; consider increasing "
+              + ZK_DTSM_ZK_CACHE_INIT_TIMEOUT);
+        }
+        LOG.warn("Still waiting for {} cache initialization after {} ms"
+            + " (timeout: {} ms, 0 means none).", cacheName, waited,
+            cacheInitTimeoutMs);
       }
-    });
-    if (isTokenCache) {
-      syncTokenOwnerStats();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("Interrupted while waiting for " + cacheName
+          + " cache initialization", e);
     }
-    if (count.get() > 0) {
-      LOG.warn("Ignored {} nodes while loading {} cache.", count.get(),
-          cacheName);
-    }
-    LOG.info("Loaded {} cache.", cacheName);
   }
 
   private void processKeyAddOrUpdate(byte[] data) throws IOException {
@@ -425,6 +474,10 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   private void processTokenRemoved(ChildData data) throws IOException {
+    if (ZK_DTSM_TOKENS_ROOT.equals(data.getPath())) {
+      // The root node itself is a container, not a token.
+      return;
+    }
     ByteArrayInputStream bin = new ByteArrayInputStream(data.getData());
     DataInputStream din = new DataInputStream(bin);
     TokenIdent ident = createIdentifier();
@@ -474,7 +527,9 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   private void createPersistentNode(String nodePath) throws Exception {
     try {
-      zkClient.create().withMode(CreateMode.PERSISTENT).forPath(nodePath);
+      // Store empty data instead of Curator's default (the local address);
+      // HADOOP-17835 (3.4.0): CuratorCache includes the root node in the cache.
+      zkClient.create().withMode(CreateMode.PERSISTENT).forPath(nodePath, new byte[0]);
     } catch (KeeperException.NodeExistsException ne) {
       LOG.debug(nodePath + " znode already exists !!");
     } catch (Exception e) {
