@@ -142,8 +142,14 @@ export function usePropertyEditor({
   queuePath,
   properties = queuePropertyDefinitions,
 }: UsePropertyEditorOptions) {
-  const { getQueuePropertyValue, stageQueueChange, clearQueueChanges, schedulerData, configData } =
-    useSchedulerStore();
+  const {
+    getQueuePropertyValue,
+    stageQueueChange,
+    clearQueueChanges,
+    schedulerData,
+    configData,
+    resolveRootCapacityStagingForFlexibleAutoCreation,
+  } = useSchedulerStore();
 
   const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
   const cleanResetRef = useRef(false);
@@ -461,6 +467,14 @@ export function usePropertyEditor({
         }
       });
 
+      const stagedRootCapacity = resolveRootCapacityStagingForFlexibleAutoCreation(
+        queuePath,
+        changedData,
+      );
+      if (stagedRootCapacity) {
+        changedData.capacity = stagedRootCapacity.capacity;
+      }
+
       const pendingEntries = Object.entries(changedData);
 
       const previewConfigData = new Map(configData);
@@ -549,6 +563,12 @@ export function usePropertyEditor({
         success: true,
         message: `${stagedCount} change${stagedCount !== 1 ? 's' : ''} staged successfully!`,
       };
+
+      if (stagedRootCapacity?.direction === 'to-weight') {
+        toast.info('Root queue capacity was automatically converted from 100% to 1w for weight mode.');
+      } else if (stagedRootCapacity?.direction === 'to-percentage') {
+        toast.info('Root queue capacity was automatically converted from 1w to 100%.');
+      }
 
       if (stagedCount > 0) {
         const latestValues = form.getValues();

@@ -548,7 +548,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     name: 'auto-queue-creation-v2.enabled',
     displayName: 'Flexible Queue Auto-Creation',
     description:
-      'Enable flexible queue auto-creation (parent and leaf queues). In legacy queue mode, root queue requires all child queues to use weight-based capacity.',
+      'Enable flexible queue auto-creation (parent and leaf queues). In legacy queue mode, root queue requires all child queues to use weight-based capacity; enabling or disabling on root automatically converts root capacity between 100% and 1w.',
     type: 'boolean' as PropertyType,
     category: 'dynamic-queues' as PropertyCategory,
     defaultValue: '',
