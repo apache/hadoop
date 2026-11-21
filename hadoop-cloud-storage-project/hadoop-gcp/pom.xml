@@ -481,6 +481,11 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-api</artifactId>
+        <version>1.67.0</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
