@@ -23,6 +23,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
@@ -520,6 +521,63 @@ public class TestCapacitySchedulerMultiNodes {
     assertEquals(0, Iterators.size(nodeIterator));
 
     rm.stop();
+  }
+
+  @Test
+  @Timeout(value = 30)
+  public void testReservationPreservedAfterLaterNodeSkipped()
+      throws Exception {
+    CapacitySchedulerConfiguration newConf =
+        new CapacitySchedulerConfiguration(conf);
+    newConf.setInt(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
+        + ".resource-based.sorting-interval.ms", 0);
+    newConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT, 1.0f);
+    MockRM rm = new MockRM(newConf);
+
+    try {
+      rm.start();
+      MockNM nm1 = rm.registerNode("h1:1234", 5 * GB);
+      MockNM nm2 = rm.registerNode("h2:1234", 3 * GB);
+      MockNM nm3 = rm.registerNode("h3:1234", 3 * GB);
+
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withQueue("default")
+              .build());
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+
+      RMApp app2 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(3 * GB, rm)
+              .withAppName("app2")
+              .withUser("user2")
+              .withQueue("default")
+              .build());
+      MockRM.launchAndRegisterAM(app2, rm, nm2);
+
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+      RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
+      FiCaSchedulerApp schedulerApp1 =
+          cs.getApplicationAttempt(am1.getApplicationAttemptId());
+
+      // Node visit order is h3 (0 GB used), h1 (2 GB used), then h2
+      // (3 GB used). A 4 GB request is skipped on h3, reserved on h1, and
+      // skipped on h2. The reservation on h1 must survive the final skip.
+      am1.allocate("*", 4 * GB, 1, new ArrayList<>());
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+
+      RMContainer reservedContainer =
+          cs.getNode(nm1.getNodeId()).getReservedContainer();
+      assertNotNull(reservedContainer);
+      assertNull(cs.getNode(nm2.getNodeId()).getReservedContainer());
+      assertNull(cs.getNode(nm3.getNodeId()).getReservedContainer());
+      assertEquals(1, schedulerApp1.getReservedContainers().size());
+      assertSame(reservedContainer,
+          schedulerApp1.getReservedContainers().get(0));
+    } finally {
+      rm.close();
+    }
   }
 
   @Test

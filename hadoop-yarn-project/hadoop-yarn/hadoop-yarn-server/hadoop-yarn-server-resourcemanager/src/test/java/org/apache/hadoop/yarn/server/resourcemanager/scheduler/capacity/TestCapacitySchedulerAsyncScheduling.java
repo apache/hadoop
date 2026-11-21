@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -86,6 +87,8 @@ import org.mockito.stubbing.Answer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TestCapacitySchedulerAsyncScheduling {
@@ -144,6 +147,113 @@ public class TestCapacitySchedulerAsyncScheduling {
     conf.setBoolean(CapacitySchedulerConfiguration.MULTI_NODE_PLACEMENT_ENABLED,
             true);
     testAsyncContainerAllocation(2);
+  }
+
+  @Test
+  @Timeout(value = 60)
+  public void testConflictingMultiNodeReservationProposals() throws Exception {
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration(conf);
+    csConf.setBoolean(
+        CapacitySchedulerConfiguration.MULTI_NODE_PLACEMENT_ENABLED, true);
+    csConf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICIES,
+        "resource-based");
+    csConf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME,
+        "resource-based");
+    String policy = CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
+        + ".resource-based";
+    csConf.set(policy + ".class", POLICY_CLASS_NAME);
+    csConf.setInt(policy + ".sorting-interval.ms", 0);
+    csConf.setInt(
+        CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD, 1);
+    csConf.setMaximumApplicationMasterResourcePerQueuePercent(
+        new QueuePath("root.default"), 1.0f);
+
+    List<CSAssignment> reservations = new ArrayList<>();
+    List<Boolean> commitResults = new ArrayList<>();
+    CountDownLatch committed = new CountDownLatch(2);
+    CapacityScheduler cs = new CapacityScheduler() {
+      @Override
+      public void submitResourceCommitRequest(Resource cluster,
+          CSAssignment assignment) {
+        if (assignment.getAssignmentInformation().getNumReservations() == 0) {
+          super.submitResourceCommitRequest(cluster, assignment);
+          return;
+        }
+        if (reservations.size() == 2) {
+          return;
+        }
+        // Generate both proposals while the target node is still unreserved.
+        reservations.add(assignment);
+        if (reservations.size() == 2) {
+          getAsyncSchedulerThreads().forEach(AsyncScheduleThread::suspendSchedule);
+          for (CSAssignment reservation : reservations) {
+            super.submitResourceCommitRequest(cluster, reservation);
+          }
+        }
+      }
+
+      @Override
+      public boolean tryCommit(Resource cluster, ResourceCommitRequest request,
+          boolean updatePending) {
+        boolean accepted = super.tryCommit(cluster, request, updatePending);
+        if (!request.getContainersToReserve().isEmpty()) {
+          commitResults.add(accepted);
+          committed.countDown();
+        }
+        return accepted;
+      }
+    };
+    cs.setConf(csConf);
+    try (MockRM rm = new MockRM(csConf) {
+      @Override
+      protected ResourceScheduler createScheduler() {
+        return cs;
+      }
+    }) {
+      rm.start();
+      assertTrue(cs.getConfiguration().getScheduleAynschronously());
+      MockNM nm1 = rm.registerNode("h1:1234", 5 * GB);
+      RMApp app1 = MockRMAppSubmitter.submitWithMemory(2 * GB, rm);
+      MockAM am1 = MockRM.launchAMWhenAsyncSchedulingEnabled(app1, rm);
+      am1.registerAppAttempt();
+      MockNM nm2 = rm.registerNode("h2:1234", 3 * GB);
+      RMApp app2 = MockRMAppSubmitter.submitWithMemory(3 * GB, rm);
+      MockAM am2 = MockRM.launchAMWhenAsyncSchedulingEnabled(app2, rm);
+      am2.registerAppAttempt();
+      MockNM nm3 = rm.registerNode("h3:1234", 3 * GB);
+      MockNM nm4 = rm.registerNode("h4:1234", 3 * GB);
+      rm.drainEvents();
+
+      // Visit h3/h4 (0 GB used), h1 (2 GB), then h2 (3 GB). Only h1 can
+      // reserve the 4 GB request, and that result must survive h2's skip.
+      // The 14 GB queue can fit both AMs and both 4 GB proposals, so queue
+      // capacity cannot mask a missing node reservation conflict check.
+      am1.allocate("*", 4 * GB, 1, new ArrayList<>());
+      assertTrue(committed.await(30, TimeUnit.SECONDS),
+          "Both fallback reservations should reach the async committer");
+      assertEquals(Arrays.asList(true, false), commitResults);
+
+      RMContainer reserved = cs.getNode(nm1.getNodeId())
+          .getReservedContainer();
+      assertNotNull(reserved);
+      assertSame(reservations.get(0).getAssignmentInformation()
+          .getReservationDetails().get(0).rmContainer, reserved);
+      RMContainer rejected = reservations.get(1).getAssignmentInformation()
+          .getReservationDetails().get(0).rmContainer;
+      assertEquals(nm1.getNodeId(), rejected.getNodeId());
+      assertEquals(RMContainerState.NEW, rejected.getState());
+      assertNull(cs.getNode(nm2.getNodeId()).getReservedContainer());
+      assertNull(cs.getNode(nm3.getNodeId()).getReservedContainer());
+      assertNull(cs.getNode(nm4.getNodeId()).getReservedContainer());
+      FiCaSchedulerApp schedulerApp = cs.getApplicationAttempt(
+          am1.getApplicationAttemptId());
+      assertEquals(1, schedulerApp.getReservedContainers().size());
+      assertSame(reserved, schedulerApp.getReservedContainers().get(0));
+      assertEquals(4 * GB,
+          schedulerApp.getCurrentReservation().getMemorySize());
+      assertEquals(4 * GB, cs.getRootQueueMetrics().getReservedMB());
+    }
   }
 
   @Test
