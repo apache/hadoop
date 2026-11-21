@@ -1342,6 +1342,10 @@ public class TestRPC extends TestRpcBase {
         proxy.echo(null, newEchoRequest("" + i));
         proxy2.echo(null, newEchoRequest("" + i));
       }
+      // The handler updates the metrics after sending the response, and
+      // RpcResponseTime is the last of the counters checked below.
+      GenericTestUtils.waitFor(() -> getLongCounter("RpcResponseTimeNumOps",
+          getMetrics(server.getRpcMetrics().name())) >= 3000, 10, 10000);
       MetricsRecordBuilder rpcMetrics =
           getMetrics(server.getRpcMetrics().name());
       assertEquals(3000, getLongCounter("RpcEnQueueTimeNumOps", rpcMetrics),
@@ -1372,10 +1376,17 @@ public class TestRPC extends TestRpcBase {
       assertTrue(actualUserVsCon.contains("\"" + testUser + "\":1"));
 
       proxy.lockAndSleep(null, newSleepRequest(5));
-      rpcMetrics = getMetrics(server.getRpcMetrics().name());
+      // A snapshot resets the average, so check the one that saw the sample.
+      AtomicReference<MetricsRecordBuilder> lockWaitMetrics =
+          new AtomicReference<>();
+      GenericTestUtils.waitFor(() -> {
+        lockWaitMetrics.set(getMetrics(server.getRpcMetrics().name()));
+        return getLongCounter("RpcLockWaitTimeNumOps",
+            lockWaitMetrics.get()) > 3000;
+      }, 10, 10000);
       assertGauge("RpcLockWaitTimeAvgTime",
           (double)(server.getRpcMetrics().getMetricsTimeUnit().convert(10L,
-              TimeUnit.SECONDS)), rpcMetrics);
+              TimeUnit.SECONDS)), lockWaitMetrics.get());
     } finally {
       if (proxy2 != null) {
         RPC.stopProxy(proxy2);
