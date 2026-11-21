@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -39,6 +40,63 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
         CapacitySchedulerConfiguration.PREEMPTION_SELECT_CANDIDATES_FOR_RESERVED_CONTAINERS,
         true);
     policy = new ProportionalCapacityPreemptionPolicy(rmContext, cs, mClock);
+  }
+
+  @Test
+  public void testUnselectedReservedContainerIsNotCancelled() throws IOException {
+    String labelsConfig = "=100,true;x=100,true";
+    String nodesConfig = "n1=x;n2=";
+    String queuesConfig =
+        "root(=[100 100 100 60],x=[100 100 10 60 10]);"
+            + "-a(=[50 100 100 10],x=[50 100 10 10 10]);"
+            + "-b(=[50 100 0 50],x=[50 100 0 50])";
+    String appsConfig = "a\t(1,1,n2,,100,false)"
+        + "(1,1,n1,x,10,false)(1,10,n1,x,1,true)";
+
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
+    policy.editSchedule();
+
+    // Only the default partition needs preemption, not the reservation on x.
+    verify(eventHandler, times(0)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(1), SchedulerEventType.KILL_RESERVED_CONTAINER)));
+    verify(eventHandler, times(50)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(1))));
+  }
+
+  @Test
+  public void testSelectedReservedContainerIsCancelled() throws IOException {
+    buildEnvWithPreemptableReservation();
+    policy.editSchedule();
+
+    verify(eventHandler, times(1)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(1), SchedulerEventType.KILL_RESERVED_CONTAINER)));
+  }
+
+  @Test
+  public void testSelectedReservedContainerIsNotCancelledInObserveOnlyMode()
+      throws IOException {
+    conf.setBoolean(CapacitySchedulerConfiguration.PREEMPTION_OBSERVE_ONLY,
+        true);
+    buildEnvWithPreemptableReservation();
+    policy.editSchedule();
+
+    verify(eventHandler, times(0)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(1), SchedulerEventType.KILL_RESERVED_CONTAINER)));
+  }
+
+  private void buildEnvWithPreemptableReservation() throws IOException {
+    String labelsConfig = "=100,true";
+    String nodesConfig = "n1=;n2=";
+    String queuesConfig =
+        "root(=[100 100 100 60 10]);"
+            + "-a(=[50 100 100 10 10]);"
+            + "-b(=[50 100 0 50])";
+    String appsConfig = "a\t(1,1,n2,,100,false)(1,10,n1,,1,true)";
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
   }
 
   @Test
