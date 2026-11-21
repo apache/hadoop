@@ -151,6 +151,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.shar
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.LogAggregationService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.LogHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.NonAggregatingLogHandler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerRecoveredEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEventType;
@@ -165,6 +166,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.Re
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerType;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredLogAggregatorState;
 import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider;
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -446,6 +448,11 @@ public class ContainerManagerImpl extends CompositeService implements
         }
       }
 
+      RecoveredLogAggregatorState logAggregatorState = stateStore.loadLogAggregatorState();
+      for (ContainerId containerId: logAggregatorState.getLogAggregators()) {
+        recoverLogAggregator(containerId);
+      }
+
       // Recovery AMRMProxy state after apps and containers are recovered
       if (this.amrmProxyEnabled) {
         this.getAMRMProxyService().recover();
@@ -593,6 +600,11 @@ public class ContainerManagerImpl extends CompositeService implements
     if (waitIterations < 0) {
       LOG.warn("Timeout waiting for recovered containers");
     }
+  }
+
+  private void recoverLogAggregator(ContainerId containerId) {
+    LOG.info("Recovering log aggregator for " + containerId);
+    dispatcher.getEventHandler().handle(new LogHandlerContainerRecoveredEvent(containerId));
   }
 
   protected LogHandler createLogHandler(Configuration conf, Context context,
