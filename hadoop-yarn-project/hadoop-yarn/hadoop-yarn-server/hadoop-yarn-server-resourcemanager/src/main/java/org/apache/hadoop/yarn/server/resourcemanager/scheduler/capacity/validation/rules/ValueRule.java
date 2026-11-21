@@ -64,23 +64,23 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.r
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class ValueRule implements ValidationRule {
-  /** U12 and other values that fail to parse. */
+  /** A value that fails to parse. */
   public static final String INVALID_VALUE = "invalid-value";
-  /** U04. */
+  /** A priority ACL that fails to parse. */
   public static final String INVALID_PRIORITY_ACL = "invalid-priority-acl";
-  /** U06. */
+  /** An application ordering policy that cannot be loaded. */
   public static final String INVALID_ORDERING_POLICY =
       "invalid-ordering-policy";
-  /** U07. */
+  /** A queue ordering policy that cannot be loaded. */
   public static final String INVALID_QUEUE_ORDERING_POLICY =
       "invalid-queue-ordering-policy";
-  /** U08. */
+  /** A multi node placement policy that cannot be loaded. */
   public static final String INVALID_MULTI_NODE_POLICY =
       "invalid-multi-node-policy";
-  /** U11. */
+  /** A queue management policy that cannot be loaded. */
   public static final String INVALID_QUEUE_MANAGEMENT_POLICY =
       "invalid-queue-management-policy";
-  /** U10, warning. */
+  /** An off-switch assignment limit below one, warning. */
   public static final String OFFSWITCH_ASSIGNMENTS_BELOW_ONE =
       "offswitch-assignments-below-one";
 
@@ -166,7 +166,7 @@ public final class ValueRule implements ValidationRule {
   }
 
   /**
-   * U06, U07, U08 and U11: the getters that load policy classes. They read
+   * The getters that load policy classes. They read
    * the configuration directly, so they run for configured queues only.
    */
   private static void checkPolicies(ValidationContext context,

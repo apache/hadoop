@@ -240,7 +240,8 @@ public class TestCapacitySchedulerConfigValidator {
 
   /**
    * The hierarchy transition checks fail on the first live queue in the
-   * iteration order of the queue store: root.a (S06) before root.a.a1 (S04).
+   * iteration order of the queue store: the managed parent conversion of
+   * root.a before the removal of root.a.a1.
    */
   @Test
   public void testValidateCSConfigHierarchyCheckOrder() {

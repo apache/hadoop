@@ -35,11 +35,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validati
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.validation.rules.ValueRule;
 
 /**
- * Orders issues the way a refresh evaluates the checks
- * ({@code inventory-checks.md} section 1.10), so that the first ERROR is the
- * one a refresh fails with: the scheduler allocation settings, then queue
- * construction depth first (each queue's setup steps in order, the checks of
- * a parent's children after its last descendant), the hierarchy transition,
+ * Orders issues the way a refresh evaluates the checks, so that the first ERROR
+ * is the one a refresh fails with: the scheduler allocation settings, then
+ * queue construction depth first (each queue's setup steps in order, the checks
+ * of a parent's children after its last descendant), the hierarchy transition,
  * the reinitialization of live queues, the capacity update and the placement
  * rules. Warnings come last.
  */

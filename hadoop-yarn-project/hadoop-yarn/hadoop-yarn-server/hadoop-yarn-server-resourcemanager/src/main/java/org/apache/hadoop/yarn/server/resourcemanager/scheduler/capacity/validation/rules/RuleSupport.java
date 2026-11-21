@@ -46,7 +46,7 @@ final class RuleSupport {
 
   /**
    * @param e a failure
-   * @return the exception message, the trunk message of the failure
+   * @return the exception message, as a refresh reports the failure
    */
   static String message(Throwable e) {
     return e.getMessage() != null ? e.getMessage() : e.toString();

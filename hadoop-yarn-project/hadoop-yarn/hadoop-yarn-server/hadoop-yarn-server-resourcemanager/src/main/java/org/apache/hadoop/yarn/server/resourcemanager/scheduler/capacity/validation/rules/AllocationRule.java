@@ -50,19 +50,19 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.r
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class AllocationRule implements ValidationRule {
-  /** A01, scheduler minimum and maximum memory allocation. */
+  /** Scheduler minimum and maximum memory allocation. */
   public static final String INVALID_MEMORY_ALLOCATION =
       "invalid-memory-allocation";
-  /** A02, scheduler minimum and maximum vcores allocation. */
+  /** Scheduler minimum and maximum vcores allocation. */
   public static final String INVALID_VCORES_ALLOCATION =
       "invalid-vcores-allocation";
-  /** A05, malformed queue or scheduler maximum allocation. */
+  /** Malformed queue or scheduler maximum allocation. */
   public static final String INVALID_MAXIMUM_ALLOCATION =
       "invalid-maximum-allocation";
-  /** A03 and A04, queue maximum allocation above the cluster maximum. */
+  /** Queue maximum allocation above the cluster maximum. */
   public static final String MAXIMUM_ALLOCATION_EXCEEDS_CLUSTER =
       "maximum-allocation-exceeds-cluster";
-  /** A06, decreased maximum allocation of a live leaf queue. */
+  /** Decreased maximum allocation of a live leaf queue. */
   public static final String MAXIMUM_ALLOCATION_DECREASED =
       "maximum-allocation-decreased";
 

@@ -47,13 +47,13 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.r
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class HierarchyRule implements ValidationRule {
-  /** S04. */
+  /** Removal of a queue that is not stopped. */
   public static final String QUEUE_REMOVAL_NOT_STOPPED =
       "queue-removal-not-stopped";
-  /** S05. */
+  /** Conversion of a live leaf queue to a parent queue. */
   public static final String LEAF_TO_PARENT_CONVERSION =
       "leaf-to-parent-conversion";
-  /** S06 and S07. */
+  /** Conversion between a managed parent and another parent type. */
   public static final String MANAGED_PARENT_CONVERSION =
       "managed-parent-conversion";
   /** A removed queue that still has applications, warning. */

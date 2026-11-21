@@ -58,16 +58,16 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.r
 public final class NodeLabelRule implements ValidationRule {
   /** A labeled key that ends right after the label. */
   public static final String INVALID_NODE_LABEL_KEY = "invalid-node-label-key";
-  /** L01 and L02. */
+  /** Accessible labels of a child that its parent cannot access. */
   public static final String CHILD_LABELS_NOT_SUBSET =
       "child-labels-not-subset";
-  /** L03. */
+  /** A default label expression the queue cannot access. */
   public static final String INVALID_DEFAULT_LABEL_EXPRESSION =
       "invalid-default-label-expression";
-  /** L04, warning. */
+  /** Accessible labels set on root, which it ignores, warning. */
   public static final String ROOT_ACCESSIBLE_LABELS_IGNORED =
       "root-accessible-labels-ignored";
-  /** L05. */
+  /** A template label the parent cannot access. */
   public static final String INVALID_TEMPLATE_LABEL = "invalid-template-label";
   /** A label the cluster does not know, warning. */
   public static final String UNKNOWN_NODE_LABEL = "unknown-node-label";
@@ -164,7 +164,7 @@ public final class NodeLabelRule implements ValidationRule {
     }
   }
 
-  /** L05, as GuaranteedOrZeroCapacityOverTimePolicy checks it. */
+  /** Template labels, as GuaranteedOrZeroCapacityOverTimePolicy checks them. */
   private static void checkTemplateLabels(ValidationContext context,
       ResolvedQueueConfig parent, Map<String, Set<String>> labelsByQueue,
       List<ValidationIssue> issues) {

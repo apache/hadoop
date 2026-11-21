@@ -46,12 +46,12 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.r
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class StateRule implements ValidationRule {
-  /** S01. */
+  /** A queue state that fails to parse. */
   public static final String INVALID_STATE = "invalid-state";
-  /** S02. */
+  /** A RUNNING queue under a STOPPED parent. */
   public static final String RUNNING_QUEUE_UNDER_STOPPED_PARENT =
       "running-queue-under-stopped-parent";
-  /** S03. */
+  /** A queue started while its parent is not running. */
   public static final String PARENT_QUEUE_NOT_RUNNING =
       "parent-queue-not-running";
 

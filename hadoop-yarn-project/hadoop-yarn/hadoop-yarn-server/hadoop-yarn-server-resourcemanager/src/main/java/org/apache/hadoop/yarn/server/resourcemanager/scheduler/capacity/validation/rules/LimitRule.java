@@ -44,17 +44,17 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.r
  * User limit and application lifetime checks ({@link QueueLimitChecks}):
  * user weights parse and fit the user limit of a leaf, and an explicit
  * default application lifetime does not exceed the maximum. The ranges
- * that trunk does not check are reported as warnings.
+ * that a refresh does not check are reported as warnings.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class LimitRule implements ValidationRule {
-  /** U02. */
+  /** A user weight that fails to parse. */
   public static final String INVALID_USER_WEIGHT = "invalid-user-weight";
-  /** U01. */
+  /** A user weight outside the range the user limit allows. */
   public static final String USER_WEIGHT_OUT_OF_RANGE =
       "user-weight-out-of-range";
-  /** U03. */
+  /** A default application lifetime above the maximum lifetime. */
   public static final String DEFAULT_LIFETIME_EXCEEDS_MAXIMUM =
       "default-lifetime-exceeds-maximum";
   /** A user limit, user limit factor or AM resource share out of range. */
@@ -137,7 +137,7 @@ public final class LimitRule implements ValidationRule {
         || value.getSource() == ValueSource.TEMPLATE_V2;
   }
 
-  /** Ranges that trunk accepts without a check, warnings. */
+  /** Ranges a refresh accepts without a check, warnings. */
   private static void warnRanges(ResolvedQueueConfig queue,
       List<ValidationIssue> issues) {
     String path = queue.getQueuePath().getFullPath();

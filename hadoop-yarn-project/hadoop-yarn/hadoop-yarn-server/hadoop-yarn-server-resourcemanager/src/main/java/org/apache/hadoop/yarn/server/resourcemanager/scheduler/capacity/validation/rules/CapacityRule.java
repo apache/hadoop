@@ -69,40 +69,40 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.r
  * configured minimum and maximum resources fit, and in legacy queue mode a
  * queue and its children do not mix capacity types and the children's
  * capacities add up. The capacity calculation warnings of non-legacy mode
- * (C17 to C22) need effective resources and are not evaluated.
+ * need effective resources and are not evaluated.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class CapacityRule implements ValidationRule {
-  /** C01 to C04, a capacity, maximum capacity or weight that fails. */
+  /** A capacity, maximum capacity or weight that fails to parse. */
   public static final String INVALID_CAPACITY = "invalid-capacity";
-  /** C04, a malformed absolute resource. */
+  /** A malformed absolute resource. */
   public static final String INVALID_CAPACITY_RESOURCE =
       "invalid-capacity-resource";
-  /** C04, a malformed capacity vector. */
+  /** A malformed capacity vector. */
   public static final String INVALID_CAPACITY_VECTOR =
       "invalid-capacity-vector";
-  /** C06. */
+  /** A maximum resource above the maximum resource of the parent. */
   public static final String MAXIMUM_RESOURCE_EXCEEDS_PARENT =
       "maximum-resource-exceeds-parent";
-  /** C07. */
+  /** A minimum resource above the maximum resource of the queue. */
   public static final String MINIMUM_RESOURCE_EXCEEDS_MAXIMUM =
       "minimum-resource-exceeds-maximum";
-  /** C08. */
+  /** Labels of one queue that mix capacity types, legacy queue mode. */
   public static final String MIXED_CAPACITY_CONFIG_TYPE =
       "mixed-capacity-config-type";
-  /** C09. */
+  /** Children of a parent that mix capacity types, legacy queue mode. */
   public static final String MIXED_CHILDREN_CAPACITY_TYPES =
       "mixed-children-capacity-types";
-  /** C10. */
+  /** Absolute resource capacities not used by both parent and children. */
   public static final String ABSOLUTE_CAPACITY_MISMATCH =
       "absolute-capacity-mismatch";
-  /** C11. */
+  /** Children minimum resources that add up to more than the parent's. */
   public static final String CHILDREN_MINIMUM_RESOURCE_EXCEEDS_PARENT =
       "children-minimum-resource-exceeds-parent";
-  /** C12 to C14. */
+  /** Children percentage capacities that do not add up. */
   public static final String CHILDREN_CAPACITY_SUM = "children-capacity-sum";
-  /** C15, C09 over the live children including dynamic queues. */
+  /** Mixed capacity types among the live children, dynamic queues included. */
   public static final String MIXED_DYNAMIC_CHILDREN_CAPACITY_TYPES =
       "mixed-dynamic-children-capacity-types";
   /** Percentage capacity above the maximum capacity, warning. */
@@ -163,7 +163,7 @@ public final class CapacityRule implements ValidationRule {
   }
 
   /**
-   * C01 to C04: the values queue setup reads, in its order.
+   * The capacity values queue setup reads, in its order.
    * @return true if every value resolved
    */
   private static boolean checkValues(ResolvedQueueConfig queue,
@@ -211,7 +211,7 @@ public final class CapacityRule implements ValidationRule {
     return true;
   }
 
-  /** C06 and C07, as AbstractCSQueue.updateConfigurableResourceLimits. */
+  /** Resource limits, as AbstractCSQueue.updateConfigurableResourceLimits. */
   private static void checkResourceLimits(ValidationContext context,
       ResolvedQueueConfig queue,
       Map<QueuePath, Map<String, Resource>> maximumResources,
@@ -261,7 +261,7 @@ public final class CapacityRule implements ValidationRule {
     maximumResources.put(queue.getQueuePath(), maximums);
   }
 
-  /** C08, legacy queue mode. */
+  /** Capacity type consistency across labels, legacy queue mode. */
   private static void checkConfigTypeConsistent(ResolvedQueueConfig queue,
       List<ValidationIssue> issues) {
     QueuePath path = queue.getQueuePath();
@@ -318,7 +318,7 @@ public final class CapacityRule implements ValidationRule {
   }
 
   /**
-   * C09 to C14, as AbstractParentQueue.setChildQueues.
+   * The children's capacities, as AbstractParentQueue.setChildQueues.
    * @return true if the checks passed
    */
   private static boolean checkChildren(ValidationContext context,
@@ -407,8 +407,9 @@ public final class CapacityRule implements ValidationRule {
   }
 
   /**
-   * C15: in legacy queue mode the capacity update repeats C09 over the live
-   * children of a parent, including its dynamic queues.
+   * In legacy queue mode the capacity update repeats the children capacity
+   * type check over the live children of a parent, including its dynamic
+   * queues.
    */
   private static void checkDynamicChildren(ResolvedQueueConfig parent,
       List<ResolvedQueueConfig> children, Set<QueuePath> failed,
@@ -471,7 +472,7 @@ public final class CapacityRule implements ValidationRule {
     return inputs;
   }
 
-  /** Percentage capacities that trunk does not range check, warnings. */
+  /** Percentage capacities a refresh does not range check, warnings. */
   private static void warnMaximumCapacity(ResolvedQueueConfig queue,
       List<ValidationIssue> issues) {
     if (queue.getQueuePath().isRoot()) {
@@ -521,7 +522,7 @@ public final class CapacityRule implements ValidationRule {
   }
 
   /**
-   * C01 to C04 for the AQC v1 leaf queue template, whose capacities the
+   * The capacity values of the AQC v1 leaf queue template, whose capacities the
    * managed parent loads when it is built.
    */
   private static void checkTemplateValues(ValidationContext context,

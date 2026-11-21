@@ -72,9 +72,7 @@ import static org.mockito.Mockito.when;
  * Validating a proposed scheduler configuration must not change the running
  * scheduler: placement rules, queue ACLs, the node label manager's queue map
  * and queue metrics stay as they were, for both {@code validate/v2} and the
- * legacy {@code validate} endpoint. On trunk the legacy endpoint built a
- * throwaway scheduler on the live RMContext, which replaced all of them with
- * the proposed configuration.
+ * legacy {@code validate} endpoint.
  *
  * <p>The endpoints are called directly, but the test rewrites
  * {@code target/test-classes/capacity-scheduler.xml}, so it must not run in
@@ -192,10 +190,9 @@ public class TestRMWebServicesConfValidatePurity {
   }
 
   /**
-   * Removing a DRAINING queue that still has applications: the legacy
-   * endpoint judges the removal by the configured state, as trunk did, and
-   * accepts it; validate/v2 sees the live DRAINING state and rejects it, as
-   * a refresh does.
+   * Removing a DRAINING queue that still has applications: the legacy endpoint
+   * judges the removal by the configured state and accepts it; validate/v2 sees
+   * the live DRAINING state and rejects it, as a refresh does.
    */
   @Test
   public void testRemovingADrainingQueueWithApplications() throws Exception {

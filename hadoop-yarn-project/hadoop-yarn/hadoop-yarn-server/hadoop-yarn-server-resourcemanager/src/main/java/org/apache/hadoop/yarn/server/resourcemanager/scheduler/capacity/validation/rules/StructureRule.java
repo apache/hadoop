@@ -56,12 +56,12 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.r
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class StructureRule implements ValidationRule {
-  /** H01. */
+  /** A root queue without child queues. */
   public static final String MISSING_CHILD_QUEUES = "missing-child-queues";
-  /** H02. */
+  /** A reservable queue that has child queues. */
   public static final String RESERVABLE_PARENT_QUEUE =
       "reservable-parent-queue";
-  /** H04. */
+  /** A leaf template capacity type that the managed parent rejects. */
   public static final String MANAGED_PARENT_TEMPLATE_TYPE =
       "managed-parent-template-type";
   /** A child queue listed twice, warning. */
@@ -143,7 +143,7 @@ public final class StructureRule implements ValidationRule {
     }
   }
 
-  /** H04, as ManagedParentQueue checks it. */
+  /** Template capacity type, as ManagedParentQueue checks it. */
   private static void checkTemplateType(ValidationContext context,
       ResolvedQueueConfig parent, Map<String, Set<String>> labelsByQueue,
       List<ValidationIssue> issues) {

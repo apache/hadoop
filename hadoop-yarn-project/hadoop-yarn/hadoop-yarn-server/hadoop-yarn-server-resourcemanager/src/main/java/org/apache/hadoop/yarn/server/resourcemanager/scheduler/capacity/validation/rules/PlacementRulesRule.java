@@ -63,20 +63,20 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.r
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class PlacementRulesRule implements ValidationRule {
-  /** P01. */
+  /** A placement rule listed more than once. */
   public static final String DUPLICATE_PLACEMENT_RULES =
       "duplicate-placement-rules";
-  /** P02 and P03. */
+  /** A placement rule class that cannot be used. */
   public static final String INVALID_PLACEMENT_RULE = "invalid-placement-rule";
-  /** P04 to P06. */
+  /** Mapping rules that fail to load or parse. */
   public static final String INVALID_MAPPING_RULES = "invalid-mapping-rules";
-  /** P07, warning. */
+  /** A mapping rule JSON file that does not exist, warning. */
   public static final String MAPPING_RULE_JSON_MISSING =
       "mapping-rule-json-missing";
-  /** P08 to P13. */
+  /** A mapping rule whose target queue is invalid. */
   public static final String INVALID_MAPPING_RULE_TARGET =
       "invalid-mapping-rule-target";
-  /** P14. */
+  /** A workflow priority mapping that fails to parse. */
   public static final String INVALID_WORKFLOW_PRIORITY_MAPPING =
       "invalid-workflow-priority-mapping";
 
@@ -98,7 +98,7 @@ public final class PlacementRulesRule implements ValidationRule {
     }
   }
 
-  /** P01 to P13. */
+  /** The placement rules and the queue mapping rules. */
   private static void checkPlacementRules(ValidationContext context,
       List<ValidationIssue> issues) {
     CapacitySchedulerConfiguration conf = context.getConfiguration();
@@ -134,7 +134,7 @@ public final class PlacementRulesRule implements ValidationRule {
   }
 
   /**
-   * P02 and P03: the class loads as a placement rule, and a Fair Scheduler
+   * The class loads as a placement rule, and a Fair Scheduler
    * rule, which only initializes for the Fair Scheduler, is rejected.
    */
   private static boolean checkRuleClass(CapacitySchedulerConfiguration conf,
@@ -164,7 +164,7 @@ public final class PlacementRulesRule implements ValidationRule {
     return true;
   }
 
-  /** P04 to P13, as CSMappingPlacementRule initializes. */
+  /** Mapping rules, as CSMappingPlacementRule initializes them. */
   private static boolean checkMappingRules(ValidationContext context,
       List<ValidationIssue> issues) {
     CapacitySchedulerConfiguration conf = context.getConfiguration();

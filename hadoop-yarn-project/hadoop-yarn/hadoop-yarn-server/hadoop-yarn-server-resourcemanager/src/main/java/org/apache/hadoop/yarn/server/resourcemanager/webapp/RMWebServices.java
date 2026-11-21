@@ -2790,8 +2790,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           e = iter.next();
           newConfig.set(e.getKey(), e.getValue());
         }
-        // Validated against the queues as configured, like trunk's
-        // throwaway scheduler saw them; validate/v2 uses the live queues
+        // Validated against the queues as configured; validate/v2 uses the
+        // live queues
         CapacitySchedulerConfigValidator.validateCSConfiguration(
             ((CapacityScheduler) scheduler).getConfiguration(), newConfig,
             rm.getRMContext());
