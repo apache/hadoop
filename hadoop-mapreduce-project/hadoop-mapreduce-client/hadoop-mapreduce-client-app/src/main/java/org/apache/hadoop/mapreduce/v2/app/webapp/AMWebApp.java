@@ -45,6 +45,7 @@ public class AMWebApp extends WebApp implements AMParams {
     route("/", AppController.class);
     route("/app", AppController.class);
     route("/mapreduce", AppController.class);
+    route("/mapreduce/app", AppController.class, "index");
     route(pajoin("/job", JOB_ID), AppController.class, "job");
     route(pajoin("/conf", JOB_ID), AppController.class, "conf");
     route(pajoin("/jobcounters", JOB_ID), AppController.class, "jobCounters");
@@ -62,5 +63,10 @@ public class AMWebApp extends WebApp implements AMParams {
   @Override
   protected Class<? extends Filter> getWebAppFilterClass() {
     return null;
+  }
+
+  @Override
+  public String getRedirectPath() {
+    return "/mapreduce/app";
   }
 }
