@@ -17,7 +17,7 @@
  */
 
 
-import type { QueueInfo } from './queue';
+import type { QueueInfo, QueueCapacityVectorInfo } from './queue';
 import type { ResourceInfo } from './resource';
 
 export type SchedulerData = {
@@ -50,6 +50,8 @@ export type QueueCapacitiesByPartition = {
   configuredMinResource?: ResourceInfo;
   effectiveMaxResource?: ResourceInfo;
   effectiveMinResource?: ResourceInfo;
+  queueCapacityVectorInfo?: QueueCapacityVectorInfo;
+  maximumQueueCapacityVectorInfo?: QueueCapacityVectorInfo;
   maximumAllocation?: ResourceInfo;
   minimumAllocation?: ResourceInfo;
   netPending?: ResourceInfo;
