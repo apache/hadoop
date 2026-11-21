@@ -36,7 +36,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.BufferedWriter;
@@ -1627,6 +1630,93 @@ public class TestClientRMService {
         ApplicationsRequestScope.OWN);
     assertEquals(3, rmService.getApplications(request).getApplicationList().size(),
         "Incorrect number of applications for the scope");
+  }
+
+  @Test
+  public void testGetApplicationsFiltersTagsBeforeStateAndTime()
+      throws Exception {
+    RMContext rmContext = mock(RMContext.class);
+    RMApp app = mock(RMApp.class);
+    ApplicationId appId = getApplicationId(1);
+    ConcurrentHashMap<ApplicationId, RMApp> apps = new ConcurrentHashMap<>();
+    apps.put(appId, app);
+    when(rmContext.getRMApps()).thenReturn(apps);
+    when(app.createApplicationState()).thenReturn(YarnApplicationState.RUNNING);
+    ApplicationACLsManager appAcls = mock(ApplicationACLsManager.class);
+    QueueACLsManager queueAcls = mock(QueueACLsManager.class);
+    try (ClientRMService service = new ClientRMService(rmContext,
+        mock(ResourceScheduler.class), null, appAcls, queueAcls, null)) {
+      service.init(new Configuration());
+      GetApplicationsRequest request = GetApplicationsRequest.newInstance();
+      request.setApplicationTags(Collections.singleton("wanted"));
+      request.setApplicationStates(EnumSet.of(YarnApplicationState.RUNNING));
+      request.setStartRange(0, Long.MAX_VALUE);
+      request.setFinishRange(0, Long.MAX_VALUE);
+
+      for (Set<String> tags : Arrays.<Set<String>>asList(null,
+          Collections.emptySet(), Collections.singleton("other"))) {
+        when(app.getApplicationTags()).thenReturn(tags);
+        assertTrue(service.getApplications(request).getApplicationList()
+            .isEmpty());
+        verify(app, never()).createApplicationState();
+        verify(app, never()).getStartTime();
+        verify(app, never()).getFinishTime();
+        verifyNoInteractions(appAcls, queueAcls);
+      }
+
+      request.setApplicationTags(Sets.newHashSet("wanted", "other"));
+      ApplicationReport report = recordFactory.newRecordInstance(
+          ApplicationReport.class);
+      when(app.createAndGetApplicationReport(anyString(), eq(false)))
+          .thenReturn(report);
+      assertEquals(Collections.singletonList(report),
+          service.getApplications(request).getApplicationList(),
+          "Application tags should use OR matching");
+    }
+  }
+
+  @Test
+  public void testGetApplicationsFiltersNameBeforeAccessCheck()
+      throws Exception {
+    RMContext rmContext = mock(RMContext.class);
+    RMApp app = mock(RMApp.class);
+    ApplicationId appId = getApplicationId(1);
+    ConcurrentHashMap<ApplicationId, RMApp> apps = new ConcurrentHashMap<>();
+    apps.put(appId, app);
+    when(rmContext.getRMApps()).thenReturn(apps);
+    when(app.getApplicationId()).thenReturn(appId);
+    when(app.getUser()).thenReturn("owner");
+    when(app.getName()).thenReturn("other");
+    ApplicationACLsManager appAcls = mock(ApplicationACLsManager.class);
+    QueueACLsManager queueAcls = mock(QueueACLsManager.class);
+    try (ClientRMService service = new ClientRMService(rmContext,
+        mock(ResourceScheduler.class), null, appAcls, queueAcls, null)) {
+      service.init(new Configuration());
+      GetApplicationsRequest request = GetApplicationsRequest.newInstance(
+          ApplicationsRequestScope.VIEWABLE);
+      request.setName("wanted");
+      assertTrue(service.getApplications(request).getApplicationList()
+          .isEmpty());
+      verifyNoInteractions(appAcls, queueAcls);
+
+      when(app.getName()).thenReturn("wanted");
+      assertTrue(service.getApplications(request).getApplicationList()
+          .isEmpty());
+      verify(appAcls).checkAccess(any(UserGroupInformation.class),
+          eq(ApplicationAccessType.VIEW_APP), eq("owner"), eq(appId));
+      verify(app, never()).createAndGetApplicationReport(anyString(),
+          anyBoolean());
+
+      when(appAcls.checkAccess(any(UserGroupInformation.class),
+          eq(ApplicationAccessType.VIEW_APP), eq("owner"), eq(appId)))
+          .thenReturn(true);
+      ApplicationReport report = recordFactory.newRecordInstance(
+          ApplicationReport.class);
+      when(app.createAndGetApplicationReport(anyString(), eq(true)))
+          .thenReturn(report);
+      assertEquals(Collections.singletonList(report),
+          service.getApplications(request).getApplicationList());
+    }
   }
 
   @Test
