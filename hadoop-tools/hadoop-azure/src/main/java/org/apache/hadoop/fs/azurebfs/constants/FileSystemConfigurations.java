@@ -51,6 +51,7 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_STATIC_RETRY_INTERVAL = 1_000; // 1s
   public static final int DEFAULT_BACKOFF_INTERVAL = 500;  // 500ms
   public static final int DEFAULT_MAX_RETRY_ATTEMPTS = 30;
+  public static final int DEFAULT_PREFETCH_MAX_RETRY_ATTEMPTS = 2;
   public static final int DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT = 3;
 
   /**
