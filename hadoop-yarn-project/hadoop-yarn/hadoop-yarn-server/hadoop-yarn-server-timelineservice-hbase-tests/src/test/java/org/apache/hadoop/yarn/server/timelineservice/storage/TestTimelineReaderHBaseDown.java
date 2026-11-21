@@ -22,6 +22,7 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
@@ -33,6 +34,7 @@ import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.TimerTask;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_SERVICE_READER_STORAGE_MONITOR_INTERVAL_MS;
@@ -42,6 +44,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+/**
+ * Tests for the reader's handling of an HBase backend that is down.
+ * <p>
+ * Every test here stops its {@link TimelineReaderServer}, which is what stops
+ * the storage monitor the server started.  Without that the monitor's
+ * scheduled executor stays behind for the life of the JVM, polling HBase
+ * every TIMELINE_SERVICE_READER_STORAGE_MONITOR_INTERVAL_MS against a
+ * minicluster the test has already torn down.  Its threads are not daemons
+ * and the module runs with forkCount 0, so they pile up across the whole
+ * surefire run.
+ */
 public class TestTimelineReaderHBaseDown {
 
   @Test
@@ -49,12 +62,12 @@ public class TestTimelineReaderHBaseDown {
   public void testTimelineReaderHBaseUp() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
+    TimelineReaderServer server = getTimelineReaderServer();
     try {
       util.startMiniCluster();
       DataGeneratorForTest.createSchema(util.getConfiguration());
       DataGeneratorForTest.loadApps(util, System.currentTimeMillis());
 
-      TimelineReaderServer server = getTimelineReaderServer();
       server.init(util.getConfiguration());
       HBaseTimelineReaderImpl htr = getHBaseTimelineReaderImpl(server);
       server.start();
@@ -67,6 +80,7 @@ public class TestTimelineReaderHBaseDown {
         throw e;
       }
     } finally {
+      ServiceOperations.stopQuietly(server);
       util.shutdownMiniCluster();
     }
   }
@@ -79,11 +93,15 @@ public class TestTimelineReaderHBaseDown {
     configure(util);
     TimelineReaderServer server = getTimelineReaderServer();
 
-    // init timeline reader when hbase is not running
-    server.init(util.getConfiguration());
-    HBaseTimelineReaderImpl htr = getHBaseTimelineReaderImpl(server);
-    server.start();
-    waitForHBaseDown(htr);
+    try {
+      // init timeline reader when hbase is not running
+      server.init(util.getConfiguration());
+      HBaseTimelineReaderImpl htr = getHBaseTimelineReaderImpl(server);
+      server.start();
+      waitForHBaseDown(htr);
+    } finally {
+      ServiceOperations.stopQuietly(server);
+    }
   }
 
   @Test
@@ -91,6 +109,7 @@ public class TestTimelineReaderHBaseDown {
   public void testTimelineReaderDetectsHBaseDown() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
+    TimelineReaderServer server = getTimelineReaderServer();
 
     try {
       // start minicluster
@@ -99,7 +118,6 @@ public class TestTimelineReaderHBaseDown {
       DataGeneratorForTest.loadApps(util, System.currentTimeMillis());
 
       // init timeline reader
-      TimelineReaderServer server = getTimelineReaderServer();
       server.init(util.getConfiguration());
       HBaseTimelineReaderImpl htr = getHBaseTimelineReaderImpl(server);
 
@@ -117,6 +135,7 @@ public class TestTimelineReaderHBaseDown {
         throw e;
       }
     } finally {
+      ServiceOperations.stopQuietly(server);
       util.shutdownMiniCluster();
     }
   }
@@ -126,6 +145,7 @@ public class TestTimelineReaderHBaseDown {
   public void testTimelineReaderDetectsZooKeeperDown() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
+    TimelineReaderServer server = getTimelineReaderServer();
 
     try {
       // start minicluster
@@ -134,7 +154,6 @@ public class TestTimelineReaderHBaseDown {
       DataGeneratorForTest.loadApps(util, System.currentTimeMillis());
 
       // init timeline reader
-      TimelineReaderServer server = getTimelineReaderServer();
       server.init(util.getConfiguration());
       HBaseTimelineReaderImpl htr = getHBaseTimelineReaderImpl(server);
 
@@ -152,6 +171,7 @@ public class TestTimelineReaderHBaseDown {
         throw e;
       }
     } finally {
+      ServiceOperations.stopQuietly(server);
       util.shutdownMiniCluster();
     }
   }
@@ -161,6 +181,7 @@ public class TestTimelineReaderHBaseDown {
   public void testTimelineReaderRecoversAfterHBaseReturns() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
     configure(util);
+    TimelineReaderServer server = getTimelineReaderServer();
 
     try {
       // start minicluster
@@ -169,7 +190,6 @@ public class TestTimelineReaderHBaseDown {
       DataGeneratorForTest.loadApps(util, System.currentTimeMillis());
 
       // init timeline reader
-      TimelineReaderServer server = getTimelineReaderServer();
       server.init(util.getConfiguration());
       HBaseTimelineReaderImpl htr = getHBaseTimelineReaderImpl(server);
 
@@ -189,6 +209,11 @@ public class TestTimelineReaderHBaseDown {
           return false;
         }
       }, 1000, 150000);
+      // The restarted region server is still reopening the regions of the
+      // other timeline tables; storage is reported up after one read of the
+      // flow activity table.  Shutting down now fails those opens and makes
+      // the region server abort.
+      util.waitUntilNoRegionsInTransition(150000);
     } catch (Exception e) {
       // TODO catch InaccessibleObjectException directly once Java 8 support is dropped
       if (e.getClass().getSimpleName().equals("InaccessibleObjectException")) {
@@ -197,6 +222,7 @@ public class TestTimelineReaderHBaseDown {
         throw e;
       }
     } finally {
+      ServiceOperations.stopQuietly(server);
       util.shutdownMiniCluster();
     }
   }
@@ -242,6 +268,19 @@ public class TestTimelineReaderHBaseDown {
     config.setLong(TIMELINE_SERVICE_READER_STORAGE_MONITOR_INTERVAL_MS, 5000);
     Path tmpDir = new Path(config.get("hadoop.tmp.dir", "target/build/test"), "httpfs");
     config.set(HttpServer2.HTTP_TEMP_DIR_KEY, tmpDir.toString());
+    // A region server abort schedules a timer that halts the JVM once
+    // hbase.regionserver.abort.timeout passes, and never cancels it.  The
+    // module runs with forkCount 0, so that JVM is Maven's own.  Keep the
+    // abort logged but make the timer do nothing.
+    config.set("hbase.regionserver.abort.timeout.task",
+        NoOpAbortTimeoutTask.class.getName());
+  }
+
+  /** Replaces HBase's abort timeout task, which halts the JVM. */
+  private static final class NoOpAbortTimeoutTask extends TimerTask {
+    @Override
+    public void run() {
+    }
   }
 
   private static TimelineReaderServer getTimelineReaderServer() {
