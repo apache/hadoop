@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -516,17 +517,17 @@ public class HadoopArchiveLogs implements Tool {
       for (AppInfo context : eligibleApplications) {
         fw.write("if [ \"$YARN_SHELL_ID\" == \"");
         fw.write(Integer.toString(containerCount));
-        fw.write("\" ]; then\n\tappId=\"");
-        fw.write(context.getAppId());
-        fw.write("\"\n\tuser=\"");
-        fw.write(context.getUser());
-        fw.write("\"\n\tworkingDir=\"");
-        fw.write(context.getWorkingDir().toString());
-        fw.write("\"\n\tremoteRootLogDir=\"");
-        fw.write(context.getRemoteRootLogDir().toString());
-        fw.write("\"\n\tsuffix=\"");
-        fw.write(context.getSuffix());
-        fw.write("\"\nel");
+        fw.write("\" ]; then\n\tappId=");
+        fw.write(Shell.bashQuote(context.getAppId()));
+        fw.write("\n\tuser=");
+        fw.write(Shell.bashQuote(context.getUser()));
+        fw.write("\n\tworkingDir=");
+        fw.write(Shell.bashQuote(context.getWorkingDir().toString()));
+        fw.write("\n\tremoteRootLogDir=");
+        fw.write(Shell.bashQuote(context.getRemoteRootLogDir().toString()));
+        fw.write("\n\tsuffix=");
+        fw.write(Shell.bashQuote(context.getSuffix()));
+        fw.write("\nel");
         containerCount++;
       }
       fw.write("se\n\techo \"Unknown Mapping!\"\n\texit 1\nfi\n");
