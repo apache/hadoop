@@ -150,7 +150,8 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
 
     long keepAliveTime = getConf().getTimeDuration(
         YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME,
-        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME, TimeUnit.SECONDS);
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
 
     BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>();
     this.executorService = new ThreadPoolExecutor(numThreads, numThreads,

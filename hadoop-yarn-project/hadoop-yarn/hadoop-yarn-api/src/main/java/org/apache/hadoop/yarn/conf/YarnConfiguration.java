@@ -4457,13 +4457,10 @@ public class YarnConfiguration extends Configuration {
       ROUTER_PREFIX + "interceptor.user-thread-pool.keep-alive-time";
 
   /**
-   * This configurable is used to set the default time of keepAliveTime
-   * of the thread pool of the interceptor.
-   *
-   * the default value is 0s.
+   * Default interceptor thread-pool keep-alive time, in seconds.
    */
   public static final long DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME =
-      TimeUnit.SECONDS.toMillis(0); // 0s
+      30L;
 
   /**
    * This method configures the policy for core threads regarding termination
