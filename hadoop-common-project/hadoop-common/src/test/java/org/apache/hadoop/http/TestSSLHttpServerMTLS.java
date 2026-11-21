@@ -18,6 +18,8 @@
 package org.apache.hadoop.http;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -25,7 +27,6 @@ import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLHandshakeException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -37,11 +38,13 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests that HttpServer2 enforces mutual TLS (mTLS) when
@@ -140,11 +143,24 @@ public class TestSSLHttpServerMTLS extends HttpServerFunctionalTest {
   }
 
   @Test
+  @Timeout(value = 120)
   public void testUntrustedClientIsRejected() throws Exception {
     URL url = new URL(baseUrl, "/echo?a=b");
     HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
     // presents untrustedCert; server cert is trusted via no-op TrustManager
     KeyStoreTestUtil.setAllowAllSSL(conn, untrustedCert, untrustedKeyPair);
-    assertThrows(SSLHandshakeException.class, () -> conn.getInputStream());
+    // The server drops the connection as soon as it rejects the certificate,
+    // racing the client's last handshake flight, so depending on timing and
+    // TLS version the refusal surfaces as an SSLHandshakeException, a
+    // SocketException or another IOException.  getResponseCode() returns an
+    // HTTP error status instead of throwing, so a throw means the request was
+    // refused below HTTP; a ConnectException means the server was never
+    // reached.
+    IOException e =
+        assertThrows(IOException.class, () -> conn.getResponseCode());
+    if (e instanceof ConnectException) {
+      fail("expected the server to refuse the request, but it was never "
+          + "reached", e);
+    }
   }
 }
