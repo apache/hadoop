@@ -25,12 +25,15 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
+import org.apache.hadoop.hdfs.StripeReader.BlockReaderInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
@@ -48,6 +51,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -59,11 +63,13 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
@@ -541,6 +547,130 @@ public class TestDFSStripedInputStream {
       } catch (IOException expected) {
         LOG.info("Exception caught", expected);
         GenericTestUtils.assertExceptionContains(msg, expected);
+      }
+    }
+  }
+
+  @Test
+  public void testMovedBlockIsNotAddedToLocalDeadNodes() throws Exception {
+    DFSTestUtil.createStripedFile(cluster, filePath, null, 1,
+        stripesPerBlock, false, ecPolicy);
+    LocatedBlocks lbs = fs.getClient().namenode.getBlockLocations(
+        filePath.toString(), 0, blockGroupSize);
+    LocatedBlock[] blocks = StripedBlockUtil.parseStripedBlockGroup(
+        (LocatedStripedBlock) lbs.get(0), cellSize, dataBlocks, parityBlocks);
+    LocatedBlock movedBlock = new LocatedBlock(blocks[0].getBlock(),
+        new DatanodeInfo[] {blocks[1].getLocations()[0]},
+        null, null, blocks[0].getStartOffset(), false, null);
+
+    try (MovedBlockDFSStripedInputStream in =
+        new MovedBlockDFSStripedInputStream(fs.getClient(),
+            filePath.toString(), blocks[0], movedBlock)) {
+      LocatedBlock[] targetBlocks = new LocatedBlock[dataBlocks + parityBlocks];
+      BlockReaderInfo[] readerInfos =
+          new BlockReaderInfo[dataBlocks + parityBlocks];
+      assertTrue(in.createBlockReader(blocks[0], 0, targetBlocks, readerInfos,
+          0, cellSize));
+      assertFalse(in.deadNodesContain(blocks[0].getLocations()[0]),
+          "A DN should not be marked dead if the refreshed block location "
+              + "shows the block moved away from it.");
+    }
+  }
+
+  @Test
+  public void testReadRetryRefreshesCachedBlockLocations() throws Exception {
+    DFSTestUtil.createStripedFile(cluster, filePath, null, 1,
+        stripesPerBlock, false, ecPolicy);
+    LocatedBlocks lbs = fs.getClient().namenode.getBlockLocations(
+        filePath.toString(), 0, blockGroupSize);
+    injectInternalBlocks((LocatedStripedBlock) lbs.get(0));
+    DFSClientFaultInjector oldInjector = DFSClientFaultInjector.get();
+    try (OpenInfoTrackingDFSStripedInputStream in =
+        new OpenInfoTrackingDFSStripedInputStream(fs.getClient(),
+            filePath.toString())) {
+      DFSClientFaultInjector.set(new DFSClientFaultInjector() {
+        private boolean firstRead = true;
+
+        @Override
+        public void failWhenReadWithStrategy(boolean isRetryRead)
+            throws IOException {
+          if (firstRead) {
+            firstRead = false;
+            throw new IOException("Inject read failure before retry");
+          }
+        }
+      });
+
+      assertEquals(1, in.read(new byte[1], 0, 1));
+      assertEquals(1, in.refreshOpenInfoCalls,
+          "readWithStrategy retry should refresh block locations before "
+              + "seeking again.");
+    } finally {
+      DFSClientFaultInjector.set(oldInjector);
+    }
+  }
+
+  private void injectInternalBlocks(LocatedStripedBlock blockGroup)
+      throws IOException {
+    for (int i = 0; i < dataBlocks + parityBlocks; i++) {
+      Block block = new Block(blockGroup.getBlock().getBlockId() + i,
+          stripesPerBlock * cellSize,
+          blockGroup.getBlock().getGenerationStamp());
+      block.setGenerationStamp(blockGroup.getBlock().getGenerationStamp());
+      cluster.injectBlocks(i, Arrays.asList(block),
+          blockGroup.getBlock().getBlockPoolId());
+    }
+  }
+
+  private class MovedBlockDFSStripedInputStream extends DFSStripedInputStream {
+    private final LocatedBlock movedBlock;
+    private LocatedBlock currentBlock;
+    private int blockReaderAttempts;
+
+    MovedBlockDFSStripedInputStream(DFSClient dfsClient, String src,
+        LocatedBlock initialBlock, LocatedBlock movedBlock) throws IOException {
+      super(dfsClient, src, false, ecPolicy, null);
+      this.currentBlock = initialBlock;
+      this.movedBlock = movedBlock;
+    }
+
+    @Override
+    protected LocatedBlock fetchBlockAt(long offset) {
+      currentBlock = movedBlock;
+      return movedBlock;
+    }
+
+    @Override
+    protected LocatedBlock refreshLocatedBlock(LocatedBlock block) {
+      return currentBlock;
+    }
+
+    @Override
+    protected BlockReader getBlockReader(LocatedBlock targetBlock,
+        long offsetInBlock, long length, InetSocketAddress targetAddr,
+        StorageType storageType, DatanodeInfo datanode) throws IOException {
+      blockReaderAttempts++;
+      if (blockReaderAttempts == 1) {
+        throw new IOException("Inject reader creation failure");
+      }
+      return mock(BlockReader.class);
+    }
+  }
+
+  private class OpenInfoTrackingDFSStripedInputStream
+      extends DFSStripedInputStream {
+    private int refreshOpenInfoCalls;
+
+    OpenInfoTrackingDFSStripedInputStream(DFSClient dfsClient, String src)
+        throws IOException {
+      super(dfsClient, src, false, ecPolicy, null);
+    }
+
+    @Override
+    void openInfo(boolean refreshLocatedBlocks) throws IOException {
+      super.openInfo(refreshLocatedBlocks);
+      if (refreshLocatedBlocks) {
+        refreshOpenInfoCalls++;
       }
     }
   }
