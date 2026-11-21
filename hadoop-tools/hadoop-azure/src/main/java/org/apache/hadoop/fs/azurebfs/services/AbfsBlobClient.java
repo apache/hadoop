@@ -86,6 +86,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.ListUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.util.XMLUtils;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
@@ -1882,7 +1883,7 @@ public class AbfsBlobClient extends AbfsClient {
     // Convert the input stream to a Document object
 
     try {
-      DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+      DocumentBuilderFactory factory = XMLUtils.newSecureDocumentBuilderFactory();
       Document doc = factory.newDocumentBuilder().parse(stream);
 
       // Find the CommittedBlocks element and extract the list of block IDs
@@ -2148,9 +2149,9 @@ public class AbfsBlobClient extends AbfsClient {
   }
 
   private final ThreadLocal<SAXParser> saxParserThreadLocal = ThreadLocal.withInitial(() -> {
-    SAXParserFactory factory = SAXParserFactory.newInstance();
-    factory.setNamespaceAware(true);
     try {
+      SAXParserFactory factory = XMLUtils.newSecureSAXParserFactory();
+      factory.setNamespaceAware(true);
       return factory.newSAXParser();
     } catch (SAXException e) {
       throw new RuntimeException("Unable to create SAXParser", e);
