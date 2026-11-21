@@ -1182,7 +1182,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         federationSubClusters.add(federationSubCluster);
       } catch (Exception e) {
         routerMetrics.incrGetFederationSubClustersFailedRetrieved();
-        LOG.error("getSubClusters SubClusterId = [%s] error.", subClusterId, e);
+        LOG.error("getSubClusters SubClusterId = [{}] error.", subClusterId, e);
       }
     }
     long stopTime = clock.getTime();
