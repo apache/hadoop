@@ -223,8 +223,11 @@ public final class AzureADAuthenticator {
     if (clientId != null) {
       qp.add("client_id", clientId);
     }
+    Hashtable<String, String> headers = new Hashtable<>();
+    qp.add("scope", SCOPE);
+    headers.put("Origin", "*");
     LOG.debug("AADToken: starting to fetch token using refresh token for client ID " + clientId);
-    return getTokenCall(authEndpoint, qp.serialize(), null, null);
+    return getTokenCall(authEndpoint, qp.serialize(), headers, "POST");
   }
 
 
