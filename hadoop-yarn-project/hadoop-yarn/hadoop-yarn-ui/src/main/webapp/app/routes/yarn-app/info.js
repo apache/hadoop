@@ -42,6 +42,11 @@ export default AbstractRoute.extend(AppAttemptMixin, {
     });
   },
 
+  setupController(controller, model) {
+    this._super(controller, model);
+    controller.resetApplicationDiagnosticState();
+  },
+
   refresh() {
     window.location.reload();
   },
