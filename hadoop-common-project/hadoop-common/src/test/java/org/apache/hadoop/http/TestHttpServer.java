@@ -29,9 +29,11 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JsonUtils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
@@ -55,6 +57,7 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
@@ -285,9 +288,20 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     final HttpURLConnection conn =
         (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
-    assertThat(conn.getResponseCode()).isEqualTo(200);
-    final int after = metrics.responses2xx();
-    assertThat(after).isGreaterThan(before);
+    try {
+      assertThat(conn.getResponseCode()).isEqualTo(200);
+      // Drain the body so the exchange completes on the server side.
+      try (InputStream in = conn.getInputStream()) {
+        IOUtils.consume(in);
+      }
+    } finally {
+      conn.disconnect();
+    }
+    // Jetty's StatisticsHandler records the response when the request
+    // completes on the server, which can be after the client has read the
+    // status line, so wait for the counter rather than reading it once.
+    GenericTestUtils.waitFor(() -> metrics.responses2xx() > before, 10, 10000,
+        "responses2xx did not increase above " + before);
   }
 
   @Test
