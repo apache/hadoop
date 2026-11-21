@@ -36,9 +36,14 @@ import org.junit.jupiter.api.Test;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.InvalidClassException;
+import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.PriorityQueue;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -103,6 +108,34 @@ public class TestLeveldbConfigurationStore extends
     }
     assertFalse(logKeyPresent, "Audit Log is not disabled");
     confStore.close();
+  }
+
+  /**
+   * The store directory is writable outside the RM, so the mutation log
+   * decoder must only accept the classes the store itself writes and reject
+   * anything else planted under the log key instead of instantiating it.
+   */
+  @Test
+  public void testDeserializationIsRestricted() throws Exception {
+    confStore.initialize(conf, schedConf, rmContext);
+    try {
+      prepareLogMutation("key1", "val1");
+      LinkedList<LogMutation> logs = confStore.getLogs();
+      assertEquals(1, logs.size());
+      assertEquals("val1", logs.get(0).getUpdates().get("key1"));
+
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+        oos.writeObject(new PriorityQueue<String>());
+      }
+      ((LeveldbConfigurationStore) confStore).getDB().put(
+          "log".getBytes(StandardCharsets.UTF_8), baos.toByteArray());
+      InvalidClassException e = assertThrows(InvalidClassException.class,
+          () -> confStore.getLogs());
+      assertTrue(e.getMessage().contains(PriorityQueue.class.getName()));
+    } finally {
+      confStore.close();
+    }
   }
 
   /**
