@@ -855,6 +855,14 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     return executorService;
   }
 
+  @Override
+  public void shutdown() {
+    if (executorService != null) {
+      executorService.shutdown();
+    }
+    super.shutdown();
+  }
+
   /**
    * In YARN Federation mode, We allow users to mark subClusters
    * With no heartbeat for a long time as SC_LOST state.
