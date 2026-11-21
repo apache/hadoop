@@ -176,7 +176,7 @@ class BlockSender implements java.io.Closeable {
   /**
    * See {{@link BlockSender#isLongRead()}
    */
-  private static final long LONG_READ_THRESHOLD_BYTES = 256 * 1024;
+  private long readAheadCacheBytesThreshold;
 
   // The number of bytes per checksum here determines the alignment
   // of reads: we always start reading at a checksum chunk boundary,
@@ -229,6 +229,8 @@ class BlockSender implements java.io.Closeable {
             this.dropCacheBehindLargeReads =
                  cachingStrategy.getDropBehind().booleanValue();
       }
+      this.readAheadCacheBytesThreshold =
+          datanode.getDnConf().readAheadCacheBytesThreshold;
       /*
        * Similarly, if readahead was explicitly requested, we always do it.
        * Otherwise, we read ahead based on the DataNode settings, and only
@@ -892,7 +894,7 @@ class BlockSender implements java.io.Closeable {
    * posix_fadvise(POSIX_FADV_SEQUENTIAL).
    */
   private boolean isLongRead() {
-    return (endOffset - initialOffset) > LONG_READ_THRESHOLD_BYTES;
+    return (endOffset - initialOffset) > readAheadCacheBytesThreshold;
   }
 
   /**
