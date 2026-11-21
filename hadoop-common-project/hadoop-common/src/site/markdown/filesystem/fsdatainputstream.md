@@ -468,6 +468,10 @@ Also, clients are encouraged to use `WeakReferencedElasticByteBufferPool` for
 allocating buffers such that even direct buffers are garbage collected when
 they are no longer referenced.
 
+Implementations MAY allocate internal buffers without using `allocate()`; it is not
+guaranteed to see every allocation. Returned range buffers MUST be obtained through
+the supplied allocator.
+
 The position returned by `getPos()` after `readVectored()` is undefined.
 
 If a file is changed while the `readVectored()` operation is in progress, the output is
@@ -476,11 +480,6 @@ undefined. Some ranges may have old data, some may have new, and some may have b
 While a `readVectored()` operation is in progress, normal read API calls MAY block;
 the value of `getPos(`) is also undefined. Applications SHOULD NOT make such requests
 while waiting for the results of a vectored read.
-
-Note: Don't use direct buffers for reading from `ChecksumFileSystem` as that may
-lead to memory fragmentation explained in
-[HADOOP-18296](https://issues.apache.org/jira/browse/HADOOP-18296)
-_Memory fragmentation in ChecksumFileSystem Vectored IO implementation_
 
 #### Preconditions
 
@@ -669,13 +668,20 @@ Stream.hasCapability("in:readvectored")
 
 [HADOOP-18296](https://issues.apache.org/jira/browse/HADOOP-18296),
 _Memory fragmentation in ChecksumFileSystem Vectored IO implementation_
-highlights that `ChecksumFileSystem` (which the default implementation of `file://`
-subclasses), may return buffers which are sliced subsets of buffers allocated
-through the `allocate()` function passed in.
+highlights that older versions of `ChecksumFileSystem` (which the default implementation
+of `file://` subclasses) return sliced subsets of buffers allocated through the
+`allocate()` function passed in. These slices cannot be recycled by allocators which
+track buffer identity and can retain oversized backing allocations.
 
-This will happen during reads with and without range coalescing.
+With [HADOOP-19901](https://issues.apache.org/jira/browse/HADOOP-19901),
+`ChecksumFileSystem` verifies data in internal buffers and copies
+each requested range into its own buffer, allocated synchronously through `allocate()`.
+It returns exactly that buffer, not a slice, and reports `false` for
+`fs.capability.vectoredio.sliced` on both the filesystem and the stream.
+This applies with and without checksum verification, so direct buffers and
+identity-tracking allocators can be used without a slicing workaround.
 
-Checksum verification may be disabled by setting the option
+For older releases, checksum verification may be disabled by setting the option
 `fs.file.checksum.verify` to false (Hadoop 3.4.2 and later).
 
 ```xml
@@ -695,7 +701,7 @@ to the path capabilities probe `fs.capability.vectoredio.sliced`,
 and for the open stream in its `hasCapability()` method.
 
 
-The local filesystem will not slice buffers if the checksum file
+Older versions of the local filesystem will not slice buffers if the checksum file
 of `filename + ".crc"` is not found. This is not declared in the
 filesystem `hasPathCapability(filename, "fs.capability.vectoredio.sliced")`
 call, as no checks for the checksum file are made then.
@@ -704,8 +710,7 @@ testing for buffer recycling with Hadoop releases 3.4.1 and earlier.
 
 *Implementors Notes*
 
-* Don't slice buffers. `ChecksumFileSystem` has to be considered an outlier which
-  needs to be addressed in future.
+* Don't slice buffers. Return the exact buffers obtained through `allocate()`.
 * Always free buffers in error handling code paths.
 * When handling errors in coalesced ranges, don't release buffers for any sub-ranges
   which have already completed.
@@ -731,11 +736,30 @@ if release = null raise NullPointerException
   SHOULD call `release(buffer)` with the buffer created by invoking the `allocate()` function into which
   the data was being read.
 * Implementations MUST NOT call `release(buffer)` with any non-null buffer _not_ obtained through `allocate()`.
-* Implementations MUST only call `release(buffer)` when a failure has occurred and the future is about to have `Future.completedExceptionally()` invoked.
+* For buffers holding caller-visible range data, implementations MUST only call `release(buffer)`
+  when a failure has occurred and the future is about to have `CompletableFuture.completeExceptionally()` invoked,
+  or when cancellation prevents delivery of the buffer to the caller.
+* Implementations SHOULD release buffers used only internally, such as checksum buffers, once all
+  operations using them have completed, whether successfully or exceptionally.
+* Implementations MUST NOT release a buffer if it has been returned to the caller.
+* For each call to `allocate()`, implementations MUST NOT call `release()` more than once with the allocated buffer.
+* `release` MAY be invoked asynchronously, including after `readVectored()` has thrown.
+  Callers MUST keep the release target valid until all submitted reads complete.
+
+The two-argument overload has no release callback. `ChecksumFileSystem` uses unpooled
+heap buffers for its internal data and checksum reads on this path, and invokes the
+caller's allocator exactly once per requested range. Internal buffers are therefore
+garbage collected rather than retained by a caller's pool. This includes direct-buffer
+callers: internal memory is on the heap and outside their allocator's accounting or
+limits. The three-argument overload uses the supplied allocator and release callback
+for internal buffers too, allowing callers to control their allocation and recycling.
+When migrating from a capturing-allocator workaround to the three-argument overload,
+callers must not also release every captured allocation: internal and failed buffers
+are already released through the callback. Only successfully returned range buffers
+remain caller-owned.
 
 It is an extension to the original Vector Read API -not all versions of Hadoop with the original `readVectored()` call define it.
 If used directly in application code, that application is restricting itself to later versions
 of the API.
 
 If used via reflection, if this method is not found, fall back to the original method.
-
