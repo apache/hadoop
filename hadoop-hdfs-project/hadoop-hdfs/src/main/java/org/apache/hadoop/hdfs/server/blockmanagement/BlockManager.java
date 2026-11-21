@@ -724,6 +724,11 @@ public class BlockManager implements BlockStatsMXBean {
     final long lifetimeMin = conf.getLong(
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY, 
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_DEFAULT);
+    if (lifetimeMin <= 0) {
+      throw new HadoopIllegalArgumentException(
+          DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY + " = '"
+              + lifetimeMin + "' is invalid. It should be a positive value.");
+    }
     final String encryptionAlgorithm = conf.get(
         DFSConfigKeys.DFS_DATA_ENCRYPTION_ALGORITHM_KEY);
     LOG.info("{}={} min(s), {}={} min(s), {}={}",
