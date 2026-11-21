@@ -100,6 +100,7 @@ Command `submit` has the following options:
 | -delay | Specify the delayed duration(millie seconds) when the job needs to retry. | 1000 |
 | -moveToTrash | This options has 3 values: `trash` (move the source path to trash), `delete` (delete the source path directly) and `skip` (skip both trash and deletion). By default the server side trash interval is used. If the trash is disabled in the server side, the default trash interval 60 minutes is used. | trash |
 | -diffThreshold | Specify the threshold of the diff entries that used in incremental copy stage. If the diff entries size is no greater than the threshold and the open files check is satisfied(no open files or force close all open files), the fedBalance will go to the final round of distcp. Setting to 0 means waiting until there is no diff.| 0 |
+| -verify | Run an optional verification phase after the final DistCp succeeds. The verification compares source and target ContentSummary directory count, file count, and length after excluding snapshot content. | Disabled |
 
 ### Configuration Options
 --------------------
@@ -110,6 +111,7 @@ Set configuration options at hdfs-fedbalance-site.xml.
 | ------------------------------ | ------------------------------------ | ------- |
 | hdfs.fedbalance.procedure.work.thread.num | The worker threads number of the BalanceProcedureScheduler. BalanceProcedureScheduler is responsible for scheduling a balance job, including submit, run, delay and recover. | 10 |
 | hdfs.fedbalance.procedure.scheduler.journal.uri | The uri of the journal, the journal file is used for handling the job persistence and recover. | hdfs://localhost:8020/tmp/procedure |
+| hdfs.fedbalance.verify.enabled | Whether FedBalance should run the optional verification phase after the final DistCp succeeds. The verification compares source and target ContentSummary directory count, file count, and length after excluding snapshot content. | false |
 
 Architecture of HDFS Federation Balance
 ----------------------
@@ -145,7 +147,7 @@ Architecture of HDFS Federation Balance
   procedures:
 
   * DistCpProcedure: This is the first procedure. It handles all the data copy
-    works. There are 6 stages:
+    works. There are 7 stages:
     * PRE_CHECK: Do the pre-check of the src and dst path.
     * INIT_DISTCP: Create a snapshot of the source path and distcp it to the
       target.
@@ -158,6 +160,8 @@ Architecture of HDFS Federation Balance
       In normal federation mode it is done by cancelling all the permissions of
       the source path.
     * FINAL_DISTCP: Force close all the open files and submit the final distcp.
+    * VERIFY: Optionally compare source and target ContentSummary directory
+      count, file count, and length after the final DistCp succeeds.
     * FINISH: Do the cleanup works. In normal federation mode the finish stage
       also restores the permission of the dst path.
 
