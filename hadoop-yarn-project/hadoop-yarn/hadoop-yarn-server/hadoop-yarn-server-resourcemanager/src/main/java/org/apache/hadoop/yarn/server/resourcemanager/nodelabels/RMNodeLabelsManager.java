@@ -506,7 +506,8 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
     }
     
     // Notify RM
-    if (rmContext != null && rmContext.getDispatcher() != null) {
+    if (!newNodeToLabelsMap.isEmpty()
+        && rmContext != null && rmContext.getDispatcher() != null) {
       rmContext.getDispatcher().getEventHandler().handle(
           new NodeLabelsUpdateSchedulerEvent(newNodeToLabelsMap));
     }
