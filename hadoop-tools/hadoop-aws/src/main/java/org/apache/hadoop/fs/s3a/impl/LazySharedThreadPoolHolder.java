@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -31,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_CLIENT_SHARED_THREADPOOL_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CLIENT_SHARED_THREADPOOL_KEEPALIVE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CLIENT_SHARED_THREADPOOL_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.S3AUtils.intOption;
@@ -68,33 +71,13 @@ public class LazySharedThreadPoolHolder {
   }
 
   /**
-   * Get the config key controlling whether the shared pool is enabled.
-   * This is for testing only.
-   * @return the enabled config key
+   * Get the config keys for the enabled flag, pool size and keep-alive, in that
+   * order. This is for testing only.
+   * @return the config keys
    */
   @VisibleForTesting
-  public String getEnabledKey() {
-    return enabledKey;
-  }
-
-  /**
-   * Get the config key controlling the pool size.
-   * This is for testing only.
-   * @return the size config key
-   */
-  @VisibleForTesting
-  public String getSizeKey() {
-    return sizeKey;
-  }
-
-  /**
-   * Get the config key controlling the thread keep-alive.
-   * This is for testing only.
-   * @return the keep-alive config key
-   */
-  @VisibleForTesting
-  public String getKeepAliveKey() {
-    return keepAliveKey;
+  public List<String> getConfigKeys() {
+    return Arrays.asList(enabledKey, sizeKey, keepAliveKey);
   }
 
   /**
@@ -104,7 +87,7 @@ public class LazySharedThreadPoolHolder {
    */
   public synchronized ScheduledExecutorService get(Configuration conf) {
     if (executor == null) {
-      if (conf.getBoolean(enabledKey, false)) {
+      if (conf.getBoolean(enabledKey, AWS_CLIENT_SHARED_THREADPOOL_ENABLED_DEFAULT)) {
         int poolSize = intOption(conf, sizeKey,
             AWS_CLIENT_SHARED_THREADPOOL_SIZE_DEFAULT, 1);
         int keepAlive = intOption(conf, keepAliveKey,
