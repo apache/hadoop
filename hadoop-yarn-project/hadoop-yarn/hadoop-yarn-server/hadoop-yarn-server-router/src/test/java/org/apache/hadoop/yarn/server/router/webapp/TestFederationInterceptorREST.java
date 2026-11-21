@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
@@ -523,6 +524,24 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     AppInfo response = interceptor.getApp(null, appId.toString(), null);
 
     assertNull(response);
+  }
+
+  /**
+   * GetApp finds an application in its RM when its home SubCluster is not in
+   * the StateStore, and records it again.
+   */
+  @Test
+  public void testGetApplicationWithoutHomeSubCluster() throws Exception {
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+    interceptor.submitApplication(context, null);
+    SubClusterId home = stateStoreUtil.queryApplicationHomeSC(appId);
+    stateStore.deleteApplicationHomeSubCluster(
+        DeleteApplicationHomeSubClusterRequest.newInstance(appId));
+
+    assertNotNull(interceptor.getApp(null, appId.toString(), null));
+    assertEquals(home, stateStoreUtil.queryApplicationHomeSC(appId));
   }
 
   /**
