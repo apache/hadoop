@@ -1999,7 +1999,15 @@ public class FairScheduler extends
           + " not found or is not a leaf queue.");
     }
 
-    reservationQueue.setWeights(entitlement.getCapacity());
+    // The update thread computes fair shares from the queue weights while
+    // holding the write lock. Changing a weight in the middle of that
+    // computation can keep ComputeFairShares from ever converging.
+    writeLock.lock();
+    try {
+      reservationQueue.setWeights(entitlement.getCapacity());
+    } finally {
+      writeLock.unlock();
+    }
 
     // TODO Does MaxCapacity need to be set for fairScheduler ?
   }
