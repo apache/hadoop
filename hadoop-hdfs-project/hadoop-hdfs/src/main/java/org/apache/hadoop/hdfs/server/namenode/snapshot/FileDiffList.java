@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
@@ -126,11 +125,11 @@ public class FileDiffList extends
         continue;
       break;
     }
-    // Check if last block is part of truncate recovery
+    // Replay on a standby leaves the target UNDER_CONSTRUCTION rather than
+    // UNDER_RECOVERY. Its truncate source is still required until completion.
     BlockInfo lastBlock = file.getLastBlock();
     BlockInfo dontRemoveBlock = null;
-    if (lastBlock != null && lastBlock.getBlockUCState().equals(
-        HdfsServerConstants.BlockUCState.UNDER_RECOVERY)) {
+    if (lastBlock != null && !lastBlock.isComplete()) {
       dontRemoveBlock = lastBlock.getUnderConstructionFeature()
           .getTruncateBlock();
     }
