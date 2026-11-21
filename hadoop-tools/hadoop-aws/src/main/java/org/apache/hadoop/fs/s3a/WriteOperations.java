@@ -171,6 +171,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @return a list of in-progress multipart uploads
    * @throws IOException on problems
    */
+  @Retries.RetryTranslated
   List<MultipartUpload> listMultipartUploads(String prefix)
       throws IOException;
 
