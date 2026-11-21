@@ -136,6 +136,18 @@ public class TestNameNodeReconfigure {
         nameNode.getConf().getBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY,
             HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT),
         HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value");
+    // The slow RPC log of the RPC servers follows the audit log.
+    final NameNodeRpcServer nnrs = (NameNodeRpcServer) nameNode.getRpcServer();
+    assertEquals(expected, nnrs.getClientRpcServer().isCallerContextEnabled(),
+        HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value");
+    if (nnrs.getServiceRpcServer() != null) {
+      assertEquals(expected, nnrs.getServiceRpcServer().isCallerContextEnabled(),
+          HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value");
+    }
+    if (nnrs.getLifelineRpcServer() != null) {
+      assertEquals(expected, nnrs.getLifelineRpcServer().isCallerContextEnabled(),
+          HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value");
+    }
   }
 
   /**

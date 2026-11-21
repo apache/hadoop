@@ -4341,6 +4341,8 @@ are idle beyond the keepalive window.
     <value>false</value>
     <description>When the feature is enabled, additional fields are written into
       name-node audit log records for auditing coarse granularity operations.
+      The caller context is also appended to the slow RPC log of every RPC
+      server, see ipc.server.log.slow.rpc.
     </description>
   </property>
   <property>
@@ -4350,7 +4352,8 @@ are idle beyond the keepalive window.
       passed caller context is longer than this maximum bytes, client will
       truncate it before sending to server. Note that the server may have a
       different maximum size, and will truncate the caller context to the
-      maximum size it allows.
+      maximum size it allows. The same limit applies to the caller context
+      printed in the audit log and in the slow RPC log of every RPC server.
     </description>
   </property>
   <property>

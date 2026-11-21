@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ipc;
 
+import static org.apache.commons.text.StringEscapeUtils.escapeJava;
 import static org.apache.hadoop.ipc.ProcessingDetails.Timing;
 import static org.apache.hadoop.ipc.RpcConstants.AUTHORIZATION_FAILED_CALL_ID;
 import static org.apache.hadoop.ipc.RpcConstants.CONNECTION_CONTEXT_CALL_ID;
@@ -521,6 +522,10 @@ public abstract class Server {
   private volatile boolean logSlowRPC = false;
   /** Threshold time for log slow rpc. */
   private volatile long logSlowRPCThresholdTime;
+  /** Whether the caller context is printed in the slow rpc log. */
+  private volatile boolean callerContextEnabled;
+  /** Max length of the caller context printed in the slow rpc log. */
+  private final int callerContextMaxLen;
 
   /**
    * Checks if LogSlowRPC is set true.
@@ -553,6 +558,22 @@ public abstract class Server {
   @VisibleForTesting
   public void setLogSlowRPC(boolean logSlowRPCFlag) {
     this.logSlowRPC = logSlowRPCFlag;
+  }
+
+  /**
+   * Checks if the caller context is printed in the slow RPC log.
+   * @return true, if the caller context is printed, false, otherwise.
+   */
+  public boolean isCallerContextEnabled() {
+    return callerContextEnabled;
+  }
+
+  /**
+   * Sets whether the caller context is printed in the slow RPC log.
+   * @param enabled input callerContextEnabled flag.
+   */
+  public void setCallerContextEnabled(boolean enabled) {
+    this.callerContextEnabled = enabled;
   }
 
   @VisibleForTesting
@@ -610,10 +631,29 @@ public abstract class Server {
         (processingTime > threeSigma) &&
         (processingTime > getLogSlowRPCThresholdTime())) {
       LOG.warn("Slow RPC : {} took {} {} to process from client {}, the processing detail is {}," +
-              " and the threshold time is {} {}.", methodName, processingTime, metricsTimeUnit,
-          call, details.toString(), getLogSlowRPCThresholdTime(), metricsTimeUnit);
+              " and the threshold time is {} {}, user {}{}.", methodName, processingTime,
+          metricsTimeUnit, call, details.toString(), getLogSlowRPCThresholdTime(),
+          metricsTimeUnit, call.getRemoteUser(), getCallerContextForLog(call));
       rpcMetrics.incrSlowRpc();
     }
+  }
+
+  /**
+   * Format the caller context as a log suffix in the same way as the HDFS
+   * audit log: only when hadoop.caller.context.enabled is set, escaped and
+   * truncated to hadoop.caller.context.max.size. The signature is not logged.
+   */
+  private String getCallerContextForLog(Call call) {
+    CallerContext callerContext = call.getCallerContext();
+    if (!callerContextEnabled || callerContext == null ||
+        !callerContext.isContextValid()) {
+      return "";
+    }
+    // Escaping never shortens, so escaping only the prefix gives the same result.
+    String raw = callerContext.getContext();
+    String context = escapeJava(raw.substring(0, Math.min(raw.length(), callerContextMaxLen)));
+    return ", callerContext " + (context.length() > callerContextMaxLen ?
+        context.substring(0, callerContextMaxLen) : context);
   }
 
   void updateMetrics(Call call, long processingStartTimeNanos, boolean connDropped) {
@@ -3476,6 +3516,13 @@ public abstract class Server {
     this.setLogSlowRPCThresholdTime(conf.getLong(
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY,
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_DEFAULT));
+
+    this.setCallerContextEnabled(conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY,
+        CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT));
+    this.callerContextMaxLen = Math.max(0, conf.getInt(
+        CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY,
+        CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT));
 
     this.setPurgeIntervalNanos(conf.getInt(
         CommonConfigurationKeysPublic.IPC_SERVER_PURGE_INTERVAL_MINUTES_KEY,
