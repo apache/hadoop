@@ -3868,6 +3868,9 @@ public class DataNode extends ReconfigurableBase
     checkSuperuserPrivilege();
     setConf(new Configuration());
     refreshNamenodes(getConf());
+    if (httpServer != null) {
+      httpServer.updateConf(getConf());
+    }
   }
   
   @Override // ClientDatanodeProtocol
