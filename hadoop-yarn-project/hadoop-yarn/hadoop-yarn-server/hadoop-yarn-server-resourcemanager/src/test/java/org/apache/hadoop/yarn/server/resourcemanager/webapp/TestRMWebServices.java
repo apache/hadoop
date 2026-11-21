@@ -90,6 +90,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerConfigValidator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.MutableCSConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
@@ -1055,6 +1056,8 @@ public class TestRMWebServices extends JerseyTestBase {
 
     when(configurationProvider.getConfiguration()).thenReturn(config);
     when(scheduler.getConf()).thenReturn(config);
+    when(scheduler.getConfiguration())
+            .thenReturn(new CapacitySchedulerConfiguration(config, false));
     when(configurationProvider
             .applyChanges(any(), any())).thenCallRealMethod();
     return scheduler;

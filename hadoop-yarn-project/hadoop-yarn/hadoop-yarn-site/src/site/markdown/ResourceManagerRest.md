@@ -8314,6 +8314,229 @@ Response Header:
 ```yarn rmadmin -removeFromClusterNodeLabels x```
 
 
+Scheduler Configuration Validation API
+--------------------------------
+
+The scheduler configuration validation API checks a proposed mutation without storing or activating it.
+It is available only when the Capacity Scheduler uses a mutable configuration store, and it requires the same administrator access as the mutation API.
+
+### URI
+
+      * http://rm-http-address:port/ws/v1/cluster/scheduler-conf/validate
+      * http://rm-http-address:port/ws/v1/cluster/scheduler-conf/validate/v2
+
+### HTTP Operations Supported
+
+      * POST
+
+### Legacy validation
+
+`POST /scheduler-conf/validate` accepts a *sched-conf* object.
+On success it returns status `200` with the proposed scheduler configuration, in the same format as the GET response of the mutation API.
+On failure it returns status `400` with a plain text message that starts with `CapacityScheduler configuration validation failed:`.
+It runs the same checks as the structured validation below and reports the first `ERROR` issue, in the form a queue refresh fails with (for example `java.io.IOException: Failed to re-init queues : <message>`).
+Neither endpoint builds queues or changes the running scheduler.
+The legacy endpoint compares the proposal with the queues as they are configured, as earlier releases did.
+The structured endpoint compares it with the running queues, so it also rejects changes a queue refresh rejects because of the live state, for example removing a `DRAINING` queue that still has applications.
+
+### Structured validation (v2)
+
+`POST /scheduler-conf/validate/v2` accepts the same *sched-conf* object, as JSON or XML, and reports every issue it finds instead of the first failure.
+The request is not serialized with configuration mutations, so it may observe a mutation that is still being applied.
+
+#### Query Parameters Supported
+
+| Parameter | Description |
+|:---- |:---- |
+| explain | Optional. `affected` adds the resolved properties of the queues the mutation can change. A comma-separated list of full queue paths adds the resolved properties of those queues. |
+
+With `explain=affected` the reported queues are: every updated or added queue with its descendants, the parent of every added or removed queue, and for a global update the queue the key belongs to with its descendants, or every queue when the key is not specific to a queue.
+
+#### Status codes
+
+| Status | Meaning |
+|:---- |:---- |
+| 200 | Validation ran. The proposal is valid when `valid` is `true`; it may still carry warnings. |
+| 400 | The request body cannot be interpreted, or the scheduler does not support configuration mutation (`Configuration change validation only supported by MutableConfScheduler.`, the same text as the legacy endpoint). |
+| 403 | The caller is not an administrator. |
+| 500 | An unexpected failure prevented validation. |
+
+A mutation that cannot be applied to the current configuration, for example removing a queue that does not exist or adding a queue that already exists, is reported with status `200` as an issue with rule id `invalid-mutation`.
+
+#### Elements of the *validationResult* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| valid | boolean | `false` when at least one issue has severity `ERROR` |
+| issues | array of issue objects | The issues found; the wrapper is always present, possibly empty |
+| explain | array of queue objects | Present only when the `explain` parameter was given and the mutation could be applied |
+
+*Elements of the* issue *object*
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| queuePath | string | Full path of the queue the issue belongs to; omitted for scheduler-wide issues |
+| propertyKey | string | Full configuration key the issue belongs to; omitted when the issue is not about one key |
+| ruleId | string | Stable rule identifier, for example `invalid-mutation` |
+| severity | string | `ERROR` or `WARNING` |
+| message | string | Human readable description |
+
+An issue has severity `ERROR` only when the same configuration is rejected today when it is applied through the mutation API or a queue refresh.
+Every other finding, including checks that the scheduler does not enforce today, has severity `WARNING` and does not make the proposal invalid.
+Issues are listed in the order a queue refresh evaluates the checks, so the first `ERROR` is the failure a refresh would report.
+The checks compare the proposal with the running scheduler: its queues, their states and applications, the dynamic queues, the cluster resource and the node labels.
+
+| Rule id | Severity | Finding |
+|:---- |:---- |:---- |
+| `invalid-mutation` | ERROR | The mutation cannot be applied to the current configuration |
+| `invalid-memory-allocation`, `invalid-vcores-allocation` | ERROR | Invalid scheduler minimum or maximum allocation |
+| `missing-child-queues`, `reservable-parent-queue` | ERROR | Root has no child queues; a parent queue is reservable |
+| `invalid-node-label-key`, `child-labels-not-subset`, `invalid-default-label-expression`, `invalid-template-label` | ERROR | Node label configuration that queue setup rejects |
+| `invalid-capacity`, `invalid-capacity-resource`, `invalid-capacity-vector`, `invalid-value`, `invalid-state`, `invalid-user-weight`, `invalid-priority-acl`, `invalid-maximum-allocation` | ERROR | A value that cannot be parsed or is out of its allowed range |
+| `maximum-resource-exceeds-parent`, `minimum-resource-exceeds-maximum`, `maximum-allocation-exceeds-cluster`, `maximum-allocation-decreased` | ERROR | Resource limits that do not fit |
+| `mixed-capacity-config-type`, `mixed-children-capacity-types`, `mixed-dynamic-children-capacity-types`, `absolute-capacity-mismatch`, `children-minimum-resource-exceeds-parent`, `children-capacity-sum` | ERROR | Capacity checks of legacy queue mode |
+| `running-queue-under-stopped-parent`, `parent-queue-not-running` | ERROR | Queue states that do not fit the parent's state |
+| `queue-removal-not-stopped`, `leaf-to-parent-conversion`, `managed-parent-conversion` | ERROR | Changes of the running hierarchy that a refresh rejects |
+| `user-weight-out-of-range`, `default-lifetime-exceeds-maximum`, `managed-parent-template-type` | ERROR | Queue limits and templates that queue setup rejects |
+| `invalid-ordering-policy`, `invalid-queue-ordering-policy`, `invalid-multi-node-policy`, `invalid-queue-management-policy` | ERROR | A policy class that cannot be loaded |
+| `duplicate-placement-rules`, `invalid-placement-rule`, `invalid-mapping-rules`, `invalid-mapping-rule-target`, `invalid-workflow-priority-mapping` | ERROR | Placement rules, mapping rules and workflow priority mappings that cannot be set up |
+| `capacity-exceeds-maximum-capacity`, `maximum-capacity-out-of-range`, `value-out-of-range`, `unknown-node-label`, `root-accessible-labels-ignored`, `duplicate-child-queue`, `conflicting-auto-queue-creation`, `queue-removal-with-applications`, `offswitch-assignments-below-one`, `mapping-rule-json-missing` | WARNING | Configurations the scheduler accepts but that are likely mistakes |
+
+Values that are only read when a dynamic queue is created or by the reservation system are reported as `invalid-value` warnings, and `invalid-template-label` is a warning when the managed parent can access any label.
+
+*Elements of the* queue *object of* explain
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| queuePath | string | Full path of the explained queue |
+| property | array of property objects | The resolved properties of the queue |
+
+*Elements of the* property *object*
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| key | string | Full configuration key |
+| value | string | Resolved value |
+| source | string | Where the value comes from: `QUEUE`, `TEMPLATE_V2`, `TEMPLATE_V1`, `PARENT`, `GLOBAL`, `DEFAULT` or `DERIVED` |
+| sourceDetail | string | The key or parent queue path the value was taken from |
+
+#### Request and Response Examples
+
+**JSON request**
+
+HTTP Request:
+
+```json
+      Accept: application/json
+      POST http://rm-http-address:port/ws/v1/cluster/scheduler-conf/validate/v2?explain=affected
+      Content-Type: application/json
+      {
+        "update-queue": [{
+          "queue-name": "root.a",
+          "params": {
+            "entry": [{
+              "key": "capacity",
+              "value": "150"
+            }]
+          }
+        }]
+      }
+```
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json; charset=utf-8
+      Transfer-Encoding: chunked
+
+Response Body:
+
+```json
+{
+  "validationResult": {
+    "valid": false,
+    "issues": {
+      "issue": [
+        {
+          "queuePath": "root.a",
+          "propertyKey": "yarn.scheduler.capacity.root.a.capacity",
+          "ruleId": "invalid-capacity",
+          "severity": "ERROR",
+          "message": "Illegal capacity of 150.0 for queue root.a"
+        }
+      ]
+    },
+    "explain": {
+      "queue": [
+        {
+          "queuePath": "root.a",
+          "property": [
+            {
+              "key": "yarn.scheduler.capacity.root.a.capacity",
+              "source": "QUEUE",
+              "sourceDetail": "yarn.scheduler.capacity.root.a.capacity"
+            },
+            {
+              "key": "yarn.scheduler.capacity.root.a.maximum-am-resource-percent",
+              "value": "0.1",
+              "source": "GLOBAL",
+              "sourceDetail": "yarn.scheduler.capacity.maximum-am-resource-percent"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+Lists are always JSON arrays, also when they hold a single element.
+The explain lists in these examples are shortened.
+A value that cannot be resolved has no `value`.
+A valid proposal without issues returns `{"validationResult":{"valid":true,"issues":{"issue":[]}}}`.
+
+**XML request**
+
+HTTP Request:
+
+```xml
+      Accept: application/xml
+      POST http://rm-http-address:port/ws/v1/cluster/scheduler-conf/validate/v2
+      Content-Type: application/xml
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <sched-conf>
+        <remove-queue>root.missing</remove-queue>
+      </sched-conf>
+```
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml; charset=utf-8
+      Transfer-Encoding: chunked
+
+Response Body:
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<validationResult>
+  <valid>false</valid>
+  <issues>
+    <issue>
+      <ruleId>invalid-mutation</ruleId>
+      <severity>ERROR</severity>
+      <message>Queue root.missing not found</message>
+    </issue>
+  </issues>
+</validationResult>
+```
+
+#### Router
+
+The Router does not route either validation endpoint to a sub-cluster.
+`POST /scheduler-conf/validate/v2` sent to the Router returns status `501` with a plain text message; send validation requests to the ResourceManager directly.
+
+
 Cluster Container Signal API
 --------------------------------
 

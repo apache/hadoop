@@ -116,4 +116,18 @@ public final class QueueStructureChecks {
     }
     return null;
   }
+
+  /**
+   * Loads the queue management policy of an auto create enabled parent queue
+   * (auto queue creation v1) the way the queue does when it is built.
+   * @param conf the configuration
+   * @param queuePath the path of the managed parent queue
+   * @return a new, uninitialized instance of the policy
+   * @throws org.apache.hadoop.yarn.exceptions.YarnRuntimeException if the
+   *         policy class cannot be loaded
+   */
+  public static AutoCreatedQueueManagementPolicy loadQueueManagementPolicy(
+      CapacitySchedulerConfiguration conf, QueuePath queuePath) {
+    return conf.getAutoCreatedQueueManagementPolicyClass(queuePath);
+  }
 }
