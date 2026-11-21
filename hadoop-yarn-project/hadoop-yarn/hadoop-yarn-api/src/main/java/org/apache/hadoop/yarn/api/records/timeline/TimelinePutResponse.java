@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.api.records.timeline;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -139,11 +140,16 @@ public class TimelinePutResponse {
      */
     public static final int EXPIRED_ENTITY = 7;
 
+    // The aliases are the JAXB names the server writes; TimelinePutResponseReader
+    // reads with a plain ObjectMapper and would otherwise ignore them.
     @JsonProperty("entityId")
+    @JsonAlias("entity")
     private String entityId;
     @JsonProperty("entityType")
+    @JsonAlias("entitytype")
     private String entityType;
     @JsonProperty("errorCode")
+    @JsonAlias("errorcode")
     private int errorCode;
 
     /**

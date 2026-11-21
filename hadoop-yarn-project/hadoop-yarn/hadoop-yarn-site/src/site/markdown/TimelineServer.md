@@ -1954,6 +1954,7 @@ None
 | `elapsedTime` | long | The elapsed time since the container started (in ms) |
 | `allocatedMB` | int | The memory in MB allocated to the container |
 | `allocatedVCores` | int | The virtual cores allocated to the container |
+| `allocatedResources` | map | The resources allocated to the container, as a map of resource name to value that includes memory and virtual cores, for example `{"memory-mb":1024,"vcores":1,"yarn.io/gpu":2}` |
 | `priority` | int  | The priority of the container |
 | `assignedNodeId` | string | The assigned node host and port of the container |
 
