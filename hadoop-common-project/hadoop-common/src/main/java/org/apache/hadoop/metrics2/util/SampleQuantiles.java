@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.metrics2.util;
 
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.TreeMap;
@@ -57,15 +57,23 @@ public class SampleQuantiles implements QuantileEstimator {
   /**
    * Current list of sampled items, maintained in sorted order with error bounds
    */
-  private LinkedList<SampleItem> samples;
+  private ArrayList<SampleItem> samples;
+  private ArrayList<SampleItem> mergeBuffer;
 
   /**
-   * Buffers incoming items to be inserted in batch. Items are inserted into 
-   * the buffer linearly. When the buffer fills, it is flushed into the samples
-   * array in its entirety.
+   * Buffers incoming items to be inserted in batch. A full active buffer is
+   * exchanged for an empty one and processed outside the producer lock.
    */
-  private long[] buffer = new long[500];
+  private static final int BUFFER_SIZE = 500;
+  // stateLock protects producer state and buffer ownership. flushLock
+  // protects samples and CKMS processing. Producers release stateLock before
+  // acquiring flushLock, and waiters never wait while holding flushLock.
+  private final Object stateLock = new Object();
+  private final Object flushLock = new Object();
+  private long[] activeBuffer = new long[BUFFER_SIZE];
+  private long[] spareBuffer = new long[BUFFER_SIZE];
   private int bufferCount = 0;
+  private long[] flushingBuffer;
 
   /**
    * Array of Quantiles that we care about, along with desired error.
@@ -74,7 +82,8 @@ public class SampleQuantiles implements QuantileEstimator {
 
   public SampleQuantiles(Quantile[] quantiles) {
     this.quantiles = quantiles;
-    this.samples = new LinkedList<SampleItem>();
+    this.samples = new ArrayList<SampleItem>();
+    this.mergeBuffer = new ArrayList<SampleItem>();
   }
 
   /**
@@ -88,7 +97,10 @@ public class SampleQuantiles implements QuantileEstimator {
    *          the index in the list of samples
    */
   private double allowableError(int rank) {
-    int size = samples.size();
+    return allowableError(rank, samples.size());
+  }
+
+  private double allowableError(int rank, int size) {
     double minError = size + 1;
     for (Quantile q : quantiles) {
       double error;
@@ -110,15 +122,41 @@ public class SampleQuantiles implements QuantileEstimator {
    * 
    * @param v v.
    */
-  synchronized public void insert(long v) {
-    buffer[bufferCount] = v;
-    bufferCount++;
+  public void insert(long v) {
+    long[] fullBuffer = null;
+    synchronized (stateLock) {
+      boolean interrupted = false;
+      while (bufferCount == BUFFER_SIZE && flushingBuffer != null) {
+        try {
+          stateLock.wait();
+        } catch (InterruptedException e) {
+          interrupted = true;
+        }
+      }
+      if (bufferCount == BUFFER_SIZE) {
+        fullBuffer = activeBuffer;
+        activeBuffer = spareBuffer;
+        spareBuffer = fullBuffer;
+        bufferCount = 0;
+        flushingBuffer = fullBuffer;
+      }
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
 
-    count++;
+      activeBuffer[bufferCount++] = v;
+      count++;
+      if (bufferCount == BUFFER_SIZE && flushingBuffer == null) {
+        fullBuffer = activeBuffer;
+        activeBuffer = spareBuffer;
+        spareBuffer = fullBuffer;
+        bufferCount = 0;
+        flushingBuffer = fullBuffer;
+      }
+    }
 
-    if (bufferCount == buffer.length) {
-      insertBatch();
-      compress();
+    if (fullBuffer != null) {
+      processBuffer(fullBuffer, BUFFER_SIZE);
     }
   }
 
@@ -126,46 +164,75 @@ public class SampleQuantiles implements QuantileEstimator {
    * Merges items from buffer into the samples array in one pass.
    * This is more efficient than doing an insert on every item.
    */
-  private void insertBatch() {
-    if (bufferCount == 0) {
+  private void insertBatch(long[] buffer, int batchSize) {
+    if (batchSize == 0) {
       return;
     }
 
-    Arrays.sort(buffer, 0, bufferCount);
+    Arrays.sort(buffer, 0, batchSize);
 
-    // Base case: no samples
-    int start = 0;
-    if (samples.size() == 0) {
-      SampleItem newItem = new SampleItem(buffer[0], 1, 0);
-      samples.add(newItem);
-      start++;
-    }
+    int originalSize = samples.size();
+    ArrayList<SampleItem> merged = mergeBuffer;
+    merged.clear();
+    int sourceIndex = 0;
+    int inserted = 0;
 
-    ListIterator<SampleItem> it = samples.listIterator();
-    SampleItem item = it.next();
-    for (int i = start; i < bufferCount; i++) {
+    for (int i = 0; i < batchSize; i++) {
       long v = buffer[i];
-      while (it.nextIndex() < samples.size() && item.value < v) {
-        item = it.next();
+      while (sourceIndex < samples.size()
+          && samples.get(sourceIndex).value < v) {
+        merged.add(samples.get(sourceIndex++));
       }
-      // If we found that bigger item, back up so we insert ourselves before it
-      if (item.value > v) {
-        it.previous();
-      }
-      // We use different indexes for the edge comparisons, because of the above
-      // if statement that adjusts the iterator
+
+      int rank = merged.size();
+      int currentSize = originalSize + inserted;
       int delta;
-      if (it.previousIndex() == 0 || it.nextIndex() == samples.size()) {
+      if (currentSize == 0 || rank == 0 || rank == currentSize) {
         delta = 0;
       } else {
-        delta = ((int) Math.floor(allowableError(it.nextIndex()))) - 1;
+        delta = ((int) Math.floor(allowableError(rank, currentSize))) - 1;
       }
-      SampleItem newItem = new SampleItem(v, 1, delta);
-      it.add(newItem);
-      item = newItem;
+      merged.add(new SampleItem(v, 1, delta));
+      inserted++;
     }
 
-    bufferCount = 0;
+    while (sourceIndex < samples.size()) {
+      merged.add(samples.get(sourceIndex++));
+    }
+
+    ArrayList<SampleItem> previousSamples = samples;
+    samples = merged;
+    mergeBuffer = previousSamples;
+  }
+
+  private void processBuffer(long[] buffer, int size) {
+    synchronized (flushLock) {
+      try {
+        insertBatch(buffer, size);
+        compress();
+      } finally {
+        synchronized (stateLock) {
+          flushingBuffer = null;
+          stateLock.notifyAll();
+        }
+      }
+    }
+  }
+
+  private void awaitFlushCompletion() {
+    boolean interrupted = false;
+    synchronized (stateLock) {
+      while (flushingBuffer != null) {
+        try {
+          stateLock.wait();
+        } catch (InterruptedException e) {
+          interrupted = true;
+        }
+      }
+    }
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   /**
@@ -203,11 +270,11 @@ public class SampleQuantiles implements QuantileEstimator {
    * @param quantile Queried quantile, e.g. 0.50 or 0.99.
    * @return Estimated value at that quantile.
    */
-  private long query(double quantile) {
+  private long query(double quantile, long snapshotCount) {
     Preconditions.checkState(!samples.isEmpty(), "no data in estimator");
 
     int rankMin = 0;
-    int desired = (int) (quantile * count);
+    int desired = (int) (quantile * snapshotCount);
 
     ListIterator<SampleItem> it = samples.listIterator();
     SampleItem prev = null;
@@ -233,20 +300,50 @@ public class SampleQuantiles implements QuantileEstimator {
    * @return snapshot of the tracked quantiles. If no items are added
    * to the estimator, returns null.
    */
-  synchronized public Map<Quantile, Long> snapshot() {
-    // flush the buffer first for best results
-    insertBatch();
-    
-    if (samples.isEmpty()) {
-      return null;
-    }
-    
-    Map<Quantile, Long> values = new TreeMap<Quantile, Long>();
-    for (int i = 0; i < quantiles.length; i++) {
-      values.put(quantiles[i], query(quantiles[i].quantile));
-    }
+  public Map<Quantile, Long> snapshot() {
+    while (true) {
+      awaitFlushCompletion();
+      synchronized (flushLock) {
+        long[] partialBuffer;
+        int partialSize;
+        long snapshotCount;
+        synchronized (stateLock) {
+          if (flushingBuffer != null) {
+            continue;
+          }
+          partialBuffer = activeBuffer;
+          partialSize = bufferCount;
+          activeBuffer = spareBuffer;
+          spareBuffer = partialBuffer;
+          bufferCount = 0;
+          flushingBuffer = partialSize > 0 ? partialBuffer : null;
+          snapshotCount = count;
+        }
 
-    return values;
+        if (partialSize > 0) {
+          try {
+            insertBatch(partialBuffer, partialSize);
+          } finally {
+            synchronized (stateLock) {
+              flushingBuffer = null;
+              stateLock.notifyAll();
+            }
+          }
+        }
+
+        if (samples.isEmpty()) {
+          return null;
+        }
+
+        Map<Quantile, Long> values = new TreeMap<Quantile, Long>();
+        for (int i = 0; i < quantiles.length; i++) {
+          values.put(quantiles[i],
+              query(quantiles[i].quantile, snapshotCount));
+        }
+
+        return values;
+      }
+    }
   }
 
   /**
@@ -254,8 +351,10 @@ public class SampleQuantiles implements QuantileEstimator {
    * 
    * @return count total number of items processed
    */
-  synchronized public long getCount() {
-    return count;
+  public long getCount() {
+    synchronized (stateLock) {
+      return count;
+    }
   }
 
   /**
@@ -264,27 +363,41 @@ public class SampleQuantiles implements QuantileEstimator {
    * @return count current number of samples
    */
   @VisibleForTesting
-  synchronized public int getSampleCount() {
-    return samples.size();
+  public int getSampleCount() {
+    synchronized (flushLock) {
+      return samples.size();
+    }
   }
 
   /**
    * Resets the estimator, clearing out all previously inserted items
    */
-  synchronized public void clear() {
-    count = 0;
-    bufferCount = 0;
-    samples.clear();
+  public void clear() {
+    while (true) {
+      awaitFlushCompletion();
+      synchronized (flushLock) {
+        synchronized (stateLock) {
+          if (flushingBuffer != null) {
+            continue;
+          }
+          count = 0;
+          bufferCount = 0;
+          samples.clear();
+          return;
+        }
+      }
+    }
   }
   
   @Override
-  synchronized public String toString() {
+  public String toString() {
     Map<Quantile, Long> data = snapshot();
     if (data == null) {
       return "[no samples]";
     } else {
       return Joiner.on("\n").withKeyValueSeparator(": ").join(data);
     }
+
   }
 
   /**
