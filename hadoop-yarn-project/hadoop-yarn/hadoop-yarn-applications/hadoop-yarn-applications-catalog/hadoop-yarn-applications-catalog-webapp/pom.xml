@@ -90,22 +90,18 @@
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
           <artifactId>http2-hpack</artifactId>
-          <version>${jetty.version}</version>
       </dependency>
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
           <artifactId>http2-client</artifactId>
-          <version>${jetty.version}</version>
       </dependency>
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
           <artifactId>http2-common</artifactId>
-          <version>${jetty.version}</version>
       </dependency>
       <dependency>
           <groupId>org.eclipse.jetty.http2</groupId>
           <artifactId>http2-http-client-transport</artifactId>
-          <version>${jetty.version}</version>
       </dependency>
 
       <dependency>
