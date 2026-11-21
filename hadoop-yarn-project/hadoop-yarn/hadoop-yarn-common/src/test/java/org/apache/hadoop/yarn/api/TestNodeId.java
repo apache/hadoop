@@ -22,6 +22,8 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -48,6 +50,27 @@ public class TestNodeId {
     assertFalse(nodeId3.hashCode() == nodeId4.hashCode());
 
     assertEquals("10.18.52.124:8041", nodeId1.toString());
+  }
+
+  @Test
+  void testFromString() {
+    assertThat(NodeId.fromString("host1:8041")).isEqualTo(NodeId.newInstance("host1", 8041));
+    assertThat(NodeId.fromString("10.18.52.124:8041"))
+        .isEqualTo(NodeId.newInstance("10.18.52.124", 8041));
+
+    // An IPv6 host round-trips through toString(), and the bracketed form is accepted.
+    NodeId ipv6 = NodeId.newInstance("2001:db8:0:0:0:0:0:21", 8041);
+    assertThat(NodeId.fromString(ipv6.toString())).isEqualTo(ipv6);
+    assertThat(NodeId.fromString("[2001:db8:0:0:0:0:0:21]:8041")).isEqualTo(ipv6);
+    assertThat(NodeId.fromString("[::1]:8041")).isEqualTo(NodeId.newInstance("::1", 8041));
+
+    for (String invalid : new String[] {"host1", "host1:8041:1", "a:b:8041", "[host1]:8041",
+        "[10.18.52.124]:8041", "2001:db8::21"}) {
+      assertThatThrownBy(() -> NodeId.fromString(invalid))
+          .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Expected host:port");
+    }
+    assertThatThrownBy(() -> NodeId.fromString("host1:port"))
+        .isInstanceOf(IllegalArgumentException.class).hasMessage("Invalid port: port");
   }
 
 }
