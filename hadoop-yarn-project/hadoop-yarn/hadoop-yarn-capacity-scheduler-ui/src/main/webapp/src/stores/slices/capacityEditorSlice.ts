@@ -36,6 +36,7 @@ import {
   extractChangesFromDrafts,
   buildPreviewConfig,
   validateCapacityChanges,
+  getLabelPartitionAccessIssuesForEditor,
 } from '~/features/queue-management/utils/capacityValidation';
 import type { ValidationIssue } from '~/types';
 
@@ -385,6 +386,23 @@ export const createCapacityEditorSlice: StateCreator<
         state.capacityEditor.validationIssues = [];
       });
       return true;
+    }
+
+    const labelAccessIssues = getLabelPartitionAccessIssuesForEditor(
+      draftCache,
+      drafts,
+      draftOrder,
+      selectedNodeLabel,
+      storeSnapshot,
+    );
+
+    if (!force && labelAccessIssues.length > 0) {
+      set((state) => {
+        state.capacityEditor.isSaving = false;
+        state.capacityEditor.saveError = 'Capacity validation failed.';
+        state.capacityEditor.validationIssues = labelAccessIssues;
+      });
+      return false;
     }
 
     // Build preview config and validate
