@@ -30,7 +30,7 @@
     $('#alert-panel').show();
   }
 
-  $(window).bind('hashchange', function () {
+  $(window).on('hashchange', function () {
     $('#alert-panel').hide();
 
     var dir = decodeURIComponent(window.location.hash.slice(1));
@@ -95,11 +95,11 @@
           browse_directory(current_directory);
         }).fail(network_error_handler(url)
          ).always(function() {
-           $('#delete-modal').modal('hide');
-           $('#delete-button').button('reset');
+           hadoopBootstrap.hideModal('#delete-modal');
+           hadoopBootstrap.setButtonBusy('#delete-button', false);
         });
     })
-    $('#delete-modal').modal();
+    hadoopBootstrap.showModal('#delete-modal');
   }
 
   /* This method loads the checkboxes on the permission info modal. It accepts
@@ -107,22 +107,30 @@
    * should be true and false
    */
   function view_perm_details(e, filename, abs_path, perms) {
-    $('.explorer-perm-links').popover('destroy');
+    hadoopBootstrap.disposePopovers('.explorer-perm-links');
    setTimeout(function() {
-    e.popover({html: true,sanitize: false, content: $('#explorer-popover-perm-info').html(), trigger: 'focus'})
-      .on('shown.bs.popover', function(e) {
-        var popover = $(this), parent = popover.parent();
-        //Convert octal to binary permissions
-        var bin_perms = parseInt(perms, 8).toString(2);
-        bin_perms = bin_perms.length == 9 ? "0" + bin_perms : bin_perms;
-        parent.find('#explorer-perm-cancel').on('click', function() { popover.popover('destroy'); });
-        parent.find('#explorer-set-perm-button').off().click(function() { set_permissions(abs_path); });
-        parent.find('input[type=checkbox]').each(function(idx, element) {
-          var e = $(element);
-          e.prop('checked', bin_perms.charAt(9 - e.attr('data-bit')) == '1');
-        });
-      })
-      .popover('show');
+    var trigger = e[0];
+    hadoopBootstrap.showPopover(trigger, {
+      html: true,
+      sanitize: false,
+      content: $('#explorer-popover-perm-info').html(),
+      trigger: 'manual'
+    });
+    var parent = $('.popover');
+    //Convert octal to binary permissions
+    var bin_perms = parseInt(perms, 8).toString(2);
+    bin_perms = bin_perms.length == 9 ? "0" + bin_perms : bin_perms;
+    parent.find('#explorer-perm-cancel').on('click', function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      $(this).closest('.popover').remove();
+      hadoopBootstrap.disposePopovers('.explorer-perm-links');
+    });
+    parent.find('#explorer-set-perm-button').off().click(function() { set_permissions(abs_path); });
+    parent.find('input[type=checkbox]').each(function(idx, element) {
+      var e = $(element);
+      e.prop('checked', bin_perms.charAt(9 - e.attr('data-bit')) == '1');
+    });
       }, 100);
   }
 
@@ -144,7 +152,7 @@
         browse_directory(current_directory);
       }).fail(network_error_handler(url))
       .always(function() {
-        $('.explorer-perm-links').popover('destroy');
+        hadoopBootstrap.disposePopovers('.explorer-perm-links');
       });
   }
 
@@ -249,34 +257,71 @@
       } else {
         $('#file-info-blockinfo-panel').hide();
       }
-      $('#file-info').modal();
+      hadoopBootstrap.showModal('#file-info');
     }).fail(network_error_handler(url));
   }
 
-  /**Use X-editable to make fields editable with a nice UI.
+  /**Make fields editable with the native Hadoop inline editor.
    * elementType is the class of element(s) you want to make editable
    * op is the WebHDFS operation that will be triggered
    * parameter is (currently the 1) parameter which will be passed along with
    *   the value entered by the user
    */
   function makeEditable(elementType, op, parameter) {
-    $(elementType).each(function(index, value) {
-      $(this).editable({
-        url: function(params) {
-          var inode_name = $(this).closest('tr').attr('inode-path');
+    $(elementType).attr({
+      role: 'button',
+      tabindex: '0',
+      title: 'Select to edit'
+    }).off('click.hadoop-edit keydown.hadoop-edit')
+      .on('click.hadoop-edit keydown.hadoop-edit', function(event) {
+        if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') {
+          return;
+        }
+        event.preventDefault();
+
+        var field = $(this);
+        if (field.find('input').length) {
+          return;
+        }
+        var originalValue = field.text().trim();
+        var editor = $('<input type="text" class="form-control form-control-sm explorer-inline-editor">')
+          .val(originalValue);
+        field.empty().append(editor);
+        editor.trigger('focus').trigger('select');
+
+        function restore() {
+          field.text(originalValue);
+        }
+
+        editor.on('keydown', function(editorEvent) {
+          editorEvent.stopPropagation();
+          if (editorEvent.key === 'Escape') {
+            restore();
+            field.trigger('focus');
+            return;
+          }
+          if (editorEvent.key !== 'Enter') {
+            return;
+          }
+          editorEvent.preventDefault();
+          var newValue = editor.val().trim();
+          if (!newValue) {
+            restore();
+            return;
+          }
+
+          var inode_name = field.closest('tr').attr('inode-path');
           var absolute_file_path = append_path(current_directory, inode_name);
           var url = '/webhdfs/v1' + encode_path(absolute_file_path) + '?op=' +
-            op + '&' + parameter + '=' + encodeURIComponent(params.value);
-
-          return $.ajax(url, { type: 'PUT', })
+            op + '&' + parameter + '=' + encodeURIComponent(newValue);
+          editor.prop('disabled', true);
+          $.ajax(url, { type: 'PUT' })
             .fail(network_error_handler(url))
-            .done(function() {
-                browse_directory(current_directory);
-             });
-        },
-        error: function(response, newValue) {return "";}
+            .always(function() {
+              browse_directory(current_directory);
+            });
+        });
       });
-    });
   }
 
   function func_size_render(data, type, row, meta) {
@@ -352,7 +397,7 @@
         makeEditable('.explorer-group-links', 'SETOWNER', 'group');
         makeEditable('.explorer-replication-links', 'SETREPLICATION', 'replication');
 
-        $('.explorer-entry .glyphicon-trash').click(function() {
+        $('.explorer-entry .hadoop-icon-trash').click(function() {
           var inode_name = $(this).closest('tr').attr('inode-path');
           var absolute_file_path = append_path(current_directory, inode_name);
           delete_path(inode_name, absolute_file_path);
@@ -364,6 +409,7 @@
 
         //This needs to be last because it repaints the table
         $('#table-explorer').dataTable( {
+          'order': [],
           'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
           'columns': [
             { 'orderable' : false }, //select
@@ -416,7 +462,7 @@
 
   $('#btn-create-directory-send').click(function () {
     $(this).prop('disabled', true);
-    $(this).button('complete');
+    hadoopBootstrap.setButtonBusy(this, true);
 
     // Get umask from the configuration
     var umask, oldUmask, actualUmask;
@@ -455,18 +501,20 @@
       browse_directory(current_directory);
     }).fail(network_error_handler(url)
      ).always(function() {
-       $('#btn-create-directory').modal('hide');
-       $('#btn-create-directory-send').button('reset');
+       hadoopBootstrap.hideModal('#btn-create-directory');
+       hadoopBootstrap.setButtonBusy('#btn-create-directory-send', false);
     });
   })
 
   $('#btn-upload-files').click(function() {
-        $('#modal-upload-file-button').prop('disabled', true).button('reset');
+        $('#modal-upload-file-button').prop('disabled', true);
+        hadoopBootstrap.setButtonBusy('#modal-upload-file-button', false);
         $('#modal-upload-file-input').val(null);
       });
 
   $('#btn-create-dir').click(function() {
-        $('#btn-create-directory-send').prop('disabled', true).button('reset');
+        $('#btn-create-directory-send').prop('disabled', true);
+        hadoopBootstrap.setButtonBusy('#btn-create-directory-send', false);
         $('#new_directory').val(null);
       });
 
@@ -490,7 +538,7 @@
 
   $('#modal-upload-file-button').click(function() {
     $(this).prop('disabled', true);
-    $(this).button('complete');
+    hadoopBootstrap.setButtonBusy(this, true);
     var files = []
     var numCompleted = 0
 
@@ -541,8 +589,8 @@
 
   //Reset the upload button
   function reset_upload_button() {
-    $('#modal-upload-file').modal('hide');
-    $('#modal-upload-file-button').button('reset');
+    hadoopBootstrap.hideModal('#modal-upload-file');
+    hadoopBootstrap.setButtonBusy('#modal-upload-file-button', false);
   }
 
   //Store the list of files which have been checked into session storage

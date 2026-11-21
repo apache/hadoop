@@ -15,6 +15,12 @@
 * limitations under the License.
 */
 
+/* Hadoop daemon pages intentionally retain their established 14px information density
+ * while using Bootstrap 5's rem-based components and headings. */
+html {
+  font-size: 14px;
+}
+
 body {
   background-color : #ffffff;
   font-family : sans-serif;
@@ -189,7 +195,7 @@ div.security {
   font-weight: bold;
 }
 
-.panel-success > .panel-heading {
+.hadoop-card-success > .hadoop-card-header {
   color: #fff !important;
   background-color: #5FA33E !important;
 }
@@ -200,13 +206,144 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
   color: #fff;
 }
 
-#ui-tabs > li > a {
+header.bs-docs-nav {
+  padding: 0;
+}
+
+header.bs-docs-nav .container {
+  align-items: stretch;
+}
+
+header.bs-docs-nav .hadoop-navbar-header {
+  align-items: center;
+}
+
+#ui-tabs,
+.hadoop-utility-nav {
+  margin-bottom: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+#ui-tabs > li > a,
+.hadoop-utility-nav > li > a {
+  display: block;
+  padding: 1rem;
+  text-decoration: none;
+}
+
+#ui-tabs .dropdown-menu > li > a,
+.hadoop-utility-nav .dropdown-menu > li > a {
+  display: block;
+  padding: .25rem 1rem;
+  color: #212529;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+#ui-tabs .dropdown-menu > li > a:hover,
+#ui-tabs .dropdown-menu > li > a:focus,
+.hadoop-utility-nav .dropdown-menu > li > a:hover,
+.hadoop-utility-nav .dropdown-menu > li > a:focus {
+  background-color: #e9ecef;
+}
+
+#ui-tabs > li > a,
+.hadoop-utility-nav > li > a {
   color: #dcf0d3;
 }
 
 #ui-tabs .active a {
   color: #fff;
   background-color: #446633;
+}
+
+#ui-tabs > li > a.active {
+  color: #fff;
+  background-color: #446633;
+}
+
+/* Keep wide daemon tables scrollable inside the content region instead of
+ * widening the complete page on small screens. */
+.tab-content {
+  overflow-x: auto;
+}
+
+/* Use ASCII CSS escapes because HttpServer2 does not attach a charset to
+ * stylesheets; literal UTF-8 arrows in the DataTables theme become mojibake. */
+table.dataTable > thead .sorting:before,
+table.dataTable > thead .sorting_asc:before,
+table.dataTable > thead .sorting_desc:before,
+table.dataTable > thead .sorting_asc_disabled:before,
+table.dataTable > thead .sorting_desc_disabled:before {
+  content: "\2191";
+}
+
+table.dataTable > thead .sorting:after,
+table.dataTable > thead .sorting_asc:after,
+table.dataTable > thead .sorting_desc:after,
+table.dataTable > thead .sorting_asc_disabled:after,
+table.dataTable > thead .sorting_desc_disabled:after {
+  content: "\2193";
+}
+
+/* Hadoop-specific structural styles layered on Bootstrap 5. */
+.hadoop-page-header {
+  margin: 2rem 0 1rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.hadoop-card {
+  margin-bottom: 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: .375rem;
+}
+
+.hadoop-card-header,
+.hadoop-card-body {
+  padding: 1rem;
+}
+
+.hadoop-card-success > .hadoop-card-header {
+  border-radius: .375rem .375rem 0 0;
+}
+
+.hadoop-card-info > .hadoop-card-header {
+  background-color: #cff4fc;
+}
+
+.hadoop-close {
+  float: right;
+  padding: .25rem .5rem;
+  border: 0;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.hadoop-well {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: .375rem;
+  background-color: #f8f9fa;
+}
+
+.hadoop-icon {
+  display: inline-block;
+  font-style: normal;
+  line-height: 1;
+}
+
+.hadoop-icon-folder-open:before { content: "\1F4C2"; }
+.hadoop-icon-cloud-upload:before { content: "\2B06"; }
+.hadoop-icon-list-alt:before { content: "\2637"; }
+.hadoop-icon-level-up:before { content: "\2191"; }
+.hadoop-icon-trash:before { content: "\1F5D1"; }
+
+tr.danger > td {
+  background-color: #f8d7da;
 }
 
 #alert-panel {
@@ -222,7 +359,7 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
 .dfshealth-node-icon:before {
     font-size: 10pt;
     padding-right: 1pt;
-    font-family: 'Glyphicons Halflings';
+    font-family: sans-serif;
     font-style: normal;
     font-weight: normal;
     line-height: 1;
@@ -232,42 +369,42 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
 
 .dfshealth-node-alive:before {
     color: #5fa341;
-    content: "\e013";
+    content: "\2714";
 }
 
 .dfshealth-node-decommissioning:before {
     color: #5fa341;
-    content: "\e090";
+    content: "\2298";
 }
 
 .dfshealth-node-decommissioned:before {
     color: #eea236;
-    content: "\e090";
+    content: "\2298";
 }
 
 .dfshealth-node-in-maintenance:before {
     color: #eea236;
-    content: "\e136";
+    content: "\2692";
 }
 
 .dfshealth-node-entering-maintenance:before {
     color: #5fa341;
-    content: "\e136";
+    content: "\2692";
 }
 
 .dfshealth-node-down:before {
     color: #c7254e;
-    content: "\e101";
+    content: "\26A0";
 }
 
 .dfshealth-node-down-decommissioned:before {
     color: #c7254e;
-    content: "\e090";
+    content: "\2298";
 }
 
 .dfshealth-node-down-maintenance:before {
     color: #c7254e;
-    content: "\e136";
+    content: "\2692";
 }
 
 .dfshealth-node-legend {
@@ -288,7 +425,7 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
 .dfshealth-namenode-icon:before {
     font-size: 10pt;
     padding-right: 1pt;
-    font-family: 'Glyphicons Halflings';
+    font-family: sans-serif;
     font-style: normal;
     font-weight: normal;
     line-height: 1;
@@ -298,36 +435,43 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
 
 .dfshealth-namenode-active:before {
     color: #5fa341;
-    content: "\e013";
+    content: "\2714";
 }
 
 .dfshealth-namenode-observer:before {
     color: #CCCC00;
-    content: "\e013";
+    content: "\2714";
 }
 
 .dfshealth-namenode-unavailable:before {
     color: #c7254e;
-    content: "\e101";
+    content: "\26A0";
 }
 
 .dfshealth-namenode-standby:before {
     color: #2e6da6;
-    content: "\e017";
+    content: "\2016";
 }
 
 .dfshealth-namenode-safemode:before {
     color: #bc5f04;
-    content: "\e090";
+    content: "\2298";
 }
 
 .dfshealth-namenode-disabled:before {
     color: #eea236;
-    content: "\e136";
+    content: "\2692";
 }
 
 .explorer-entry .explorer-browse-links { cursor: pointer; }
-.explorer-entry .glyphicon-trash { cursor: pointer; }
+.explorer-entry .hadoop-icon-trash { cursor: pointer; }
+.explorer-owner-links,
+.explorer-group-links,
+.explorer-replication-links { cursor: pointer; }
+
+.explorer-inline-editor {
+  min-width: 8rem;
+}
 
 .popover {
   max-width: 400px;
@@ -370,7 +514,6 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
     fill: #fff;
     font: 10px sans-serif;
 }
-
 td.details-control:before {
     color: #5fa341;
     content: "\2b";
