@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mcp;
 
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -30,6 +32,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 @InterfaceStability.Evolving
 final class McpJsonRpcValidator {
 
+  /** Longest request id accepted, so that storing ids in a session stays cheap. */
+  static final int MAX_REQUEST_ID_LENGTH = 256;
+
   private McpJsonRpcValidator() {
   }
 
@@ -41,32 +46,25 @@ final class McpJsonRpcValidator {
       return responses.error(null, McpJsonRpc.INVALID_REQUEST, McpJsonRpc.INVALID_REQUEST_MESSAGE);
     }
 
-    JsonNode jsonrpcNode = requestNode.get("jsonrpc");
-    if (jsonrpcNode == null || jsonrpcNode.isNull()
-        || !jsonrpcNode.isTextual()
-        || !McpJsonRpc.VERSION.equals(jsonrpcNode.asText())) {
-      return responses.error(responseId(requestNode), McpJsonRpc.INVALID_REQUEST,
-          McpJsonRpc.INVALID_REQUEST_MESSAGE);
+    // A JSON-RPC response from the client
+    if (!requestNode.has("method")
+        && (requestNode.has("result") || requestNode.has("error"))) {
+      return responses.transportError(HttpServletResponse.SC_BAD_REQUEST,
+          McpJsonRpc.UNEXPECTED_RESPONSE_MESSAGE);
     }
 
-    JsonNode methodNode = requestNode.get("method");
-    if (methodNode == null || methodNode.isNull() || !methodNode.isTextual()
-        || methodNode.asText().isEmpty()) {
-      return responses.error(responseId(requestNode), McpJsonRpc.INVALID_REQUEST,
-          McpJsonRpc.INVALID_REQUEST_MESSAGE);
+    boolean isNotification = isJsonRpcNotification(requestNode);
+    if (!isValidEnvelope(requestNode)) {
+      // The transport specification requires an HTTP error for a notification the server
+      // cannot accept. Otherwise, requests gets a JSON-RPC error that echoes its id when valid.
+      return isNotification
+          ? responses.transportError(HttpServletResponse.SC_BAD_REQUEST,
+              McpJsonRpc.INVALID_REQUEST_MESSAGE)
+          : responses.error(responseId(requestNode), McpJsonRpc.INVALID_REQUEST,
+              McpJsonRpc.INVALID_REQUEST_MESSAGE);
     }
 
-    JsonNode paramsNode = requestNode.get("params");
-    if (paramsNode != null && paramsNode.isNull()) {
-      return responses.error(responseId(requestNode), McpJsonRpc.INVALID_REQUEST,
-          McpJsonRpc.INVALID_REQUEST_MESSAGE);
-    }
-
-    if (isJsonRpcNotification(requestNode)) {
-      return null;
-    }
-
-    if (!isValidRequestId(requestNode.get("id"))) {
+    if (!isNotification && !isValidRequestId(requestNode.get("id"))) {
       return responses.error(null, McpJsonRpc.INVALID_REQUEST, McpJsonRpc.INVALID_REQUEST_MESSAGE);
     }
     return null;
@@ -76,9 +74,20 @@ final class McpJsonRpcValidator {
     return !requestNode.has("id");
   }
 
+  private static boolean isValidEnvelope(JsonNode requestNode) {
+    JsonNode jsonrpcNode = requestNode.get("jsonrpc");
+    JsonNode methodNode = requestNode.get("method");
+    JsonNode paramsNode = requestNode.get("params");
+    return jsonrpcNode != null && jsonrpcNode.isTextual()
+        && McpJsonRpc.VERSION.equals(jsonrpcNode.asText())
+        && methodNode != null && methodNode.isTextual() && !methodNode.asText().isEmpty()
+        && (paramsNode == null || !paramsNode.isNull());
+  }
+
   private static boolean isValidRequestId(JsonNode idNode) {
     return idNode != null && !idNode.isNull()
-        && (idNode.isIntegralNumber() || idNode.isTextual());
+        && (idNode.isIntegralNumber() || idNode.isTextual())
+        && idNode.asText().length() <= MAX_REQUEST_ID_LENGTH;
   }
 
   /** Returns {@code id} when it is a valid request id, otherwise {@code null}. */
