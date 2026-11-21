@@ -411,6 +411,12 @@ public class HarFileSystem extends FileSystem {
     return new Path(uri.getScheme(), harAuth, tmpURI.getPath());
   }
 
+  // the path of a har URI is the path in the underlying filesystem,
+  // so drop the har scheme and authority before passing it down
+  private Path getUnderlyingPath(Path path) {
+    return new Path(makeQualified(path).toUri().getPath());
+  }
+
   /**
    * Fix offset and length of block locations.
    * Note that this method modifies the original array.
@@ -1288,7 +1294,7 @@ public class HarFileSystem extends FileSystem {
   @SuppressWarnings("deprecation")
   @Override
   public long getDefaultBlockSize(Path f) {
-    return fs.getDefaultBlockSize(f);
+    return fs.getDefaultBlockSize(getUnderlyingPath(f));
   }
 
   @SuppressWarnings("deprecation")
@@ -1299,16 +1305,6 @@ public class HarFileSystem extends FileSystem {
 
   @Override
   public short getDefaultReplication(Path f) {
-    return fs.getDefaultReplication(f);
-  }
-
-  @Override
-  public FSDataOutputStreamBuilder createFile(Path path) {
-    return fs.createFile(path);
-  }
-
-  @Override
-  public FSDataOutputStreamBuilder appendFile(Path path) {
-    return fs.appendFile(path);
+    return fs.getDefaultReplication(getUnderlyingPath(f));
   }
 }
