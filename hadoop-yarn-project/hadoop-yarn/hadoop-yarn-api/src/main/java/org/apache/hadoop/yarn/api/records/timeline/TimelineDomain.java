@@ -23,6 +23,8 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
@@ -159,6 +161,8 @@ public class TimelineDomain {
    * @return the created time of the domain
    */
   @XmlElement(name = "createdtime")
+  @JsonProperty("createdtime")
+  @JsonAlias("createdTime")
   public Long getCreatedTime() {
     return createdTime;
   }
@@ -178,6 +182,8 @@ public class TimelineDomain {
    * @return the modified time of the domain
    */
   @XmlElement(name = "modifiedtime")
+  @JsonProperty("modifiedtime")
+  @JsonAlias("modifiedTime")
   public Long getModifiedTime() {
     return modifiedTime;
   }
