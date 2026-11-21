@@ -36,6 +36,7 @@ import java.net.SocketAddress;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestHostRestrictingAuthorizationFilterHandler {
@@ -147,6 +148,35 @@ public class TestHostRestrictingAuthorizationFilterHandler {
             WebHdfsFileSystem.PATH_PREFIX + "/user/myName/fooFile?op" +
                 "=GETFILECHECKSUM");
     assertTrue(channel.writeInbound(httpRequest), "Should successfully accept request");
+  }
+
+  /*
+   * Test that an IPv4 rule checked before a matching rule does not fail an
+   * IPv6 client, and that an IPv6 client gets 403, not 500, when only an
+   * IPv4 rule covers the path
+   */
+  @Test
+  public void testIPv6Client() {
+    Configuration conf = new Configuration();
+    conf.set(CONFNAME, "*,192.168.0.0/16,/v4|*,*,/any");
+    HostRestrictingAuthorizationFilter filter =
+        HostRestrictingAuthorizationFilterHandler.initializeState(conf);
+    EmbeddedChannel channel = new CustomEmbeddedChannel("2001:db8::1", 1006,
+        new HostRestrictingAuthorizationFilterHandler(filter));
+    FullHttpRequest allowedHttpRequest =
+        new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+            WebHdfsFileSystem.PATH_PREFIX + "/any/foo?op=OPEN");
+    FullHttpRequest rejectedHttpRequest =
+        new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+            WebHdfsFileSystem.PATH_PREFIX + "/v4/foo?op=OPEN");
+    assertTrue(channel.writeInbound(allowedHttpRequest), "Should successfully accept request");
+    assertSame(allowedHttpRequest, channel.readInbound());
+    assertFalse(channel.writeInbound(rejectedHttpRequest),
+        "Should get error back from handler for rejected request");
+    DefaultHttpResponse channelResponse =
+        (DefaultHttpResponse) channel.outboundMessages().poll();
+    assertNotNull(channelResponse, "Expected response to exist.");
+    assertEquals(HttpResponseStatus.FORBIDDEN, channelResponse.status());
   }
 
   /*

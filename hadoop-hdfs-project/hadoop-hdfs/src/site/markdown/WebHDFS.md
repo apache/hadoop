@@ -302,7 +302,7 @@ One may control directionality of data in the WebHDFS protocol allowing only wri
 | Property | Description | Default Value |
 |:---- |:---- |:----
 | `dfs.datanode.httpserver.filter.handlers` | Comma separated list of Netty servlet-style filter handlers to inject into the Datanode WebHDFS I/O path | `org.apache.hadoop.hdfs.server.datanode.web.RestCsrfPreventionFilterHandler` |
-| `dfs.web.authentication.host.allow.rules` | Rules allowing users to read files in the format of _user_,_network/bits_,_path glob_ newline or `|`-separated. Use `*` for a wildcard of all _users_ or _network/bits_. | nothing - defaults to no one may read via WebHDFS |
+| `dfs.web.authentication.host.allow.rules` | Rules allowing users to read files in the format of _user_,_network/bits_,_path glob_ newline or `|`-separated. Use `*` for a wildcard of all _users_ or _network/bits_. The _network/bits_ can be an IPv4 or IPv6 network, such as `10.0.0.0/8` or `2001:db8::/32`. | nothing - defaults to no one may read via WebHDFS |
 
 File and Directory Operations
 -----------------------------
