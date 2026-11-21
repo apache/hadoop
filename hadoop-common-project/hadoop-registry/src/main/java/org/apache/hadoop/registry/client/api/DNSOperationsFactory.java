@@ -63,7 +63,7 @@ public final class DNSOperationsFactory implements RegistryConstants {
     DNSOperations operations = null;
     switch (impl) {
     case DNSJAVA:
-      operations = new RegistryDNS(name);
+      operations = new RegistryDNS(name, conf);
       break;
 
     default:
