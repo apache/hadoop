@@ -32,6 +32,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.JsonUtils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
@@ -54,6 +55,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
@@ -110,6 +112,19 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   @SuppressWarnings("serial")
+  public static class PathInfoServlet extends HttpServlet {
+    @Override
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws IOException {
+      response.setContentType("text/plain; charset=utf-8");
+      response.setStatus(HttpServletResponse.SC_OK);
+      try (PrintWriter out = response.getWriter()) {
+        out.println(request.getPathInfo());
+      }
+    }
+  }
+
+  @SuppressWarnings("serial")
   public static class EchoServlet extends HttpServlet {
     @SuppressWarnings("unchecked")
     @Override
@@ -146,6 +161,21 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }
   }
 
+  /**
+   * Redirects with a context-absolute path, the way WebServlet, the webapp
+   * Dispatcher and the YARN proxy redirect.
+   */
+  @SuppressWarnings("serial")
+  public static class RedirectingServlet extends HttpServlet {
+    static final String TARGET = "/echo?redirected=true";
+
+    @Override
+    protected void doGet(HttpServletRequest request,
+        HttpServletResponse response) throws IOException {
+      response.sendRedirect(TARGET);
+    }
+  }
+
   @BeforeAll
   public static void setup() throws Exception {
     Configuration conf = new Configuration();
@@ -154,9 +184,12 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED, true);
     server = createTestServer(conf);
     server.addServlet("echo", "/echo", EchoServlet.class);
+    server.addServlet("pathinfo", "/pathinfo/*", PathInfoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
     server.addServlet("htmlcontent", "/htmlcontent", HtmlContentServlet.class);
     server.addServlet("longheader", "/longheader", LongHeaderServlet.class);
+    server.addServlet("redirecting", "/redirecting",
+        RedirectingServlet.class);
     server.addJerseyResourcePackage(
         JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
@@ -206,6 +239,150 @@ public class TestHttpServer extends HttpServerFunctionalTest {
    * trying to configure more of them than would be allowed based on the
    * maximum thread count.
    */
+  /**
+   * A redirect carries an absolute URI in Location, as it did on Jetty 9.4.
+   * Jetty 12 defaults HttpConfiguration#relativeRedirectAllowed to true, which
+   * leaves the bare path the servlet passed to sendRedirect in the header;
+   * Hadoop reads that header back with new URL(...) - WebHdfsFileSystem does -
+   * and a relative value does not parse.
+   */
+  @Test
+  public void testRedirectLocationIsAbsolute() throws Exception {
+    URL url = new URL(baseUrl, "/redirecting");
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setInstanceFollowRedirects(false);
+    try {
+      assertEquals(HttpURLConnection.HTTP_MOVED_TEMP, conn.getResponseCode());
+      String location = conn.getHeaderField("Location");
+      assertThat(location)
+          .as("Location on a redirect")
+          .isNotNull()
+          .startsWith(baseUrl.toString());
+      // What a Hadoop client does with the header it is handed.
+      assertEquals("/echo", new URL(location).getPath());
+    } finally {
+      conn.disconnect();
+    }
+  }
+
+  /**
+   * /static must never list what is in it. The setting that stops it is a
+   * context init parameter, which the DefaultServlet reads under a prefix of
+   * its own choosing: get the prefix wrong and the parameter is not rejected,
+   * it is ignored, and dirAllowed falls back to its default of true. That is
+   * silent, so the endpoint is asserted rather than the setting.
+   */
+  @Test
+  public void testStaticContextDoesNotListDirectories() throws Exception {
+    URL staticUrl = new URL(baseUrl, "/static/");
+    HttpURLConnection conn = (HttpURLConnection) staticUrl.openConnection();
+    conn.connect();
+    assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode(),
+        "/static served a directory listing");
+
+    // The context is otherwise working, so the 403 above is dirAllowed doing
+    // its job and not the whole context being broken.
+    URL cssUrl = new URL(baseUrl, "/static/test.css");
+    conn = (HttpURLConnection) cssUrl.openConnection();
+    conn.connect();
+    assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
+  }
+
+  /**
+   * A path with an empty segment has to reach the servlet, which is where
+   * Hadoop decides what it means. Jetty 12 rejects one at the connector by
+   * default, with a bare 400 and no body - WebHDFS clients parse a JSON
+   * RemoteException out of that response, and there is nothing there to parse.
+   * The ambiguities that actually matter stay rejected, so an encoded
+   * separator is asserted here too.
+   */
+  @Test
+  public void testHadoopPathsReachTheServlet() throws Exception {
+    assertPathInfo("//tmp//file", "/pathinfo//tmp//file");
+    // A file whose name contains a '%' arrives as %25.
+    assertPathInfo("/a%b", "/pathinfo/a%25b");
+    assertPathInfo("/@;%$", "/pathinfo/%40%3B%25%24");
+    // A '\' is a path separator on Windows and just a character on HDFS.
+    assertPathInfo("/a\\b", "/pathinfo/a%5Cb");
+  }
+
+  private static int postStatusCode(String urlstring, String userName)
+      throws IOException {
+    URL url = new URL(urlstring + "?user.name=" + userName);
+    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    connection.setRequestMethod("POST");
+    connection.connect();
+    return connection.getResponseCode();
+  }
+
+  private static void assertPathInfo(String expected, String path)
+      throws Exception {
+    URL url = new URL(baseUrl, path);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.connect();
+    assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode(),
+        path + " was rejected before the servlet ran");
+    assertEquals(expected, readOutput(url).trim(),
+        path + " did not reach the servlet as sent");
+  }
+
+  /**
+   * With hadoop.log.dir pointing nowhere, /logs still sits behind the admin
+   * check: a non-admin is refused and an admin is told there is nothing there,
+   * which is what Jetty 9.4 answered. Jetty 12 will not start a context on a
+   * missing base resource, and dropping the context instead would let the
+   * request fall through to the root webapp without the check.
+   */
+  @Test
+  public void testLogsWithMissingLogDirStillCheckAdminAccess()
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
+        true);
+    conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
+        DummyFilterInitializer.class.getName());
+    // The group mapping is a process-wide singleton, created by whichever
+    // test gets there first; give it the mapping the other tests expect.
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        MyGroupsProvider.class.getName());
+    Groups.getUserToGroupsMappingService(conf);
+
+    String savedLogDir = System.getProperty("hadoop.log.dir");
+    System.setProperty("hadoop.log.dir",
+        new File(GenericTestUtils.getTestDir(), "no-such-log-dir")
+            .getAbsolutePath());
+    HttpServer2 myServer;
+    try {
+      myServer = new HttpServer2.Builder().setName("test")
+          .addEndpoint(new URI("http://localhost:0")).setFindPort(true)
+          .setConf(conf).setACL(new AccessControlList("userA")).build();
+    } finally {
+      if (savedLogDir == null) {
+        System.clearProperty("hadoop.log.dir");
+      } else {
+        System.setProperty("hadoop.log.dir", savedLogDir);
+      }
+    }
+    myServer.setAttribute(HttpServer2.CONF_CONTEXT_ATTRIBUTE, conf);
+    myServer.start();
+    try {
+      String logsURL = "http://"
+          + NetUtils.getHostPortString(myServer.getConnectorAddress(0))
+          + "/logs/";
+      assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
+          getHttpStatusCode(logsURL, "userA"));
+      assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+          getHttpStatusCode(logsURL, "userE"));
+      // DefaultServlet answers a POST as a GET, so it gets the same answers.
+      assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
+          postStatusCode(logsURL, "userA"));
+      assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
+          postStatusCode(logsURL, "userE"));
+    } finally {
+      myServer.stop();
+    }
+  }
+
   @Test
   public void testAcceptorSelectorConfigurability() throws Exception {
     Configuration conf = new Configuration();
