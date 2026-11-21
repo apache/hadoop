@@ -18,7 +18,6 @@ import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Properties;
 import java.util.Random;
-import javax.servlet.ServletContext;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -100,9 +99,11 @@ public class ZKSignerSecretProvider extends RolloverSignerSecretProvider {
           CONFIG_PREFIX + "disconnect.on.shutdown";
 
   /**
-   * Constant for the ServletContext attribute that can be used for providing a
-   * custom CuratorFramework client. If set ZKSignerSecretProvider will use this
-   * Curator client instead of creating a new one. The providing class is
+   * Constant for the {@link SecretProviderContext} attribute that can be used
+   * for providing a custom CuratorFramework client. In a servlet container that
+   * is the ServletContext attribute of the same name, so the way it is set is
+   * unchanged. If set ZKSignerSecretProvider will use this Curator client
+   * instead of creating a new one. The providing class is
    * responsible for creating and configuring the Curator client (including
    * security and ACLs) in this case.
    */
@@ -159,16 +160,16 @@ public class ZKSignerSecretProvider extends RolloverSignerSecretProvider {
   }
 
   @Override
-  public void init(Properties config, ServletContext servletContext,
+  public void initialize(Properties config, SecretProviderContext context,
           long tokenValidity) throws Exception {
-    Object curatorClientObj = servletContext.getAttribute(
+    Object curatorClientObj = context.getAttribute(
             ZOOKEEPER_SIGNER_SECRET_PROVIDER_CURATOR_CLIENT_ATTRIBUTE);
     if (curatorClientObj != null
             && curatorClientObj instanceof CuratorFramework) {
       client = (CuratorFramework) curatorClientObj;
     } else {
       client = createCuratorClient(config);
-      servletContext.setAttribute(
+      context.setAttribute(
           ZOOKEEPER_SIGNER_SECRET_PROVIDER_CURATOR_CLIENT_ATTRIBUTE, client);
     }
     this.tokenValidity = tokenValidity;

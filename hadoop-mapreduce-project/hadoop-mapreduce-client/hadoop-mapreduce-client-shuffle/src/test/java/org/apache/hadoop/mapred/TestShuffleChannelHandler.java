@@ -81,7 +81,6 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
-import org.eclipse.jetty.http.HttpHeader;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
@@ -371,10 +370,11 @@ public class TestShuffleChannelHandler extends TestShuffleHandlerBase {
       headers.set(ShuffleHeader.HTTP_HEADER_NAME, ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
       headers.set(ShuffleHeader.HTTP_HEADER_VERSION, ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
       if (keepAlive) {
-        headers.set(HttpHeader.CONNECTION.asString(), HttpHeader.KEEP_ALIVE.asString());
-        headers.set(HttpHeader.KEEP_ALIVE.asString(), "timeout=" + ctx.connectionKeepAliveTimeOut);
+        headers.set(ShuffleChannelHandler.CONNECTION,
+            ShuffleChannelHandler.KEEP_ALIVE);
+        headers.set(ShuffleChannelHandler.KEEP_ALIVE, "timeout=" + ctx.connectionKeepAliveTimeOut);
       } else {
-        response.headers().set(HttpHeader.CONNECTION.asString(), CONNECTION_CLOSE);
+        response.headers().set(ShuffleChannelHandler.CONNECTION, CONNECTION_CLOSE);
       }
       HttpUtil.setContentLength(response, contentLength);
       return response;
