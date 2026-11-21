@@ -20,10 +20,13 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,23 +39,24 @@ import org.apache.http.HttpClientConnection;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KEEP_ALIVE_CACHE_CLOSED;
 
 /**
- * Connection-pooling heuristics used by {@link AbfsConnectionManager}. Each
- * instance of FileSystem has its own KeepAliveCache.
+ * KeepAliveCache manages pooled HTTP connections for Azure Blob File System (ABFS) clients.
  * <p>
- * Why this implementation is required in comparison to {@link org.apache.http.impl.conn.PoolingHttpClientConnectionManager}
- * connection-pooling:
- * <ol>
- * <li>PoolingHttpClientConnectionManager heuristic caches all the reusable connections it has created.
- * JDK's implementation only caches a limited number of connections. The limit is given by JVM system
- * property "http.maxConnections". If there is no system-property, it defaults to 5.</li>
- * <li>In PoolingHttpClientConnectionManager, it expects the application to provide setMaxPerRoute and setMaxTotal,
- * which the implementation uses as the total number of connections it can create. For application using ABFS, it is not
- * feasible to provide a value in the initialisation of the connectionManager. JDK's implementation has no cap on the
- * number of connections it can create.</li>
- * </ol>
+ * It maintains separate caches for default and cluster hosts, using thread-safe queues to store connections.
+ * The cache supports concurrent access, eviction, and safe closure of connections.
+ * <ul>
+ *   <li>Connections are pooled per host, with limits for default and cluster hosts.</li>
+ *   <li>Eviction is handled atomically to prevent race conditions.</li>
+ *   <li>Thread pools are used for cache refresh and warmup, with daemon threads to avoid JVM hang.</li>
+ *   <li>Cache closure ensures all connections and resources are released safely.</li>
+ * </ul>
+ * <p>
+ * Typical usage involves putting and getting connections, and closing the cache when done.
+ * <p>
+ * <b>Thread Safety:</b> All operations are thread-safe, using concurrent collections and atomic variables.
+ * <p>
+ * <b>Testing:</b> Exposes methods and inner classes for testing cache size, host queues, and connection limits.
  */
-class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
-    implements Closeable {
+class KeepAliveCache implements Closeable {
 
   /**
    * Logger instance.
@@ -61,216 +65,405 @@ class KeepAliveCache extends LinkedBlockingDeque<HttpClientConnection>
       KeepAliveCache.class);
 
   /**
-   * Flag to indicate if the cache is closed.
+   * Indicates whether the cache has been closed.
+   * Used to prevent further operations after closure.
    */
-  private final AtomicBoolean isClosed = new AtomicBoolean(false);
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   /**
-   * Maximum number of connections that can be cached.
+   * Maximum number of connections allowed in the default host cache.
    */
-  private final int maxCacheConnections;
+  private final int maxDefaultConnections;
 
   /**
-   * Account name for which the cache is created. To be used only in exception
-   * messages.
+   * Maximum number of connections allowed in the cluster host cache.
+   */
+  private final int maxClusterConnections;
+
+  /**
+   * The account name path associated with this cache instance.
    */
   private final String accountNamePath;
 
   /**
-   * Executor server to trigger connection refresh from cache manager.
+   * Executor service for single-threaded cache refresh operations.
    */
-  private ExecutorService singleThreadPool = null;
+  private ExecutorService singleThreadPool;
 
   /**
-   * Executor service to trigger async cache warmup.
+   * Executor service for fixed-threaded cache warmup and refresh operations.
    */
-  private ExecutorService fixedThreadPool = null;
-
+  private ExecutorService fixedThreadPool;
 
   /**
-   * Creates an {@link KeepAliveCache} instance using filesystem's configuration.
+   * Represents a pooled HTTP connection with a usage flag and cache key.
    * <p>
-   * The size of the cache is determined by the configuration
-   * {@value org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys#FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE}.
-   * If the configuration is not set, the default value is
-   * {@value org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations#DEFAULT_APACHE_HTTP_CLIENT_MAX_CACHE_SIZE}.
-   * <p>.
-   */
-  KeepAliveCache(AbfsConfiguration abfsConfiguration) {
-    this.accountNamePath =
-        abfsConfiguration.getAccountName();
-    this.maxCacheConnections =
-        abfsConfiguration.getApacheMaxCacheSize();
-    // Initialise singleThreadPool if cache refresh is enabled.
-    if (abfsConfiguration.getApacheCacheRefreshCount() > 0) {
-      this.singleThreadPool = Executors.newSingleThreadExecutor(r -> {
-        Thread thread = new Thread(r);
-        thread.setName("CacheRefreshThread");
-        thread.setDaemon(true);
-        return thread;
-      });
-    }
-
-    // Initialise fixedThreadPool if cache warmup or cache refresh is enabled.
-    if (abfsConfiguration.getApacheCacheWarmupCount() > 0
-        || abfsConfiguration.getApacheCacheRefreshCount() > 0) {
-      this.fixedThreadPool = Executors.newFixedThreadPool(Math.min(5,
-          Math.max(abfsConfiguration.getApacheCacheWarmupCount(),
-              abfsConfiguration.getApacheCacheRefreshCount())), r -> {
-        Thread thread = new Thread(r);
-        thread.setName("AsyncCacheConnectionThread");
-        thread.setDaemon(true);
-        return thread;
-      });
-    }
-  }
-
-  /**
-   * Safe close of the HttpClientConnection.
-   *
-   * @param hc HttpClientConnection to be closed
-   */
-  private void closeHttpClientConnection(final HttpClientConnection hc) {
-    try {
-      hc.close();
-    } catch (IOException ex) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Close failed for connection: {}", hc, ex);
-      }
-    }
-  }
-
-  /**
-   * Close all connections in cache.
-   */
-  @Override
-  public void close() {
-    boolean closed = isClosed.getAndSet(true);
-    if (closed) {
-      return;
-    }
-    closeInternal();
-    if (singleThreadPool != null && !singleThreadPool.isShutdown()) {
-      singleThreadPool.shutdownNow();
-    }
-
-    if (fixedThreadPool != null && !fixedThreadPool.isShutdown()) {
-      fixedThreadPool.shutdownNow();
-    }
-  }
-
-  /**
-   * @return true if the cache is closed, false otherwise.
-   */
-  public boolean getIsClosed() {
-    return isClosed.get();
-  }
-
-  /**
-   * @return ExecutorService to trigger connection refresh from cache manager.
-   */
-  public ExecutorService getSingleThreadPool() {
-    return singleThreadPool;
-  }
-
-  /**
-   * @return ExecutorService to trigger async create connections and put in cache.
-   */
-  public ExecutorService getFixedThreadPool() {
-    return fixedThreadPool;
-  }
-
-  /**
-   * Internal close method to close all connections in the cache.
-   * This method does not change the state of isClosed.
-   * It is expected that the caller of this method has set the isClosed flag.
+   * Each instance wraps a {@link HttpClientConnection} and tracks whether it is currently in use.
+   * The {@code cacheKey} identifies the host this connection is associated with.
+   * The {@code inUse} flag is used to prevent race conditions during eviction or retrieval.
    */
   @VisibleForTesting
-  void closeInternal() {
-    while (size() != 0) {
-      closeHttpClientConnection(pollFirst());
+  public static final class PooledConnection {
+
+    final HttpClientConnection conn;
+
+    final String cacheKey;
+
+    final AtomicBoolean inUse = new AtomicBoolean(false); // New Flag
+
+    PooledConnection(HttpClientConnection conn, String cacheKey) {
+      this.conn = conn;
+      this.cacheKey = cacheKey;
     }
   }
 
   /**
-   * Gets the oldest added HttpClientConnection from the cache. The returned connection
-   * is open.
-   * The cache follows the FIFO strategy. If the connection is not open, it will
-   * be closed and the next connection is checked. Once a valid connection is found,
-   * it is returned.
-   * @return HttpClientConnection: if a valid connection is found, else null.
-   * @throws IOException if the cache is closed.
+   * HostQueue is a thread-safe queue for storing pooled HTTP connections per host.
+   * <p>
+   * Uses a ConcurrentLinkedDeque to allow concurrent access and lock-free operations.
+   * Each HostQueue instance manages the connections for a specific host in the cache.
    */
-  public HttpClientConnection get() throws IOException {
-    if (getIsClosed()) {
-      LOG.debug("Attempt to get connection from closed cache for account: {}",
-          accountNamePath);
+  @VisibleForTesting
+  public static final class HostQueue {
+
+    // ConcurrentLinkedDeque is thread-safe; no manual lock needed
+    final ConcurrentLinkedDeque<PooledConnection> queue
+        = new ConcurrentLinkedDeque<>();
+  }
+
+  private final ConcurrentHashMap<String, HostQueue> hostCaches
+      = new ConcurrentHashMap<>();
+
+  private final ConcurrentLinkedQueue<PooledConnection> clusterQueue
+      = new ConcurrentLinkedQueue<>();
+
+  private final AtomicInteger defaultSize = new AtomicInteger(0);
+
+  private final AtomicInteger clusterSize = new AtomicInteger(0);
+
+  /**
+   * Checks if the cache is closed.
+   *
+   * @return true if the cache is closed, false otherwise
+   */
+  boolean isClosed() {
+    return closed.get();
+  }
+
+  /**
+   * Gets the current size of the default host cache.
+   *
+   * @return the number of connections cached for the default host
+   */
+  int getCachedDefaultSize() {
+    return defaultSize.get();
+  }
+
+  /**
+   * Constructs a KeepAliveCache instance with the specified configuration.
+   *
+   * @param abfsConfiguration the ABFS configuration
+   */
+  KeepAliveCache(AbfsConfiguration abfsConfiguration) {
+    this.accountNamePath = abfsConfiguration.getAccountName();
+    this.maxDefaultConnections
+        = abfsConfiguration.getApacheMaxDefaultCacheSize();
+    this.maxClusterConnections
+        = abfsConfiguration.getApacheMaxNonDefaultCacheSize();
+
+    // Fix: Always use Daemon threads to prevent JVM hang on exit
+    if (abfsConfiguration.getApacheCacheRefreshCount() > 0) {
+      this.singleThreadPool = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "CacheRefreshThread");
+        t.setDaemon(true);
+        return t;
+      });
+    }
+
+    int warmup = abfsConfiguration.getApacheCacheWarmupCount();
+    int refresh = abfsConfiguration.getApacheCacheRefreshCount();
+    if (warmup > 0 || refresh > 0) {
+      this.fixedThreadPool = Executors.newFixedThreadPool(
+          Math.min(5, Math.max(warmup, refresh)), r -> {
+            Thread t = new Thread(r, "AsyncCacheConnectionThread");
+            t.setDaemon(true);
+            return t;
+          });
+    }
+  }
+
+  /**
+   * Retrieves a pooled HTTP connection for the specified host.
+   * <p>
+   * If the cache is closed, throws ClosedIOException. If no connection is available, returns null.
+   * Decrements the appropriate counter and closes stale connections.
+   *
+   * @param host the host to retrieve a connection for
+   * @param isDefaultHost true if the host is the default host
+   * @return a valid HttpClientConnection or null if unavailable
+   * @throws IOException if the cache is closed
+   */
+  public HttpClientConnection get(String host, boolean isDefaultHost)
+      throws IOException {
+    if (closed.get()) {
       throw new ClosedIOException(accountNamePath, KEEP_ALIVE_CACHE_CLOSED);
     }
-    HttpClientConnection httpClientConnection;
-    while ((httpClientConnection = pollFirst()) != null) {
-      if (!httpClientConnection.isOpen() || httpClientConnection.isStale()) {
-        closeHttpClientConnection(httpClientConnection);
-        continue;
-      }
-      return httpClientConnection;
+    HostQueue hq = hostCaches.get(host);
+    if (hq == null) {
+      return null;
     }
-    LOG.debug("No valid connection found in cache for account: {}",
-        accountNamePath);
+
+    PooledConnection pooled;
+    // poll() is now an atomic, non-blocking operation
+    while ((pooled = hq.queue.poll()) != null) {
+      if (!pooled.inUse.compareAndSet(false, true)) {
+        continue; // Already claimed by eviction
+      }
+
+      if (!isDefaultHost) {
+        clusterSize.decrementAndGet();
+      } else {
+        defaultSize.decrementAndGet();
+      }
+
+      if (pooled.conn.isOpen() && !pooled.conn.isStale()) {
+        return pooled.conn;
+      }
+      closeQuietly(pooled.conn);
+    }
     return null;
   }
 
   /**
-   * Puts the HttpClientConnection in the cache. If the size of cache is equal to
-   * maxConn, the oldest connection is closed and removed from the cache, which
-   * will make space for the new connection. If the cache is closed or of zero size,
-   * the connection is closed and not added to the cache.
+   * Adds a connection to the cache for the specified host type.
+   * <p>
+   * Only valid, open, non-stale connections are cached. Defensive casting ensures only
+   * AbfsManagedApacheHttpConnection instances are accepted. Returns true if the connection
+   * was successfully cached, false otherwise.
    *
-   * @param conn HttpClientConnection to be cached
-   * @return true if the HttpClientConnection is added in active cache, false otherwise.
+   * @param conn the connection to cache
+   * @param isDefaultHost true if the host is the default host
+   * @return true if the connection was cached, false otherwise
    */
-  public boolean add(HttpClientConnection conn) {
-    if (conn == null) {
-      LOG.warn(
-          "Attempt to add null HttpClientConnection to the cache for account: {}",
-          accountNamePath);
+  public boolean put(HttpClientConnection conn, boolean isDefaultHost) {
+    if (conn == null || closed.get() || !conn.isOpen() || conn.isStale()) {
+      closeQuietly(conn);
       return false;
     }
-    if (getIsClosed() || getMaxCacheConnections() <= 0
-        || !conn.isOpen() || conn.isStale()) {
-      LOG.debug(
-          "Not adding connection to cache. closed: {}, "
-              + "maxCacheSize: {}, isOpen: {}, isStale: {} for account: {}",
-          getIsClosed(), getMaxCacheConnections(), conn.isOpen(),
-          conn.isStale(), accountNamePath);
-      closeHttpClientConnection(conn);
+
+    // Defensive casting check
+    if (!(conn instanceof AbfsManagedApacheHttpConnection)) {
+      closeQuietly(conn);
       return false;
     }
-    while (size() >= getMaxCacheConnections()) {
-      HttpClientConnection httpClientConnection = pollFirst();
-      if (httpClientConnection != null) {
-        closeHttpClientConnection(httpClientConnection);
-      } else {
-        break;
-      }
-    }
-    return offerLast(conn);
+
+    String host = ((AbfsManagedApacheHttpConnection) conn).getTargetHost()
+        .toHostString();
+    PooledConnection pooled = new PooledConnection(conn, host);
+    HostQueue hq = hostCaches.computeIfAbsent(host, k -> new HostQueue());
+
+    return isDefaultHost ? putDefault(hq, pooled) : putCluster(hq, pooled);
   }
 
   /**
-   * @return maximum number of connections that can be cached.
+   * Adds a connection to the default host cache, evicting the oldest if the cache exceeds its limit.
+   *
+   * @param hq the HostQueue for the default host
+   * @param pooled the pooled connection to add
+   * @return true if the connection was cached, false otherwise
+   */
+  private boolean putDefault(HostQueue hq, PooledConnection pooled) {
+    if (maxDefaultConnections <= 0) {
+      closeQuietly(pooled.conn);
+      return false;
+    }
+
+    hq.queue.offer(pooled);
+    if (defaultSize.incrementAndGet() > maxDefaultConnections) {
+      PooledConnection evicted = hq.queue.poll(); // Evict oldest
+      if (evicted != null) {
+        // Double-check 'inUse' to ensure we don't close a connection just handed out
+        if (evicted.inUse.compareAndSet(false, true)) {
+          defaultSize.decrementAndGet();
+          closeQuietly(evicted.conn);
+        } else {
+          // If we couldn't claim it for eviction, it was just grabbed by get()
+          // defaultSize was already decremented by get(), so just move on.
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Adds a connection to the cluster host cache, evicting connections if the cache exceeds its limit.
+   *
+   * @param hq the HostQueue for the cluster host
+   * @param pooled the pooled connection to add
+   * @return true if the connection was cached, false otherwise
+   */
+  private boolean putCluster(HostQueue hq, PooledConnection pooled) {
+    if (maxClusterConnections <= 0) {
+      closeQuietly(pooled.conn);
+      return false;
+    }
+
+    while (clusterSize.get() >= maxClusterConnections) {
+      PooledConnection candidate = clusterQueue.poll();
+      if (candidate == null) {break;}
+
+      if (candidate.inUse.compareAndSet(false, true)) {
+        clusterSize.decrementAndGet();
+        HostQueue evictHq = hostCaches.get(candidate.cacheKey);
+        if (evictHq != null) {
+          // remove() on ConcurrentLinkedDeque is thread-safe and lock-free
+          evictHq.queue.remove(candidate);
+        }
+        closeQuietly(candidate.conn);
+      }
+    }
+
+    hq.queue.offer(pooled);
+    clusterQueue.offer(pooled);
+    clusterSize.incrementAndGet();
+    return true;
+  }
+
+  /**
+   * Closes the given HttpClientConnection quietly, ignoring any IOException.
+   *
+   * @param conn the connection to close
+   */
+  private void closeQuietly(HttpClientConnection conn) {
+    try {
+      if (conn != null) {
+        conn.close();
+      }
+    } catch (IOException ignored) {
+      // Ignore
+    }
+  }
+
+  /**
+   * Gets the maximum number of connections that can be cached for the default host.
+   *
+   * @return the maximum default host cache size
    */
   @VisibleForTesting
   public int getMaxCacheConnections() {
-    return maxCacheConnections;
+    return maxDefaultConnections;
   }
 
   /**
-   * @return String representation of the KeepAliveCache instance.
+   * Gets the maximum number of connections that can be cached for cluster hosts.
+   *
+   * @return the maximum cluster host cache size
+   */
+  @VisibleForTesting
+  public int getMaxCacheConnectionsForHost() {
+    return maxClusterConnections;
+  }
+
+  /**
+   * Gets the current number of connections cached for the default host.
+   *
+   * @return the default host cache size
+   */
+  @VisibleForTesting
+  public int getDefaultConnectionsSize() {
+    return defaultSize.get();
+  }
+
+  /**
+   * Gets the current number of connections cached for cluster hosts.
+   *
+   * @return the cluster host cache size
+   */
+  @VisibleForTesting
+  public int getClusterConnectionsSize() {
+    return clusterSize.get();
+  }
+
+  /**
+   * Gets the HostQueue for the specified host.
+   *
+   * @param host the host name
+   * @return the HostQueue for the host, or null if not present
+   */
+  @VisibleForTesting
+  public HostQueue getHostQueue(String host) {
+    return hostCaches.get(host);
+  }
+
+  /**
+   * Gets the fixed thread pool used for cache warmup and refresh operations.
+   *
+   * @return the fixed thread pool ExecutorService, or null if not initialized
+   */
+  ExecutorService getFixedThreadPool() {
+    return fixedThreadPool;
+  }
+
+  /**
+   * Gets the single thread pool used for cache refresh operations.
+   *
+   * @return the single thread pool ExecutorService, or null if not initialized
+   */
+  ExecutorService getSingleThreadPool() {
+    return singleThreadPool;
+  }
+
+  /**
+   * Closes the cache and all connections within it, shutting down thread pools and releasing resources.
+   */
+  @Override
+  public void close() {
+    // 1. Atomic check to ensure close only runs once
+    if (!closed.compareAndSet(false, true)) {
+      return;
+    }
+
+    // 2. Shutdown thread pools immediately to stop background refresh/warmup
+    if (singleThreadPool != null) {
+      singleThreadPool.shutdownNow();
+    }
+    if (fixedThreadPool != null) {
+      fixedThreadPool.shutdownNow();
+    }
+
+    // 3. Close all connections across all host queues
+    hostCaches.values().forEach(hq -> {
+      PooledConnection pooled;
+      // poll() ensures we "own" the connection during the close process
+      // preventing any race conditions with late-running threads
+      while ((pooled = hq.queue.poll()) != null) {
+        // Attempt to claim it. If get() already took it, it will handle closing or reuse.
+        if (pooled.inUse.compareAndSet(false, true)) {
+          closeQuietly(pooled.conn);
+        }
+      }
+    });
+
+    // 4. Clear the maps and queues to release memory
+    hostCaches.clear();
+    clusterQueue.clear();
+
+    // 5. Reset counters
+    clusterSize.set(0);
+    defaultSize.set(0);
+
+    LOG.debug("KeepAliveCache closed for account: {}", accountNamePath);
+  }
+
+  /**
+   * Returns a string representation of the KeepAliveCache instance.
+   *
+   * @return a string describing the cache state
    */
   @Override
   public String toString() {
     return String.format("KeepAliveCache[closed=%s, size=%d, max=%d]",
-        getIsClosed(), size(), getMaxCacheConnections());
+        closed.get(), defaultSize.get() + clusterSize.get(),
+        getMaxCacheConnections() + getMaxCacheConnectionsForHost());
   }
 }

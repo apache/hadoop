@@ -565,7 +565,7 @@ class VectoredReadHandler {
     int requested = unit.getLength();
     while (total < requested) {
       int n = stream.readRemote(unit.getOffset() + total, tmp, total,
-          requested - total, tracingContext);
+          requested - total, tracingContext, null);
       if (n <= 0) {
         throw new IOException(
             "Unexpected end of stream during direct read: path=" + stream.getPath()

@@ -976,6 +976,32 @@ public abstract class AbfsClient implements Closeable {
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   /**
+   * Read the contents of the file at specified path from given endpoint.
+   * @param path of the file to be read.
+   * @param position in the file from where data has to be read.
+   * @param buffer to store the data read.
+   * @param bufferOffset offset in the buffer to start storing the data.
+   * @param bufferLength length of data to be read.
+   * @param eTag to specify conditional headers.
+   * @param cachedSasToken to be used for the authenticating operation.
+   * @param contextEncryptionAdapter to provide encryption context.
+   * @param tracingContext for tracing the server calls.
+   * @param endpointUrl endpoint from which data has to be read.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
+  public abstract AbfsRestOperation read(String path,
+      long position,
+      byte[] buffer,
+      int bufferOffset,
+      int bufferLength,
+      String eTag,
+      String cachedSasToken,
+      ContextEncryptionAdapter contextEncryptionAdapter,
+      TracingContext tracingContext,
+      String endpointUrl) throws AzureBlobFileSystemException;
+
+  /**
    * Delete the file or directory at specified path.
    * @param path to be deleted.
    * @param recursive if the path is a directory, delete recursively.
