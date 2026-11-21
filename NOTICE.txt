@@ -32,3 +32,9 @@ This software uses the SSL libraries from the Jetty project written
 by mortbay.org.
 Hadoop Yarn Server Web Proxy uses the BouncyCastle Java
 cryptography APIs written by the Legion of the Bouncy Castle Inc.
+
+Apache Kerby
+Copyright 2014-2026 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
