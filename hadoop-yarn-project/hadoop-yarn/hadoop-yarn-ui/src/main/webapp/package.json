@@ -1,4 +1,8 @@
 {
+  "overrides": {
+    "form-data": "2.73.11",
+    "performance-now": "2.73.11"
+  },
   "name": "yarn-ui",
   "version": "0.0.1",
   "description": "New UI framework of Apache Hadoop YARN",

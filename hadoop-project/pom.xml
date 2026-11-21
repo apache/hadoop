@@ -36,7 +36,7 @@
     <!--Whether to proceed to next module if any test failures exist-->
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.4.58.v20250814</jetty.version>
+    <jetty.version>9.4.63</jetty.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -2226,6 +2226,16 @@
         <artifactId>google-cloud-storage</artifactId>
         <version>2.52.0</version>
     </dependency>
+      <dependency>
+        <groupId>io.grpc</groupId>
+        <artifactId>grpc-netty-shaded</artifactId>
+        <version>1.75.0</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-redis</artifactId>
+        <version>4.2.21.Final</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
