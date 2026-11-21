@@ -2654,7 +2654,10 @@ public abstract class FileSystem extends Configured
     } else {
       local = getLocal(conf);
     }
-    FileUtil.copy(this, src, local, dst, delSrc, conf);
+    if (!FileUtil.copy(this, src, local, dst, delSrc, conf)) {
+      throw new IOException("Failed to " + (delSrc ? "move " : "copy ")
+          + src + " to " + dst);
+    }
   }
 
   /**
