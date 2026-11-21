@@ -279,7 +279,7 @@ public class TimelineCollectorWebService {
   }
 
   private static void init(HttpServletResponse response) {
-    response.setContentType(null);
+    JettyUtils.clearContentType(response);
   }
 
   private static UserGroupInformation getUser(HttpServletRequest req) {

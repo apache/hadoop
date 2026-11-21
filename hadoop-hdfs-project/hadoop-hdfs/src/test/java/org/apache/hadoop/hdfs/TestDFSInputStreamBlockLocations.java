@@ -151,6 +151,11 @@ public class TestDFSInputStreamBlockLocations {
       assertSame(existing, fin.locatedBlocks,
           "should not have modified locatedBlocks");
 
+      // Time.monotonicNow() may not have ticked since the stream recorded
+      // lastRefreshedAt; move it back so the refresh provably advances it.
+      lastRefreshedAt--;
+      fin.setLastRefreshedBlocksAtForTesting(lastRefreshedAt);
+
       // fake a dead node to force refresh
       // refreshBlockLocations should return true, indicating we attempted a refresh
       // nothing should be changed, because locations have not changed
@@ -159,8 +164,9 @@ public class TestDFSInputStreamBlockLocations {
           "should have attempted refresh");
       verifyChanged(fin, existing, lastRefreshedAt);
 
-      // reset
-      lastRefreshedAt = fin.getLastRefreshedBlocksAtForTesting();
+      // reset, moving lastRefreshedAt back again as above
+      lastRefreshedAt = fin.getLastRefreshedBlocksAtForTesting() - 1;
+      fin.setLastRefreshedBlocksAtForTesting(lastRefreshedAt);
       existing = fin.locatedBlocks;
 
       // It's hard to test explicitly for non-local nodes, but we can fake it
