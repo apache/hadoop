@@ -21,6 +21,10 @@ build
 dependency-reduced-pom.xml
 make-build-debug
 
+# Python bytecode caches (dev-support/licenses tooling)
+__pycache__/
+*.pyc
+
 # Filesystem contract test options and credentials
 auth-keys.xml
 azure-auth-keys.xml

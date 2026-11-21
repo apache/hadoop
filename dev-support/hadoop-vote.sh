@@ -18,7 +18,8 @@
 
 # This script is useful to perform basic sanity tests for the given
 # Hadoop RC. It checks for the Checksum, Signature, Rat check,
-# Build from source and building tarball from the source.
+# Build from source, building tarball from the source and the
+# license checks of the release tarballs.
 
 set -e -o pipefail
 
@@ -32,6 +33,7 @@ hadoop-vote. A script for standard vote which verifies the following items
 3. Rat check
 4. Built from source
 5. Built tar from source
+6. License checks of the binary tarballs
 
 Usage: ${SCRIPT} -s | --source <url> [-k | --key <signature>] [-f | --keys-file-url <url>] [-o | --output-dir </path/to/use>] [-D property[=value]] [-P profiles]
        ${SCRIPT} -h | --help
@@ -107,6 +109,8 @@ CHECKSUM_PASSED=0
 RAT_CHECK_PASSED=0
 BUILD_FROM_SOURCE_PASSED=0
 BUILD_TAR_FROM_SOURCE_PASSED=0
+LICENSE_CHECK_PASSED=0
+LICENSE_CHECK_SKIPPED=0
 
 function download_and_import_keys() {
     KEY_FILE_URL="${KEY_FILE_URL:-https://downloads.apache.org/hadoop/common/KEYS}"
@@ -157,6 +161,31 @@ function build_from_source() {
     mvn clean install "${MVN_PROPERTIES[@]}" -DskipTests "${MVN_PROFILES[@]}" 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_build_from_source && BUILD_FROM_SOURCE_PASSED=1
 }
 
+function verify_licenses() {
+    rm -f "${OUTPUT_PATH_PREFIX}"_verify_licenses
+    DRIVER="dev-support/licenses/run-release-checks.sh"
+    if [ ! -f "${DRIVER}" ]; then
+        echo "License tooling not present in this release; skipping the license check" \
+            | tee -a "${OUTPUT_PATH_PREFIX}"_verify_licenses
+        LICENSE_CHECK_SKIPPED=1
+        return
+    fi
+    # Voter mode of the release-time license driver: re-enumerates each
+    # binary tarball, re-runs the full license generate-and-verify suite
+    # against the tarball's own shipped LICENSE-binary and the
+    # THIRD-PARTY.txt the RC carries, and verifies checksums and (with
+    # the KEYS file imported above) GPG signatures. Requires python3.
+    # A red result here means the staged RC's license files do not match
+    # its own contents and the RC must be replaced.
+    # invoked via bash: the source tarball's file modes are not
+    # guaranteed to carry the exec bit on every packager
+    bash dev-support/licenses/run-release-checks.sh \
+        --verify-only ".." \
+        --repo "$(pwd)" \
+        --keys "${OUTPUT_DIR}/KEYS" 2>&1 \
+        | tee "${OUTPUT_PATH_PREFIX}"_verify_licenses && LICENSE_CHECK_PASSED=1
+}
+
 function build_tar_from_source() {
     rm -f "${OUTPUT_PATH_PREFIX}"_build_tar_from_source
     # No unit test run.
@@ -177,9 +206,13 @@ function print_when_exit() {
          - mvn clean install ${MVN_PROPERTIES[@]} -DskipTests ${MVN_PROFILES[@]}
         * Built tar from source (${JAVA_VERSION}): $( ((BUILD_TAR_FROM_SOURCE_PASSED)) && echo "ok" || echo "failed" )
          - mvn clean package ${MVN_PROPERTIES[@]} -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true
+        * License checks: $( ((LICENSE_CHECK_PASSED)) && echo "ok" || { ((LICENSE_CHECK_SKIPPED)) && echo "skipped (RC predates the license tooling)"; } || echo "failed" )
+         - dev-support/licenses/run-release-checks.sh --verify-only (log: $(basename "${OUTPUT_PATH_PREFIX}")_verify_licenses)
 __EOF
   if ((CHECKSUM_PASSED)) && ((SIGNATURE_PASSED)) && ((RAT_CHECK_PASSED)) && ((BUILD_FROM_SOURCE_PASSED)) && ((BUILD_TAR_FROM_SOURCE_PASSED)) ; then
-    exit 0
+    if ((LICENSE_CHECK_PASSED)) || ((LICENSE_CHECK_SKIPPED)); then
+      exit 0
+    fi
   fi
   exit 1
 }
@@ -194,6 +227,7 @@ pushd "${HADOOP_RC_VERSION}"
 execute verify_signatures
 execute verify_checksums
 execute unzip_from_source
+execute verify_licenses
 execute rat_test
 execute build_from_source
 execute build_tar_from_source

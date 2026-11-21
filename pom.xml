@@ -625,6 +625,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <exclude>dev-support/docker/pkg-resolver/packages.json</exclude>
             <exclude>dev-support/docker/pkg-resolver/platforms.json</exclude>
             <exclude>dev-support/docker/vcpkg/vcpkg.json</exclude>
+            <exclude>dev-support/licenses/texts/**</exclude>
+            <exclude>dev-support/licenses/curation/**</exclude>
             <exclude>hadoop-hdfs-project/hadoop-hdfs-rbf/src/main/java/org/apache/hadoop/hdfs/server/federation/metrics/JSON.java</exclude>
             <exclude>**/target/**</exclude>
          </excludes>
@@ -909,6 +911,131 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
       <properties>
         <docker.image>${user.name}/hadoop:${project.version}</docker.image>
       </properties>
+    </profile>
+
+    <!-- Collects and downloads the license texts of all (transitive)
+         dependencies into target/licenses. The release-time license
+         checks (dev-support/licenses/run-release-checks.sh) consume the
+         THIRD-PARTY.txt report this profile produces. -->
+    <profile>
+      <id>licenses</id>
+      <properties>
+        <license-maven-plugin.version>2.5.0</license-maven-plugin.version>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>license-maven-plugin</artifactId>
+            <version>${license-maven-plugin.version}</version>
+            <configuration>
+              <!-- resolve the full dependency graph across modules -->
+              <includeTransitiveDependencies>true</includeTransitiveDependencies>
+              <!-- only what ships in the distribution -->
+              <includedScopes>compile,runtime</includedScopes>
+              <!-- test tools must not leak into the shipped license set -->
+              <excludedScopes>test,provided</excludedScopes>
+              <!-- also applies when the goals are invoked directly
+                   (execution-scoped config is ignored for default-cli) -->
+              <outputDirectory>${project.build.directory}/third-party</outputDirectory>
+              <licensesOutputDirectory>${project.build.directory}/licenses</licensesOutputDirectory>
+              <failOnMissing>true</failOnMissing>
+              <!-- optional deps can still ship in the distribution
+                   (e.g. guava's checker-qual), so include them -->
+              <includeOptional>true</includeOptional>
+              <!-- curated fixes for dependencies with missing or wrong
+                   license metadata (overrideFile is deprecated) -->
+              <overrideUrl>file://${maven.multiModuleProjectDirectory}/dev-support/licenses/override-THIRD-PARTY.properties</overrideUrl>
+              <!-- build tooling must not leak into the shipped inventory;
+                   own-reactor artifacts (org.apache.hadoop) and our
+                   shaded thirdparty jars are not third-party.
+                   Anchored: the plugin matches "g:a" against
+                   [^:]*(PATTERN)[^:]*:[^:]+, so a bare alternative is a
+                   substring match; ^ and the (?=:) lookahead make every
+                   alternative match the whole groupId -->
+              <excludedGroups>^(?:org\.apache\.maven(\..*)?|org\.codehaus\.plexus|org\.eclipse\.sisu|org\.apache\.hadoop(\..*)?)(?=:)</excludedGroups>
+              <!-- test tooling that enters the graph at compile scope:
+                   hadoop-client-minicluster declares test-jar support deps
+                   at compile+optional (mockito, jersey-test-framework,
+                   junit-jupiter...) and some upstream SDK POMs declare test
+                   tooling at compile (aliyun's jacoco agent, JMH's
+                   jopt-simple, tencent's ini4j). None of it ships; the
+                   scope filter cannot see it.
+                   Anchored (R47): the plugin matches "g:a" against
+                   [^:]+:[^:]*(PATTERN)[^:]*, so a bare alternative is a
+                   substring match (junit-.* also excluded my-junit-extras);
+                   the (?<=:) lookbehind and $ make every alternative match
+                   the whole artifactId (the < of the lookbehind is written
+                   &lt; - a bare < is not well-formed XML; Maven decodes it).
+                   check-archive-licenses.sh reads this element, requires
+                   exactly this (?<=:)(?:...)$ form and rejects duplicate
+                   alternatives.
+                   objenesis, the jacoco agent and ini4j are deliberately
+                   NOT here: they ship in the binary distribution
+                   (objenesis via the yarn dist, jacoco+ini4j via the
+                   cloud SDK trees once -Dhadoop-*-package is on).
+                   The kerby/jmh/jsr311-api/kfs/jersey-container-jdk-http
+                   alternatives are the same class:
+                   compile(+optional)/test scope of modules the dist
+                   never ships (hadoop-minikdc, hadoop-client-minicluster,
+                   hadoop-benchmark, the hbase test-support module) or
+                   transitives of already-excluded test tooling
+                   (jersey-container-jdk-http via
+                   jersey-test-framework-provider-jdk-http). None of them
+                   ships in either distributed archive, and none is
+                   embedded in a shipping jar (the auth-chain kerby jars
+                   kerb-core/util/crypto and kerby-asn1/pkix DO ship
+                   standalone and stay out of this list) -->
+              <excludedArtifacts>(?&lt;=:)(?:mockito-.*|junit-.*|opentest4j|apiguardian-api|byte-buddy(-agent)?|hamcrest(-.*)?|jersey-test-framework-.*|jopt-simple|jmh-.*|jsr311-api|kfs|jersey-container-jdk-http|kerb-admin|kerb-client|kerb-common|kerb-identity|kerb-server|kerb-simplekdc|kerby-xdr|token-provider)$</excludedArtifacts>
+              <licenseMerges>
+                <!-- variants observed in the full-reactor dependency
+                     collection (most collapsed by the plugin's own
+                     matching, these merges target the remainder);
+                     keep BSD 2-clause and 3-clause separate -->
+                <licenseMerge>The Apache Software License, Version 2.0|Apache License, Version 2.0|Apache License 2.0|Apache License, 2.0|The Apache License, Version 2.0|Apache Software License - Version 2.0|Apache-2.0|Apache 2|Apache 2.0|Apache 2.0 License|Apache License V2.0|Apache License v2.0</licenseMerge>
+                <licenseMerge>MIT License|The MIT License|MIT|MIT license</licenseMerge>
+                <licenseMerge>BSD 2-Clause License|BSD 2-Clause|BSD-2-Clause</licenseMerge>
+                <!-- 3-clause BSD under all its spellings; the generic
+                     "BSD License" carriers (stax2-api, dom4j, jdom2,
+                     jline) are all 3-clause BSD, so they fold in here -->
+                <licenseMerge>Revised BSD|Modified BSD|New BSD License|BSD 3-Clause|The BSD 3-Clause License|BSD New license|BSD-3-Clause|BSD License|The BSD License|Similar to Apache License but with the acknowledgment clause removed|Plexus</licenseMerge>
+                <!-- Tencent COS SDK declares its license name as
+                     "cos-java-sdk-bundle"; the SDK is Apache-2.0
+                     (github.com/tencentyun/cos-java-sdk-v5) -->
+                <licenseMerge>The Apache Software License, Version 2.0|cos-java-sdk-bundle</licenseMerge>
+                <licenseMerge>Eclipse Public License - Version 1.0|Eclipse Public License, Version 1.0|Eclipse Public License - v 1.0|EPL-1.0</licenseMerge>
+                <licenseMerge>EPL 2.0|Eclipse Public License 2.0|Eclipse Public License v2.0|Eclipse Public License v. 2.0|Eclipse Public License - v 2.0</licenseMerge>
+                <licenseMerge>EDL 1.0|Eclipse Distribution License - v 1.0|Eclipse Distribution License v. 1.0</licenseMerge>
+                <licenseMerge>CDDL + GPLv2 with classpath exception|CDDL+GPLv2 with classpath exception|GPL2 w/ CPE|CDDL v1.1 / GPL v2 dual license|Dual license consisting of the CDDL v1.1 and GPL v2</licenseMerge>
+                <!-- javax.json (org.glassfish) declares "CDDL License";
+                     it is plain CDDL 1.1, not the CDDL+GPLv2 dual license -->
+                <licenseMerge>CDDL License|CDDL 1.1</licenseMerge>
+                <licenseMerge>LGPL 2.1|LGPL, version 2.1</licenseMerge>
+                <licenseMerge>Public Domain|CC0|Public Domain, per Creative Commons CC0</licenseMerge>
+                <!-- JMH (org.openjdk.jmh) and jersey ship the GPLv2 with
+                     the Classpath Exception under three spellings -->
+                <licenseMerge>GNU General Public License (GPL), version 2, with the Classpath exception|GNU General Public License, version 2 with the GNU Classpath Exception|The GNU General Public License (GPL), Version 2, With Classpath Exception</licenseMerge>
+              </licenseMerges>
+            </configuration>
+            <executions>
+              <!-- generate THIRD-PARTY reports for every module -->
+              <execution>
+                <id>aggregate-third-party</id>
+                <goals>
+                  <goal>aggregate-add-third-party</goal>
+                </goals>
+              </execution>
+              <!-- download the actual license texts -->
+              <execution>
+                <id>aggregate-download-licenses</id>
+                <goals>
+                  <goal>aggregate-download-licenses</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 </project>
