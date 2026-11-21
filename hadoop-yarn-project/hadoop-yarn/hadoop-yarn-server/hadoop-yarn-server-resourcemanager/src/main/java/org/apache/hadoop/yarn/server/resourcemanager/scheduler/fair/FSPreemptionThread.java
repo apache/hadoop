@@ -295,7 +295,7 @@ class FSPreemptionThread extends Thread {
    * A class to track preemptable containers.
    */
   private static class PreemptableContainers {
-    Map<ApplicationId, List<RMContainer>> containersByApp;
+    private final Map<ApplicationId, List<RMContainer>> containersByApp;
     int numAMContainers;
     int maxAMContainers;
 
@@ -312,7 +312,8 @@ class FSPreemptionThread extends Thread {
      * @param container the container to add
      * @return true if success; false otherwise
      */
-    private boolean addContainer(RMContainer container, ApplicationId appId) {
+    private synchronized boolean addContainer(RMContainer container,
+        ApplicationId appId) {
       if (container.isAMContainer()) {
         numAMContainers++;
         if (numAMContainers >= maxAMContainers) {
@@ -320,15 +321,12 @@ class FSPreemptionThread extends Thread {
         }
       }
 
-      if (!containersByApp.containsKey(appId)) {
-        containersByApp.put(appId, new ArrayList<>());
-      }
-
-      containersByApp.get(appId).add(container);
+      containersByApp.computeIfAbsent(appId, key -> new ArrayList<>())
+          .add(container);
       return true;
     }
 
-    private List<RMContainer> getAllContainers() {
+    private synchronized List<RMContainer> getAllContainers() {
       List<RMContainer> allContainers = new ArrayList<>();
       for (List<RMContainer> containersForApp : containersByApp.values()) {
         allContainers.addAll(containersForApp);
@@ -336,12 +334,15 @@ class FSPreemptionThread extends Thread {
       return allContainers;
     }
 
-    private Resource getResourcesToPreemptForApp(ApplicationId appId) {
+    private synchronized Resource getResourcesToPreemptForApp(
+        ApplicationId appId) {
       Resource resourcesToPreempt = Resources.createResource(0, 0);
-      if (containersByApp.containsKey(appId)) {
-        for (RMContainer container : containersByApp.get(appId)) {
-          Resources.addTo(resourcesToPreempt, container.getAllocatedResource());
-        }
+      List<RMContainer> containersForApp = containersByApp.get(appId);
+      if (containersForApp == null) {
+        return resourcesToPreempt;
+      }
+      for (RMContainer container : containersForApp) {
+        Resources.addTo(resourcesToPreempt, container.getAllocatedResource());
       }
       return resourcesToPreempt;
     }
