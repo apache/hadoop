@@ -44,6 +44,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
@@ -1110,6 +1111,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     });
 
     return metrics;
+  }
+
+  @Override
+  public Response getResourceManagerThreadDump(HttpServletRequest req,
+      int numberOfJStack) {
+    throw new NotImplementedException("Code is not implemented");
   }
 
   /**

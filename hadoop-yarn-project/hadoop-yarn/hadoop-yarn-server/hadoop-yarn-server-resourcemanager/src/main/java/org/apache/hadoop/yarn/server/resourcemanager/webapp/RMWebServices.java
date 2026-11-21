@@ -265,6 +265,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   private AtomicLong getAppsSuccessTimes = new AtomicLong(0);
   private AtomicLong hitAppsCacheTimes = new AtomicLong(0);
   private boolean enableAppsCache = false;
+  private boolean isRmJStackEndpointsEnabled = false;
+  private RMDiagnosticJStackService rmDiagnosticJStackService;
 
   public final static String DELEGATION_TOKEN_HEADER =
       "Hadoop-YARN-RM-Delegation-Token";
@@ -296,6 +298,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           YarnConfiguration.DEFAULT_APPS_CACHE_EXPIRE, TimeUnit.MILLISECONDS);
       appsLRUCache = new LRUCache<>(cacheSize, appsCacheTimeMs);
     }
+    this.isRmJStackEndpointsEnabled = conf.getBoolean(
+        YarnConfiguration.RM_JSTACK_ENDPOINTS_ENABLED,
+        YarnConfiguration.DEFAULT_RM_JSTACK_ENDPOINTS_ENABLED);
+    this.rmDiagnosticJStackService = new RMDiagnosticJStackService(this.rm);
   }
 
   RMWebServices(ResourceManager rm, Configuration conf,
@@ -406,6 +412,33 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public ClusterMetricsInfo getClusterMetricsInfo() {
     initForReadableEndpoints();
     return new ClusterMetricsInfo(this.rm);
+  }
+
+  @GET
+  @Path(RMWSConsts.JSTACK)
+  @Produces({ MediaType.TEXT_PLAIN })
+  @Override
+  public Response getResourceManagerThreadDump(
+      @Context HttpServletRequest req,
+      @PathParam("numberOfJStack") int numberOfJStack) {
+    if (!isRmJStackEndpointsEnabled) {
+      return Response.status(Status.METHOD_NOT_ALLOWED).build();
+    }
+    try {
+      return Response.status(Status.OK)
+          .entity(rmDiagnosticJStackService.collectResourceManagerThreadDump(
+              numberOfJStack, req))
+          .build();
+    } catch (YarnRuntimeException e) {
+      return Response.status(Status.FORBIDDEN)
+          .entity(e.getMessage())
+          .build();
+    } catch (IOException e) {
+      return Response.status(Status.INTERNAL_SERVER_ERROR)
+          .entity("Shell command has failed: " + e.getMessage() + ". "
+              + "For more information please check the ResourceManager logs.")
+          .build();
+    }
   }
 
   @GET
