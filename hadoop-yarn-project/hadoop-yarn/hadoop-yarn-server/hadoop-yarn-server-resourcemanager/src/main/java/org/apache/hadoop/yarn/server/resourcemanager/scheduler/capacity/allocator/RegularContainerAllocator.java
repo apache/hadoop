@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityLevel;
@@ -840,6 +841,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     return allocationResult;
   }
 
+  @VisibleForTesting
   ContainerAllocation allocate(Resource clusterResource,
       CandidateNodeSet<FiCaSchedulerNode> candidates,
       SchedulingMode schedulingMode, ResourceLimits resourceLimits,

@@ -204,6 +204,27 @@ public class TestRegularContainerAllocator {
   }
 
   @Test
+  public void testSuccessfulAllocationPreventsReservationFallback()
+      throws Exception {
+    FiCaSchedulerNode reservationNode = mock(FiCaSchedulerNode.class);
+    FiCaSchedulerNode allocationNode = mock(FiCaSchedulerNode.class);
+    mockPlacement(reservationNode, allocationNode);
+    allowNodePrecheck(reservationNode);
+    allowNodePrecheck(allocationNode);
+
+    ContainerAllocation reservation = new ContainerAllocation(null,
+        Resource.newInstance(1024, 1), AllocationState.RESERVED);
+    ContainerAllocation allocation = new ContainerAllocation(null,
+        Resource.newInstance(1024, 1), AllocationState.ALLOCATED);
+    TestAllocator allocator = new TestAllocator(application, rmContext,
+        reservation, allocation);
+
+    assertSame(allocation, allocate(allocator));
+    assertSame(allocationNode, allocator.getLastDoAllocationNode());
+    assertEquals(1, allocator.doAllocationCalls);
+  }
+
+  @Test
   public void testFailedAllocationPreventsReservationFallback()
       throws Exception {
     FiCaSchedulerNode reservationNode = mock(FiCaSchedulerNode.class);
@@ -223,12 +244,14 @@ public class TestRegularContainerAllocator {
         Resource.newInstance(1024, 1), AllocationState.ALLOCATED);
     TestAllocator allocator = new TestAllocator(application, rmContext,
         reservation, allocation);
+    // Preserve the existing behavior: even a failed allocation ends the search.
     allocator.setDoAllocationResult(ContainerAllocation.APP_SKIPPED);
 
     ContainerAllocation result = allocate(allocator);
 
     assertEquals(AllocationState.APP_SKIPPED, result.getAllocationState());
     assertSame(allocationNode, allocator.getLastDoAllocationNode());
+    assertEquals(1, allocator.doAllocationCalls);
   }
 
   private void mockPlacement(FiCaSchedulerNode... nodes) {

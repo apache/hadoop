@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleC
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -582,6 +583,36 @@ public class TestCapacitySchedulerMultiNodes {
           schedulerApp1.getReservedContainers().get(0));
     } finally {
       rm.close();
+    }
+  }
+
+  @Test
+  @Timeout(value = 60)
+  public void testAllocationOnLaterNodeCommits() throws Exception {
+    conf.setInt(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
+        + ".resource-based.sorting-interval.ms", 0);
+    conf.setInt(YarnConfiguration.SCHEDULER_SKIP_NODE_MULTIPLIER, 1000);
+    conf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT, 1.0f);
+    try (MockRM rm = new MockRM(conf)) {
+      rm.start();
+      MockNM nm1 = rm.registerNode("h1:1234", 3 * GB);
+      RMApp app1 = MockRMAppSubmitter.submitWithMemory(2 * GB, rm);
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+      MockNM nm2 = rm.registerNode("h2:1234", 8 * GB);
+      RMApp app2 = MockRMAppSubmitter.submitWithMemory(4 * GB, rm);
+      MockRM.launchAndRegisterAM(app2, rm, nm2);
+
+      // h1 sorts first with 2 GB used and can only reserve the request.
+      // h2 has 4 GB used and enough space to allocate it immediately.
+      am1.allocate("*", 3 * GB, 1, new ArrayList<>());
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+
+      List<Container> allocated = am1.schedule().getAllocatedContainers();
+      assertEquals(1, allocated.size());
+      assertEquals(nm2.getNodeId(), allocated.get(0).getNodeId());
+      assertNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
     }
   }
 
