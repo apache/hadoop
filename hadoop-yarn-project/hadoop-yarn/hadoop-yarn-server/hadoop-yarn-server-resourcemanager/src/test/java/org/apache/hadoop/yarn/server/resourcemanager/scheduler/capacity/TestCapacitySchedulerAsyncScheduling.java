@@ -219,6 +219,8 @@ public class TestCapacitySchedulerAsyncScheduling {
         + ".resource-based";
     csConf.set(policy + ".class", POLICY_CLASS_NAME);
     csConf.setInt(policy + ".sorting-interval.ms", 0);
+    // The mock NMs do not heartbeat while the two AMs start.
+    csConf.setInt(YarnConfiguration.SCHEDULER_SKIP_NODE_MULTIPLIER, 1000);
     csConf.setInt(
         CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD, 1);
     csConf.setMaximumApplicationMasterResourcePerQueuePercent(

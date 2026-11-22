@@ -532,6 +532,8 @@ public class TestCapacitySchedulerMultiNodes {
       throws Exception {
     CapacitySchedulerConfiguration newConf =
         new CapacitySchedulerConfiguration(conf);
+    // Keep h2 eligible so the scheduler visits it after the reservation on h1.
+    newConf.setInt(YarnConfiguration.SCHEDULER_SKIP_NODE_MULTIPLIER, 1000);
     newConf.setInt(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
         + ".resource-based.sorting-interval.ms", 0);
     newConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT, 1.0f);
