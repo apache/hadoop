@@ -32,12 +32,15 @@
 #   MVNW_BOOTSTRAP_ATTEMPTS  number of attempts per download (default 5)
 #   MVNW_BOOTSTRAP_DELAY     seconds to wait after the first failed attempt
 #                            (default 10); the wait doubles after each attempt
+#   MVNW_BOOTSTRAP_TIMEOUT   seconds after which an attempt is given up
+#                            (default 300)
 #   MVNW_BOOTSTRAP_MIRROR    mirror of Maven Central to download
 #                            maven-wrapper.jar from when Maven Central fails;
 #                            set to an empty value to disable
 
 attempts=${MVNW_BOOTSTRAP_ATTEMPTS:-5}
 delay=${MVNW_BOOTSTRAP_DELAY:-10}
+timeout=${MVNW_BOOTSTRAP_TIMEOUT:-300}
 central="https://repo.maven.apache.org/maven2/"
 mirror=${MVNW_BOOTSTRAP_MIRROR-https://maven-central.storage-download.googleapis.com/maven2}
 
@@ -59,12 +62,26 @@ function sha256
   fi
 }
 
+## @description  Run a command, and kill it if it runs for more than
+## @description  ${timeout} seconds. Without timeout(1), which macOS does not
+## @description  ship, the command runs unbounded.
+## @param        command and its arguments
+function with_timeout
+{
+  if command -v timeout >/dev/null; then
+    timeout "${timeout}" "$@"
+  else
+    "$@"
+  fi
+}
+
 function download
 {
   if command -v curl >/dev/null; then
-    curl -f -L -sS -o "$2" "$1"
+    curl -f -L -sS --connect-timeout 30 --max-time "${timeout}" -o "$2" "$1"
   else
-    wget --no-verbose -O "$2" "$1"
+    # wget has no limit for the whole transfer, so bound it with timeout(1)
+    with_timeout wget --no-verbose --tries=1 --timeout=30 -O "$2" "$1"
   fi
 }
 
@@ -128,6 +145,27 @@ function fetch_wrapper_jar
   return 1
 }
 
+## @description  Have maven-wrapper.jar download, verify and unpack the Maven
+## @description  distribution
+function fetch_distribution
+{
+  local name
+
+  if with_timeout ./mvnw --version; then
+    return 0
+  fi
+  # maven-wrapper.jar stores the archive in its cache before it verifies the
+  # checksum, and never downloads an archive that is already there. Unless
+  # the cache is cleared, every further attempt fails on the same archive.
+  name=$(property distributionUrl)
+  name=${name##*/}
+  name=${name%.*}
+  if [[ -n "${name}" ]]; then
+    rm -rf "${MAVEN_USER_HOME:-${HOME}/.m2}/wrapper/dists/${name}"
+  fi
+  return 1
+}
+
 wrapper_url=$(property wrapperUrl)
 wrapper_sha=$(property wrapperSha256Sum)
 if [[ -z "${wrapper_url}" || -z "${wrapper_sha}" ]]; then
@@ -141,6 +179,5 @@ else
   retry "download ${wrapper_url}" fetch_wrapper_jar || exit 1
 fi
 
-# maven-wrapper.jar downloads and verifies the Maven distribution
 cd "${basedir}" || exit 1
-retry "run ./mvnw --version" ./mvnw --version
+retry "run ./mvnw --version" fetch_distribution
