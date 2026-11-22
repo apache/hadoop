@@ -43,6 +43,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -137,6 +138,72 @@ public class TestRegularContainerAllocator {
   }
 
   @Test
+  public void testSkipReservationOnReservedNode() throws Exception {
+    FiCaSchedulerNode node = mock(FiCaSchedulerNode.class);
+    when(node.getReservedContainer()).thenReturn(mock(RMContainer.class));
+    mockPlacement(node);
+    allowNodePrecheck(node);
+
+    ContainerAllocation reservation = new ContainerAllocation(null,
+        Resource.newInstance(1024, 1), AllocationState.RESERVED);
+    TestAllocator allocator =
+        new TestAllocator(application, rmContext, reservation);
+
+    ContainerAllocation result = allocate(allocator);
+
+    assertEquals(AllocationState.PRIORITY_SKIPPED, result.getAllocationState());
+    assertEquals(0, allocator.doAllocationCalls);
+    assertNull(allocator.getLastDoAllocationNode());
+  }
+
+  @Test
+  public void testReservationFallbackSkipsReservedNode() throws Exception {
+    FiCaSchedulerNode availableNode = mock(FiCaSchedulerNode.class);
+    FiCaSchedulerNode reservedNode = mock(FiCaSchedulerNode.class);
+    when(reservedNode.getReservedContainer())
+        .thenReturn(mock(RMContainer.class));
+    mockPlacement(availableNode, reservedNode);
+    allowNodePrecheck(availableNode);
+    allowNodePrecheck(reservedNode);
+
+    ContainerAllocation reservation = new ContainerAllocation(null,
+        Resource.newInstance(1024, 1), AllocationState.RESERVED);
+    ContainerAllocation invalidReservation = new ContainerAllocation(null,
+        Resource.newInstance(1024, 1), AllocationState.RESERVED);
+    TestAllocator allocator = new TestAllocator(application, rmContext,
+        reservation, invalidReservation);
+
+    ContainerAllocation result = allocate(allocator);
+
+    assertSame(reservation, result);
+    assertSame(availableNode, allocator.getLastDoAllocationNode());
+    assertEquals(1, allocator.doAllocationCalls);
+  }
+
+  @Test
+  public void testReReserveCurrentContainer() throws Exception {
+    FiCaSchedulerNode node = mock(FiCaSchedulerNode.class);
+    RMContainer reservedContainer = mock(RMContainer.class);
+    when(node.getReservedContainer()).thenReturn(reservedContainer);
+    mockPlacement(node);
+
+    ContainerAllocation reservation = new ContainerAllocation(null,
+        Resource.newInstance(1024, 1), AllocationState.RESERVED);
+    TestAllocator allocator =
+        new TestAllocator(application, rmContext, reservation);
+
+    ContainerAllocation result = allocator.allocate(
+        Resource.newInstance(8192, 8), candidates,
+        SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, resourceLimits,
+        schedulerKey, reservedContainer);
+
+    assertSame(reservation, result);
+    assertSame(reservedContainer, result.getUpdatedContainer());
+    assertSame(node, allocator.getLastDoAllocationNode());
+    assertEquals(1, allocator.doAllocationCalls);
+  }
+
+  @Test
   public void testFailedAllocationPreventsReservationFallback()
       throws Exception {
     FiCaSchedulerNode reservationNode = mock(FiCaSchedulerNode.class);
@@ -189,6 +256,7 @@ public class TestRegularContainerAllocator {
     private final Iterator<ContainerAllocation> results;
     private ContainerAllocation doAllocationResult;
     private FiCaSchedulerNode lastDoAllocationNode;
+    private int doAllocationCalls;
 
     private TestAllocator(FiCaSchedulerApp application, RMContext rmContext,
         ContainerAllocation... results) {
@@ -217,6 +285,7 @@ public class TestRegularContainerAllocator {
         FiCaSchedulerNode node, SchedulerRequestKey schedulerKey,
         RMContainer reservedContainer) {
       lastDoAllocationNode = node;
+      doAllocationCalls++;
       if (doAllocationResult != null) {
         return doAllocationResult;
       }

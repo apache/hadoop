@@ -920,6 +920,12 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // Allocate of new containers when the first node in the
       // iterator could not fit and returns RESERVED allocation.
       if (AllocationState.RESERVED == result.getAllocationState()) {
+        if (nodeReservedContainer != null
+            && nodeReservedContainer != reservedContainer) {
+          // A new reservation cannot commit on an already-reserved node.
+          result = ContainerAllocation.PRIORITY_SKIPPED;
+          continue;
+        }
         lastReservation = result;
         lastReservationNode = node;
       }

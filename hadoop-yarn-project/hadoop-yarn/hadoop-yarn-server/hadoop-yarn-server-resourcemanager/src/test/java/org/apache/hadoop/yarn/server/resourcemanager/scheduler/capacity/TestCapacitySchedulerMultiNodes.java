@@ -38,6 +38,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
@@ -48,6 +49,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ClusterNodeTracker;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -57,6 +59,7 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
@@ -577,6 +580,83 @@ public class TestCapacitySchedulerMultiNodes {
           schedulerApp1.getReservedContainers().get(0));
     } finally {
       rm.close();
+    }
+  }
+
+  @Test
+  @Timeout(value = 60)
+  public void testFallbackReservationOnReservedNodeDoesNotBlockQueue()
+      throws Exception {
+    CapacitySchedulerConfiguration newConf =
+        new CapacitySchedulerConfiguration(conf);
+    newConf.setInt(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
+        + ".resource-based.sorting-interval.ms", 0);
+    newConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT, 1.0f);
+    // Keep nodes eligible between registration and the scheduling updates.
+    newConf.setInt(YarnConfiguration.SCHEDULER_SKIP_NODE_MULTIPLIER, 1000);
+
+    AtomicInteger rejectedReservations = new AtomicInteger();
+    CapacityScheduler cs = new CapacityScheduler() {
+      @Override
+      public boolean tryCommit(Resource cluster, ResourceCommitRequest request,
+          boolean updatePending) {
+        boolean accepted = super.tryCommit(cluster, request, updatePending);
+        if (!accepted && !request.getContainersToReserve().isEmpty()) {
+          rejectedReservations.incrementAndGet();
+        }
+        return accepted;
+      }
+    };
+    cs.setConf(newConf);
+    try (MockRM rm = new MockRM(newConf) {
+      @Override
+      protected ResourceScheduler createScheduler() {
+        return cs;
+      }
+    }) {
+      rm.start();
+      MockNM nm1 = rm.registerNode("h1:1234", 5 * GB);
+      MockNM nm2 = rm.registerNode("h2:1234", 3 * GB);
+      MockNM nm3 = rm.registerNode("h3:1234", 3 * GB);
+      MockNM nm4 = rm.registerNode("h4:1234", 3 * GB);
+
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm)
+              .withAppName("app1").withUser("user1").withQueue("default")
+              .build());
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+      RMApp app2 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(3 * GB, rm)
+              .withAppName("app2").withUser("user2").withQueue("default")
+              .build());
+      MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm2);
+
+      FiCaSchedulerApp schedulerApp1 =
+          cs.getApplicationAttempt(am1.getApplicationAttemptId());
+      FiCaSchedulerApp schedulerApp2 =
+          cs.getApplicationAttempt(am2.getApplicationAttemptId());
+      int liveBefore = schedulerApp2.getLiveContainers().size();
+
+      // Visit h3/h4 (0 GB used), h1 (2 GB), then h2 (3 GB).
+      // Only h1 can reserve 4 GB; app2's 1 GB request fits on h3/h4.
+      am1.allocate("*", 4 * GB, 2, new ArrayList<>());
+      am2.allocate("*", 1 * GB, 1, new ArrayList<>());
+
+      RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
+      for (int i = 0; i < 3
+          && schedulerApp2.getLiveContainers().size() == liveBefore; i++) {
+        cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+      }
+
+      assertEquals(liveBefore + 1, schedulerApp2.getLiveContainers().size(),
+          "rejected reservation proposals=" + rejectedReservations.get());
+      assertEquals(0, rejectedReservations.get());
+      RMContainer reserved = cs.getNode(nm1.getNodeId()).getReservedContainer();
+      assertNotNull(reserved);
+      assertEquals(1, schedulerApp1.getReservedContainers().size());
+      assertSame(reserved, schedulerApp1.getReservedContainers().get(0));
+      assertNull(cs.getNode(nm3.getNodeId()).getReservedContainer());
+      assertNull(cs.getNode(nm4.getNodeId()).getReservedContainer());
     }
   }
 
