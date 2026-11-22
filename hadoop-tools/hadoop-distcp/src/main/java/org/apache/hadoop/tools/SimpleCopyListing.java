@@ -77,7 +77,7 @@ public class SimpleCopyListing extends CopyListing {
   private int numListstatusThreads = 1;
   private int fileStatusLimit;
   private boolean randomizeFileListing;
-  private final int maxRetries = 3;
+  private static final int MAX_RETRIES = 3;
   private CopyFilter copyFilter;
   private DistCpSync distCpSync;
   private final Random rnd = new Random();
@@ -780,7 +780,7 @@ public class SimpleCopyListing extends CopyListing {
                   }
                 }
               }
-              if (retry < maxRetries) {
+              if (retry < MAX_RETRIES) {
                 if (isChildDirectory) {
                   LOG.debug("Traversing into source dir: {}", child.getPath());
                   workers.put(new WorkRequest<FileStatus>(child, retry));
