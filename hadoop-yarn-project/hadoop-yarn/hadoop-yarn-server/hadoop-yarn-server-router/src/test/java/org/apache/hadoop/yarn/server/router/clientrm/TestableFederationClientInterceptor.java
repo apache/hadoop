@@ -145,7 +145,7 @@ public class TestableFederationClientInterceptor
    */
   protected void registerBadSubCluster(SubClusterId badSC) throws IOException {
     badSubCluster.add(badSC);
-    if (mockRMs.contains(badSC)) {
+    if (mockRMs.containsKey(badSC)) {
       mockRMs.get(badSC).close();
     }
   }
