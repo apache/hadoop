@@ -63,16 +63,16 @@ public class TestBlockPoolSliceStorage {
            rand.nextInt(256);
   }
 
-  private String makeRandomBlockpoolId() {
+  private String makeRandomBlockpoolId(String ip) {
     return "BP-" + rand.nextInt(Integer.MAX_VALUE) +
-           "-" + makeRandomIpAddress() +
+           "-" + ip +
            "-" + rand.nextInt(Integer.MAX_VALUE);
   }
 
-  private BlockPoolSliceStorage makeBlockPoolStorage() {
+  private BlockPoolSliceStorage makeBlockPoolStorage(String ip) {
     return new StubBlockPoolSliceStorage(
         rand.nextInt(Integer.MAX_VALUE),
-        makeRandomBlockpoolId(),
+        makeRandomBlockpoolId(ip),
         rand.nextInt(Integer.MAX_VALUE),
         UUID.randomUUID().toString());
   }
@@ -119,7 +119,6 @@ public class TestBlockPoolSliceStorage {
    * target directory for restore.
   */
   public void getRestoreDirectoryForBlockFile(String fileName, int nestingLevel) {
-    BlockPoolSliceStorage storage = makeBlockPoolStorage();
     final String blockFileSubdir = makeRandomBlockFileSubdir(nestingLevel);
     final String blockFileName = fileName;
 
@@ -142,8 +141,19 @@ public class TestBlockPoolSliceStorage {
   @Test
   @Timeout(value = 300)
   public void testGetTrashAndRestoreDirectories() {
-    storage = makeBlockPoolStorage();
+    storage = makeBlockPoolStorage(makeRandomIpAddress());
+    checkTrashAndRestoreDirectories();
+  }
 
+  /** Block pool ID of a NameNode with an IPv6 address, as NNStorage generates it. */
+  @Test
+  @Timeout(value = 300)
+  public void testGetTrashAndRestoreDirectoriesWithIPv6() {
+    storage = makeBlockPoolStorage("fd00_dead_beef_0_0_0_0_10");
+    checkTrashAndRestoreDirectories();
+  }
+
+  private void checkTrashAndRestoreDirectories() {
     // Test a few different nesting levels since block files
     // could be nested such as subdir1/subdir5/blk_...
     // Make sure all nesting levels are handled correctly.

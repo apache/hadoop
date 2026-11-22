@@ -326,22 +326,17 @@ public class WebAppUtils {
 
   public static String getResolvedAddress(InetSocketAddress address) {
     address = NetUtils.getConnectAddress(address);
-    StringBuilder sb = new StringBuilder();
+    String host = address.getHostName();
     InetAddress resolved = address.getAddress();
     if (resolved == null || resolved.isAnyLocalAddress() ||
         resolved.isLoopbackAddress()) {
-      String lh = address.getHostName();
       try {
-        lh = InetAddress.getLocalHost().getCanonicalHostName();
+        host = InetAddress.getLocalHost().getCanonicalHostName();
       } catch (UnknownHostException e) {
         //Ignore and fallback.
       }
-      sb.append(lh);
-    } else {
-      sb.append(address.getHostName());
     }
-    sb.append(":").append(address.getPort());
-    return sb.toString();
+    return NetUtils.getHostPortString(host, address.getPort());
   }
   
   /**

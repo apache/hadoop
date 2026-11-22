@@ -275,10 +275,10 @@ public enum DistCpOptionSwitch {
 
   /**
    * Get CLI Option corresponding to the distcp option
-   * @return option
+   * @return a copy of the option
    */
   public Option getOption() {
-    return option;
+    return (Option) option.clone();
   }
 
   /**

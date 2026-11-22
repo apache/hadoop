@@ -2843,7 +2843,7 @@ public class FileContext implements PathCapabilities {
       @Override
       public Void next(final AbstractFileSystem fs, final Path p)
           throws IOException {
-        fs.satisfyStoragePolicy(path);
+        fs.satisfyStoragePolicy(p);
         return null;
       }
     }.resolve(this, absF);
@@ -2865,7 +2865,7 @@ public class FileContext implements PathCapabilities {
       @Override
       public Void next(final AbstractFileSystem fs, final Path p)
           throws IOException {
-        fs.setStoragePolicy(path, policyName);
+        fs.setStoragePolicy(p, policyName);
         return null;
       }
     }.resolve(this, absF);
@@ -2882,7 +2882,7 @@ public class FileContext implements PathCapabilities {
       @Override
       public Void next(final AbstractFileSystem fs, final Path p)
           throws IOException {
-        fs.unsetStoragePolicy(src);
+        fs.unsetStoragePolicy(p);
         return null;
       }
     }.resolve(this, absF);

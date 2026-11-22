@@ -250,94 +250,102 @@ public class StandbyCheckpointer {
     ExecutorService executor =
         new ThreadPoolExecutor(poolSize, remoteNNAddresses.size(), 100, TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>(remoteNNAddresses.size()), uploadThreadFactory);
-    // for right now, just match the upload to the nn address by convention. There is no need to
-    // directly tie them together by adding a pair class.
-    HashMap<String, Future<TransferFsImage.TransferResult>> uploads =
-        new HashMap<>();
-    for (final URL remoteNNAddress : remoteNNAddresses) {
-      // Upload image if at least 1 of 2 following conditions met:
-      // 1. has been quiet for long enough, try to contact the node.
-      // 2. this standby IS the primary checkpointer of target NN.
-      String addressString = remoteNNAddress.toString();
-      assert checkpointReceivers.containsKey(addressString);
-      CheckpointReceiverEntry receiverEntry =
-          checkpointReceivers.get(addressString);
-      long secsSinceLastUpload =
-          TimeUnit.MILLISECONDS.toSeconds(
-              monotonicNow() - receiverEntry.getLastUploadTime());
-      boolean shouldUpload = receiverEntry.isPrimary() ||
-          secsSinceLastUpload >= checkpointConf.getQuietPeriod();
-      if (shouldUpload) {
-        Future<TransferFsImage.TransferResult> upload =
-            executor.submit(() -> {
-              CheckpointFaultInjector.getInstance().duringUploadInProgess();
-              return TransferFsImage.uploadImageFromStorage(remoteNNAddress, conf,
-                  namesystem.getFSImage().getStorage(), imageType, txid, canceler);
-            });
-        uploads.put(addressString, upload);
-      }
-    }
-    InterruptedException ie = null;
-    List<IOException> ioes = Lists.newArrayList();
-    for (Map.Entry<String, Future<TransferFsImage.TransferResult>> entry :
-        uploads.entrySet()) {
-      String url = entry.getKey();
-      Future<TransferFsImage.TransferResult> upload = entry.getValue();
-      try {
-        // TODO should there be some smarts here about retries nodes that
-        //  are not the active NN?
-        CheckpointReceiverEntry receiverEntry = checkpointReceivers.get(url);
-        TransferFsImage.TransferResult uploadResult = upload.get();
-        if (uploadResult == TransferFsImage.TransferResult.SUCCESS) {
-          receiverEntry.setLastUploadTime(monotonicNow());
-          receiverEntry.setIsPrimary(true);
-        } else {
-          // Getting here means image upload is explicitly rejected
-          // by the other node. This could happen if:
-          // 1. the other is also a standby, or
-          // 2. the other is active, but already accepted another
-          // newer image, or
-          // 3. the other is active but has a recent enough image.
-          // All these are valid cases, just log for information.
-          LOG.info("Image upload rejected by the other NameNode: {}",
-              uploadResult);
-          receiverEntry.setIsPrimary(false);
+    try {
+      // for right now, just match the upload to the nn address by convention. There is no need to
+      // directly tie them together by adding a pair class.
+      HashMap<String, Future<TransferFsImage.TransferResult>> uploads =
+          new HashMap<>();
+      for (final URL remoteNNAddress : remoteNNAddresses) {
+        // Upload image if at least 1 of 2 following conditions met:
+        // 1. has been quiet for long enough, try to contact the node.
+        // 2. this standby IS the primary checkpointer of target NN.
+        String addressString = remoteNNAddress.toString();
+        assert checkpointReceivers.containsKey(addressString);
+        CheckpointReceiverEntry receiverEntry =
+            checkpointReceivers.get(addressString);
+        long secsSinceLastUpload =
+            TimeUnit.MILLISECONDS.toSeconds(
+                monotonicNow() - receiverEntry.getLastUploadTime());
+        boolean shouldUpload = receiverEntry.isPrimary() ||
+            secsSinceLastUpload >= checkpointConf.getQuietPeriod();
+        if (shouldUpload) {
+          Future<TransferFsImage.TransferResult> upload =
+              executor.submit(() -> {
+                CheckpointFaultInjector.getInstance().duringUploadInProgess();
+                return TransferFsImage.uploadImageFromStorage(remoteNNAddress, conf,
+                    namesystem.getFSImage().getStorage(), imageType, txid, canceler);
+              });
+          uploads.put(addressString, upload);
         }
-      } catch (ExecutionException e) {
-        // Even if exception happens, still proceeds to next NN url.
-        // so that fail to upload to previous NN does not cause the
-        // remaining NN not getting the fsImage.
-        ioes.add(new IOException("Exception during image upload", e));
-      } catch (InterruptedException e) {
-        ie = e;
-        break;
       }
-    }
-    // cleaner than copying code for multiple catch statements and better than catching all
-    // exceptions, so we just handle the ones we expect.
-    if (ie != null) {
-
-      // cancel the rest of the tasks, and close the pool
+      InterruptedException ie = null;
+      List<IOException> ioes = Lists.newArrayList();
       for (Map.Entry<String, Future<TransferFsImage.TransferResult>> entry :
           uploads.entrySet()) {
+        String url = entry.getKey();
         Future<TransferFsImage.TransferResult> upload = entry.getValue();
-        // The background thread may be blocked waiting in the throttler, so
-        // interrupt it.
-        upload.cancel(true);
+        try {
+          // TODO should there be some smarts here about retries nodes that
+          //  are not the active NN?
+          CheckpointReceiverEntry receiverEntry = checkpointReceivers.get(url);
+          TransferFsImage.TransferResult uploadResult = upload.get();
+          if (uploadResult == TransferFsImage.TransferResult.SUCCESS) {
+            receiverEntry.setLastUploadTime(monotonicNow());
+            receiverEntry.setIsPrimary(true);
+          } else {
+            // Getting here means image upload is explicitly rejected
+            // by the other node. This could happen if:
+            // 1. the other is also a standby, or
+            // 2. the other is active, but already accepted another
+            // newer image, or
+            // 3. the other is active but has a recent enough image.
+            // All these are valid cases, just log for information.
+            LOG.info("Image upload rejected by the other NameNode: {}",
+                uploadResult);
+            receiverEntry.setIsPrimary(false);
+          }
+        } catch (ExecutionException e) {
+          // Even if exception happens, still proceeds to next NN url.
+          // so that fail to upload to previous NN does not cause the
+          // remaining NN not getting the fsImage.
+          ioes.add(new IOException("Exception during image upload", e));
+        } catch (InterruptedException e) {
+          ie = e;
+          break;
+        }
+      }
+      // cleaner than copying code for multiple catch statements and better than catching all
+      // exceptions, so we just handle the ones we expect.
+      if (ie != null) {
+
+        // cancel the rest of the tasks, and close the pool
+        for (Map.Entry<String, Future<TransferFsImage.TransferResult>> entry :
+            uploads.entrySet()) {
+          Future<TransferFsImage.TransferResult> upload = entry.getValue();
+          // The background thread may be blocked waiting in the throttler, so
+          // interrupt it.
+          upload.cancel(true);
+        }
+
+        // shutdown so we interrupt anything running and don't start anything new
+        executor.shutdownNow();
+        // this is a good bit longer than the thread timeout, just to make sure all the threads
+        // that are not doing any work also stop
+        executor.awaitTermination(500, TimeUnit.MILLISECONDS);
+
+        // re-throw the exception we got, since one of these two must be non-null
+        throw ie;
       }
 
-      // shutdown so we interrupt anything running and don't start anything new
-      executor.shutdownNow();
-      // this is a good bit longer than the thread timeout, just to make sure all the threads
-      // that are not doing any work also stop
-      executor.awaitTermination(500, TimeUnit.MILLISECONDS);
-
-      // re-throw the exception we got, since one of these two must be non-null
-      throw ie;
-    }
-
-    if (ioes.size() > remoteNNAddresses.size() / 2) {
-      throw MultipleIOException.createIOException(ioes);
+      if (ioes.size() > remoteNNAddresses.size() / 2) {
+        throw MultipleIOException.createIOException(ioes);
+      }
+    } finally {
+      // Always stop the pool. Core threads do not time out (the 100ms
+      // keepAlive only applies to non-core threads), so without an explicit
+      // shutdown each checkpoint would leak up to remoteNNAddresses.size()
+      // upload threads. Harmless if shutdownNow() was already called above.
+      executor.shutdown();
     }
   }
   

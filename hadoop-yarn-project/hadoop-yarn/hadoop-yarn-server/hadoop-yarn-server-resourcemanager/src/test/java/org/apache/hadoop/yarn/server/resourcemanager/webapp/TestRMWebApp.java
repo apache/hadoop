@@ -433,6 +433,15 @@ public class TestRMWebApp {
     assertFalse(resourceConfig.isRegistered(RMWebServices.class));
   }
 
+  @Test
+  public void testGetWebAppURLWithScheme() {
+    Configuration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, "1.2.3.4:8088");
+    assertEquals("http://1.2.3.4:8088", RMWebApp.getWebAppURLWithScheme(conf));
+    conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, "[2001:db8::1]:8088");
+    assertEquals("http://[2001:db8::1]:8088", RMWebApp.getWebAppURLWithScheme(conf));
+  }
+
   private class CustomRMWebServices extends RMWebServices {
     public CustomRMWebServices(ResourceManager rm, Configuration conf) {
       super(rm, conf);
