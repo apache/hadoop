@@ -28,7 +28,6 @@ import java.net.UnknownHostException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.ServiceLoader;
@@ -692,16 +691,26 @@ public final class SecurityUtil {
    *    with an IP, then that IP is all that should ever be contacted.
    *    
    * NOTE: this resolver is only used if:
-   *       hadoop.security.token.service.use_ip=false 
+   *       hadoop.security.token.service.use_ip=false
+   *
+   * <p>Since HADOOP-15764 the search list is read from dnsjava
+   * {@link ResolverConfig#searchPath()}. Search suffixes are stored without a
+   * trailing dot, and hostnames returned by this resolver are never rooted
+   * (never {@code host.domain.}), because
+   * {@link SecurityUtil#buildTokenService(java.net.InetSocketAddress)} and
+   * Kerberos principal matching expect unrooted names. DNS queries are still
+   * sent rooted; see {@code getByExactName(String)}.
    */
   protected static class QualifiedHostResolver extends CacheableHostResolver {
-    private List<String> searchDomains = new ArrayList<>();
-    {
-      ResolverConfig resolverConfig = ResolverConfig.getCurrentConfig();
-      for (Name name : resolverConfig.searchPath()) {
-        searchDomains.add(name.toString());
-      }
-    }
+    /**
+     * The DNS root as a search-list entry, e.g. {@code search .} in
+     * {@code resolv.conf}. A host is then looked up as {@code host.} but
+     * stored as {@code host}.
+     */
+    private static final String ROOT_DOMAIN = ".";
+
+    private List<String> searchDomains =
+        toSearchDomains(ResolverConfig.getCurrentConfig().searchPath());
 
     QualifiedHostResolver() {
       this(0);
@@ -792,12 +801,62 @@ public final class SecurityUtil {
         addr = getByExactName(host); 
       } else {
         for (String domain : searchDomains) {
-          String dot = !domain.startsWith(".") ? "." : "";
-          addr = getByExactName(host + dot + domain);
+          String candidate;
+          if (ROOT_DOMAIN.equals(domain)) {
+            // Root search entry: query via getByExactName (adds "." for DNS)
+            // but store the unrooted host; "host." would break token service.
+            candidate = host;
+          } else {
+            String dot = !domain.startsWith(".") ? "." : "";
+            candidate = host + dot + domain;
+          }
+          addr = getByExactName(candidate);
           if (addr != null) break;
         }
       }
       return addr;
+    }
+
+    /**
+     * Convert dnsjava {@link ResolverConfig#searchPath()} names to suffixes
+     * used when expanding unqualified hosts.
+     *
+     * <p>Before HADOOP-15764 the JDK returned suffixes as written in
+     * {@code resolv.conf}, normally {@code example.com}; dnsjava
+     * {@link Name#toString()} is absolute ({@code example.com.}). The
+     * relative form {@link Name#toString(boolean) toString(true)} restores
+     * suffixes the resolver expects, except the root name which is kept as
+     * {@link #ROOT_DOMAIN}.
+     */
+    @VisibleForTesting
+    static List<String> toSearchDomains(List<Name> names) {
+      List<String> domains = new ArrayList<>();
+      for (Name name : names) {
+        String domain = stripRootDotFromSearchDomain(name.toString(true));
+        if (domain != null) {
+          domains.add(domain);
+        }
+      }
+      return domains;
+    }
+
+    /**
+     * Normalize one DNS search suffix for {@link #searchDomains}.
+     *
+     * @return the suffix without its trailing dot, {@link #ROOT_DOMAIN} for
+     *         the DNS root, or {@code null} if null or empty
+     */
+    private static String stripRootDotFromSearchDomain(String domain) {
+      if (domain == null || domain.isEmpty()) {
+        return null;
+      }
+      if (ROOT_DOMAIN.equals(domain)) {
+        return domain;
+      }
+      if (domain.endsWith(".")) {
+        domain = domain.substring(0, domain.length() - 1);
+      }
+      return domain.isEmpty() ? null : domain;
     }
 
     // implemented as a separate method to facilitate unit testing
@@ -805,8 +864,18 @@ public final class SecurityUtil {
       return InetAddress.getByName(host);
     }
 
+    /**
+     * Replace the search list (tests only); each suffix is normalized like the
+     * dnsjava search path from {@link #toSearchDomains}.
+     */
     void setSearchDomains(String ... domains) {
-      searchDomains = Arrays.asList(domains);
+      searchDomains = new ArrayList<>();
+      for (String domain : domains) {
+        String normalized = stripRootDotFromSearchDomain(domain);
+        if (normalized != null) {
+          searchDomains.add(normalized);
+        }
+      }
     }
   }
 

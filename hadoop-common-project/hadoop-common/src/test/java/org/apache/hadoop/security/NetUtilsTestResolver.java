@@ -45,6 +45,17 @@ public class NetUtilsTestResolver extends QualifiedHostResolver {
     return resolver;
   }
 
+  /**
+   * Replace the DNS search list for tests in other packages.
+   * Suffixes go through the same normalization as the production resolver,
+   * so absolute forms such as {@code example.com.} and the root entry
+   * {@code .} are accepted.
+   */
+  @Override
+  public void setSearchDomains(String... domains) {
+    super.setSearchDomains(domains);
+  }
+
   public void addResolvedHost(String host, String ip) {
     InetAddress addr;
     try {

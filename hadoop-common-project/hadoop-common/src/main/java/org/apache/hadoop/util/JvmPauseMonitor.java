@@ -147,11 +147,32 @@ public class JvmPauseMonitor extends AbstractService {
     List<GarbageCollectorMXBean> gcBeans =
         ManagementFactory.getGarbageCollectorMXBeans();
     for (GarbageCollectorMXBean gcBean : gcBeans) {
+      // Concurrent GC cycles do not pause the JVM, see JDK-8265136.
+      if (isConcurrentCycleBean(gcBean)) {
+        continue;
+      }
       map.put(gcBean.getName(), new GcTimes(gcBean));
     }
     return map;
   }
   
+  /**
+   * Whether the given GC bean reports concurrent GC cycles rather than
+   * stop-the-world pauses, so its collection time is not JVM pause time.
+   * <p>
+   * ZGC exposes "ZGC Cycles" / "ZGC Pauses" and, with generational ZGC,
+   * "ZGC Minor Cycles", "ZGC Major Cycles", "ZGC Minor Pauses" and
+   * "ZGC Major Pauses". The "Cycles" beans measure the concurrent phase
+   * (see JDK-8265136); only the "Pauses" beans measure pauses.
+   *
+   * @param gcBean the GC bean to check.
+   * @return true if the bean measures concurrent cycles, not pauses.
+   */
+  public static boolean isConcurrentCycleBean(GarbageCollectorMXBean gcBean) {
+    String name = gcBean.getName();
+    return name != null && name.startsWith("ZGC") && name.endsWith("Cycles");
+  }
+
   private static class GcTimes {
     private GcTimes(GarbageCollectorMXBean gcBean) {
       gcCount = gcBean.getCollectionCount();

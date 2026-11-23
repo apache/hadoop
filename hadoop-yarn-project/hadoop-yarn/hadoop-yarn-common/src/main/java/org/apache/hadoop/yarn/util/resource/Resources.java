@@ -241,7 +241,6 @@ public class Resources {
         lhs.setResourceValue(i, lhsValue.getValue() + rhsValue.getValue());
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
-        continue;
       }
     }
     return lhs;
@@ -260,7 +259,6 @@ public class Resources {
         lhs.setResourceValue(i, lhsValue.getValue() - rhsValue.getValue());
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
-        continue;
       }
     }
     return lhs;
@@ -504,7 +502,6 @@ public class Resources {
         }
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
-        continue;
       }
     }
     return true;
@@ -528,7 +525,6 @@ public class Resources {
         ret.setResourceInformation(i, outInfo);
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
-        continue;
       }
     }
     return ret;
@@ -547,7 +543,6 @@ public class Resources {
         ret.setResourceInformation(i, outInfo);
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
-        continue;
       }
     }
     return ret;
