@@ -973,13 +973,15 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
             }
         });
 
-    // Collect the results
+    // Collect the results. The stream is parallel, so the pairs have to be
+    // merged on this thread: writing a plain HashMap from the parallel
+    // workers races and can silently drop entries (YARN-12069). A null
+    // NodeInfo means the subcluster does not host the node; keep it out of
+    // the map so the selection loops only see real answers.
     final Map<SubClusterInfo, NodeInfo> results = new HashMap<>();
-    pairStream.forEach(pair -> {
-      if (pair != null) {
-        SubClusterInfo subCluster = pair.getKey();
-        NodeInfo nodeInfo = pair.getValue();
-        results.put(subCluster, nodeInfo);
+    pairStream.collect(Collectors.toList()).forEach(pair -> {
+      if (pair != null && pair.getValue() != null) {
+        results.put(pair.getKey(), pair.getValue());
       }
     });
 
@@ -1002,8 +1004,15 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     NodeInfo nodeInfo = null;
     for (Entry<SubClusterInfo, NodeInfo> entry : results.entrySet()) {
       NodeInfo nodeResponse = entry.getValue();
-      if (nodeInfo == null || (nodeResponse != null &&
-          nodeInfo.getLastHealthUpdate() < nodeResponse.getLastHealthUpdate())) {
+      // Defensive: getNode() no longer maps null answers into the results,
+      // but a null response must never win the selection, otherwise an
+      // arbitrary subcluster would be chosen when no subcluster reports the
+      // node (YARN-12069).
+      if (nodeResponse == null) {
+        continue;
+      }
+      if (nodeInfo == null ||
+          nodeInfo.getLastHealthUpdate() < nodeResponse.getLastHealthUpdate()) {
         subcluster = entry.getKey();
         nodeInfo = nodeResponse;
       }
@@ -1814,7 +1823,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       // and then call the replaceLabelsOnNode of the subCluster.
       long startTime = clock.getTime();
       SubClusterInfo subClusterInfo = getNodeSubcluster(nodeId);
-      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorByNodeId(nodeId);
+      DefaultRequestInterceptorREST interceptor =
+          getOrCreateInterceptorForSubCluster(subClusterInfo);
       final HttpServletRequest hsrCopy = clone(hsr);
       interceptor.replaceLabelsOnNode(newNodeLabelsName, hsrCopy, nodeId);
 

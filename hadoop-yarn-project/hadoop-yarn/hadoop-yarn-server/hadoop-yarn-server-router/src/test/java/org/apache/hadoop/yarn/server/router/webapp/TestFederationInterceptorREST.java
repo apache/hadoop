@@ -21,8 +21,10 @@ package org.apache.hadoop.yarn.server.router.webapp;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Method;
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
@@ -1907,6 +1909,77 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         "Parameter error, newNodeLabelsName must not be empty.",
         () -> interceptor.replaceLabelsOnNode(labelsEmpty, null, nodeId));
+  }
+
+  @Test
+  public void testReplaceLabelsOnNodeNotInAnySubCluster() throws Exception {
+    // YARN-12069: no subcluster hosts this node (the id contains no subcluster
+    // id and no "test" substring, so every mock answers null). The Router must
+    // throw NotFoundException instead of picking an arbitrary subcluster that
+    // does not own the node.
+    String nodeId = "unknownnode:9";
+    Set<String> labels = Collections.singleton("NodeLabel3");
+    NotFoundException exception = assertThrows(NotFoundException.class, () -> {
+      interceptor.replaceLabelsOnNode(labels, null, nodeId);
+    });
+    // The diagnostic text travels in the cause chain, not in getMessage().
+    String stackTraceAsString = getStackTraceAsString(exception);
+    assertTrue(stackTraceAsString.contains(
+        "Cannot find " + nodeId + " in any subcluster"));
+  }
+
+  @Test
+  public void testUpdateNodeResourceNotInAnySubCluster() {
+    // YARN-12069: updateNodeResource resolves the node through
+    // getNodeSubcluster; an unknown node must yield NotFoundException (404)
+    // instead of being forwarded to a subcluster that does not own the node.
+    ResourceOptionInfo resourceOption = new ResourceOptionInfo(
+        ResourceOption.newInstance(Resource.newInstance(2048, 3), 1000));
+    assertThrows(NotFoundException.class, () -> interceptor.updateNodeResource(
+        null, "unknownnode:9", resourceOption));
+  }
+
+  @Test
+  public void testGetActivitiesNotInAnySubCluster() {
+    // YARN-12069: getActivities resolves the node through getNodeSubcluster;
+    // an unknown node must yield NotFoundException (404) instead of being
+    // forwarded to a subcluster that does not own the node.
+    assertThrows(NotFoundException.class, () -> interceptor.getActivities(
+        null, "unknownnode:9", "DIAGNOSTIC"));
+  }
+
+  @Test
+  public void testGetNodeCollectsAllSubClusterAnswers() throws Exception {
+    // YARN-12069: the parallel fan-out in getNode(Collection, String) used to
+    // collect into a plain HashMap from the parallel-stream workers, racing and
+    // silently dropping entries. Register enough extra subclusters that the
+    // concurrent puts collide, then verify no answer is ever lost.
+    final int extraSubClusters = 32;
+    List<SubClusterInfo> subClusterInfos = new ArrayList<>();
+    for (int i = 0; i < extraSubClusters; i++) {
+      SubClusterId sc = SubClusterId.newInstance(Integer.toString(NUM_SUBCLUSTER + i));
+      stateStoreUtil.registerSubCluster(sc);
+      SubClusterInfo info = stateStoreUtil.querySubClusterInfo(sc);
+      subClusterInfos.add(info);
+      interceptor.getOrCreateInterceptorForSubCluster(
+          sc, info.getRMWebServiceAddress());
+    }
+
+    Method getNode = FederationInterceptorREST.class.getDeclaredMethod(
+        "getNode", Collection.class, String.class);
+    getNode.setAccessible(true);
+
+    for (int iteration = 0; iteration < 5; iteration++) {
+      @SuppressWarnings("unchecked")
+      Map<SubClusterInfo, NodeInfo> results =
+          (Map<SubClusterInfo, NodeInfo>) getNode.invoke(
+              interceptor, (Object) subClusterInfos, (Object) "testCollectAllAnswers");
+      assertNotNull(results);
+      assertEquals(subClusterInfos.size(), results.size());
+      for (SubClusterInfo info : subClusterInfos) {
+        assertTrue(results.containsKey(info));
+      }
+    }
   }
 
   @Test
