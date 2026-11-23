@@ -671,7 +671,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
           remoteMethod.invokeConcurrent(this, ReplaceLabelsOnNodeResponse.class, subClusterId);
       if (CollectionUtils.isNotEmpty(replaceLabelsOnNodeResps)) {
         long stopTime = clock.getTime();
-        routerMetrics.succeededRemoveFromClusterNodeLabelsRetrieved(stopTime - startTime);
+        routerMetrics.succeededReplaceLabelsOnNodeRetrieved(stopTime - startTime);
         return ReplaceLabelsOnNodeResponse.newInstance();
       }
     } catch (YarnException e) {
