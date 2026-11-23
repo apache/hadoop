@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -75,6 +76,7 @@ import org.mockito.Mockito;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -911,6 +913,66 @@ public class TestLocalResourcesTrackerImpl {
       if (dispatcher != null) {
         dispatcher.stop();
       }
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testRetryAfterAbandonedLocalization() throws Exception {
+    final String user = "someuser";
+    final ApplicationId appId = ApplicationId.newInstance(1, 1);
+    // This is a random path. NO File creation will take place at this place.
+    final Path localDir = new Path("/tmp");
+    Configuration conf = new YarnConfiguration();
+    DrainDispatcher dispatcher = createDispatcher(conf);
+    EventHandler<LocalizerEvent> localizerEventHandler =
+        mock(EventHandler.class);
+    EventHandler<LocalizerEvent> containerEventHandler =
+        mock(EventHandler.class);
+    dispatcher.register(LocalizerEventType.class, localizerEventHandler);
+    dispatcher.register(ContainerEventType.class, containerEventHandler);
+    NMStateStoreService stateStore = mock(NMStateStoreService.class);
+
+    try {
+      LocalResourcesTrackerImpl tracker = new LocalResourcesTrackerImpl(user,
+          appId, dispatcher, true, conf, stateStore, null);
+      LocalResourceRequest lr1 = createLocalResourceRequest(user, 1, 1,
+          LocalResourceVisibility.APPLICATION);
+      // Two containers share lr1
+      ContainerId cId1 = BuilderUtils.newContainerId(1, 1, 1, 1);
+      ContainerId cId2 = BuilderUtils.newContainerId(1, 1, 1, 2);
+      tracker.handle(new ResourceRequestEvent(lr1,
+          LocalResourceVisibility.APPLICATION,
+          new LocalizerContext(user, cId1, null)));
+      tracker.handle(new ResourceRequestEvent(lr1,
+          LocalResourceVisibility.APPLICATION,
+          new LocalizerContext(user, cId2, null)));
+      dispatcher.await();
+
+      // Container 1 starts downloading lr1, then is killed. lr1 stays
+      // DOWNLOADING because container 2 still references it.
+      tracker.getPathForLocalization(lr1, localDir, null);
+      Path abandonedPath = tracker.getLocalizedResource(lr1).getLocalPath();
+      tracker.handle(new ResourceReleaseEvent(lr1, cId1));
+      dispatcher.await();
+      assertEquals(ResourceState.DOWNLOADING,
+          tracker.getLocalizedResource(lr1).getState());
+
+      // Container 2 retries the download.
+      tracker.getPathForLocalization(lr1, localDir, null);
+      Path retryPath = tracker.getLocalizedResource(lr1).getLocalPath();
+      assertNotEquals(abandonedPath, retryPath);
+
+      // The stale started/ record of the abandoned attempt is removed, so
+      // recovery cannot remove the resource localized by the retry.
+      verify(stateStore).removeLocalizedResource(user, appId, abandonedPath);
+      verify(stateStore, never()).removeLocalizedResource(user, appId,
+          retryPath);
+      // The directory count of the abandoned attempt is released.
+      assertEquals(1,
+          tracker.getDirectoryManager(localDir).getDirectory("").getCount());
+    } finally {
+      dispatcher.stop();
     }
   }
 

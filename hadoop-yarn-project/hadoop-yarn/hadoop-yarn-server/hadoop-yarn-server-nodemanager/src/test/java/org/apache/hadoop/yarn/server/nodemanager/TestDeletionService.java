@@ -236,6 +236,51 @@ public class TestDeletionService {
   }
   
   @Test
+  public void testDeleteAfterStopIsRecovered() throws Exception {
+    Random r = new Random();
+    long seed = r.nextLong();
+    r.setSeed(seed);
+    System.out.println("SEED: " + seed);
+    List<Path> dirs = buildDirs(r, base, 1);
+    createDirs(new Path("."), dirs);
+    Path dir = dirs.get(0);
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.NM_RECOVERY_ENABLED, true);
+    conf.setInt(YarnConfiguration.DEBUG_NM_DELETE_DELAY_SEC, 0);
+    NMMemoryStateStoreService stateStore = new NMMemoryStateStoreService();
+    stateStore.init(conf);
+    stateStore.start();
+    DeletionService del =
+        new DeletionService(new FakeDefaultContainerExecutor(), stateStore);
+    try {
+      del.init(conf);
+      del.start();
+      del.stop();
+      // A late deletion request while the NM is stopping must not throw
+      // RejectedExecutionException, and must be recorded for recovery.
+      FileDeletionTask deletionTask =
+          new FileDeletionTask(del, null, dir, null);
+      del.delete(deletionTask);
+      assertTrue(lfs.util().exists(dir));
+
+      // restart the deletion service, the task is replayed
+      del = new DeletionService(new FakeDefaultContainerExecutor(),
+          stateStore);
+      del.init(conf);
+      del.start();
+      int msecToWait = 10 * 1000;
+      while (msecToWait > 0 && lfs.util().exists(dir)) {
+        Thread.sleep(100);
+        msecToWait -= 100;
+      }
+      assertFalse(lfs.util().exists(dir));
+    } finally {
+      del.close();
+      stateStore.close();
+    }
+  }
+
+  @Test
   @Timeout(value = 60)
   public void testFileDeletionTaskDependency() throws Exception {
     FakeDefaultContainerExecutor exec = new FakeDefaultContainerExecutor();

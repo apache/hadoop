@@ -103,12 +103,9 @@ import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
-import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
-import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
@@ -824,72 +821,77 @@ public class TestResourceLocalizationService {
 
   @Test
   @Timeout(value = 10)
-  @SuppressWarnings("unchecked") // mocked generics
   public void testDownloadingResourcesCleanedUpWhenDispatchFails()
       throws Exception {
-    Dispatcher dispatcher = mock(Dispatcher.class);
-    EventHandler<Event> eventHandler = mock(EventHandler.class);
-    when(dispatcher.getEventHandler()).thenReturn(eventHandler);
-    // Simulate the localizer thread being interrupted by a container kill:
-    // dispatching the failure event throws instead of completing.
-    Mockito.doThrow(new YarnRuntimeException(new InterruptedException()))
-        .when(eventHandler).handle(isA(ContainerResourceFailedEvent.class));
+    DrainDispatcher dispatcher = new DrainDispatcher();
+    dispatcher.init(conf);
+    dispatcher.start();
+    try {
+      ContainerExecutor exec = mock(ContainerExecutor.class);
+      DeletionService delService = mock(DeletionService.class);
+      LocalDirsHandlerService dirsHandler =
+          mock(LocalDirsHandlerService.class);
+      // Fail localization so LocalizerRunner.run() takes the error path.
+      when(dirsHandler.getLocalPathForWrite(isA(String.class)))
+          .thenThrow(new IOException("Simulated disk failure"));
 
-    ContainerExecutor exec = mock(ContainerExecutor.class);
-    DeletionService delService = mock(DeletionService.class);
-    LocalDirsHandlerService dirsHandlerSpy = spy(new LocalDirsHandlerService());
-    dirsHandlerSpy.init(conf);
-    // Fail localization so LocalizerRunner.run() takes the error path.
-    Mockito.doThrow(new IOException("Simulated disk failure"))
-        .when(dirsHandlerSpy).getLocalPathForWrite(isA(String.class));
+      ResourceLocalizationService rls =
+          new ResourceLocalizationService(dispatcher, exec, delService,
+              dirsHandler, nmContext, metrics);
+      rls.init(conf);
 
-    ResourceLocalizationService rls =
-        new ResourceLocalizationService(dispatcher, exec, delService,
-            dirsHandlerSpy, nmContext, metrics);
+      final ApplicationId appId =
+          BuilderUtils.newApplicationId(314159265358979L, 3);
+      final Container c = getMockContainer(appId, 42, "user0");
+      LocalizerRunner runner = rls.new LocalizerRunner(
+          new LocalizerContext("user0", c.getContainerId(), null),
+          c.getContainerId().toString());
 
-    final ApplicationId appId =
-        BuilderUtils.newApplicationId(314159265358979L, 3);
-    final Container c = getMockContainer(appId, 42, "user0");
-    LocalizerRunner runner = rls.new LocalizerRunner(
-        new LocalizerContext("user0", c.getContainerId(), null),
-        c.getContainerId().toString());
+      // A resource that was in DOWNLOADING state when the localizer died.
+      LocalizedResource rsrc = mock(LocalizedResource.class);
+      when(rsrc.getLocalPath()).thenReturn(
+          new Path("/local/usercache/user0/filecache/10/foo.jar"));
+      LocalizerResourceRequestEvent scheduledEvent =
+          mock(LocalizerResourceRequestEvent.class);
+      when(scheduledEvent.getResource()).thenReturn(rsrc);
+      runner.scheduled.put(mock(LocalResourceRequest.class), scheduledEvent);
 
-    // A resource that was in DOWNLOADING state when the localizer died.
-    LocalizedResource rsrc = mock(LocalizedResource.class);
-    when(rsrc.getLocalPath()).thenReturn(
-        new Path("/local/usercache/user0/filecache/10/foo.jar"));
-    LocalizerResourceRequestEvent scheduledEvent =
-        mock(LocalizerResourceRequestEvent.class);
-    when(scheduledEvent.getResource()).thenReturn(rsrc);
-    runner.scheduled.put(mock(LocalResourceRequest.class), scheduledEvent);
+      // Simulate the localizer thread being interrupted by a container kill.
+      // Dispatching the failure event then fails in the real AsyncDispatcher:
+      // the queue put throws InterruptedException (clearing the flag) and
+      // it is rethrown as YarnRuntimeException.
+      assertFalse(Thread.currentThread().isInterrupted());
+      Thread.currentThread().interrupt();
+      boolean interrupted;
+      try {
+        // Must not propagate the dispatch failure, and must still unlock
+        // the DOWNLOADING resource and schedule the deletion task.
+        runner.run();
+      } finally {
+        interrupted = Thread.interrupted();
+      }
+      // The interrupt status must be restored after the dispatch failure
+      // was swallowed.
+      assertTrue(interrupted);
 
-    // Must not propagate the dispatch failure, and must still unlock the
-    // DOWNLOADING resource and schedule the deletion tasks.
-    runner.run();
-
-    // The interrupt status must be restored after the dispatch failure was
-    // swallowed. Thread.interrupted() also clears it for the test thread.
-    assertTrue(Thread.interrupted());
-
-    verify(rsrc).unlock();
-    ArgumentCaptor<FileDeletionTask> captor =
-        ArgumentCaptor.forClass(FileDeletionTask.class);
-    verify(delService, times(2)).delete(captor.capture());
-    List<FileDeletionTask> tasks = captor.getAllValues();
-    // Localization dir and _tmp download dir of the DOWNLOADING resource.
-    FileDeletionTask rsrcTask = tasks.get(0);
-    assertEquals("user0", rsrcTask.getUser());
-    assertNull(rsrcTask.getSubDir());
-    assertEquals(Arrays.asList(
-        new Path("/local/usercache/user0/filecache/10"),
-        new Path("/local/usercache/user0/filecache/10_tmp")),
-        rsrcTask.getBaseDirs());
-    // nmPrivate token file; the path is null here because localization
-    // failed before it was resolved.
-    FileDeletionTask tokenTask = tasks.get(1);
-    assertNull(tokenTask.getUser());
-    assertNull(tokenTask.getSubDir());
-    assertNull(tokenTask.getBaseDirs());
+      verify(rsrc).unlock();
+      assertTrue(runner.scheduled.isEmpty());
+      // Only the localization dir and _tmp download dir of the DOWNLOADING
+      // resource. The nmPrivate token file path was never resolved, so no
+      // deletion task is scheduled for it.
+      ArgumentCaptor<FileDeletionTask> captor =
+          ArgumentCaptor.forClass(FileDeletionTask.class);
+      verify(delService, times(1)).delete(captor.capture());
+      FileDeletionTask rsrcTask = captor.getValue();
+      assertEquals("user0", rsrcTask.getUser());
+      assertNull(rsrcTask.getSubDir());
+      assertEquals(Arrays.asList(
+          new Path("/local/usercache/user0/filecache/10"),
+          new Path("/local/usercache/user0/filecache/10_tmp")),
+          rsrcTask.getBaseDirs());
+    } finally {
+      dispatcher.stop();
+    }
   }
 
   @Test

@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -88,7 +89,13 @@ public class DeletionService extends AbstractService {
       LOG.debug("Scheduling DeletionTask (delay {}) : {}", debugDelay,
           deletionTask);
       recordDeletionTaskInStateStore(deletionTask);
-      sched.schedule(deletionTask, debugDelay, TimeUnit.SECONDS);
+      try {
+        sched.schedule(deletionTask, debugDelay, TimeUnit.SECONDS);
+      } catch (RejectedExecutionException e) {
+        // NM is stopping. With recovery enabled the task is replayed on
+        // restart.
+        LOG.warn("DeletionService is stopped, skip {}", deletionTask);
+      }
     }
   }
 
