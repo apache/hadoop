@@ -29,6 +29,10 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.hdfs.server.datanode.erasurecode.ErasureCodingTestHelper;
+import org.apache.hadoop.io.ElasticByteBufferPool;
+import org.apache.hadoop.io.erasurecode.CodecUtil;
+import org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Timeout;
@@ -40,6 +44,8 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.slf4j.event.Level;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Random;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY;
@@ -100,9 +106,14 @@ public class TestFileChecksum {
   }
 
   public static void setup(String mode) throws IOException {
+    setup(mode, new Configuration());
+  }
+
+  private static void setup(String mode, Configuration baseConf)
+      throws IOException {
     checksumCombineMode = mode;
     int numDNs = dataBlocks + parityBlocks + 2;
-    conf = new Configuration();
+    conf = baseConf;
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     conf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
@@ -758,6 +769,55 @@ public class TestFileChecksum {
         cluster.restartDataNode(killedIdx[i]);
       }
       cluster.waitActive();
+    }
+  }
+
+  /**
+   * The reconstruction buffers come from a shared ElasticByteBufferPool which
+   * may hand out a heap buffer with a larger capacity than requested. Checksum
+   * reconstruction must only use the reconstructed bytes, i.e. the remaining
+   * part of the target buffer, not the whole backing array.
+   */
+  @MethodSource("getParameters")
+  @ParameterizedTest
+  @Timeout(value = 90)
+  public void testStripedFileChecksumWithMissedDataBlocksLargerPooledBuffer(
+      String pMode) throws Exception {
+    Configuration javaCoderConf = new Configuration();
+    // Use the pure Java RS coder so that heap buffers are used.
+    javaCoderConf.set(CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
+        RSRawErasureCoderFactory.CODER_NAME);
+    setup(pMode, javaCoderConf);
+    prepareTestFiles(fileSize, new String[] {stripedFile1});
+    FileChecksum stripedFileChecksum1 = getFileChecksum(stripedFile1, -1,
+        false);
+
+    // Fill the pool with heap buffers larger than the reconstruction buffer
+    // size, e.g. left behind by files with a different bytesPerChecksum.
+    ElasticByteBufferPool bufferPool =
+        (ElasticByteBufferPool) ErasureCodingTestHelper.getBufferPool();
+    while (bufferPool.size(false) != 0) {
+      bufferPool.getBuffer(false, 0);
+    }
+    int largerBufferSize = 2 * 64 * 1024;
+    for (int i = 0; i < 2 * (dataBlocks + parityBlocks); i++) {
+      ByteBuffer buffer = ByteBuffer.allocate(largerBufferSize);
+      // Stale data beyond the reconstructed length.
+      Arrays.fill(buffer.array(), (byte) 0x5a);
+      bufferPool.putBuffer(buffer);
+    }
+
+    try {
+      FileChecksum stripedFileChecksumRecon = getFileChecksum(stripedFile1,
+          -1, true);
+      LOG.info("stripedFileChecksum1:" + stripedFileChecksum1);
+      LOG.info("stripedFileChecksumRecon:" + stripedFileChecksumRecon);
+      assertEquals(stripedFileChecksum1, stripedFileChecksumRecon,
+          "Checksum mismatches!");
+    } finally {
+      while (bufferPool.size(false) != 0) {
+        bufferPool.getBuffer(false, 0);
+      }
     }
   }
 

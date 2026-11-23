@@ -217,17 +217,16 @@ public abstract class StripedBlockChecksumReconstructor
   }
 
   /**
-   * Gets an array corresponding the buffer.
+   * Gets an array with the remaining content of the buffer, i.e. the bytes
+   * between its position and limit. The backing array of a heap buffer can't
+   * be used directly since the buffer may come from a pool and have a larger
+   * capacity than the reconstructed length.
    * @param buffer the input buffer.
-   * @return the array with content of the buffer.
+   * @return the array with the remaining content of the buffer.
    */
   private static byte[] getBufferArray(ByteBuffer buffer) {
     byte[] buff = new byte[buffer.remaining()];
-    if (buffer.hasArray()) {
-      buff = buffer.array();
-    } else {
-      buffer.slice().get(buff);
-    }
+    buffer.slice().get(buff);
     return buff;
   }
 
