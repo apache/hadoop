@@ -126,16 +126,18 @@ public class AppsBlock extends RouterBlock {
 
   private AppsInfo getSubClusterAppsInfoByWebAddress(String webAddress, String states) {
     Client client = RouterWebServiceUtil.createJerseyClient(conf);
-    Map<String, String[]> queryParams = new HashMap<>();
-    if (StringUtils.isNotBlank(states)) {
-      queryParams.put("states", new String[]{states});
+    try {
+      Map<String, String[]> queryParams = new HashMap<>();
+      if (StringUtils.isNotBlank(states)) {
+        queryParams.put("states", new String[]{states});
+      }
+      return RouterWebServiceUtil
+          .genericForward(webAddress, null, AppsInfo.class, HTTPMethods.GET,
+          RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, null, queryParams, conf,
+          client);
+    } finally {
+      client.close();
     }
-    AppsInfo apps = RouterWebServiceUtil
-        .genericForward(webAddress, null, AppsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, null, queryParams, conf,
-        client);
-    client.close();
-    return apps;
   }
 
   private void initYarnFederationAppsOfCluster(AppsInfo appsInfo, Block html) {

@@ -74,6 +74,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.ExcludeRootJSONProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.IncludeRootJSONProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ConflictException;
@@ -363,8 +364,10 @@ public final class RouterWebServiceUtil {
     client.property(ClientProperties.READ_TIMEOUT, readTimeout);
 
     // Read and write JSON as the RM web services do, see RMWebApp#resourceConfig.
-    client.register(new IncludeRootJSONProvider(conf), 2001);
-    client.register(new ExcludeRootJSONProvider(conf), 2002);
+    client.register(new IncludeRootJSONProvider(conf),
+        JsonProviderFeature.INCLUDE_ROOT_PRIORITY);
+    client.register(new ExcludeRootJSONProvider(conf),
+        JsonProviderFeature.EXCLUDE_ROOT_PRIORITY);
 
     return client;
   }

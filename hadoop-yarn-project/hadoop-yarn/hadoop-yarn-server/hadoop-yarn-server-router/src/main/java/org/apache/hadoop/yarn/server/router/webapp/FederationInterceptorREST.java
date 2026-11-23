@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -211,6 +212,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   private static final Logger LOG = LoggerFactory.getLogger(FederationInterceptorREST.class);
 
+  /**
+   * Maximum time in seconds to wait for in-flight forwarded calls to finish
+   * before closing the per-subcluster interceptor clients in {@link #shutdown()}.
+   */
+  private static final int SHUTDOWN_TIMEOUT_SECONDS = 30;
+
   private int numSubmitRetries;
   private FederationStateStoreFacade federationFacade;
   private RouterPolicyFacade policyFacade;
@@ -252,7 +259,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_RETRY,
         YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY);
 
-    interceptors = new HashMap<>();
+    interceptors = new ConcurrentHashMap<>();
     routerMetrics = RouterMetrics.getMetrics();
     threadpool = HadoopExecutors.newCachedThreadPool(new ThreadFactoryBuilder()
         .setNameFormat("FederationInterceptorREST #%d")
@@ -355,13 +362,19 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @VisibleForTesting
   protected DefaultRequestInterceptorREST getOrCreateInterceptorForSubCluster(
       SubClusterId subClusterId, String webAppAddress) {
-    DefaultRequestInterceptorREST interceptor = getInterceptorForSubCluster(subClusterId);
     String webAppAddressWithScheme =
         WebAppUtils.getHttpSchemePrefix(this.getConf()) + webAppAddress;
-    if (interceptor == null || !webAppAddressWithScheme.equals(interceptor.getWebAppAddress())) {
-      interceptor = createInterceptorForSubCluster(subClusterId, webAppAddress);
+    // Synchronized so concurrent request threads cannot create two
+    // interceptors for the same SubCluster. The map itself is a
+    // ConcurrentHashMap, so shutdown() can iterate it safely while
+    // creation is in progress.
+    synchronized (interceptors) {
+      DefaultRequestInterceptorREST interceptor = getInterceptorForSubCluster(subClusterId);
+      if (interceptor == null || !webAppAddressWithScheme.equals(interceptor.getWebAppAddress())) {
+        interceptor = createInterceptorForSubCluster(subClusterId, webAppAddress);
+      }
+      return interceptor;
     }
-    return interceptor;
   }
 
   /**
@@ -3326,7 +3339,19 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public void shutdown() {
     if (threadpool != null) {
+      // Let in-flight forwarded calls finish before closing the clients
+      // they use. ExecutorService.shutdown() only stops new submissions.
       threadpool.shutdown();
+      try {
+        if (!threadpool.awaitTermination(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+          LOG.warn("Router interceptor threadpool did not terminate within {} seconds.",
+              SHUTDOWN_TIMEOUT_SECONDS);
+          threadpool.shutdownNow();
+        }
+      } catch (InterruptedException e) {
+        threadpool.shutdownNow();
+        Thread.currentThread().interrupt();
+      }
     }
     if (interceptors != null) {
       interceptors.values().forEach(DefaultRequestInterceptorREST::shutdown);

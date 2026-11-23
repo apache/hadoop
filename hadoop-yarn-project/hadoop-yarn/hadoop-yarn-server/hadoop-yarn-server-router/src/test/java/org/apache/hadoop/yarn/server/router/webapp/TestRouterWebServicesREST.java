@@ -711,16 +711,16 @@ public class TestRouterWebServicesREST {
 
   /**
    * Router forwards {@link RMWebServiceProtocol#createNewApplication} with
-   * the caller's Accept header, which defaults to JSON, and then reads the
-   * RM's answer, as FederationInterceptorREST does. Its client must read that
-   * JSON and stay open for the next call.
+   * the caller's Accept header and then reads the RM's answer, as
+   * FederationInterceptorREST does. Its client must read both JSON and XML
+   * answers and stay open for the next call.
    */
   @Test
   @Timeout(value = 5)
   public void testNewApplicationJSONThroughRouterClient() throws Exception {
     Client client = RouterWebServiceUtil.createJerseyClient(conf);
     try {
-      for (String accept : new String[] {null, APPLICATION_JSON}) {
+      for (String accept : new String[] {APPLICATION_JSON, APPLICATION_XML}) {
         HttpServletRequest hsr = mock(HttpServletRequest.class);
         when(hsr.getUserPrincipal()).thenReturn((Principal) () -> userName);
         when(hsr.getHeader(HttpHeaders.ACCEPT)).thenReturn(accept);

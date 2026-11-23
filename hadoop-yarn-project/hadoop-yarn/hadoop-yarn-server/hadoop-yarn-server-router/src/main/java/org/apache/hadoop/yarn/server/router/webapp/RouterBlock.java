@@ -94,12 +94,14 @@ public abstract class RouterBlock extends HtmlBlock {
 
     // We will get ClusterMetricsInfo By webAppAddress.
     Client client = RouterWebServiceUtil.createJerseyClient(conf);
-    ClusterMetricsInfo metrics = RouterWebServiceUtil
-        .genericForward(webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
-        conf, client);
-    client.close();
-    return metrics;
+    try {
+      return RouterWebServiceUtil
+          .genericForward(webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
+          RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
+          conf, client);
+    } finally {
+      client.close();
+    }
   }
 
   /**
@@ -177,15 +179,17 @@ public abstract class RouterBlock extends HtmlBlock {
       SubClusterInfo subClusterInfo = facade.getSubCluster(subClusterId);
       if (subClusterInfo != null) {
         Client client = RouterWebServiceUtil.createJerseyClient(this.conf);
-        // Call the RM interface to obtain schedule information
-        String webAppAddress =  WebAppUtils.getHttpSchemePrefix(this.conf) +
-            subClusterInfo.getRMWebServiceAddress();
-        ClusterMetricsInfo metrics = RouterWebServiceUtil
-            .genericForward(webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
-            RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
-            conf, client);
-        client.close();
-        return metrics;
+        try {
+          // Call the RM interface to obtain schedule information
+          String webAppAddress =  WebAppUtils.getHttpSchemePrefix(this.conf) +
+              subClusterInfo.getRMWebServiceAddress();
+          return RouterWebServiceUtil
+              .genericForward(webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
+              RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
+              conf, client);
+        } finally {
+          client.close();
+        }
       }
     } catch (Exception e) {
       LOG.error("getClusterMetricsInfoBySubClusterId subClusterId = {} error.", subclusterId, e);
