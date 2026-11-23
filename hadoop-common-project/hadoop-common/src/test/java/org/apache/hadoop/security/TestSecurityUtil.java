@@ -36,6 +36,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -50,11 +51,14 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.LocalJavaKeyStoreProvider;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import org.xbill.DNS.Name;
 
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
@@ -386,6 +390,21 @@ public class TestSecurityUtil {
   }
 
   @Test
+  public void testGetByNameWithBracketedIPv6() throws Exception {
+    Configuration conf = new Configuration(false);
+    for (boolean useIp : new boolean[] {false, true}) {
+      conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, useIp);
+      SecurityUtil.setConfiguration(conf);
+      String msg = "use_ip=" + useIp;
+      for (String ip : new String[] {"::1", "2001:db8::1"}) {
+        assertEquals(InetAddress.getByName(ip), SecurityUtil.getByName("[" + ip + "]"), msg);
+      }
+      // the JDK does not accept an IPv4 literal in brackets either
+      assertThrows(UnknownHostException.class, () -> SecurityUtil.getByName("[127.0.0.1]"), msg);
+    }
+  }
+
+  @Test
   public void testSocketAddrWithNameToStaticName() {
     String staticHost = "host1";
     NetUtils.addStaticResolution(staticHost, "localhost");
@@ -595,6 +614,16 @@ public class TestSecurityUtil {
     testCacheableResolve(resolver);
   }
 
+  @Test
+  public void testQualifiedHostResolverSearchDomainsAreRelative()
+      throws Exception {
+    List<String> domains = SecurityUtil.QualifiedHostResolver.toSearchDomains(
+        Arrays.asList(Name.fromString("example.com", Name.root),
+            Name.fromString("sub.example.com."), Name.root));
+    assertEquals(Arrays.asList("example.com", "sub.example.com", "."),
+        domains);
+  }
+
   /**
    * Test caching behavior in StandardHostResolver when caching is enabled.
    */
@@ -609,18 +638,39 @@ public class TestSecurityUtil {
   private void  testCacheableResolve(SecurityUtil.CacheableHostResolver resolver)
       throws Exception {
     // Call getByName twice with the same host
-    InetAddress addr1 = resolver.getByName("127.0.0.1");
-    InetAddress addr2 = resolver.getByName("127.0.0.1");
+    InetAddress addr1 = resolver.getByName("localhost");
+    InetAddress addr2 = resolver.getByName("localhost");
     assertNotNull(addr1);
     assertNotNull(addr2);
     // Both addresses should be the same instance (cached value)
     assertSame(addr1, addr2);
+    assertSame(addr1, resolver.getCache().getIfPresent("localhost"));
 
     // wait for timeout of cache item
     Thread.sleep(1500);
-    InetAddress addr3 = resolver.getByName("127.0.0.1");
+    // the JDK caches hostname lookups itself, so check the entry, not identity
+    assertNull(resolver.getCache().getIfPresent("localhost"));
+    InetAddress addr3 = resolver.getByName("localhost");
     assertNotNull(addr3);
-    assertNotSame(addr1, addr3);
+  }
+
+  /**
+   * IP literals bypass the cache, so a reverse lookup done by one caller via
+   * getHostName() does not change the host string seen by later callers.
+   */
+  @Test
+  public void testCacheableResolverDoesNotShareIpLiteral() throws Exception {
+    SecurityUtil.StandardHostResolver resolver =
+        new SecurityUtil.StandardHostResolver(10);
+    for (String ip : new String[] {"127.0.0.1", "::1", "[::1]"}) {
+      InetAddress addr1 = resolver.getByName(ip);
+      addr1.getHostName();
+      InetAddress addr2 = resolver.getByName(ip);
+      assertNotSame(addr1, addr2);
+      assertEquals(InetAddress.getByName(ip).getHostAddress(),
+          new InetSocketAddress(addr2, 0).getHostString());
+    }
+    assertEquals(0, resolver.getCache().size());
   }
 
   /**
@@ -640,5 +690,32 @@ public class TestSecurityUtil {
     assertThrows(UnknownHostException.class, () -> {
       qualifiedHostResolver.getByName(invalidHost);
     }, "Resolving an invalid host should throw UnknownHostException");
+  }
+
+  /**
+   * A failure to get the login user with security enabled must go through
+   * {@link ExitUtil#terminate(int, Throwable)} rather than exiting the JVM
+   * directly.
+   */
+  @Test
+  public void testDoAsLoginUserOrFatalTerminatesOnLoginFailure() {
+    IOException loginFailure = new IOException("login failed");
+    ExitUtil.disableSystemExit();
+    ExitUtil.resetFirstExitException();
+    try (MockedStatic<UserGroupInformation> ugi =
+        Mockito.mockStatic(UserGroupInformation.class)) {
+      ugi.when(UserGroupInformation::isSecurityEnabled).thenReturn(true);
+      ugi.when(UserGroupInformation::getLoginUser).thenThrow(loginFailure);
+
+      ExitUtil.ExitException ee = assertThrows(ExitUtil.ExitException.class,
+          () -> SecurityUtil.doAsLoginUserOrFatal(() -> {
+            throw new AssertionError("action should not run");
+          }));
+      assertEquals(-1, ee.getExitCode());
+      assertSame(loginFailure, ee.getCause());
+    } finally {
+      ExitUtil.enableSystemExit();
+      ExitUtil.resetFirstExitException();
+    }
   }
 }

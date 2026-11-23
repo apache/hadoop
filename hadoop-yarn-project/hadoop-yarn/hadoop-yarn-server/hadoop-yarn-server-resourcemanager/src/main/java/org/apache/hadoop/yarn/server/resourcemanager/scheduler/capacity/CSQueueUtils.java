@@ -18,12 +18,17 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.util.Set;
+import java.util.function.Supplier;
 
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperties;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.QueueProperty;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.Resolved;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.resolver.ResolvedQueueConfig;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -92,6 +97,69 @@ public class CSQueueUtils {
             csConf.getLabeledQueueWeight(queuePath, label));
       }
     }
+  }
+
+  /**
+   * Loads the configured capacities, maximum capacities, maximum AM resource
+   * percentages and weights of a queue for its configured node labels from
+   * its resolved configuration.
+   * @param queuePath the queue path
+   * @param queueCapacities the capacities to load into
+   * @param resolved the resolved configuration of the queue
+   * @param csConf the queue configuration, see
+   *               {@link #getResolvedValue(ResolvedQueueConfig, QueueProperty, String, Supplier)}
+   * @param nodeLabels the configured node labels of the queue
+   */
+  public static void loadCapacitiesByLabels(final QueuePath queuePath,
+      QueueCapacities queueCapacities, ResolvedQueueConfig resolved,
+      final CapacitySchedulerConfiguration csConf, Set<String> nodeLabels) {
+    queueCapacities.clearConfigurableFields();
+
+    for (final String label : nodeLabels) {
+      if (label.equals(CommonNodeLabelsManager.NO_LABEL)) {
+        queueCapacities.setCapacity(label, getResolvedValue(resolved,
+            QueueProperties.CAPACITY, label,
+            () -> csConf.getNonLabeledQueueCapacity(queuePath)) / 100);
+        queueCapacities.setMaximumCapacity(label, getResolvedValue(resolved,
+            QueueProperties.MAXIMUM_CAPACITY, label,
+            () -> csConf.getNonLabeledQueueMaximumCapacity(queuePath)) / 100);
+      } else {
+        queueCapacities.setCapacity(label, getResolvedValue(resolved,
+            QueueProperties.LABELED_CAPACITY, label,
+            () -> csConf.getLabeledQueueCapacity(queuePath, label)) / 100);
+        queueCapacities.setMaximumCapacity(label, getResolvedValue(resolved,
+            QueueProperties.LABELED_MAXIMUM_CAPACITY, label,
+            () -> csConf.getLabeledQueueMaximumCapacity(queuePath, label))
+            / 100);
+      }
+      queueCapacities.setMaxAMResourcePercentage(label, getResolvedValue(
+          resolved, QueueProperties.LABELED_MAXIMUM_AM_RESOURCE_PERCENT, label,
+          () -> csConf.getMaximumAMResourcePercentPerPartition(queuePath,
+              label)));
+      queueCapacities.setWeight(label, getResolvedValue(resolved,
+          QueueProperties.CAPACITY_WEIGHT, label,
+          () -> csConf.getLabeledQueueWeight(queuePath, label)));
+    }
+  }
+
+  /**
+   * Gets a value of a queue's resolved configuration, rethrowing the
+   * failure the value could not be parsed with. A value the configuration
+   * was not resolved for, a node label that is not among the labels it was
+   * resolved for, is read from the queue configuration; this only happens
+   * when the configured node labels of the queues were not indexed from the
+   * configuration the queues are set up from.
+   * @param resolved the resolved configuration of the queue
+   * @param property the property
+   * @param label the node label
+   * @param getter reads the value from the queue configuration
+   * @param <T> type of the value
+   * @return the value
+   */
+  public static <T> T getResolvedValue(ResolvedQueueConfig resolved,
+      QueueProperty<T> property, String label, Supplier<T> getter) {
+    Resolved<T> value = resolved.get(property, label);
+    return value == null ? getter.get() : value.getValue();
   }
 
   /**

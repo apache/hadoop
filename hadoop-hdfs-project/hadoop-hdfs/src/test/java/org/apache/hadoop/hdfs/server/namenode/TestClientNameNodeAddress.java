@@ -55,6 +55,17 @@ public class TestClientNameNodeAddress {
   }
 
   @Test
+  public void testIPv6() {
+    final Configuration conf = new HdfsConfiguration();
+    conf.set(FS_DEFAULT_NAME_KEY, "hdfs://[::1]:100");
+    assertThat(NameNodeUtils.getClientNamenodeAddress(conf, null)).isEqualTo("[::1]:100");
+    conf.set(FS_DEFAULT_NAME_KEY, "hdfs://[::1]:0");
+    assertNull(NameNodeUtils.getClientNamenodeAddress(conf, null));
+    conf.set(FS_DEFAULT_NAME_KEY, "hdfs://[::1]");
+    assertNull(NameNodeUtils.getClientNamenodeAddress(conf, null));
+  }
+
+  @Test
   public void testWithNoDefaultFs() {
     final Configuration conf = new HdfsConfiguration();
     assertNull(NameNodeUtils.getClientNamenodeAddress(conf, null));

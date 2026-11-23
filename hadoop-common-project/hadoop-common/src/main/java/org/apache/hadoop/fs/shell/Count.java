@@ -206,6 +206,10 @@ public class Count extends FsCommand {
     }
     if (displayECPolicy) {
       ContentSummary summary = src.fs.getContentSummary(src.path);
+      if (summary.getErasureCodingPolicy() == null) {
+        throw new IOException("FileSystem " + src.fs.getUri()
+            + " does not support Erasure Coding");
+      }
       outputString.append(summary.toErasureCodingPolicy());
     }
     if (showSnapshot) {

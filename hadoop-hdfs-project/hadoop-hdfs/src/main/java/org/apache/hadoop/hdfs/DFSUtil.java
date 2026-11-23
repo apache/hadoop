@@ -1098,7 +1098,7 @@ public class DFSUtil {
     InetSocketAddress sockAddr = NetUtils.createSocketAddr(configuredAddress);
     final InetAddress addr = sockAddr.getAddress();
     if (addr != null && addr.isAnyLocalAddress()) {
-      return defaultHost + ":" + sockAddr.getPort();
+      return NetUtils.getHostPortString(defaultHost, sockAddr.getPort());
     } else {
       return configuredAddress;
     }

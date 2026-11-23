@@ -1,0 +1,60 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+# Fails when a `uses:` ref under .github/ is not on the ASF allowlist, and
+# warns when an allowlisted pin is about to expire. Without it, a disallowed
+# or expired pin shows up only as a log-less "startup_failure" in apache/hadoop
+# (forks are not subject to the allowlist, so fork runs stay green).
+# The weekly schedule catches pins that ASF expires between changes.
+
+name: "ASF Allowlist Check"
+
+# Security: this workflow only reads the repository; it never runs code from
+# the checked-out tree and holds a read-only token.
+on:
+  pull_request:
+    paths:
+      - ".github/**"
+  push:
+    branches:
+      - trunk
+    paths:
+      - ".github/**"
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: asf-allowlist-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check
+    if: github.event_name != 'schedule' || github.repository == 'apache/hadoop'
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: apache/infrastructure-actions/allowlist-check@47b297bbe90f580139129bee531bd84bd95b7f5d # allowlist-check/v1.0.4

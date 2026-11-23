@@ -422,7 +422,6 @@
     <!-- skip jakarta.servlet:jakarta.servlet-api because it's in client -->
     <!-- skip jakarta.ws.rs-api:jakarta.ws.rs because it's in client -->
     <!-- Skip commons-logging:commons-logging-api because it looks like nothing actually included it -->
-    <!-- Skip jetty-util because it's in client -->
     <dependency>
       <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-common</artifactId>
@@ -632,7 +631,7 @@
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.test-framework.providers</groupId>
-      <artifactId>jersey-test-framework-provider-jetty</artifactId>
+      <artifactId>jersey-test-framework-provider-jdk-http</artifactId>
       <exclusions>
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
@@ -643,6 +642,13 @@
           <groupId>org.junit.jupiter</groupId>
         </exclusion>
       </exclusions>
+      <optional>true</optional>
+    </dependency>
+    <!-- hadoop-client-runtime does not shade jetty-util, so declare it directly to keep it in
+         this jar. -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-util</artifactId>
       <optional>true</optional>
     </dependency>
     <!-- skipping jersey-server because it's above -->
@@ -945,6 +951,8 @@
                         <exclude>com/sun/security/**/*</exclude>
                         <exclude>com/sun/jndi/**/*</exclude>
                         <exclude>com/sun/management/**/*</exclude>
+                        <exclude>com/sun/net/httpserver/*</exclude>
+                        <exclude>com/sun/net/httpserver/**/*</exclude>
                         <exclude>com/ibm/security/*</exclude>
                         <exclude>com/ibm/security/**/*</exclude>
                         <!-- Exclude zstd-jni -->

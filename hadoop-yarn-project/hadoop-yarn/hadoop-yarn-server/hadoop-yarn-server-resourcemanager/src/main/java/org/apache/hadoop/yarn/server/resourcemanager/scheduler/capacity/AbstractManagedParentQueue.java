@@ -176,9 +176,8 @@ public abstract class AbstractManagedParentQueue extends AbstractParentQueue {
     CapacitySchedulerConfiguration leafQueueConfigs = new
         CapacitySchedulerConfiguration(new Configuration(false), false);
 
-    Map<String, String> templateConfigs = queueContext
-        .getConfiguration().getConfigurationProperties()
-        .getPropertiesWithPrefix(configPrefix, true);
+    Map<String, String> templateConfigs = queueContext.getConfigSnapshot()
+        .getRawPropertiesWithPrefix(configPrefix, true);
 
     for (Map.Entry<String, String> confKeyValuePair : templateConfigs.entrySet()) {
       leafQueueConfigs.set(confKeyValuePair.getKey(), confKeyValuePair.getValue());

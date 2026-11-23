@@ -238,6 +238,43 @@ public class TestComputeFairShares {
   }
   
   /**
+   * The weight of a reservation queue can be set to 0 by the plan follower
+   * while the update thread is computing fair shares. If that happens after
+   * the fixed fair shares have been handled, no weight-to-resource ratio can
+   * fill the share, and the computation must still terminate.
+   */
+  @Test
+  public void testWeightChangedToZeroDuringComputation() {
+    // With the bound on the search for R, getWeight() is read 1,050 times
+    // here: once while handling the fixed fair shares, 1,023 times while
+    // doubling R from 1 up to Double.MAX_VALUE / 2, 25 times in the binary
+    // search and once when setting the share. Without the bound the doubling
+    // loop never ends and does not check for interrupts, so a timeout could
+    // not stop it. Failing once the cap is exceeded ends the loop instead.
+    final int maxWeightReads = 10_000;
+    scheds.add(new FakeSchedulable(0, 1.0f) {
+      private int weightReads = 0;
+
+      @Override
+      public float getWeight() {
+        weightReads++;
+        if (weightReads > maxWeightReads) {
+          throw new AssertionError("getWeight() was read more than "
+              + maxWeightReads + " times, the fair share computation does"
+              + " not terminate");
+        }
+        if (weightReads == 1) {
+          return super.getWeight();
+        }
+        return 0f;
+      }
+    });
+    ComputeFairShares.computeShares(scheds, Resources.createResource(40),
+        ResourceInformation.MEMORY_MB.getName());
+    verifyMemoryShares(0);
+  }
+
+  /**
    * Check that a given list of shares have been assigned to this.scheds.
    */
   private void verifyMemoryShares(long... shares) {

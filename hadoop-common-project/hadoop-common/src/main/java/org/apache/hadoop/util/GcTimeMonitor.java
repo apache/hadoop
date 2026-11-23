@@ -188,6 +188,10 @@ public class GcTimeMonitor extends Thread {
     long totalGcTime = 0;
     long totalGcCount = 0;
     for (GarbageCollectorMXBean gcBean : gcBeans) {
+      // Concurrent GC cycles do not pause the JVM, see JDK-8265136.
+      if (JvmPauseMonitor.isConcurrentCycleBean(gcBean)) {
+        continue;
+      }
       totalGcTime += gcBean.getCollectionTime();
       totalGcCount += gcBean.getCollectionCount();
     }

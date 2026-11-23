@@ -81,6 +81,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyCo
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
+import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -549,9 +550,14 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     labels.add("a");
     pMap.put(nodeId, labels);
 
+    RouterMetrics metrics = RouterMetrics.getMetrics();
+    long replaceLabelsBefore = metrics.getNumSucceededReplaceLabelsOnNodeRetrieved();
+    long removeLabelsBefore = metrics.getNumSucceededRemoveFromClusterNodeLabelsRetrieved();
     ReplaceLabelsOnNodeRequest request1 = ReplaceLabelsOnNodeRequest.newInstance(pMap, "SC-1");
     ReplaceLabelsOnNodeResponse response = interceptor.replaceLabelsOnNode(request1);
     assertNotNull(response);
+    assertEquals(replaceLabelsBefore + 1, metrics.getNumSucceededReplaceLabelsOnNodeRetrieved());
+    assertEquals(removeLabelsBefore, metrics.getNumSucceededRemoveFromClusterNodeLabelsRetrieved());
 
     // case2, test the non-exist subCluster.
     ReplaceLabelsOnNodeRequest request2 =

@@ -671,7 +671,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
           remoteMethod.invokeConcurrent(this, ReplaceLabelsOnNodeResponse.class, subClusterId);
       if (CollectionUtils.isNotEmpty(replaceLabelsOnNodeResps)) {
         long stopTime = clock.getTime();
-        routerMetrics.succeededRemoveFromClusterNodeLabelsRetrieved(stopTime - startTime);
+        routerMetrics.succeededReplaceLabelsOnNodeRetrieved(stopTime - startTime);
         return ReplaceLabelsOnNodeResponse.newInstance();
       }
     } catch (YarnException e) {
@@ -1182,7 +1182,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         federationSubClusters.add(federationSubCluster);
       } catch (Exception e) {
         routerMetrics.incrGetFederationSubClustersFailedRetrieved();
-        LOG.error("getSubClusters SubClusterId = [%s] error.", subClusterId, e);
+        LOG.error("getSubClusters SubClusterId = [{}] error.", subClusterId, e);
       }
     }
     long stopTime = clock.getTime();

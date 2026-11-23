@@ -41,7 +41,7 @@ fi
 if [ "$version_to_install" == "2.29.0" ]; then
   # hadolint ignore=DL3003,DL3008
   mkdir -p /opt/isa-l-src &&
-    curl -L -s -S \
+    curl -f -L -s -S --retry 5 --retry-delay 5 \
       https://github.com/intel/isa-l/archive/v2.29.0.tar.gz \
       -o /opt/isa-l.tar.gz &&
     tar xzf /opt/isa-l.tar.gz --strip-components 1 -C /opt/isa-l-src &&

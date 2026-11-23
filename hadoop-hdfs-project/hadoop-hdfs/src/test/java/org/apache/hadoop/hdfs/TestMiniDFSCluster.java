@@ -21,10 +21,13 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Set;
@@ -414,6 +417,34 @@ public class TestMiniDFSCluster {
           miniDfsCluster.getDataNode(ipcPorts[1]).getIpcPort());
       assertEquals(ipcPorts[2],
           miniDfsCluster.getDataNode(ipcPorts[2]).getIpcPort());
+    }
+  }
+
+  @Test
+  @Timeout(value = 100)
+  public void testBindHostIPv6Loopback() throws Exception {
+    assumeFalse(Boolean.getBoolean("java.net.preferIPv4Stack"), "JVM is pinned to IPv4");
+    InetAddress loopback = InetAddress.getByName("::1");
+
+    Configuration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).bindHost("::1").build()) {
+      cluster.waitActive();
+      assertEquals(loopback, cluster.getNameNode().getNameNodeAddress().getAddress());
+      DataNode dn = cluster.getDataNodes().get(0);
+      InetSocketAddress xferAddress = dn.getXferAddress();
+      int ipcPort = dn.getIpcPort();
+      assertEquals(loopback, xferAddress.getAddress());
+
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path dir = new Path("/testBindHostIPv6Loopback");
+      assertThat(fs.mkdirs(dir)).isTrue();
+      assertThat(fs.exists(dir)).isTrue();
+
+      assertThat(cluster.restartDataNode(0, true)).isTrue();
+      cluster.waitActive();
+      dn = cluster.getDataNodes().get(0);
+      assertEquals(xferAddress, dn.getXferAddress());
+      assertEquals(ipcPort, dn.getIpcPort());
     }
   }
 

@@ -933,6 +933,25 @@ public class TestRMNodeTransitions {
         "Must be null as there is no NODE_UNUSABLE update");
   }
 
+  @Test
+  public void testNodeAddressesBracketIPv6Host() {
+    String host = "2001:db8:0:0:0:0:0:21";
+    RMNodeImpl ipv6 = new RMNodeImpl(BuilderUtils.newNodeId(host, 45454),
+        rmContext, host, 45454, 8042, null, null, null);
+    assertEquals("[" + host + "]:45454", ipv6.getNodeAddress());
+    assertEquals("[" + host + "]:8042", ipv6.getHttpAddress());
+
+    RMNodeImpl named = new RMNodeImpl(BuilderUtils.newNodeId("host1", 45454),
+        rmContext, "host1", 45454, 8042, null, null, null);
+    assertEquals("host1:45454", named.getNodeAddress());
+    assertEquals("host1:8042", named.getHttpAddress());
+
+    RMNodeImpl ipv4 = new RMNodeImpl(BuilderUtils.newNodeId("10.0.0.1", 45454),
+        rmContext, "10.0.0.1", 45454, 8042, null, null, null);
+    assertEquals("10.0.0.1:45454", ipv4.getNodeAddress());
+    assertEquals("10.0.0.1:8042", ipv4.getHttpAddress());
+  }
+
   private RMNodeImpl getRunningNode() {
     return getRunningNode(null, 0);
   }

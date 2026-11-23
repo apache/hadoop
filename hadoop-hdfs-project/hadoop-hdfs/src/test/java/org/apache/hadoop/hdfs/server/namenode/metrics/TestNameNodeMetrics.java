@@ -300,6 +300,53 @@ public class TestNameNodeMetrics {
   }
 
   /**
+   * Test the metric for the number of low redundancy blocks on the
+   * decommissioning DataNodes.
+   */
+  @Test
+  public void testDecommissioningLowRedundancyBlocks() throws Exception {
+    final String metric = "DecommissioningLowRedundancyBlocks";
+    // Stop the RedundancyMonitor so that the blocks are not reconstructed.
+    BlockManagerTestUtil.stopRedundancyThread(bm);
+
+    // The only replica of each block is on one DataNode.
+    final int blockCount = 4;
+    final Path file = getTestPath("testDecommissioningLowRedundancyBlocks");
+    createFile(file, blockCount * BLOCK_SIZE, (short) 1);
+    final LocatedBlocks blocks =
+        fs.getClient().getLocatedBlocks(file.toString(), 0, blockCount * BLOCK_SIZE);
+    final DatanodeDescriptor dn = bm.getDatanodeManager()
+        .getDatanode(blocks.get(0).getLocations()[0]);
+    final int blocksOnDn = dn.numBlocks();
+    assertTrue(blocksOnDn > 0);
+
+    List<DataNode> dataNodes = cluster.getDataNodes();
+    String[] dnAddresses = new String[DATANODE_COUNT];
+    for (int i = 0; i < DATANODE_COUNT; i++) {
+      dnAddresses[i] = bm.getDatanodeManager()
+          .getDatanode(dataNodes.get(i).getDatanodeId()).getXferAddr();
+    }
+    hostsFileWriter.initIncludeHosts(dnAddresses);
+    bm.getDatanodeManager().refreshNodes(CONF);
+    assertGauge(metric, 0L, getMetrics(NS_METRICS));
+
+    // Decommission the DataNode. Its blocks can not be reconstructed, so it
+    // stays in decommissioning state with all of its blocks low redundancy.
+    hostsFileWriter.initExcludeHost(dn.getXferAddr());
+    bm.getDatanodeManager().refreshNodes(CONF);
+    BlockManagerTestUtil.recheckDecommissionState(bm.getDatanodeManager());
+    assertTrue(dn.isDecommissionInProgress());
+    assertGauge("NumDecommissioningDataNodes", 1, getMetrics(NS_METRICS));
+    assertGauge(metric, (long) blocksOnDn, getMetrics(NS_METRICS));
+
+    // Stop the decommission.
+    hostsFileWriter.initExcludeHosts(new ArrayList<>());
+    bm.getDatanodeManager().refreshNodes(CONF);
+    assertGauge("NumDecommissioningDataNodes", 0, getMetrics(NS_METRICS));
+    assertGauge(metric, 0L, getMetrics(NS_METRICS));
+  }
+
+  /**
    * Test metrics associated with liveness and decommission status of DataNodes.
    */
   @Test

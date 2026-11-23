@@ -41,7 +41,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -116,6 +115,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -1453,8 +1453,8 @@ public abstract class TaskAttemptImpl implements
     ContainerId containerId = taInfo.getContainerId();
     NodeId containerNodeId = NodeId.fromString(
         taInfo.getHostname() + ":" + taInfo.getPort());
-    String nodeHttpAddress = StringInterner.weakIntern(taInfo.getHostname() + ":"
-        + taInfo.getHttpPort());
+    String nodeHttpAddress = StringInterner.weakIntern(
+        NetUtils.getHostPortString(taInfo.getHostname(), taInfo.getHttpPort()));
     // Resource/Priority/Tokens are only needed while launching the container on
     // an NM, these are already completed tasks, so setting them to null
     container =
@@ -1873,11 +1873,8 @@ public abstract class TaskAttemptImpl implements
     return result;
   }
 
-  private static final Pattern ipPattern = // Pattern for matching ip
-    Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}");
-  
   protected boolean isIP(String src) {
-    return ipPattern.matcher(src).matches();
+    return InetAddresses.isInetAddress(src);
   }
 
   private static class ContainerAssignedTransition implements

@@ -319,6 +319,8 @@ class BPServiceActor implements Runnable {
 
     /* set thread name again to include NamespaceInfo when it's available. */
     this.bpThread.setName(formatThreadName("heartbeating", nnAddr));
+    this.commandProcessingThread.setName(
+        formatThreadName("Command processor", nnAddr));
 
     // Second phase of the handshake with the NN.
     register(nsInfo);
@@ -1410,7 +1412,7 @@ class BPServiceActor implements Runnable {
     private final BlockingQueue<Runnable> queue;
 
     CommandProcessingThread(BPServiceActor actor) {
-      super("Command processor");
+      super(formatThreadName("Command processor", nnAddr));
       this.actor = actor;
       this.queue = new LinkedBlockingDeque<>();
       setDaemon(true);
@@ -1484,8 +1486,8 @@ class BPServiceActor implements Runnable {
           dn.getMetrics().addNumProcessedCommands(processCommandsMs);
         }
         if (processCommandsMs > dnConf.getProcessCommandsThresholdMs()) {
-          LOG.warn("Took {} ms to process {} commands from NN",
-              processCommandsMs, cmds.length);
+          LOG.warn("Took {} ms to process {} commands from NN {}",
+              processCommandsMs, cmds.length, nnAddr);
         }
       }
       return true;
