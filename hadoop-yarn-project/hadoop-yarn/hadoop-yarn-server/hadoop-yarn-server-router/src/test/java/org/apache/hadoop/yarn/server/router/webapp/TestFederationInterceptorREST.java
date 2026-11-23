@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.security.Principal;
 import java.util.ArrayList;
@@ -1929,6 +1930,34 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   @Test
+  public void testReplaceLabelsOnNodePartialFailure() throws Exception {
+    // YARN-12069 review: one subcluster's lookup fails while the others
+    // report the node absent. Both outcomes used to be discarded alike, so
+    // the Router answered 404 even though it had not checked the subcluster
+    // that owns the node. With a lookup failure the fan-out is
+    // indeterminate: the Router must surface an error, not "not found".
+    SubClusterId failingSc = SubClusterId.newInstance("97");
+    stateStoreUtil.registerSubCluster(failingSc);
+    SubClusterInfo failingInfo = stateStoreUtil.querySubClusterInfo(failingSc);
+    MockDefaultRequestInterceptorREST failingMock =
+        (MockDefaultRequestInterceptorREST) interceptor
+            .getOrCreateInterceptorForSubCluster(
+                failingSc, failingInfo.getRMWebServiceAddress());
+    failingMock.setRunning(false);
+
+    // The node id contains no subcluster id and no "test" substring, so every
+    // running mock answers that the node is absent; the stopped one fails.
+    String nodeId = "unknownnode:xyz";
+    Set<String> labels = Collections.singleton("NodeLabel3");
+
+    YarnRuntimeException exception = assertThrows(YarnRuntimeException.class,
+        () -> interceptor.replaceLabelsOnNode(labels, null, nodeId));
+    assertTrue(exception.getMessage().contains(
+        "Cannot determine the subcluster hosting " + nodeId));
+    assertTrue(exception.getMessage().contains(failingSc.getId()));
+  }
+
+  @Test
   public void testUpdateNodeResourceNotInAnySubCluster() {
     // YARN-12069: updateNodeResource resolves the node through
     // getNodeSubcluster; an unknown node must yield NotFoundException (404)
@@ -1968,12 +1997,17 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Method getNode = FederationInterceptorREST.class.getDeclaredMethod(
         "getNode", Collection.class, String.class);
     getNode.setAccessible(true);
+    Class<?> fanoutClass = Class.forName(
+        FederationInterceptorREST.class.getName() + "$NodeLookupFanout");
+    Field answersField = fanoutClass.getDeclaredField("answers");
+    answersField.setAccessible(true);
 
     for (int iteration = 0; iteration < 5; iteration++) {
+      Object fanout = getNode.invoke(
+          interceptor, (Object) subClusterInfos, (Object) "testCollectAllAnswers");
       @SuppressWarnings("unchecked")
       Map<SubClusterInfo, NodeInfo> results =
-          (Map<SubClusterInfo, NodeInfo>) getNode.invoke(
-              interceptor, (Object) subClusterInfos, (Object) "testCollectAllAnswers");
+          (Map<SubClusterInfo, NodeInfo>) answersField.get(fanout);
       assertNotNull(results);
       assertEquals(subClusterInfos.size(), results.size());
       for (SubClusterInfo info : subClusterInfos) {

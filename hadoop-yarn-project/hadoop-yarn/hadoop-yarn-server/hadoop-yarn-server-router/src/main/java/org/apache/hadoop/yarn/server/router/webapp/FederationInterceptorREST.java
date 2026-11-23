@@ -926,11 +926,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throw new NotFoundException(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE);
     }
 
-    final Map<SubClusterInfo, NodeInfo> results = getNode(subClustersActive, nodeId);
+    final NodeLookupFanout fanout = getNode(subClustersActive, nodeId);
 
     // Collect the responses
     NodeInfo nodeInfo = null;
-    for (NodeInfo nodeResponse : results.values()) {
+    for (NodeInfo nodeResponse : fanout.answers.values()) {
       try {
         // Check if the node was already found in a different SubCluster and
         // it has an old health report
@@ -944,9 +944,57 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     if (nodeInfo == null) {
-      throw new NotFoundException("nodeId, " + nodeId + ", is not found");
+      throwNodeNotResolvable(nodeId, fanout.failedSubClusters,
+          "nodeId, " + nodeId + ", is not found");
     }
     return nodeInfo;
+  }
+
+  /**
+   * Throws the exception that matches a fan-out in which no subcluster hosts
+   * the node: {@link NotFoundException} when every subcluster answered, or a
+   * {@link YarnRuntimeException} when at least one lookup failed, because
+   * "not found" would be a wrong answer when the subcluster owning the node
+   * may not have been checked at all (YARN-12069).
+   */
+  private static void throwNodeNotResolvable(String nodeId,
+      List<SubClusterId> failedSubClusters, String notFoundMessage) {
+    if (!failedSubClusters.isEmpty()) {
+      throw new YarnRuntimeException("Cannot determine the subcluster hosting "
+          + nodeId + ": node lookup failed on subcluster(s) "
+          + failedSubClusters);
+    }
+    throw new NotFoundException(notFoundMessage);
+  }
+
+  /**
+   * The outcome of a single subcluster's node lookup: the node was found
+   * ({@code nodeInfo != null}), the subcluster answered that it does not host
+   * the node ({@code nodeInfo == null} with no error), or the lookup itself
+   * failed ({@code error != null}) and the subcluster's state is unknown.
+   */
+  private static final class SubClusterNodeLookup {
+    private final SubClusterInfo subCluster;
+    private final NodeInfo nodeInfo;
+    private final Exception error;
+
+    SubClusterNodeLookup(SubClusterInfo subCluster, NodeInfo nodeInfo,
+        Exception error) {
+      this.subCluster = subCluster;
+      this.nodeInfo = nodeInfo;
+      this.error = error;
+    }
+  }
+
+  /**
+   * Aggregated fan-out of a node lookup across subclusters: the answers of
+   * the subclusters that host the node, and the ids of the subclusters whose
+   * lookup failed. A subcluster that answered "node not here" appears in
+   * neither.
+   */
+  private static final class NodeLookupFanout {
+    private final Map<SubClusterInfo, NodeInfo> answers = new HashMap<>();
+    private final List<SubClusterId> failedSubClusters = new ArrayList<>();
   }
 
   /**
@@ -954,38 +1002,44 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    *
    * @param subClusters Subclusters where to search.
    * @param nodeId      Identifier of the node we are looking for.
-   * @return Map between subcluster and node.
+   * @return the fan-out result: the subclusters that host the node, and the
+   *         ids of the subclusters whose lookup failed.
    */
-  private Map<SubClusterInfo, NodeInfo> getNode(Collection<SubClusterInfo> subClusters,
+  private NodeLookupFanout getNode(Collection<SubClusterInfo> subClusters,
       String nodeId) {
 
-    // Parallel traversal of subClusters
-    Stream<Pair<SubClusterInfo, NodeInfo>> pairStream = subClusters.parallelStream().map(
+    // Parallel traversal of subClusters. Every worker reports an outcome
+    // instead of throwing: a null NodeInfo with no error means the subcluster
+    // answered that it does not host the node, while a non-null error means
+    // the lookup could not be completed and the subcluster's state is unknown
+    // (YARN-12069).
+    Stream<SubClusterNodeLookup> lookupStream = subClusters.parallelStream().map(
         subClusterInfo -> {
-            final SubClusterId subClusterId = subClusterInfo.getSubClusterId();
-            try {
-              DefaultRequestInterceptorREST interceptor =
-                   getOrCreateInterceptorForSubCluster(subClusterInfo);
-              return Pair.of(subClusterInfo, interceptor.getNode(nodeId));
-            } catch (Exception e) {
-              LOG.error("Subcluster {} failed to return nodeInfo.", subClusterId, e);
-              return null;
-            }
+          try {
+            DefaultRequestInterceptorREST interceptor =
+                getOrCreateInterceptorForSubCluster(subClusterInfo);
+            return new SubClusterNodeLookup(subClusterInfo,
+                interceptor.getNode(nodeId), null);
+          } catch (Exception e) {
+            LOG.error("Subcluster {} failed to return nodeInfo.",
+                subClusterInfo.getSubClusterId(), e);
+            return new SubClusterNodeLookup(subClusterInfo, null, e);
+          }
         });
 
-    // Collect the results. The stream is parallel, so the pairs have to be
-    // merged on this thread: writing a plain HashMap from the parallel
-    // workers races and can silently drop entries (YARN-12069). A null
-    // NodeInfo means the subcluster does not host the node; keep it out of
-    // the map so the selection loops only see real answers.
-    final Map<SubClusterInfo, NodeInfo> results = new HashMap<>();
-    pairStream.collect(Collectors.toList()).forEach(pair -> {
-      if (pair != null && pair.getValue() != null) {
-        results.put(pair.getKey(), pair.getValue());
+    // Merge the outcomes on this thread. The stream is parallel, so writing
+    // a plain HashMap from the parallel workers races and can silently drop
+    // entries (YARN-12069).
+    final NodeLookupFanout fanout = new NodeLookupFanout();
+    lookupStream.collect(Collectors.toList()).forEach(lookup -> {
+      if (lookup.error != null) {
+        fanout.failedSubClusters.add(lookup.subCluster.getSubClusterId());
+      } else if (lookup.nodeInfo != null) {
+        fanout.answers.put(lookup.subCluster, lookup.nodeInfo);
       }
     });
 
-    return results;
+    return fanout;
   }
 
   /**
@@ -994,20 +1048,23 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * @param nodeId Identifier of the node we are looking for.
    * @return The subcluster containing the node.
    * @throws NotFoundException If the node cannot be found.
+   * @throws YarnRuntimeException If no subcluster hosts the node and at least
+   *     one subcluster lookup failed: the fan-out is indeterminate, the
+   *     subcluster owning the node may not have been checked.
    */
   private SubClusterInfo getNodeSubcluster(String nodeId) throws NotFoundException {
 
     final Collection<SubClusterInfo> subClusters = federationFacade.getActiveSubClusters();
-    final Map<SubClusterInfo, NodeInfo> results = getNode(subClusters, nodeId);
+    final NodeLookupFanout fanout = getNode(subClusters, nodeId);
 
     SubClusterInfo subcluster = null;
     NodeInfo nodeInfo = null;
-    for (Entry<SubClusterInfo, NodeInfo> entry : results.entrySet()) {
+    for (Entry<SubClusterInfo, NodeInfo> entry : fanout.answers.entrySet()) {
       NodeInfo nodeResponse = entry.getValue();
-      // Defensive: getNode() no longer maps null answers into the results,
-      // but a null response must never win the selection, otherwise an
-      // arbitrary subcluster would be chosen when no subcluster reports the
-      // node (YARN-12069).
+      // Defensive: getNode() never maps a null answer into the results, but a
+      // null response must never win the selection, otherwise an arbitrary
+      // subcluster would be chosen when no subcluster reports the node
+      // (YARN-12069).
       if (nodeResponse == null) {
         continue;
       }
@@ -1018,7 +1075,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       }
     }
     if (subcluster == null) {
-      throw new NotFoundException("Cannot find " + nodeId + " in any subcluster");
+      throwNodeNotResolvable(nodeId, fanout.failedSubClusters,
+          "Cannot find " + nodeId + " in any subcluster");
     }
     return subcluster;
   }
@@ -1413,7 +1471,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         routerMetrics.succeededGetActivitiesLatencyRetrieved(stopTime - startTime);
         return activitiesInfo;
       }
-    } catch (IllegalArgumentException | NotFoundException e) {
+    } catch (IllegalArgumentException | NotFoundException
+        | YarnRuntimeException e) {
       routerMetrics.incrGetActivitiesFailedRetrieved();
       RouterAuditLogger.logFailure(getUser().getShortUserName(), GET_ACTIVITIES, UNKNOWN,
           TARGET_WEB_SERVICE, e.getLocalizedMessage());
