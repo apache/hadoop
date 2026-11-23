@@ -112,6 +112,7 @@ public class DefaultRequestInterceptorREST
   public void shutdown() {
     if (client != null) {
       client.close();
+      client = null;
     }
     super.shutdown();
   }

@@ -1866,6 +1866,24 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   @Test
+  public void testShutdownClosesSubClusterInterceptorClients() throws Exception {
+    // Create a per-subcluster interceptor; its client must be open before
+    // shutdown and released by FederationInterceptorREST#shutdown.
+    SubClusterId scId = SubClusterId.newInstance("0");
+    DefaultRequestInterceptorREST subInterceptor =
+        interceptor.getOrCreateInterceptorForSubCluster(scId, "127.0.0.1:8088");
+    assertNotNull(subInterceptor);
+    assertNotNull(subInterceptor.getClient());
+
+    interceptor.shutdown();
+    assertNull(subInterceptor.getClient(),
+        "per-subcluster interceptor client must be closed on shutdown");
+
+    // Shutdown must be idempotent: a second call must not throw.
+    interceptor.shutdown();
+  }
+
+  @Test
   @Order(1)
   public void testReplaceLabelsOnNode() throws Exception {
     // subCluster3 -> node3:3 -> label:NodeLabel3
