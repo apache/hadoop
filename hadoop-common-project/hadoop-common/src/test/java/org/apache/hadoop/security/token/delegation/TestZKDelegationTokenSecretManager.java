@@ -132,6 +132,11 @@ public class TestZKDelegationTokenSecretManager {
    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH, "testPath");
    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_AUTH_TYPE, "none");
    conf.setLong(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_SHUTDOWN_TIMEOUT, 100);
+   // The token watcher propagates token znode changes into the local cache.
+   // It is on by default, but set it explicitly: the forced-expiry path in
+   // testNodesLoadedAfterRestart relies on it.
+   conf.setBoolean(ZKDelegationTokenSecretManager.ZK_DTSM_TOKEN_WATCHER_ENABLED,
+       true);
    conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, DAY_IN_SECS);
    conf.setLong(DelegationTokenManager.MAX_LIFETIME, DAY_IN_SECS);
    conf.setLong(DelegationTokenManager.RENEW_INTERVAL, DAY_IN_SECS);
