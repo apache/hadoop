@@ -118,11 +118,11 @@ function fetch_wrapper_jar_from
   # compare the checksums ourselves: `sha256sum -c` skips a malformed line
   # and still exits 0
   if download "$1" "${jar}.tmp"; then
-    if [[ "$(sha256 "${jar}.tmp")" == "${wrapper_sha}" ]]; then
-      mv "${jar}.tmp" "${jar}"
+    if [[ "$(sha256 "${jar}.tmp")" != "${wrapper_sha}" ]]; then
+      echo "SHA-256 of the file downloaded from $1 is not ${wrapper_sha}" >&2
+    elif mv "${jar}.tmp" "${jar}"; then
       return 0
     fi
-    echo "SHA-256 of the file downloaded from $1 is not ${wrapper_sha}" >&2
   fi
   rm -f "${jar}.tmp"
   return 1
@@ -145,24 +145,41 @@ function fetch_wrapper_jar
   return 1
 }
 
+## @description  Remove the cache entries of maven-wrapper.jar that hold a
+## @description  Maven distribution archive with the wrong checksum.
+## @description  maven-wrapper.jar stores the archive in its cache before it
+## @description  verifies the checksum, and never downloads an archive that is
+## @description  already there, so every further attempt would fail on the
+## @description  same archive. The cache has one entry per download URL;
+## @description  entries with a valid archive are left alone.
+function remove_invalid_distributions
+{
+  local name
+  local sha
+  local archive
+
+  name=$(property distributionUrl)
+  name=${name##*/}
+  sha=$(property distributionSha256Sum)
+  if [[ -z "${name}" || -z "${sha}" ]]; then
+    return
+  fi
+  for archive in "${MAVEN_USER_HOME:-${HOME}/.m2}/wrapper/dists/${name%.*}"/*/"${name}"; do
+    if [[ -f "${archive}" && "$(sha256 "${archive}")" != "${sha}" ]]; then
+      echo "Removing ${archive%/*}, SHA-256 of ${name} is not ${sha}" >&2
+      rm -rf "${archive%/*}"
+    fi
+  done
+}
+
 ## @description  Have maven-wrapper.jar download, verify and unpack the Maven
 ## @description  distribution
 function fetch_distribution
 {
-  local name
-
   if with_timeout ./mvnw --version; then
     return 0
   fi
-  # maven-wrapper.jar stores the archive in its cache before it verifies the
-  # checksum, and never downloads an archive that is already there. Unless
-  # the cache is cleared, every further attempt fails on the same archive.
-  name=$(property distributionUrl)
-  name=${name##*/}
-  name=${name%.*}
-  if [[ -n "${name}" ]]; then
-    rm -rf "${MAVEN_USER_HOME:-${HOME}/.m2}/wrapper/dists/${name}"
-  fi
+  remove_invalid_distributions
   return 1
 }
 
