@@ -69,7 +69,15 @@ public final class NameNodeAdapterMockitoUtil {
   }
 
   public static FSNamesystem spyOnNamesystem(NameNode nn) {
-    FSNamesystem fsnSpy = spy(nn.getNamesystem());
+    return spyOnNamesystem(nn, spy(nn.getNamesystem()));
+  }
+
+  /**
+   * Install a spy created by {@code spy(nn.getNamesystem())}. Stub the spy
+   * before calling this: stubbing a spy that NameNode threads already use can
+   * attach the stub to another thread's call and skip that call.
+   */
+  public static FSNamesystem spyOnNamesystem(NameNode nn, FSNamesystem fsnSpy) {
     FSNamesystem fsnOld = nn.namesystem;
     fsnOld.writeLock();
     fsnSpy.writeLock();
