@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -164,4 +166,16 @@ public interface DataNodeMXBean {
    * @return Start time of the DataNode.
    */
   long getDNStartedTimeInMillis();
+
+  /**
+   * Get the storage info of each block pool on the DataNode. Storage info
+   * includes the layout version, namespace id, cluster id, block pool id and
+   * the creation time (cTime) of the file system state, as stored in the
+   * block pool VERSION file.
+   *
+   * @return the list of storage infos, one per block pool.
+   */
+  default List<String> getBlockPoolStorageInfos() {
+    return Collections.emptyList();
+  }
 }

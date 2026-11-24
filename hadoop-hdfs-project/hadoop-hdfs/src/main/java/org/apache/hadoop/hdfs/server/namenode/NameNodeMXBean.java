@@ -339,4 +339,16 @@ public interface NameNodeMXBean {
    */
   String getVerifyECWithTopologyResult();
 
+  /**
+   * Get the storage info of the namenode. Storage info includes the layout
+   * version, namespace id, cluster id, block pool id and the creation time
+   * (cTime) of the file system state, as stored in the VERSION file.
+   *
+   * @return the storage info of the namenode, or an empty string if it is
+   * not available.
+   */
+  default String getStorageInfo() {
+    return "";
+  }
+
 }
