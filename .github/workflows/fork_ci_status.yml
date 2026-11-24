@@ -61,7 +61,7 @@ jobs:
       pull-requests: read  # list open PRs and re-read them before writing
     steps:
       - name: "Mirror build_and_test.yml as Build"
-        uses: apache/infrastructure-actions/fork-ci@adff9de8b5e0386b4a2315f298ca9c2679cbb700 # fork-ci/v1.0.1
+        uses: apache/infrastructure-actions/fork-ci@5bbd162d9e5952388608e1ae502ec644b99ee358 # fork-ci/v1.0.3
         with:
           workflow: build_and_test.yml
           check-name: Build
