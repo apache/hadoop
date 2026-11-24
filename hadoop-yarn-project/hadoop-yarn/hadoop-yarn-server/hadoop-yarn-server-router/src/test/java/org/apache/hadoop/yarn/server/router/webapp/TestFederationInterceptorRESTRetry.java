@@ -53,7 +53,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.router.clientrm.PassThroughClientRequestInterceptor;
 import org.apache.hadoop.yarn.server.router.clientrm.TestableFederationClientInterceptor;
-import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -352,39 +351,40 @@ public class TestFederationInterceptorRESTRetry
 
   /**
    * This test validates the correctness of GetNode in case the cluster is
-   * composed of only 1 bad SubCluster.
+   * composed of only 1 bad SubCluster. The lookup on the bad SubCluster
+   * fails, so the Router cannot tell whether the node exists and must not
+   * answer "not found" (YARN-12069).
    */
   @Test
   public void testGetNodeOneBadSC()
       throws YarnException, IOException, InterruptedException {
 
     setupCluster(Arrays.asList(bad2));
-    try {
-      interceptor.getNode("testGetNodeOneBadSC");
-      fail();
-    } catch (NotFoundException e) {
-      Throwable cause = e.getCause();
-      assertTrue(cause.getMessage().contains("nodeId, testGetNodeOneBadSC, is not found"));
-    }
+
+    YarnRuntimeException exception = assertThrows(YarnRuntimeException.class,
+        () -> interceptor.getNode("testGetNodeOneBadSC"));
+    assertTrue(exception.getMessage().contains(
+        "Cannot determine the subcluster hosting testGetNodeOneBadSC"));
+    assertTrue(exception.getMessage().contains(bad2.getId()));
   }
 
   /**
    * This test validates the correctness of GetNode in case the cluster is
-   * composed of only 2 bad SubClusters.
+   * composed of only 2 bad SubClusters. Both lookups fail, so the Router
+   * cannot tell whether the node exists and must not answer "not found"
+   * (YARN-12069).
    */
   @Test
   public void testGetNodeTwoBadSCs()
       throws YarnException, IOException, InterruptedException {
     setupCluster(Arrays.asList(bad1, bad2));
 
-    try {
-      interceptor.getNode("testGetNodeTwoBadSCs");
-      fail();
-    } catch (NotFoundException e) {
-      String stackTraceAsString = getStackTraceAsString(e);
-      assertTrue(stackTraceAsString
-          .contains("nodeId, testGetNodeTwoBadSCs, is not found"));
-    }
+    YarnRuntimeException exception = assertThrows(YarnRuntimeException.class,
+        () -> interceptor.getNode("testGetNodeTwoBadSCs"));
+    assertTrue(exception.getMessage().contains(
+        "Cannot determine the subcluster hosting testGetNodeTwoBadSCs"));
+    assertTrue(exception.getMessage().contains(bad1.getId()));
+    assertTrue(exception.getMessage().contains(bad2.getId()));
   }
 
   /**

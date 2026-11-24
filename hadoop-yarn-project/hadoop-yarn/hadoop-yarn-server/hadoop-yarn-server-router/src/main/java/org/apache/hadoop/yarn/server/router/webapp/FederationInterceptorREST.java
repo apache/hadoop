@@ -45,7 +45,6 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.io.Text;
