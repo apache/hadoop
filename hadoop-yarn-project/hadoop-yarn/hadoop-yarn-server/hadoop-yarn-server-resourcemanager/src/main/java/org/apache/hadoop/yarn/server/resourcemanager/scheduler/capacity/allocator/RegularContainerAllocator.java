@@ -925,6 +925,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
         if (nodeReservedContainer != null
             && nodeReservedContainer != reservedContainer) {
           // A new reservation cannot commit on an already-reserved node.
+          LOG.debug("Skipping reservation on node {} already reserved by {}",
+              node.getNodeID(), nodeReservedContainer.getContainerId());
           result = ContainerAllocation.PRIORITY_SKIPPED;
           continue;
         }
