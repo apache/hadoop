@@ -40,7 +40,7 @@ fi
 
 if [ "$version_to_install" == "3.9.15" ]; then
   mkdir -p /opt/maven /tmp/maven &&
-    curl -L -s -S https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.15/apache-maven-3.9.15-bin.tar.gz \
+    curl -f -L -s -S --retry 5 --retry-delay 5 https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.15/apache-maven-3.9.15-bin.tar.gz \
       -o /tmp/maven/apache-maven-3.9.15-bin.tar.gz &&
     tar xzf /tmp/maven/apache-maven-3.9.15-bin.tar.gz --strip-components 1 -C /opt/maven
 else

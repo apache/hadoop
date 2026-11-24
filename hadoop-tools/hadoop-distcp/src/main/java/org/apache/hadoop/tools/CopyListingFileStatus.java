@@ -20,8 +20,10 @@ package org.apache.hadoop.tools;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -237,7 +239,7 @@ public final class CopyListingFileStatus implements Writable {
    * @param aclEntries List containing all ACL entries
    */
   public void setAclEntries(List<AclEntry> aclEntries) {
-    this.aclEntries = aclEntries;
+    this.aclEntries = aclEntries == null ? null : new ArrayList<>(aclEntries);
   }
   
   /**
@@ -255,7 +257,16 @@ public final class CopyListingFileStatus implements Writable {
    * @param xAttrs Map containing all xAttrs
    */
   public void setXAttrs(Map<String, byte[]> xAttrs) {
-    this.xAttrs = xAttrs;
+    if (xAttrs == null) {
+      this.xAttrs = null;
+      return;
+    }
+    Map<String, byte[]> copy = new LinkedHashMap<>(xAttrs.size());
+    for (Entry<String, byte[]> entry : xAttrs.entrySet()) {
+      byte[] value = entry.getValue();
+      copy.put(entry.getKey(), value == null ? null : value.clone());
+    }
+    this.xAttrs = copy;
   }
 
   public long getChunkOffset() {

@@ -83,7 +83,7 @@ public class BlockPoolSliceStorage extends Storage {
 
   private static final String BLOCK_POOL_ID_PATTERN_BASE =
       Pattern.quote(File.separator) +
-      "BP-\\d+-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}-\\d+" +
+      "BP-\\d+-(?:\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|[0-9a-fA-F_]+)-\\d+" +
       Pattern.quote(File.separator);
 
   private static final Pattern BLOCK_POOL_PATH_PATTERN = Pattern.compile(

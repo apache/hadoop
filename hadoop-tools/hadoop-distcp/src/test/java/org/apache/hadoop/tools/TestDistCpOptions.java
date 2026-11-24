@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.tools;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+
+import org.apache.commons.cli.Option;
 
 import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.Test;
@@ -583,5 +587,47 @@ public class TestDistCpOptions {
         .withUpdateRoot(true)
         .build();
     assertTrue(options.shouldUpdateRoot());
+  }
+
+  @Test
+  public void testBuilderCopiesSourcePaths() {
+    final Path source = new Path("hdfs://localhost:8020/source");
+    final List<Path> sourcePaths = new ArrayList<>();
+    sourcePaths.add(source);
+    final DistCpOptions.Builder builder = new DistCpOptions.Builder(
+        sourcePaths, new Path("hdfs://localhost:8020/target/"));
+    sourcePaths.add(new Path("hdfs://localhost:8020/other"));
+    assertEquals(Collections.singletonList(source),
+        builder.build().getSourcePaths());
+  }
+
+  @Test
+  public void testContextSourcePaths() {
+    final DistCpContext context = new DistCpContext(
+        new DistCpOptions.Builder(
+            Collections.singletonList(new Path("hdfs://localhost:8020/source")),
+            new Path("hdfs://localhost:8020/target/")).build());
+    final Path snapshot = new Path("hdfs://localhost:8020/source/.snapshot/s1");
+    final List<Path> sourcePaths = new ArrayList<>();
+    sourcePaths.add(snapshot);
+    context.setSourcePaths(sourcePaths);
+    sourcePaths.add(new Path("hdfs://localhost:8020/other"));
+    assertEquals(Collections.singletonList(snapshot),
+        context.getSourcePaths());
+    assertThrows(UnsupportedOperationException.class,
+        () -> context.getSourcePaths().add(snapshot));
+
+    context.setSourcePaths(null);
+    assertNull(context.getSourcePaths());
+  }
+
+  @Test
+  public void testOptionSwitchReturnsCopyOfOption() {
+    final Option option = DistCpOptionSwitch.MAX_MAPS.getOption();
+    assertNotSame(option, DistCpOptionSwitch.MAX_MAPS.getOption());
+    option.setDescription("changed");
+    assertEquals(DistCpOptionSwitch.MAX_MAPS.getSwitch(), option.getOpt());
+    assertFalse("changed".equals(
+        DistCpOptionSwitch.MAX_MAPS.getOption().getDescription()));
   }
 }
