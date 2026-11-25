@@ -295,15 +295,17 @@ public class SimpleCopyListing extends CopyListing {
     try {
       List<FileStatusInfo> fileStatuses = Lists.newArrayList();
       for (DiffInfo diff : diffList) {
+        // The path relative to the snapshot root, with renames applied.
+        Path relativeTarget = diff.getTarget();
         // add snapshot paths prefix
         diff.setTarget(
-            new Path(context.getSourcePaths().get(0), diff.getTarget()));
+            new Path(context.getSourcePaths().get(0), relativeTarget));
         if (diff.getType() == SnapshotDiffReport.DiffType.MODIFY) {
           addToFileListing(fileListWriter,
               sourceRoot, diff.getTarget(), context);
         } else if (diff.getType() == SnapshotDiffReport.DiffType.CREATE) {
           addCreateDiffsToFileListing(fileListWriter, context, sourceRoot,
-              sourceFS, fileStatuses, diff, traverseDirectory);
+              sourceFS, fileStatuses, diff, relativeTarget, traverseDirectory);
         }
       }
       if (randomizeFileListing) {
@@ -327,12 +329,15 @@ public class SimpleCopyListing extends CopyListing {
    * @param sourceFS the source Filesystem
    * @param fileStatuses store the result fileStatuses to add to the copyList
    * @param diff the SnapshotDiff report
+   * @param relativeTarget the path of the diff relative to the snapshot root,
+   *                       with renames applied
    * @param traverseDirectory traverse directory recursively and add paths to the copyList
    * @throws IOException
    */
   private void addCreateDiffsToFileListing(SequenceFile.Writer fileListWriter,
       DistCpContext context, Path sourceRoot, FileSystem sourceFS,
-      List<FileStatusInfo> fileStatuses, DiffInfo diff, boolean traverseDirectory) throws IOException {
+      List<FileStatusInfo> fileStatuses, DiffInfo diff, Path relativeTarget,
+      boolean traverseDirectory) throws IOException {
     addToFileListing(fileListWriter, sourceRoot, diff.getTarget(), context);
 
     if (traverseDirectory) {
@@ -341,7 +346,7 @@ public class SimpleCopyListing extends CopyListing {
         LOG.debug("Adding source dir for traverse: {}", sourceStatus.getPath());
 
         HashSet<String> excludeList =
-            distCpSync.getTraverseExcludeList(diff.getSource(),
+            distCpSync.getTraverseExcludeList(relativeTarget,
                 context.getSourcePaths().get(0));
 
         ArrayList<FileStatus> sourceDirs = new ArrayList<>();
