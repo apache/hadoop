@@ -1914,12 +1914,21 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     ReplicaInfo lastFoundReplicaInfo = null;
     boolean isInPipeline = false;
     do {
-      try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
-          b.getBlockPoolId())) {
-        ReplicaInfo currentReplicaInfo =
-            volumeMap.get(b.getBlockPoolId(), b.getBlockId());
-        if (currentReplicaInfo == lastFoundReplicaInfo) {
-          break;
+      final String bpid = b.getBlockPoolId();
+      final ReplicaInfo foundReplicaInfo = volumeMap.get(bpid, b.getBlockId());
+      if (foundReplicaInfo == lastFoundReplicaInfo) {
+        break;
+      }
+      // Check the existing replica under its dir lock, so that we do not see
+      // the intermediate state of an in-place update (e.g. the generation
+      // stamp being bumped and then rolled back by recoverRbw()).
+      try (AutoCloseableLock lock = lockManager.readLock(LockLevel.DIR, bpid,
+          foundReplicaInfo.getStorageUuid(),
+          datasetSubLockStrategy.blockIdToSubLock(b.getBlockId()))) {
+        ReplicaInfo currentReplicaInfo = volumeMap.get(bpid, b.getBlockId());
+        if (currentReplicaInfo != foundReplicaInfo) {
+          // The replica was replaced or moved to another volume, retry.
+          continue;
         } else {
           isInPipeline = currentReplicaInfo.getState() == ReplicaState.TEMPORARY
               || currentReplicaInfo.getState() == ReplicaState.RBW;

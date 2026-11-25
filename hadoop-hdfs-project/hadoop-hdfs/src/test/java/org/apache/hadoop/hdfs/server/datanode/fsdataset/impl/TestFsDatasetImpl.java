@@ -33,6 +33,7 @@ import java.util.function.Supplier;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutSubLockStrategy;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
 import org.apache.hadoop.hdfs.server.datanode.DataSetLockManager;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
@@ -956,6 +957,47 @@ public class TestFsDatasetImpl {
           dataset.createTemporary(StorageType.DEFAULT, null, eb, false));
       try (ReplicaHandler handler = future.get(10, TimeUnit.SECONDS)) {
         assertNotNull(handler.getReplica());
+      }
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
+  /**
+   * createTemporary() must check the generation stamp of the existing replica
+   * under its dir lock, so it does not see the intermediate value of an
+   * in-place update, e.g. recoverRbw() bumping the stamp and rolling it back
+   * when the meta file rename fails.
+   */
+  @Test
+  @Timeout(value = 60)
+  public void testCreateTemporaryWaitsForReplicaDirLock() throws Exception {
+    final String bpid = BLOCK_POOL_IDS[0];
+    final ExtendedBlock eb = new ExtendedBlock(bpid, 1000, 0, 1001);
+    try (ReplicaHandler rbw = dataset.createRbw(StorageType.DEFAULT, null, eb,
+        false)) {
+      // The writer has gone, so createTemporary() needs not interrupt us.
+      rbw.getReplica().setWriter(null);
+    }
+    final ReplicaInfo replica = dataset.getReplicaInfo(bpid, eb.getBlockId());
+    final ExtendedBlock newBlock = new ExtendedBlock(bpid, 1000, 0, 1002);
+    final ExecutorService executor = Executors.newSingleThreadExecutor();
+    try {
+      Future<ReplicaHandler> future;
+      try (AutoCloseableLock lock = dataset.acquireDatasetLockManager()
+          .writeLock(LockLevel.DIR, bpid, replica.getStorageUuid(),
+              new DataNodeLayoutSubLockStrategy()
+                  .blockIdToSubLock(eb.getBlockId()))) {
+        // Simulate an in-place generation stamp update which is rolled back.
+        replica.setGenerationStamp(1003);
+        future = executor.submit(() -> dataset.createTemporary(
+            StorageType.DEFAULT, null, newBlock, false));
+        LambdaTestUtils.intercept(TimeoutException.class,
+            () -> future.get(1, TimeUnit.SECONDS));
+        replica.setGenerationStamp(1001);
+      }
+      try (ReplicaHandler handler = future.get(10, TimeUnit.SECONDS)) {
+        assertEquals(1002, handler.getReplica().getGenerationStamp());
       }
     } finally {
       executor.shutdownNow();
