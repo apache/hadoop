@@ -22,7 +22,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -152,6 +155,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
+import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -1091,6 +1095,61 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     assertNotNull(responseAppPriority);
     assertEquals(20,
         responseAppPriority.getApplicationPriority().getPriority());
+  }
+
+  @Test
+  public void testApplicationUpdateFailureMetrics() throws Exception {
+    TestableFederationClientInterceptor failingInterceptor = spy(interceptor);
+    ApplicationId appId = ApplicationId.newInstance(1L, 1);
+    SubClusterId subClusterId = subClusters.get(0);
+    ApplicationClientProtocol client = mock(ApplicationClientProtocol.class);
+    doReturn(subClusterId).when(failingInterceptor).getApplicationHomeSubCluster(appId);
+    doReturn(client).when(failingInterceptor).getClientRMProxyForSubCluster(subClusterId);
+    RouterMetrics metrics = RouterMetrics.getMetrics();
+    int priorityFailures = metrics.getUpdateApplicationPriorityFailedRetrieved();
+    int timeoutFailures = metrics.getUpdateApplicationTimeoutsFailedRetrieved();
+    int attemptFailures = metrics.getFailApplicationAttemptFailedRetrieved();
+    UpdateApplicationPriorityRequest priorityRequest =
+        UpdateApplicationPriorityRequest.newInstance(appId, Priority.newInstance(1));
+    when(client.updateApplicationPriority(priorityRequest))
+        .thenThrow(new YarnException("priority failure"));
+    LambdaTestUtils.intercept(YarnException.class,
+        () -> failingInterceptor.updateApplicationPriority(priorityRequest));
+    assertEquals(priorityFailures + 1, metrics.getUpdateApplicationPriorityFailedRetrieved());
+    assertEquals(attemptFailures, metrics.getFailApplicationAttemptFailedRetrieved());
+    UpdateApplicationTimeoutsRequest timeoutRequest = UpdateApplicationTimeoutsRequest.newInstance(
+        appId, Collections.singletonMap(ApplicationTimeoutType.LIFETIME,
+            Times.formatISO8601(System.currentTimeMillis() + 60000)));
+    when(client.updateApplicationTimeouts(timeoutRequest))
+        .thenThrow(new YarnException("timeout failure"));
+    LambdaTestUtils.intercept(YarnException.class,
+        () -> failingInterceptor.updateApplicationTimeouts(timeoutRequest));
+    assertEquals(timeoutFailures + 1, metrics.getUpdateApplicationTimeoutsFailedRetrieved());
+    doThrow(new YarnException("missing home subcluster"))
+        .when(failingInterceptor).getApplicationHomeSubCluster(appId);
+    LambdaTestUtils.intercept(YarnException.class,
+        () -> failingInterceptor.updateApplicationTimeouts(timeoutRequest));
+    assertEquals(timeoutFailures + 2, metrics.getUpdateApplicationTimeoutsFailedRetrieved());
+    assertEquals(attemptFailures, metrics.getFailApplicationAttemptFailedRetrieved());
+  }
+
+  @Test
+  public void testDeleteReservationFailureMetrics() throws Exception {
+    TestableFederationClientInterceptor failingInterceptor = spy(interceptor);
+    ReservationId reservationId = ReservationId.newInstance(1L, 1L);
+    SubClusterId subClusterId = subClusters.get(0);
+    ApplicationClientProtocol client = mock(ApplicationClientProtocol.class);
+    doReturn(subClusterId).when(failingInterceptor).getReservationHomeSubCluster(reservationId);
+    doReturn(client).when(failingInterceptor).getClientRMProxyForSubCluster(subClusterId);
+    ReservationDeleteRequest request = ReservationDeleteRequest.newInstance(reservationId);
+    when(client.deleteReservation(request)).thenThrow(new YarnException("delete failure"));
+    RouterMetrics metrics = RouterMetrics.getMetrics();
+    int deleteFailures = metrics.getDeleteReservationFailedRetrieved();
+    int updateFailures = metrics.getUpdateReservationFailedRetrieved();
+    LambdaTestUtils.intercept(YarnException.class,
+        () -> failingInterceptor.deleteReservation(request));
+    assertEquals(deleteFailures + 1, metrics.getDeleteReservationFailedRetrieved());
+    assertEquals(updateFailures, metrics.getUpdateReservationFailedRetrieved());
   }
 
   @Test
