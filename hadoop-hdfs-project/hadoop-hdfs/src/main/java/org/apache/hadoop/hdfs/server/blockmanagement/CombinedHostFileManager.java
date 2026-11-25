@@ -35,7 +35,11 @@ import java.io.IOException;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -65,30 +69,50 @@ public class CombinedHostFileManager extends HostConfigManager {
   static class HostProperties {
     private Multimap<InetAddress, DatanodeAdminProperties> allDNs =
         HashMultimap.create();
+    // Other addresses of a listed host, mapped to the address it is listed
+    // under, so a dual-stack datanode matches its entry whichever address
+    // family it registers from.
+    private final Map<InetAddress, InetAddress> aliases = new HashMap<>();
     // optimization. If every node in the file isn't in service, it implies
     // any node is allowed to register with nn. This is equivalent to having
     // an empty "include" file.
     private boolean emptyInServiceNodeLists = true;
     synchronized void add(InetAddress addr,
         DatanodeAdminProperties properties) {
+      add(addr, properties, Collections.emptyList());
+    }
+
+    synchronized void add(InetAddress addr,
+        DatanodeAdminProperties properties, Collection<InetAddress> others) {
       allDNs.put(addr, properties);
+      for (InetAddress other : others) {
+        aliases.putIfAbsent(other, addr);
+      }
       if (properties.getAdminState().equals(
           AdminStates.NORMAL)) {
         emptyInServiceNodeLists = false;
       }
     }
 
+    /**
+     * @return the address the hosts file lists this address under. An
+     *     explicit entry wins over an alias.
+     */
+    synchronized InetAddress entryAddress(InetAddress addr) {
+      return allDNs.containsKey(addr) ? addr : aliases.getOrDefault(addr, addr);
+    }
+
     // If the includes list is empty, act as if everything is in the
     // includes list.
     synchronized boolean isIncluded(final InetSocketAddress address) {
-      return emptyInServiceNodeLists || allDNs.get(address.getAddress())
-          .stream().anyMatch(
+      return emptyInServiceNodeLists
+          || allDNs.get(entryAddress(address.getAddress())).stream().anyMatch(
               input -> input.getPort() == 0 ||
                   input.getPort() == address.getPort());
     }
 
     synchronized boolean isExcluded(final InetSocketAddress address) {
-      return allDNs.get(address.getAddress()).stream().anyMatch(
+      return allDNs.get(entryAddress(address.getAddress())).stream().anyMatch(
           input -> input.getAdminState().equals(
               AdminStates.DECOMMISSIONED) &&
               (input.getPort() == 0 ||
@@ -97,7 +121,7 @@ public class CombinedHostFileManager extends HostConfigManager {
 
     synchronized String getUpgradeDomain(final InetSocketAddress address) {
       Iterable<DatanodeAdminProperties> datanode =
-          allDNs.get(address.getAddress()).stream().filter(
+          allDNs.get(entryAddress(address.getAddress())).stream().filter(
               input -> (input.getPort() == 0 ||
                   input.getPort() == address.getPort())).collect(
               Collectors.toList());
@@ -125,7 +149,7 @@ public class CombinedHostFileManager extends HostConfigManager {
     synchronized long getMaintenanceExpireTimeInMS(
         final InetSocketAddress address) {
       Iterable<DatanodeAdminProperties> datanode =
-          allDNs.get(address.getAddress()).stream().filter(
+          allDNs.get(entryAddress(address.getAddress())).stream().filter(
               input -> input.getAdminState().equals(
                   AdminStates.IN_MAINTENANCE) &&
                   (input.getPort() == 0 ||
@@ -192,10 +216,25 @@ public class CombinedHostFileManager extends HostConfigManager {
       InetSocketAddress addr = parseEntry(hostsFile,
           properties.getHostName(), properties.getPort());
       if (addr != null) {
-        hostProps.add(addr.getAddress(), properties);
+        hostProps.add(addr.getAddress(), properties,
+            otherAddressesOf(addr.getAddress()));
       }
     }
     refresh(hostProps);
+  }
+
+  /**
+   * @return the host's other addresses, e.g. its IPv6 address for an entry
+   *     given as an IPv4 literal.
+   */
+  private static Collection<InetAddress> otherAddressesOf(InetAddress addr) {
+    try {
+      return Arrays.stream(InetAddress.getAllByName(addr.getCanonicalHostName()))
+          .filter(a -> !a.equals(addr)).collect(Collectors.toList());
+    } catch (UnknownHostException e) {
+      LOG.debug("Cannot resolve the other addresses of {}", addr, e);
+      return Collections.emptyList();
+    }
   }
 
   @VisibleForTesting
@@ -207,6 +246,14 @@ public class CombinedHostFileManager extends HostConfigManager {
       return null;
     }
     return addr;
+  }
+
+  @Override
+  public synchronized InetSocketAddress getHostsFileAddress(
+      final DatanodeID dn) {
+    InetSocketAddress addr = dn.getResolvedAddress();
+    return new InetSocketAddress(
+        hostProperties.entryAddress(addr.getAddress()), addr.getPort());
   }
 
   @Override

@@ -1717,7 +1717,7 @@ public class DatanodeManager {
           nodes.add(dn);
         }
 
-        foundNodes.add(dn.getResolvedAddress());
+        foundNodes.add(hostConfigManager.getHostsFileAddress(dn));
       }
     }
     Collections.sort(nodes);
