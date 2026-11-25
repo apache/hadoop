@@ -100,11 +100,13 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   public static final boolean ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT = true;
   /**
    * Bound on the wait for the initial load, per cache (keys, then tokens);
-   * 0 waits indefinitely.
+   * 0 waits indefinitely. The default fits about 1 million tokens, which
+   * HDFS-15383 reports take 10 minutes to load one at a time.
    */
   public static final String ZK_DTSM_ZK_CACHE_INIT_TIMEOUT = ZK_CONF_PREFIX
       + "zkCacheInitTimeout";
-  public static final long ZK_DTSM_ZK_CACHE_INIT_TIMEOUT_DEFAULT = 0;
+  public static final long ZK_DTSM_ZK_CACHE_INIT_TIMEOUT_DEFAULT =
+      TimeUnit.MINUTES.toMillis(10);
 
   public static final String ZK_DTSM_ZK_SSL_ENABLED = ZK_CONF_PREFIX + "ssl.enabled";
   public static final String ZK_DTSM_ZK_SSL_KEYSTORE_LOCATION =
