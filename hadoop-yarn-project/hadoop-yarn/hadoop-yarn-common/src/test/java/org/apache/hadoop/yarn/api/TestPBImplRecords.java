@@ -381,6 +381,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UpdateNodeResou
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UpdateNodeResourceResponsePBImpl;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
@@ -920,6 +921,14 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
   @Test
   void testQueueInfoPBImpl() throws Exception {
     validatePBImplRecord(QueueInfoPBImpl.class, QueueInfoProto.class);
+    QueueInfoPBImpl queue = new QueueInfoPBImpl();
+    queue.setMinResourceMemory(4096L);
+    queue.setMinResourceVCore(2);
+    queue.setMaxResourceVCore(16);
+    QueueInfoPBImpl copy = new QueueInfoPBImpl(queue.getProto());
+    assertEquals(4096L, copy.getMinResourceMemory());
+    assertEquals(2, copy.getMinResourceVCore());
+    assertEquals(16, copy.getMaxResourceVCore());
   }
 
   @Test
