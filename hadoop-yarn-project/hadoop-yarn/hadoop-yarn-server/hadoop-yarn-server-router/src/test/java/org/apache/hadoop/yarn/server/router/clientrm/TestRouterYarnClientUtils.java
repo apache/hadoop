@@ -22,6 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +41,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
@@ -56,6 +60,7 @@ import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.ReservationAllocationState;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
@@ -76,6 +81,28 @@ import org.junit.jupiter.api.Test;
 public class TestRouterYarnClientUtils {
 
   private final static String PARTIAL_REPORT = "Partial Report ";
+
+  @Test
+  public void testMergeQueueResources() {
+    QueueInfo first = mock(QueueInfo.class);
+    when(first.getMaxResourceVCore()).thenReturn(8);
+    when(first.getMaxResourceMemory()).thenReturn(100L);
+    when(first.getReservedResourceVCore()).thenReturn(1);
+    when(first.getReservedResourceMemory()).thenReturn(10L);
+    QueueInfo second = mock(QueueInfo.class);
+    when(second.getMaxResourceVCore()).thenReturn(16);
+    when(second.getMaxResourceMemory()).thenReturn(200L);
+    when(second.getReservedResourceVCore()).thenReturn(2);
+    when(second.getReservedResourceMemory()).thenReturn(20L);
+    List<GetQueueInfoResponse> responses = new ArrayList<>();
+    responses.add(GetQueueInfoResponse.newInstance(first));
+    responses.add(GetQueueInfoResponse.newInstance(second));
+    assertNotNull(RouterYarnClientUtils.mergeQueues(responses));
+    verify(first).setMaxResourceVCore(24);
+    verify(first).setMaxResourceMemory(300L);
+    verify(first).setReservedResourceVCore(3);
+    verify(first).setReservedResourceMemory(30L);
+  }
 
   @Test
   public void testClusterMetricsMerge() {
