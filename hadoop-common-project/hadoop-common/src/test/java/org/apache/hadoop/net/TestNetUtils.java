@@ -36,10 +36,13 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.channels.SocketChannel;
+import java.nio.channels.UnsupportedAddressTypeException;
 import java.nio.charset.CharacterCodingException;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -129,6 +132,27 @@ public class TestNetUtils {
       } else {
         GenericTestUtils.assertExceptionContains("invalid-test-host:0", uhe);
       }
+    }
+  }
+
+  /**
+   * An endpoint the socket cannot use (as when an IPv4-only JVM connects to an
+   * IPv6 address) fails with an IOException naming the endpoint, not a bare
+   * unchecked UnsupportedAddressTypeException.
+   */
+  @Test
+  public void testConnectUnsupportedAddressType() throws Exception {
+    SocketAddress unsupported = new SocketAddress() {
+      @Override
+      public String toString() {
+        return "unsupported-endpoint";
+      }
+    };
+    try (SocketChannel ch = SocketChannel.open()) {
+      SocketException e = assertThrows(SocketException.class,
+          () -> NetUtils.connect(ch.socket(), unsupported, 1000));
+      assertTrue(e.getMessage().contains("unsupported-endpoint"), e.getMessage());
+      assertTrue(e.getCause() instanceof UnsupportedAddressTypeException);
     }
   }
 
