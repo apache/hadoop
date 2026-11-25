@@ -36,8 +36,12 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
           check-latest: false
-      - name: Download Maven wrapper
-        run: dev-support/bin/mvnw-bootstrap
+      # ./mvnw downloads maven-wrapper.jar into the workspace, which setup-java does not cache
+      - name: Cache Maven wrapper jar
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .mvn/wrapper/maven-wrapper.jar
+          key: maven-wrapper-jar-${{ hashFiles('.mvn/wrapper/maven-wrapper.properties') }}
       - name: Build Hadoop maven plugins
         run: cd hadoop-maven-plugins && ../mvnw --batch-mode install
       - name: Build Hadoop

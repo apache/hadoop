@@ -184,9 +184,12 @@ jobs:
           distribution: zulu
           java-version: ${{ inputs.java }}
 
-      - name: Download Maven wrapper
-        shell: bash
-        run: dev-support/bin/mvnw-bootstrap
+      # ./mvnw downloads maven-wrapper.jar into the workspace, which setup-java does not cache
+      - name: Cache Maven wrapper jar
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .mvn/wrapper/maven-wrapper.jar
+          key: maven-wrapper-jar-${{ hashFiles('.mvn/wrapper/maven-wrapper.properties') }}
 
       - name: Maven Build
         shell: bash
