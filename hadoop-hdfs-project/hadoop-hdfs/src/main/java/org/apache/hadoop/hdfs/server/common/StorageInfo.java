@@ -120,12 +120,22 @@ public class StorageInfo {
    * @return string representation of storage info attributes.
    */
   public String toMapString() {
+    return getStorageInfoMap().toString();
+  }
+
+  /**
+   * Returns the Storage info attributes as a Map. Subclasses may override
+   * this to add further attributes to the result of {@link #toMapString()}.
+   *
+   * @return map of storage info attribute names to their values.
+   */
+  protected Map<String, Object> getStorageInfoMap() {
     Map<String, Object> storageInfo = new HashMap<>();
     storageInfo.put("LayoutVersion", layoutVersion);
     storageInfo.put("ClusterId", clusterID);
     storageInfo.put("NamespaceId", namespaceID);
     storageInfo.put("CreationTime", cTime);
-    return storageInfo.toString();
+    return storageInfo;
   }
   
   public String toColonSeparatedString() {

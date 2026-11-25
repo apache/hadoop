@@ -152,6 +152,18 @@ public class TestNameNodeMXBean {
       String blockpoolId = (String) mbs.getAttribute(mxbeanName,
           "BlockPoolId");
       assertEquals(fsn.getBlockPoolId(), blockpoolId);
+      // get attribute "StorageInfo"
+      String storageInfo = (String) mbs.getAttribute(mxbeanName,
+          "StorageInfo");
+      assertEquals(fsn.getStorageInfo(), storageInfo);
+      NNStorage nnStorage = fsn.getFSImage().getStorage();
+      assertTrue(storageInfo.contains("ClusterId=" + fsn.getClusterId()));
+      assertTrue(storageInfo.contains("BlockPoolId=" + fsn.getBlockPoolId()));
+      assertTrue(storageInfo.contains(
+          "NamespaceId=" + nnStorage.getNamespaceID()));
+      assertTrue(storageInfo.contains("CreationTime=" + nnStorage.getCTime()));
+      assertTrue(storageInfo.contains(
+          "LayoutVersion=" + nnStorage.getLayoutVersion()));
       // get attribute "Version"
       String version = (String) mbs.getAttribute(mxbeanName, "Version");
       assertEquals(fsn.getVersion(), version);

@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.lang.management.ManagementFactory;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -38,6 +40,8 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferTestCase;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -72,6 +76,21 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
       // get attribute "ClusterId"
       String clusterId = (String) mbs.getAttribute(mxbeanName, "ClusterId");
       assertEquals(datanode.getClusterId(), clusterId);
+      // get attribute "BlockPoolStorageInfos"
+      String[] bpStorageInfos = (String[]) mbs.getAttribute(mxbeanName,
+          "BlockPoolStorageInfos");
+      assertEquals(datanode.getBlockPoolStorageInfos().size(),
+          bpStorageInfos.length);
+      assertEquals(1, bpStorageInfos.length);
+      FSNamesystem fsn = cluster.getNamesystem();
+      NNStorage nnStorage = fsn.getFSImage().getStorage();
+      assertTrue(bpStorageInfos[0].contains("ClusterId=" + clusterId));
+      assertTrue(bpStorageInfos[0].contains(
+          "BlockPoolId=" + fsn.getBlockPoolId()));
+      assertTrue(bpStorageInfos[0].contains(
+          "NamespaceId=" + nnStorage.getNamespaceID()));
+      assertTrue(bpStorageInfos[0].contains(
+          "CreationTime=" + nnStorage.getCTime()));
       // get attribute "Version"
       String version = (String)mbs.getAttribute(mxbeanName, "Version");
       assertEquals(datanode.getVersion(), version);
@@ -289,6 +308,69 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }
+  }
+
+  /**
+   * With federation, the DataNode has one block pool per nameservice, and
+   * BlockPoolStorageInfos must report one entry for each of them. With HA,
+   * the NameNodes of a nameservice share a block pool, so there should be
+   * one entry per nameservice rather than one per NameNode.
+   */
+  @Test
+  public void testDataNodeMXBeanBlockPoolStorageInfosFederated()
+      throws Exception {
+    Configuration conf = new Configuration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(2))
+        .numDataNodes(1)
+        .build()) {
+      cluster.waitActive();
+      DataNode datanode = cluster.getDataNodes().get(0);
+
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName = new ObjectName(
+          "Hadoop:service=DataNode,name=DataNodeInfo");
+      String[] bpStorageInfos = (String[]) mbs.getAttribute(mxbeanName,
+          "BlockPoolStorageInfos");
+      assertEquals(datanode.getBlockPoolStorageInfos().size(),
+          bpStorageInfos.length);
+      assertEquals(2, bpStorageInfos.length);
+
+      Map<String, Map<String, String>> infoByBpid = new HashMap<>();
+      for (String info : bpStorageInfos) {
+        Map<String, String> parsed = parseStorageInfo(info);
+        infoByBpid.put(parsed.get("BlockPoolId"), parsed);
+      }
+      assertEquals(2, infoByBpid.size(), "Duplicate block pool entries: "
+          + Arrays.toString(bpStorageInfos));
+
+      // NameNodes 0,1 serve the first nameservice and 2,3 the second.
+      for (int nnIndex : new int[] {0, 2}) {
+        FSNamesystem fsn = cluster.getNamesystem(nnIndex);
+        NNStorage nnStorage = fsn.getFSImage().getStorage();
+        Map<String, String> info = infoByBpid.get(fsn.getBlockPoolId());
+        assertNotNull(info, "No entry for block pool " + fsn.getBlockPoolId()
+            + " in " + Arrays.toString(bpStorageInfos));
+        assertEquals(nnStorage.getClusterID(), info.get("ClusterId"));
+        assertEquals(String.valueOf(nnStorage.getNamespaceID()),
+            info.get("NamespaceId"));
+        assertEquals(String.valueOf(nnStorage.getCTime()),
+            info.get("CreationTime"));
+      }
+    }
+  }
+
+  /**
+   * Parse the output of StorageInfo#toMapString, e.g. "{k1=v1, k2=v2}".
+   */
+  private static Map<String, String> parseStorageInfo(String info) {
+    assertTrue(info.startsWith("{") && info.endsWith("}"), info);
+    Map<String, String> result = new HashMap<>();
+    for (String pair : info.substring(1, info.length() - 1).split(", ")) {
+      String[] kv = pair.split("=", 2);
+      result.put(kv[0], kv[1]);
+    }
+    return result;
   }
 
   @Test

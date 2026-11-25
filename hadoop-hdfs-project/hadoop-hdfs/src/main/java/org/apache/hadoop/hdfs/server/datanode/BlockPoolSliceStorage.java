@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -723,6 +724,13 @@ public class BlockPoolSliceStorage extends Storage {
   @Override
   public String toString() {
     return super.toString() + ";bpid=" + blockpoolID;
+  }
+
+  @Override
+  protected Map<String, Object> getStorageInfoMap() {
+    Map<String, Object> storageInfo = super.getStorageInfoMap();
+    storageInfo.put("BlockPoolId", blockpoolID);
+    return storageInfo;
   }
   
   /**

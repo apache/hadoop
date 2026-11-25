@@ -1076,6 +1076,13 @@ public class NNStorage extends Storage implements Closeable,
     return blockpoolID;
   }
 
+  @Override
+  protected Map<String, Object> getStorageInfoMap() {
+    Map<String, Object> storageInfo = super.getStorageInfoMap();
+    storageInfo.put("BlockPoolId", blockpoolID);
+    return storageInfo;
+  }
+
   /**
    * Iterate over all current storage directories, inspecting them
    * with the given inspector.

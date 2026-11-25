@@ -3845,6 +3845,15 @@ public class DataNode extends ReconfigurableBase
   }
 
   @Override // DataNodeMXBean
+  public List<String> getBlockPoolStorageInfos() {
+    DataStorage dataStorage = storage;
+    if (dataStorage == null) {
+      return Collections.emptyList();
+    }
+    return dataStorage.getBPStorageInfos();
+  }
+
+  @Override // DataNodeMXBean
   public String getDiskBalancerStatus() {
     try {
       return getDiskBalancer().queryWorkStatus().toJsonString();

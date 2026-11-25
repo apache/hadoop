@@ -117,6 +117,20 @@ public class DataStorage extends Storage {
   public BlockPoolSliceStorage getBPStorage(String bpid) {
     return bpStorageMap.get(bpid);
   }
+
+  /**
+   * @return the storage info of each block pool, as given by
+   * {@link BlockPoolSliceStorage#toMapString()}.
+   */
+  List<String> getBPStorageInfos() {
+    synchronized (bpStorageMap) {
+      List<String> infos = new ArrayList<>(bpStorageMap.size());
+      for (BlockPoolSliceStorage bpStorage : bpStorageMap.values()) {
+        infos.add(bpStorage.toMapString());
+      }
+      return infos;
+    }
+  }
   
   public DataStorage(StorageInfo storageInfo) {
     super(storageInfo);

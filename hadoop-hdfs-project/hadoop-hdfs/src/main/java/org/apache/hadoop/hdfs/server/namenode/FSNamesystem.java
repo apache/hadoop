@@ -6963,6 +6963,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public String getBlockPoolId() {
     return getBlockManager().getBlockPoolId();
   }
+
+  @Override  // NameNodeMXBean
+  public String getStorageInfo() {
+    return fsImage == null ? "" : fsImage.getStorage().toMapString();
+  }
   
   @Override  // NameNodeMXBean
   public String getNameDirStatuses() {
