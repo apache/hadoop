@@ -201,4 +201,32 @@ public class TestHostFileManager {
     assertEquals(1,
         dm.getDatanodeListForReport(HdfsConstants.DatanodeReportType.DEAD).size());
   }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testReportMatchesDatanodeRegisteredOnAlias() throws IOException {
+    InetAddress v4 = InetAddress.getByName("192.0.2.1");
+    InetAddress v6 = InetAddress.getByName("2001:db8::1");
+    DatanodeAdminProperties listed = new DatanodeAdminProperties();
+    listed.setHostName("192.0.2.1");
+    CombinedHostFileManager.HostProperties props = new CombinedHostFileManager.HostProperties();
+    props.add(v4, listed, Collections.singletonList(v6));
+    CombinedHostFileManager hm = new CombinedHostFileManager();
+    Whitebox.setInternalState(hm, "hostProperties", props);
+
+    DatanodeManager dm = new DatanodeManager(mock(BlockManager.class), mock(FSNamesystem.class),
+        new Configuration());
+    Whitebox.setInternalState(dm, "hostConfigManager", hm);
+    Map<String, DatanodeDescriptor> dnMap =
+        (Map<String, DatanodeDescriptor>) Whitebox.getInternalState(dm, "datanodeMap");
+    assertEquals(1, dm.getDatanodeListForReport(HdfsConstants.DatanodeReportType.DEAD).size());
+
+    // The datanode registered over IPv6 is the entry listed by IPv4, not an extra dead node.
+    dnMap.put("uuid-v6", new DatanodeDescriptor(new DatanodeID("2001:db8::1", "dn1",
+        "uuid-v6", 9866, 1020, 1021, 1022)));
+    assertEquals(new InetSocketAddress(v4, 9866),
+        hm.getHostsFileAddress(dnMap.get("uuid-v6")));
+    assertEquals(0, dm.getDatanodeListForReport(HdfsConstants.DatanodeReportType.DEAD).size());
+    assertEquals(1, dm.getDatanodeListForReport(HdfsConstants.DatanodeReportType.ALL).size());
+  }
 }

@@ -229,6 +229,7 @@ public class CombinedHostFileManager extends HostConfigManager {
    */
   private static Collection<InetAddress> otherAddressesOf(InetAddress addr) {
     try {
+      // getCanonicalHostName returns the literal unless the PTR name resolves back to addr.
       return Arrays.stream(InetAddress.getAllByName(addr.getCanonicalHostName()))
           .filter(a -> !a.equals(addr)).collect(Collectors.toList());
     } catch (UnknownHostException e) {
