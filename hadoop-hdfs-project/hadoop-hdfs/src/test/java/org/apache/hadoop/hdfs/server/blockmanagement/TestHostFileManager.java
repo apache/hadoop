@@ -88,6 +88,16 @@ public class TestHostFileManager {
   }
 
   @Test
+  public void testCombinedHostsLoopbackHasNoAliases() throws IOException {
+    InetAddress loopback = InetAddress.getByName("127.0.0.1");
+    assertEquals(Collections.emptyList(),
+        CombinedHostFileManager.otherAddressesOf("127.0.0.1", loopback));
+    // localhost often also resolves to ::1, which must not become an alias.
+    assertEquals(Collections.emptyList(),
+        CombinedHostFileManager.otherAddressesOf("localhost", loopback));
+  }
+
+  @Test
   public void testCombinedHostsExplicitEntryWinsOverAlias() throws IOException {
     InetAddress v4 = InetAddress.getByName("192.0.2.1");
     InetAddress v6 = InetAddress.getByName("2001:db8::1");

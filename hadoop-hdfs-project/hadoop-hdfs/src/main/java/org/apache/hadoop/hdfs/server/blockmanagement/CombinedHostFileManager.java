@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.UnmodifiableIterator;
+import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -217,7 +218,7 @@ public class CombinedHostFileManager extends HostConfigManager {
           properties.getHostName(), properties.getPort());
       if (addr != null) {
         hostProps.add(addr.getAddress(), properties,
-            otherAddressesOf(addr.getAddress()));
+            otherAddressesOf(properties.getHostName(), addr.getAddress()));
       }
     }
     refresh(hostProps);
@@ -225,13 +226,19 @@ public class CombinedHostFileManager extends HostConfigManager {
 
   /**
    * @return the host's other addresses, e.g. its IPv6 address for an entry
-   *     given as an IPv4 literal.
+   *     given as an IPv4 literal. Loopback addresses are never aliases.
    */
-  private static Collection<InetAddress> otherAddressesOf(InetAddress addr) {
+  @VisibleForTesting
+  static Collection<InetAddress> otherAddressesOf(String hostName, InetAddress addr) {
+    if (addr.isLoopbackAddress()) {
+      return Collections.emptyList();
+    }
     try {
+      // parseEntry already resolved a name, so only a literal needs a reverse lookup.
       // getCanonicalHostName returns the literal unless the PTR name resolves back to addr.
-      return Arrays.stream(InetAddress.getAllByName(addr.getCanonicalHostName()))
-          .filter(a -> !a.equals(addr)).collect(Collectors.toList());
+      String name = InetAddresses.isInetAddress(hostName) ? addr.getCanonicalHostName() : hostName;
+      return Arrays.stream(InetAddress.getAllByName(name))
+          .filter(a -> !a.equals(addr) && !a.isLoopbackAddress()).collect(Collectors.toList());
     } catch (UnknownHostException e) {
       LOG.debug("Cannot resolve the other addresses of {}", addr, e);
       return Collections.emptyList();
