@@ -180,7 +180,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-all</artifactId>
+      <artifactId>netty-codec-http</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>

@@ -79,24 +79,8 @@
       <version>${azure.documentdb.version}</version>
       <exclusions>
         <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-handler</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-codec-http</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>io.reactivex</groupId>
           <artifactId>rxjava</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-transport</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-handler-proxy</artifactId>
         </exclusion>
         <exclusion>
           <groupId>xml-apis</groupId>
