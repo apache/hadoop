@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ValidationResultInfo;
 
 /**
  * A custom JSON provider that extends {@link org.eclipse.persistence.jaxb.rs.MOXyJsonProvider}
@@ -52,7 +53,8 @@ import org.apache.hadoop.conf.Configuration;
  * During marshalling and unmarshalling, this provider sets the MOXy-specific properties:
  * <ul>
  *   <li>{@code MarshallerProperties.JSON_INCLUDE_ROOT = true}</li>
- *   <li>{@code MarshallerProperties.JSON_MARSHAL_EMPTY_COLLECTIONS = false}</li>
+ *   <li>{@code MarshallerProperties.JSON_MARSHAL_EMPTY_COLLECTIONS = false}, except for
+ *   {@code ValidationResultInfo}</li>
  * </ul>
  * ensuring consistent JSON structure that includes the root element and omits empty collections.
  *
@@ -138,7 +140,9 @@ public class IncludeRootJSONProvider extends MOXyJsonProvider {
       Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders,
       Marshaller marshaller) throws JAXBException {
     LOG.trace("IncludeRootJSONProvider preWriteTo with {}", type);
-    marshaller.setProperty(MarshallerProperties.JSON_MARSHAL_EMPTY_COLLECTIONS, false);
+    // A validation result always carries its issues wrapper, even when empty.
+    marshaller.setProperty(MarshallerProperties.JSON_MARSHAL_EMPTY_COLLECTIONS,
+        object instanceof ValidationResultInfo);
     marshaller.setProperty(MarshallerProperties.JSON_INCLUDE_ROOT, true);
   }
 }

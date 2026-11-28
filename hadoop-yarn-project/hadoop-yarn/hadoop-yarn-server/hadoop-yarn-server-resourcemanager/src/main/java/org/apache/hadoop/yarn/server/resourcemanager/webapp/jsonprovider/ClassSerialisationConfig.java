@@ -83,6 +83,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInf
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.UserMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.UsersInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ValidationResultInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
@@ -159,7 +160,8 @@ public class ClassSerialisationConfig {
           ReservationUpdateRequestInfo.class, ReservationUpdateResponseInfo.class,
           ResourceInfo.class, ResourceInformationsInfo.class, SchedulerInfo.class,
           SchedulerOverviewInfo.class, SchedulerTypeInfo.class, StatisticsItemInfo.class,
-          UserInfo.class, UserMetricsInfo.class, UsersInfo.class);
+          UserInfo.class, UserMetricsInfo.class, UsersInfo.class,
+          ValidationResultInfo.class);
 
   private static final Set<Class<?>> CONST_UNWRAPPED_CLASSES =
       Sets.newHashSet(ApplicationSubmissionContextInfo.class, AppPriority.class, AppQueue.class,

@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -49,40 +47,6 @@ import static org.mockito.Mockito.when;
 
 public class TestPlacementRuleChecks {
 
-  /**
-   * Queue index over plain data: full paths, unambiguous short names and the
-   * set of ambiguous short names.
-   */
-  private static final class DataQueueIndex implements QueueIndex {
-    private final Map<String, QueueRef> queues = new HashMap<>();
-    private final Map<String, Integer> shortNameCounts = new HashMap<>();
-
-    DataQueueIndex add(String path, QueueKind kind, boolean eligible) {
-      QueueRef ref = new QueueRef(path, kind, eligible);
-      queues.put(path, ref);
-      String shortName = path.substring(path.lastIndexOf('.') + 1);
-      shortNameCounts.merge(shortName, 1, Integer::sum);
-      if (!path.equals(shortName)) {
-        queues.put(shortName, ref);
-      }
-      return this;
-    }
-
-    @Override
-    public QueueRef getQueue(String queueName) {
-      if (isAmbiguous(queueName)) {
-        return queueName.contains(".") ? queues.get(queueName) : null;
-      }
-      return queues.get(queueName);
-    }
-
-    @Override
-    public boolean isAmbiguous(String shortName) {
-      Integer count = shortNameCounts.get(shortName);
-      return count != null && count > 1;
-    }
-  }
-
   /** Mirrors the variable update action of a set-variable mapping rule. */
   private static final class SetVariableAction extends MappingRuleActionBase {
     private final String variable;
@@ -103,19 +67,34 @@ public class TestPlacementRuleChecks {
     }
   }
 
-  private static DataQueueIndex index() {
-    return new DataQueueIndex()
-        .add("root", QueueKind.PARENT, false)
-        .add("root.static", QueueKind.PARENT, false)
-        .add("root.static.sleaf", QueueKind.LEAF, false)
-        .add("root.leaf", QueueKind.LEAF, false)
-        .add("root.managed", QueueKind.MANAGED_PARENT, false)
-        .add("root.v2", QueueKind.PARENT, true)
+  private static QueueIndex index() {
+    return PlacementRuleChecks.queueIndexOf(Arrays.asList(
+        new QueueRef("root", QueueKind.PARENT, false),
+        new QueueRef("root.static", QueueKind.PARENT, false),
+        new QueueRef("root.static.sleaf", QueueKind.LEAF, false),
+        new QueueRef("root.leaf", QueueKind.LEAF, false),
+        new QueueRef("root.managed", QueueKind.MANAGED_PARENT, false),
+        new QueueRef("root.v2", QueueKind.PARENT, true),
         // an existing dynamic parent created under root.v2
-        .add("root.v2.dyn", QueueKind.PARENT, true)
-        .add("root.plan", QueueKind.OTHER_PARENT, false)
-        .add("root.x.dup", QueueKind.LEAF, false)
-        .add("root.y.dup", QueueKind.LEAF, false);
+        new QueueRef("root.v2.dyn", QueueKind.PARENT, true),
+        new QueueRef("root.plan", QueueKind.OTHER_PARENT, false),
+        new QueueRef("root.x.dup", QueueKind.LEAF, false),
+        new QueueRef("root.y.dup", QueueKind.LEAF, false)));
+  }
+
+  @Test
+  public void testQueueIndexOfQueuesFollowsTheQueueStore() {
+    QueueIndex queueIndex = index();
+    assertEquals("root.leaf", queueIndex.getQueue("leaf").getQueuePath());
+    assertEquals("root.leaf", queueIndex.getQueue("root.leaf").getQueuePath());
+    assertEquals("root", queueIndex.getQueue("root").getQueuePath());
+    assertNull(queueIndex.getQueue("dup"));
+    assertTrue(queueIndex.isAmbiguous("dup"));
+    assertEquals("root.x.dup", queueIndex.getQueue("root.x.dup").getQueuePath());
+    assertFalse(queueIndex.isAmbiguous("leaf"));
+    assertFalse(queueIndex.isAmbiguous("root"));
+    assertNull(queueIndex.getQueue("missing"));
+    assertNull(queueIndex.getQueue(null));
   }
 
   private static MappingRuleValidationContext context(QueueIndex index)

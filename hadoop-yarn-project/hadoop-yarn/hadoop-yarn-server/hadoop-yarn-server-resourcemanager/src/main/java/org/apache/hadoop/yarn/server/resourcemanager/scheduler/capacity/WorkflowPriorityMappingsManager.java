@@ -117,9 +117,19 @@ public class WorkflowPriorityMappingsManager {
    */
   public Map<String, Map<String, Priority>>
       getWorkflowPriorityMappings() {
-    Map<String, Map<String, Priority>> mappings = new HashMap<>();
+    return parseWorkflowPriorityMappings(conf.getWorkflowPriorityMappings());
+  }
 
-    Collection<String> workflowMappings = conf.getWorkflowPriorityMappings();
+  /**
+   * Parses workflow priority mappings ({@code workflowId:queue:priority}).
+   *
+   * @param workflowMappings the configured mappings
+   * @return queue to workflow id to priority
+   * @throws IllegalArgumentException for a malformed mapping
+   */
+  public static Map<String, Map<String, Priority>>
+      parseWorkflowPriorityMappings(Collection<String> workflowMappings) {
+    Map<String, Map<String, Priority>> mappings = new HashMap<>();
     for (String workflowMapping : workflowMappings) {
       WorkflowPriorityMapping mapping =
           getWorkflowMappingFromString(workflowMapping);
@@ -134,7 +144,7 @@ public class WorkflowPriorityMappingsManager {
     return mappings;
   }
 
-  private WorkflowPriorityMapping getWorkflowMappingFromString(
+  private static WorkflowPriorityMapping getWorkflowMappingFromString(
       String mappingString) {
     if (mappingString == null) {
       return null;

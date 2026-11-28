@@ -34,6 +34,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
@@ -46,6 +47,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configurable;
@@ -3463,6 +3465,23 @@ public class CapacityScheduler extends
   @Override
   public boolean isConfigurationMutable() {
     return csConfProvider instanceof MutableConfigurationProvider;
+  }
+
+  /**
+   * Runs a read-only action under the scheduler read lock, so that it sees
+   * the queues, nodes and their state as one consistent snapshot.
+   * @param action the action, which must not take the scheduler write lock
+   * @param <T> type of the result
+   * @return the result of the action
+   */
+  @InterfaceAudience.Private
+  public <T> T callUnderReadLock(Supplier<T> action) {
+    readLock.lock();
+    try {
+      return action.get();
+    } finally {
+      readLock.unlock();
+    }
   }
 
   @Override
