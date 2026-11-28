@@ -164,6 +164,10 @@ public class CapacitySchedulerPreemptionUtils {
 
     String nodePartition = getPartitionByNodeId(context,
         rmContainer.getAllocatedNode());
+    if (nodePartition == null) {
+      return false;
+    }
+
     Resource toObtainByPartition = resourceToObtainByPartitions
         .get(nodePartition);
     if (null == toObtainByPartition) {
@@ -230,7 +234,8 @@ public class CapacitySchedulerPreemptionUtils {
 
   private static String getPartitionByNodeId(
       CapacitySchedulerPreemptionContext context, NodeId nodeId) {
-    return context.getScheduler().getSchedulerNode(nodeId).getPartition();
+    SchedulerNode node = context.getScheduler().getSchedulerNode(nodeId);
+    return node == null ? null : node.getPartition();
   }
 
   protected static void addToPreemptMap(
