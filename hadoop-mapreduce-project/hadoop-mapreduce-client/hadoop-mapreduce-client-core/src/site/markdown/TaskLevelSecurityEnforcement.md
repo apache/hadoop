@@ -36,7 +36,7 @@ The goal is to protect the cluster from unwanted or unsafe task implementations,
 
 Upon receiving job metadata, the Application Master will:
 1) Check the feature is enabled.
-2) Check the user who submitted the job is allowed to bypass the security check.
+2) Check the user who submitted the job is allowed to bypass the security check, either by user name or by group membership.
 3) Compare classes in job config against the denied task list.
 4) If job is not authorised an exception will be thrown and AM will fail.
 
@@ -98,3 +98,15 @@ If the submitting user is listed here, blacklist enforcement is skipped, althoug
 - Property type: list of usernames
 - Default: empty
 - Example: alice,bob
+
+#### MapReduce Task-Level Security Enforcement: Allowed Groups
+Specifies groups whose members may bypass the blacklist defined in denied tasks.
+This works like allowed users, but matches on the groups of the submitting user. The allowed users list is checked first;
+if the user is not listed there, the Application Master resolves the user's groups and skips blacklist enforcement when any of them is listed here.
+Groups are resolved through the cluster's Hadoop group mapping (`hadoop.security.group.mapping`), not taken from the job configuration.
+Because the check runs inside the Application Master, the group mapping must resolve consistently on every NodeManager host.
+Group names must match the names returned by the group mapping exactly, including case.
+- Property name: mapreduce.security.allowed-groups
+- Property type: list of group names
+- Default: empty
+- Example: hadoop,hue
