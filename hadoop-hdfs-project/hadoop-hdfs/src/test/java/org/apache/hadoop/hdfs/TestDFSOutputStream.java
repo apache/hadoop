@@ -22,6 +22,7 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -32,6 +33,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
@@ -51,10 +53,12 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketReceiver;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
@@ -68,10 +72,13 @@ import org.junit.jupiter.api.Timeout;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import org.mockito.Mockito;
 
 import static org.mockito.ArgumentMatchers.anyString;
@@ -575,4 +582,68 @@ public class TestDFSOutputStream {
       return closed;
     }, 1000, 5000);
   }
+
+  /**
+   * A DataStreamer that ends without running closeInternal() leaves
+   * streamerClosed false and leaves nobody to notify dataQueue, so a writer
+   * parked in waitForAckedSeqno waits on a thread that no longer exists. The
+   * wait is bounded only by the datanode write timeout, which is
+   * dfs.datanode.socket.write.timeout plus 5s per node -- 495s with the
+   * defaults, since the pipeline is not up yet and the node count falls back
+   * to three.
+   *
+   * addBlock() returning null drives the streamer into a NullPointerException
+   * in setupPipelineForCreate(). With assertions enabled, Surefire's default,
+   * the assertion in run()'s own handler then raises AssertionError from
+   * inside the error handling. Whichever way the thread ends, the writer has
+   * to be released promptly and told what went wrong.
+   */
+  @Test
+  @Timeout(value = 60)
+  public void testWriterIsReleasedWhenStreamerDies() throws Exception {
+    NamenodeProtocols spyNN = spy(cluster.getNameNodeRpc());
+    doReturn((LocatedBlock) null).when(spyNN).addBlock(anyString(),
+        anyString(), any(), any(), anyLong(), any(), any());
+
+    DFSClient client =
+        new DFSClient(null, spyNN, cluster.getConfiguration(0), null);
+    Thread closer = null;
+    try {
+      final OutputStream out =
+          client.create("/testWriterIsReleasedWhenStreamerDies", false);
+      out.write(new byte[256]);
+
+      final AtomicReference<Throwable> failure = new AtomicReference<>();
+      closer = new Thread(() -> {
+        try {
+          out.close();
+        } catch (Throwable t) {
+          failure.set(t);
+        }
+      }, "closer");
+      closer.setDaemon(true);
+      closer.start();
+      closer.join(30000);
+
+      assertFalse(closer.isAlive(),
+          "close() was still blocked 30s after the streamer died. A streamer "
+              + "that ends without closeInternal() never sets streamerClosed "
+              + "and never notifies dataQueue, stranding the writer in "
+              + "waitForAckedSeqno until the datanode write timeout expires.");
+      assertNotNull(failure.get(),
+          "close() returned without reporting the failure that killed the "
+              + "streamer");
+    } finally {
+      // Drop the failed stream's lease, but only once the writer is out of
+      // close(): while it is blocked there it holds the DFSOutputStream
+      // monitor, and abort() takes that same monitor, so cleaning up would
+      // block too and turn a clear assertion failure into a hung fork.
+      // client.close() is not usable here either: it ends by stopping the
+      // namenode proxy, and this client was handed a Mockito spy.
+      if (closer == null || !closer.isAlive()) {
+        client.closeAllFilesBeingWritten(true);
+      }
+    }
+  }
+
 }
