@@ -400,7 +400,7 @@ public final class RouterWebServiceUtil {
       am.setAllocatedMB(am.getAllocatedMB() + uam.getAllocatedMB());
       am.setAllocatedVCores(am.getAllocatedVCores() + uam.getAllocatedVCores());
       am.setReservedMB(am.getReservedMB() + uam.getReservedMB());
-      am.setReservedVCores(am.getReservedVCores() + uam.getReservedMB());
+      am.setReservedVCores(am.getReservedVCores() + uam.getReservedVCores());
       am.setRunningContainers(
           am.getRunningContainers() + uam.getRunningContainers());
       am.setMemorySeconds(am.getMemorySeconds() + uam.getMemorySeconds());
