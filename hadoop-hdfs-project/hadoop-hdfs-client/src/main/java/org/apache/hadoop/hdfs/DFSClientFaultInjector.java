@@ -57,6 +57,9 @@ public class DFSClientFaultInjector {
 
   public void startFetchFromDatanode() {}
 
+  /** Invoked when opening a BlockReader on any read path (sequential/pread). */
+  public void openBlockReaderDelay() {}
+
   public void fetchFromDatanodeException() {}
 
   public void readFromDatanodeDelay() {}
