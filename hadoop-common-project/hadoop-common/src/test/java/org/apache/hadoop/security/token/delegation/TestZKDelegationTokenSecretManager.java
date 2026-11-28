@@ -54,6 +54,7 @@ import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.Time;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
@@ -125,17 +126,21 @@ public class TestZKDelegationTokenSecretManager {
   }
 
   protected Configuration getSecretConf(String connectString) {
-   Configuration conf = new Configuration();
-   conf.setBoolean(DelegationTokenManager.ENABLE_ZK_KEY, true);
-   conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CONNECTION_STRING, connectString);
-   conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH, "testPath");
-   conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_AUTH_TYPE, "none");
-   conf.setLong(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_SHUTDOWN_TIMEOUT, 100);
-   conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, DAY_IN_SECS);
-   conf.setLong(DelegationTokenManager.MAX_LIFETIME, DAY_IN_SECS);
-   conf.setLong(DelegationTokenManager.RENEW_INTERVAL, DAY_IN_SECS);
-   conf.setLong(DelegationTokenManager.REMOVAL_SCAN_INTERVAL, DAY_IN_SECS);
-   return conf;
+    Configuration conf = new Configuration();
+    conf.setBoolean(DelegationTokenManager.ENABLE_ZK_KEY, true);
+    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CONNECTION_STRING, connectString);
+    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH, "testPath");
+    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_AUTH_TYPE, "none");
+    conf.setLong(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_SHUTDOWN_TIMEOUT, 100);
+    // The token watcher propagates token znode changes into the local cache.
+    // It is on by default, but set it explicitly: the forced-expiry path in
+    // testNodesLoadedAfterRestart relies on it.
+    conf.setBoolean(ZKDelegationTokenSecretManager.ZK_DTSM_TOKEN_WATCHER_ENABLED, true);
+    conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, DAY_IN_SECS);
+    conf.setLong(DelegationTokenManager.MAX_LIFETIME, DAY_IN_SECS);
+    conf.setLong(DelegationTokenManager.RENEW_INTERVAL, DAY_IN_SECS);
+    conf.setLong(DelegationTokenManager.REMOVAL_SCAN_INTERVAL, DAY_IN_SECS);
+    return conf;
   }
 
   @SuppressWarnings("unchecked")
@@ -494,8 +499,11 @@ public class TestZKDelegationTokenSecretManager {
     // Set the update interval to trigger background thread to run. The thread
     // is hard-coded to sleep at least 5 seconds.
     conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, 5);
-    // Set token expire time to 5 seconds.
-    conf.setLong(DelegationTokenManager.RENEW_INTERVAL, 5);
+    // Set a generous token expire time so the token cannot expire while the
+    // first manager shuts down and the second one starts. Expiry is forced
+    // below, after the restarted manager is confirmed to have loaded the
+    // token into memory, so the test does not depend on wall-clock timing.
+    conf.setLong(DelegationTokenManager.RENEW_INTERVAL, 60);
 
     DelegationTokenManager tm =
         new DelegationTokenManager(conf, new Text("bla"));
@@ -553,20 +561,30 @@ public class TestZKDelegationTokenSecretManager {
 
       // The good token should be loaded on startup, and removed after expiry.
       id = smNew.decodeTokenIdentifier(token);
+      final AbstractDelegationTokenIdentifier idToLoad = id;
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return zksmNew.getTokenInfoFromMemory(idToLoad) != null;
+        }
+      }, 100, 5000);
       dtinfo = zksmNew.getTokenInfoFromMemory(id);
       assertNotNull(dtinfo, "good dt should be in memory!");
 
-      // Wait for the good token to expire.
-      Thread.sleep(5000);
+      // The token is confirmed loaded: force its expiry now so the removal
+      // below is test-controlled instead of racing the restart window.
       final ZKDelegationTokenSecretManager zksm1 = zksmNew;
       final AbstractDelegationTokenIdentifier id1 = id;
+      zksmNew.updateToken(id,
+          new AbstractDelegationTokenSecretManager.DelegationTokenInformation(
+              Time.now() - 1000, dtinfo.getPassword()));
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
         @Override
         public Boolean get() {
           LOG.info("Waiting for the expired token to be removed...");
           return zksm1.getTokenInfo(id1) == null;
         }
-      }, 1000, 5000);
+      }, 1000, 30000);
     } finally {
       restartedManager.destroy();
     }
