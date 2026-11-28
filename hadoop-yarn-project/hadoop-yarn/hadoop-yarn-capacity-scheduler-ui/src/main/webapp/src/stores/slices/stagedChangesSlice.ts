@@ -47,6 +47,7 @@ import { assertWritable } from '~/lib/errors/readOnlyGuard';
 import type { StagedChangesSlice, SchedulerStore } from './types';
 import { getAffectedQueuesForValidation } from '~/features/validation/utils/affectedQueues';
 import { validateStagedChanges, validatePropertyChange } from '~/features/validation/crossQueue';
+import { resolveRootCapacityStagingWhenAutoQueueCreationIsToggled } from './rootCapacityAutoStaging';
 
 type MutationErrorState = Pick<SchedulerStore, 'applyError' | 'error' | 'errorContext'>;
 const clearMutationError = (state: MutationErrorState) => {
@@ -581,6 +582,14 @@ export const createStagedChangesSlice: StateCreator<
       }));
     });
   },
+
+  resolveRootCapacityStagingForFlexibleAutoCreation: (queuePath, changedData) =>
+    resolveRootCapacityStagingWhenAutoQueueCreationIsToggled({
+      queuePath,
+      changedData,
+      getQueuePropertyValue: get().getQueuePropertyValue,
+      configData: get().configData,
+    }),
 
   refreshAffectedValidationErrors: (triggeringQueuePath: string, triggeringProperty: string) => {
     const { stagedChanges, schedulerData, configData } = get();
