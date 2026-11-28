@@ -2864,6 +2864,7 @@ public abstract class FSEditLogOp {
       clientMachine = null;
       newLength = 0L;
       timestamp = 0L;
+      truncateBlock = null;
     }
 
     TruncateOp setPath(String src) {
@@ -2934,8 +2935,9 @@ public abstract class FSEditLogOp {
           Long.toString(newLength));
       XMLUtils.addSaxString(contentHandler, "TIMESTAMP",
           Long.toString(timestamp));
-      if(truncateBlock != null)
+      if (truncateBlock != null) {
         FSEditLogOp.blockToXml(contentHandler, truncateBlock);
+      }
     }
 
     @Override
@@ -2945,8 +2947,12 @@ public abstract class FSEditLogOp {
       this.clientMachine = st.getValue("CLIENTMACHINE");
       this.newLength = Long.parseLong(st.getValue("NEWLENGTH"));
       this.timestamp = Long.parseLong(st.getValue("TIMESTAMP"));
-      if (st.hasChildren("BLOCK"))
-        this.truncateBlock = FSEditLogOp.blockFromXml(st);
+      if (st.hasChildren("BLOCK")) {
+        this.truncateBlock =
+            FSEditLogOp.blockFromXml(st.getChildren("BLOCK").get(0));
+      } else {
+        this.truncateBlock = null;
+      }
     }
 
     @Override
