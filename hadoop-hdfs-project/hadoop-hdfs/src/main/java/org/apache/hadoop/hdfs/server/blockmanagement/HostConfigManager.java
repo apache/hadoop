@@ -53,6 +53,15 @@ public abstract class HostConfigManager implements Configurable {
   public abstract Iterable<InetSocketAddress> getExcludes();
 
   /**
+   * @return the address the hosts configuration lists this datanode under.
+   *     It differs from the datanode's own address when the host is listed by
+   *     another of its addresses, e.g. by IPv4 while it registered over IPv6.
+   */
+  public InetSocketAddress getHostsFileAddress(DatanodeID dn) {
+    return dn.getResolvedAddress();
+  }
+
+  /**
    * Check if a datanode is allowed to connect the namenode.
    * @param dn the DatanodeID of the datanode
    * @return boolean if dn is allowed to connect the namenode.

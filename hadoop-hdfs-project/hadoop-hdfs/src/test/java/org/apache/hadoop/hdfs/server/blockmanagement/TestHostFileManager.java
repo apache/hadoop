@@ -19,14 +19,18 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.test.Whitebox;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Collections;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -57,6 +61,58 @@ public class TestHostFileManager {
     assertEquals(3, s.size());
     s.add(entry("127.0.0.10"));
     assertEquals(4, s.size());
+  }
+
+  @Test
+  public void testCombinedHostsEntryMatchesOtherAddressOfHost() throws IOException {
+    InetAddress v4 = InetAddress.getByName("192.0.2.1");
+    InetAddress v6 = InetAddress.getByName("2001:db8::1");
+    InetAddress unlisted = InetAddress.getByName("2001:db8::2");
+    DatanodeAdminProperties listed = new DatanodeAdminProperties();
+    listed.setHostName("192.0.2.1");
+    listed.setAdminState(AdminStates.DECOMMISSIONED);
+    DatanodeAdminProperties normal = new DatanodeAdminProperties();
+    normal.setHostName("192.0.2.9");
+    CombinedHostFileManager.HostProperties props = new CombinedHostFileManager.HostProperties();
+    props.add(v4, listed, Collections.singletonList(v6));
+    props.add(InetAddress.getByName("192.0.2.9"), normal, Collections.emptyList());
+
+    // A datanode registering over IPv6 matches the entry listed by its IPv4 address.
+    assertEquals(v4, props.entryAddress(v6));
+    assertTrue(props.isExcluded(new InetSocketAddress(v6, 9866)));
+    assertTrue(props.isIncluded(new InetSocketAddress(v6, 9866)));
+    // Addresses of hosts that are not listed still do not match.
+    assertEquals(unlisted, props.entryAddress(unlisted));
+    assertFalse(props.isIncluded(new InetSocketAddress(unlisted, 9866)));
+    assertFalse(props.isExcluded(new InetSocketAddress(unlisted, 9866)));
+  }
+
+  @Test
+  public void testCombinedHostsLoopbackHasNoAliases() throws IOException {
+    InetAddress loopback = InetAddress.getByName("127.0.0.1");
+    assertEquals(Collections.emptyList(),
+        CombinedHostFileManager.otherAddressesOf("127.0.0.1", loopback));
+    // localhost often also resolves to ::1, which must not become an alias.
+    assertEquals(Collections.emptyList(),
+        CombinedHostFileManager.otherAddressesOf("localhost", loopback));
+  }
+
+  @Test
+  public void testCombinedHostsExplicitEntryWinsOverAlias() throws IOException {
+    InetAddress v4 = InetAddress.getByName("192.0.2.1");
+    InetAddress v6 = InetAddress.getByName("2001:db8::1");
+    DatanodeAdminProperties byV4 = new DatanodeAdminProperties();
+    byV4.setHostName("192.0.2.1");
+    byV4.setAdminState(AdminStates.DECOMMISSIONED);
+    DatanodeAdminProperties byV6 = new DatanodeAdminProperties();
+    byV6.setHostName("2001:db8::1");
+    CombinedHostFileManager.HostProperties props = new CombinedHostFileManager.HostProperties();
+    props.add(v4, byV4, Collections.singletonList(v6));
+    props.add(v6, byV6, Collections.singletonList(v4));
+
+    assertEquals(v6, props.entryAddress(v6));
+    assertFalse(props.isExcluded(new InetSocketAddress(v6, 9866)));
+    assertTrue(props.isExcluded(new InetSocketAddress(v4, 9866)));
   }
 
   @Test
@@ -154,5 +210,33 @@ public class TestHostFileManager {
     excludedNodes.add(entry("127.0.0.3"));
     assertEquals(1,
         dm.getDatanodeListForReport(HdfsConstants.DatanodeReportType.DEAD).size());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testReportMatchesDatanodeRegisteredOnAlias() throws IOException {
+    InetAddress v4 = InetAddress.getByName("192.0.2.1");
+    InetAddress v6 = InetAddress.getByName("2001:db8::1");
+    DatanodeAdminProperties listed = new DatanodeAdminProperties();
+    listed.setHostName("192.0.2.1");
+    CombinedHostFileManager.HostProperties props = new CombinedHostFileManager.HostProperties();
+    props.add(v4, listed, Collections.singletonList(v6));
+    CombinedHostFileManager hm = new CombinedHostFileManager();
+    Whitebox.setInternalState(hm, "hostProperties", props);
+
+    DatanodeManager dm = new DatanodeManager(mock(BlockManager.class), mock(FSNamesystem.class),
+        new Configuration());
+    Whitebox.setInternalState(dm, "hostConfigManager", hm);
+    Map<String, DatanodeDescriptor> dnMap =
+        (Map<String, DatanodeDescriptor>) Whitebox.getInternalState(dm, "datanodeMap");
+    assertEquals(1, dm.getDatanodeListForReport(HdfsConstants.DatanodeReportType.DEAD).size());
+
+    // The datanode registered over IPv6 is the entry listed by IPv4, not an extra dead node.
+    dnMap.put("uuid-v6", new DatanodeDescriptor(new DatanodeID("2001:db8::1", "dn1",
+        "uuid-v6", 9866, 1020, 1021, 1022)));
+    assertEquals(new InetSocketAddress(v4, 9866),
+        hm.getHostsFileAddress(dnMap.get("uuid-v6")));
+    assertEquals(0, dm.getDatanodeListForReport(HdfsConstants.DatanodeReportType.DEAD).size());
+    assertEquals(1, dm.getDatanodeListForReport(HdfsConstants.DatanodeReportType.ALL).size());
   }
 }
