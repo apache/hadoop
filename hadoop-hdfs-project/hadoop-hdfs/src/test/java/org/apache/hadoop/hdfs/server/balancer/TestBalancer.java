@@ -2059,7 +2059,7 @@ public class TestBalancer {
   }
 
   private void spyFSNamesystem(NameNode nn) throws IOException {
-    FSNamesystem fsnSpy = NameNodeAdapterMockitoUtil.spyOnNamesystem(nn);
+    FSNamesystem fsnSpy = spy(nn.getNamesystem());
     doAnswer(new Answer<BlocksWithLocations>() {
       @Override
       public BlocksWithLocations answer(InvocationOnMock invocation)
@@ -2074,6 +2074,7 @@ public class TestBalancer {
         return blk;
       }}).when(fsnSpy).getBlocks(any(DatanodeID.class),
         anyLong(), anyLong(), anyLong(), any(StorageType.class));
+    NameNodeAdapterMockitoUtil.spyOnNamesystem(nn, fsnSpy);
   }
 
   /**
