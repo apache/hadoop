@@ -785,8 +785,20 @@ public class UsersManager implements AbstractUsersManager {
     // user-limit-factor computation is based on queue's guaranteed capacity. So
     // we will not cap user-limit as well as used resource when doing
     // IGNORE_PARTITION_EXCLUSIVITY allocation.
+    //
+    // Exception: when yarn.scheduler.capacity.non-exclusive-label.
+    // queue-limit-enable is enabled and the queue has capacity configured on
+    // the partition, compute maxUserLimit the same way as
+    // RESPECT_PARTITION_EXCLUSIVITY does, so a single user cannot over-borrow
+    // within the queue.
     Resource maxUserLimit = Resources.none();
-    if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
+    boolean respectUserLimitFactor =
+        schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY
+            || (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY
+                && lQueue.getQueueContext().getConfiguration()
+                    .isNonExclusiveLabelQueueLimitEnabled()
+                && !originalCapacity.equals(Resources.none()));
+    if (respectUserLimitFactor) {
       if (getUserLimitFactor() == -1 ||
           originalCapacity.equals(Resources.none())) {
         // If user-limit-factor set to -1, we should disable user limit.
