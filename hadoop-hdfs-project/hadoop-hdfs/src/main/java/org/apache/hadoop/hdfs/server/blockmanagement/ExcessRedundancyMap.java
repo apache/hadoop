@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -114,8 +115,28 @@ class ExcessRedundancyMap {
     return removed;
   }
 
-  synchronized Map<String, LightWeightHashSet<Block>> getExcessRedundancyMap() {
-    return map;
+  ArrayList<String> getExcessDNs() {
+    return new ArrayList<>(map.keySet());
+  }
+
+  ArrayList<Block> getExcessBlocks(String dnUUID) {
+    final LightWeightHashSet<Block> set = map.get(dnUUID);
+    if (set == null) {
+      return null;
+    }
+    synchronized (set) {
+      return new ArrayList<>(set);
+    }
+  }
+
+  Block getExcessBlockInfo(String dnUUId, BlockInfo blk) {
+    final LightWeightHashSet<Block> set = map.get(dnUUId);
+    if (set == null) {
+      return null;
+    }
+    synchronized (set) {
+      return set.getElement(blk);
+    }
   }
 
   /**
