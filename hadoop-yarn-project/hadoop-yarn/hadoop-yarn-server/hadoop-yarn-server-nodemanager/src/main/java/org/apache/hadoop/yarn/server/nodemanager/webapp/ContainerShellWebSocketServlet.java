@@ -20,17 +20,17 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import javax.servlet.annotation.WebServlet;
 
-import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
-import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
+import org.eclipse.jetty.ee8.websocket.server.JettyWebSocketServlet;
+import org.eclipse.jetty.ee8.websocket.server.JettyWebSocketServletFactory;
 
 /**
  * Container shell web socket interface.
  */
 @WebServlet(urlPatterns="/container/container/*")
-public class ContainerShellWebSocketServlet extends WebSocketServlet{
+public class ContainerShellWebSocketServlet extends JettyWebSocketServlet {
 
   @Override
-  public void configure(WebSocketServletFactory factory) {
+  protected void configure(JettyWebSocketServletFactory factory) {
     factory.register(ContainerShellWebSocket.class);
   }
 }

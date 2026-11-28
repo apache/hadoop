@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.http;
 
+import java.util.concurrent.TimeUnit;
+
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
@@ -30,6 +32,22 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 /**
  * This class collects all the metrics of Jetty's StatisticsHandler
  * and expose them as Hadoop Metrics.
+ *
+ * Jetty 12 rebuilt StatisticsHandler around the core request lifecycle. The
+ * dispatch counters it used to publish are now handle counters measuring the
+ * same thing under a different name, and are read as such here so the metric
+ * names Hadoop emits do not move. Its four async counters and its count of
+ * expired async requests have no counterpart, because the core no longer sees
+ * servlet async activity. Those five are still published, as 0, so that the
+ * metric names do not disappear from JMX and from the sinks that monitoring
+ * reads them through. That is a change in value: on Jetty 9.4 they were not
+ * always 0, because its DefaultServlet sent static files - the web UI's
+ * pages, scripts and stylesheets - asynchronously, and each of those counted
+ * as an async request. No Hadoop servlet starts one itself.
+ *
+ * Jetty 12 also records every time statistic in nanoseconds, where 9.4
+ * recorded milliseconds. The metrics below are documented, and have always
+ * been published, in milliseconds, so they are converted on the way out.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -42,53 +60,55 @@ public class HttpServer2Metrics {
   private final int acceptorThreads;
   private final int selectorThreads;
 
-  @Metric("number of requested that have been asynchronously dispatched")
+  @Metric("number of requested that have been asynchronously dispatched;"
+      + " always 0 since Jetty 12")
   public int asyncDispatches() {
-    return handler.getAsyncDispatches();
+    return 0;
   }
-  @Metric("total number of async requests")
+  @Metric("total number of async requests; always 0 since Jetty 12")
   public int asyncRequests() {
-    return handler.getAsyncRequests();
+    return 0;
   }
-  @Metric("currently waiting async requests")
+  @Metric("currently waiting async requests; always 0 since Jetty 12")
   public int asyncRequestsWaiting() {
-    return handler.getAsyncRequestsWaiting();
+    return 0;
   }
-  @Metric("maximum number of waiting async requests")
+  @Metric("maximum number of waiting async requests; always 0 since Jetty 12")
   public int asyncRequestsWaitingMax() {
-    return handler.getAsyncRequestsWaitingMax();
+    return 0;
   }
   @Metric("number of dispatches")
   public int dispatched() {
-    return handler.getDispatched();
+    return handler.getHandleTotal();
   }
   @Metric("number of dispatches currently active")
   public int dispatchedActive() {
-    return handler.getDispatchedActive();
+    return handler.getHandleActive();
   }
   @Metric("maximum number of active dispatches being handled")
   public int dispatchedActiveMax() {
-    return handler.getDispatchedActiveMax();
+    return handler.getHandleActiveMax();
   }
   @Metric("maximum time spend in dispatch handling (in ms)")
   public long dispatchedTimeMax() {
-    return handler.getDispatchedTimeMax();
+    return nanosToMillis(handler.getHandleTimeMax());
   }
   @Metric("mean time spent in dispatch handling (in ms)")
   public double dispatchedTimeMean() {
-    return handler.getDispatchedTimeMean();
+    return nanosToMillis(handler.getHandleTimeMean());
   }
   @Metric("standard deviation for dispatch handling (in ms)")
   public double dispatchedTimeStdDev() {
-    return handler.getDispatchedTimeStdDev();
+    return nanosToMillis(handler.getHandleTimeStdDev());
   }
   @Metric("total time spent in dispatch handling (in ms)")
   public long dispatchedTimeTotal() {
-    return handler.getDispatchedTimeTotal();
+    return nanosToMillis(handler.getHandleTimeTotal());
   }
-  @Metric("number of async requests requests that have expired")
+  @Metric("number of async requests requests that have expired;"
+      + " always 0 since Jetty 12")
   public int expires() {
-    return handler.getExpires();
+    return 0;
   }
   @Metric("number of requests")
   public int requests() {
@@ -104,19 +124,19 @@ public class HttpServer2Metrics {
   }
   @Metric("maximum time spend handling requests (in ms)")
   public long requestTimeMax() {
-    return handler.getRequestTimeMax();
+    return nanosToMillis(handler.getRequestTimeMax());
   }
   @Metric("mean time spent handling requests (in ms)")
   public double requestTimeMean() {
-    return handler.getRequestTimeMean();
+    return nanosToMillis(handler.getRequestTimeMean());
   }
   @Metric("standard deviation for request handling (in ms)")
   public double requestTimeStdDev() {
-    return handler.getRequestTimeStdDev();
+    return nanosToMillis(handler.getRequestTimeStdDev());
   }
   @Metric("total time spend in all request handling (in ms)")
   public long requestTimeTotal() {
-    return handler.getRequestTimeTotal();
+    return nanosToMillis(handler.getRequestTimeTotal());
   }
   @Metric("number of requests with 1xx response status")
   public int responses1xx() {
@@ -140,11 +160,11 @@ public class HttpServer2Metrics {
   }
   @Metric("total number of bytes across all responses")
   public long responsesBytesTotal() {
-    return handler.getResponsesBytesTotal();
+    return handler.getBytesWritten();
   }
   @Metric("time in milliseconds stats have been collected for")
   public long statsOnMs() {
-    return handler.getStatsOnMs();
+    return handler.getStatisticsDuration().toMillis();
   }
   @Metric("maximum number of threads in the pool")
   public int maxThreads() {
@@ -214,5 +234,13 @@ public class HttpServer2Metrics {
 
   void remove() {
     DefaultMetricsSystem.removeSourceName("HttpServer2-" + port);
+  }
+
+  private static long nanosToMillis(long nanos) {
+    return TimeUnit.NANOSECONDS.toMillis(nanos);
+  }
+
+  private static double nanosToMillis(double nanos) {
+    return nanos / TimeUnit.MILLISECONDS.toNanos(1);
   }
 }
