@@ -102,6 +102,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CommonIssues;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
@@ -200,6 +201,7 @@ import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConsta
 import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.SIGNAL_TOCONTAINER;
 import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.extractToken;
 import static org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil.getKerberosUserGroupInformation;
+import org.apache.commons.lang3.NotImplementedException;
 
 /**
  * Extends the {@code AbstractRESTRequestInterceptor} class and provides an
@@ -1141,6 +1143,17 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       return null;
     }
     return new AppState();
+  }
+
+  @Override
+  public CommonIssues getCommonIssueList(HttpServletRequest hsr) {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public Response getCommonIssueData(String issueId, List<String> args,
+      HttpServletRequest hsr) {
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
