@@ -1612,6 +1612,9 @@ public class TestWebHDFS {
       dnConn.setRequestMethod("OPTIONS");
       assertEquals(HttpURLConnection.HTTP_OK, dnConn.getResponseCode(),
           "Datanode url : " + dnLocation + " didn't allow " + "CORS");
+      assertTrue(dnConn.getHeaderField("Access-Control-Allow-Headers")
+              .contains("Content-Type"),
+          "Datanode CORS response must allow file upload content types");
     }
   }
 

@@ -19,22 +19,23 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.4.1/css/bootstrap.min.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" type="text/css" href="/static/bootstrap-5.3.8/css/bootstrap.min.css" />
   <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
   <title>Balancer Information</title>
 </head>
 
 <body>
-<header class="navbar navbar-inverse bs-docs-nav" role="banner">
+<header class="navbar navbar-dark navbar-expand-lg bs-docs-nav" role="banner">
   <div class="container">
-    <div class="navbar-header">
+    <div class="hadoop-navbar-header d-flex">
       <div class="navbar-brand">Hadoop</div>
     </div>
 
-    <ul class="nav navbar-nav" id="ui-tabs">
+    <ul class="nav navbar-nav flex-row flex-wrap" id="ui-tabs">
       <li><a href="#tab-overview">Overview</a></li>
       <li class="dropdown">
-        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Utilities <b class="caret"></b></a>
+        <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown">Utilities <b class="caret"></b></a>
         <ul class="dropdown-menu">
           <li><a href="logs/">Logs</a></li>
           <li><a href="logLevel">Log Level</a></li>
@@ -50,7 +51,7 @@
 <div class="container">
   <div id="alert-panel">
     <div class="alert alert-danger">
-      <button type="button" class="close" onclick="$('#alert-panel').hide();">&times;</button>
+      <button type="button" class="hadoop-close" onclick="$('#alert-panel').hide();">&times;</button>
       <div class="alert-body" id="alert-panel-body"></div>
     </div>
   </div>
@@ -61,13 +62,13 @@
 
   <div class="row">
     <hr />
-    <div class="col-xs-2"><p>Hadoop, {release-year-token}.</p></div>
+    <div class="col-2"><p>Hadoop, {release-year-token}.</p></div>
   </div>
 </div>
 
 <script type="text/x-dust-template" id="tmpl-balancer">
   {#balancer}
-  <div class="page-header">
+  <div class="hadoop-page-header">
     <h1>Balancer on <small>{HostName}</small></h1>
   </div>
   <table class="table table-bordered table-striped">
@@ -77,7 +78,7 @@
   </table>
   {/balancer}
 
-  <div class="page-header">
+  <div class="hadoop-page-header">
     <h1>Balancer Status</h1>
   </div>
   <table class="table">
@@ -102,8 +103,8 @@
   </table>
 </script>
 
-<script type="text/javascript" src="/static/jquery-3.6.0.min.js"></script>
-<script type="text/javascript" src="/static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="/static/jquery-4.0.0.min.js"></script>
+<script type="text/javascript" src="/static/bootstrap-5.3.8/js/bootstrap.bundle.min.js"></script>
 <script type="text/javascript" src="/static/moment.min.js"></script>
 <script type="text/javascript" src="/static/dust-full-2.0.0.min.js"></script>
 <script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js"></script>
