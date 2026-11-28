@@ -146,6 +146,16 @@
     </testResources>
     <plugins>
       <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <configuration>
+          <excludeFilterFiles>
+            <excludeFilterFile>${maven.multiModuleProjectDirectory}/dev-support/findbugs-exclude-global.xml
+            </excludeFilterFile>
+          </excludeFilterFiles>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>

@@ -106,6 +106,16 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <configuration>
+          <excludeFilterFiles>
+            <excludeFilterFile>${maven.multiModuleProjectDirectory}/dev-support/findbugs-exclude-global.xml
+            </excludeFilterFile>
+          </excludeFilterFiles>
+        </configuration>
+      </plugin>
+      <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
       </plugin>
       <plugin>
