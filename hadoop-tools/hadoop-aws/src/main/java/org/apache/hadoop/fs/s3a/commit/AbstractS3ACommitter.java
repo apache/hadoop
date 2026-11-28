@@ -150,7 +150,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * If so then it is safe for a locally generated
    * UUID to be used for task setup.
    */
-  private boolean jobSetup;
+  protected boolean jobSetup;
 
   /** Underlying commit operations. */
   private final CommitOperations commitOperations;
@@ -381,14 +381,6 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * @return the path where a task attempt should be stored.
    */
   protected abstract Path getBaseTaskAttemptPath(TaskAttemptContext context);
-
-  /**
-   * Get a temporary directory for data. When a task is aborted/cleaned
-   * up, the contents of this directory are all deleted.
-   * @param context task context
-   * @return a path for temporary data.
-   */
-  public abstract Path getTempTaskAttemptPath(TaskAttemptContext context);
 
   /**
    * Get the name of this committer.
@@ -643,13 +635,25 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
             "Task attempt " + attemptID
                 + " " + E_SELF_GENERATED_JOB_UUID);
       }
-      Path taskAttemptPath = getTaskAttemptPath(context);
-      FileSystem fs = taskAttemptPath.getFileSystem(getConf());
-      // delete that ta path if somehow it was there
-      fs.delete(taskAttemptPath, true);
-      // create an empty directory
-      fs.mkdirs(taskAttemptPath);
+      prepareTaskAttemptPath(context);
     }
+  }
+
+  /**
+   * Prepare the task attempt path during task setup: delete any
+   * existing data there and create an empty directory.
+   * Subclasses may override this if the path is not used.
+   * @param context task attempt
+   * @throws IOException failure
+   */
+  protected void prepareTaskAttemptPath(TaskAttemptContext context)
+      throws IOException {
+    Path taskAttemptPath = getTaskAttemptPath(context);
+    FileSystem fs = taskAttemptPath.getFileSystem(getConf());
+    // delete that ta path if somehow it was there
+    fs.delete(taskAttemptPath, true);
+    // create an empty directory
+    fs.mkdirs(taskAttemptPath);
   }
 
   /**
