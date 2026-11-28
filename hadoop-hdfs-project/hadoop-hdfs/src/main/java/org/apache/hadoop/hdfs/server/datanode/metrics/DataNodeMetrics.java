@@ -80,6 +80,10 @@ public class DataNodeMetrics {
   MutableCounterLong remoteBytesRead;
   @Metric("Bytes written by remote client")
   MutableCounterLong remoteBytesWritten;
+  @Metric("Bytes read by local client")
+  MutableCounterLong localBytesRead;
+  @Metric("Bytes written by local client")
+  MutableCounterLong localBytesWritten;
 
   // RamDisk metrics on read/write
   @Metric MutableCounterLong ramDiskBlocksWrite;
@@ -457,6 +461,7 @@ public class DataNodeMetrics {
   public void incrWritesFromClient(boolean local, long size) {
     if(local) {
       writesFromLocalClient.incr();
+      localBytesWritten.incr(size);
     } else {
       writesFromRemoteClient.incr();
       remoteBytesWritten.incr(size);
@@ -464,9 +469,9 @@ public class DataNodeMetrics {
   }
 
   public void incrReadsFromClient(boolean local, long size) {
-
     if (local) {
       readsFromLocalClient.incr();
+      localBytesRead.incr(size);
     } else {
       readsFromRemoteClient.incr();
       remoteBytesRead.incr(size);
