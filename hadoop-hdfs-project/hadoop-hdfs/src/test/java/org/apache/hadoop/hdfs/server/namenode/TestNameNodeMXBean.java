@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -80,6 +81,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.util.Shell.getMemlockLimit;
@@ -102,6 +104,24 @@ public class TestNameNodeMXBean {
    * Used to assert equality between doubles
    */
   private static final double DELTA = 0.000001;
+
+  /**
+   * Fields of the "LiveNodes" JSON whose values depend on the time of the call
+   * or on the latest heartbeat / block report, so they can legitimately differ
+   * between the JMX read and the direct FSNamesystem call that follows it.
+   */
+  private static final Set<String> LIVE_NODES_VOLATILE_FIELDS = ImmutableSet.of(
+      "lastContact", "lastBlockReport", "capacity", "usedSpace", "used",
+      "nonDfsUsedSpace", "remaining", "blockPoolUsed", "blockPoolUsedPercent",
+      "blockPoolUsedPercentStdDev");
+
+  /** Time-dependent fields of the "DeadNodes" JSON. */
+  private static final Set<String> DEAD_NODES_VOLATILE_FIELDS =
+      ImmutableSet.of("lastContact");
+
+  /** Time-dependent fields of the "DecomNodes" JSON. */
+  private static final Set<String> DECOM_NODES_VOLATILE_FIELDS =
+      ImmutableSet.of("decommissionDuration");
 
   @SuppressWarnings("checkstyle:VisibilityModifier")
   @TempDir
@@ -215,7 +235,8 @@ public class TestNameNodeMXBean {
             DatanodeInfo.AdminStates.IN_MAINTENANCE.toString());
         assertFalse(xferAddr.equals(dnXferAddrInMaintenance) ^ inMaintenance);
       }
-      assertEquals(fsn.getLiveNodes(), alivenodeinfo);
+      assertNodesInfoEquals("LiveNodes", fsn.getLiveNodes(), alivenodeinfo,
+          LIVE_NODES_VOLATILE_FIELDS);
 
       // Put the third DN to decommissioning state.
       DatanodeDescriptor decommissioningNode = dm.getDatanode(
@@ -241,7 +262,8 @@ public class TestNameNodeMXBean {
       // get attributes DeadNodes
       String deadNodeInfo = (String) (mbs.getAttribute(mxbeanName,
           "DeadNodes"));
-      assertEquals(fsn.getDeadNodes(), deadNodeInfo);
+      assertNodesInfoEquals("DeadNodes", fsn.getDeadNodes(), deadNodeInfo,
+          DEAD_NODES_VOLATILE_FIELDS);
       // get attribute NodeUsage
       String nodeUsage = (String) (mbs.getAttribute(mxbeanName,
           "NodeUsage"));
@@ -357,7 +379,8 @@ public class TestNameNodeMXBean {
       // get attribute DeadNodes
       String deadNodeInfo = (String) (mbs.getAttribute(mxbeanName,
         "DeadNodes"));
-      assertEquals(fsn.getDeadNodes(), deadNodeInfo);
+      assertNodesInfoEquals("DeadNodes", fsn.getDeadNodes(), deadNodeInfo,
+          DEAD_NODES_VOLATILE_FIELDS);
       Map<String, Map<String, Object>> deadNodes =
           JsonUtils.parse(deadNodeInfo,
               new TypeReference<Map<String, Map<String, Object>>>() {});
@@ -407,7 +430,8 @@ public class TestNameNodeMXBean {
           "LiveNodes"));
       Map<String, Map<String, Object>> liveNodes = JsonUtils.parse(liveNodesInfo,
           new TypeReference<Map<String, Map<String, Object>>>() {});
-      assertEquals(fsn.getLiveNodes(), liveNodesInfo);
+      assertNodesInfoEquals("LiveNodes", fsn.getLiveNodes(), liveNodesInfo,
+          LIVE_NODES_VOLATILE_FIELDS);
       assertEquals(fsn.getNumLiveDataNodes(), liveNodes.size());
 
       for (Map<String, Object> liveNode : liveNodes.values()) {
@@ -416,6 +440,7 @@ public class TestNameNodeMXBean {
       }
 
       // Add the 1st DataNode to Decommission list
+      long beforeDecommission = Time.monotonicNow();
       hostsFileWriter.initExcludeHost(
           cluster.getDataNodes().get(0).getDisplayName());
       fsn.getBlockManager().getDatanodeManager().refreshNodes(conf);
@@ -444,7 +469,31 @@ public class TestNameNodeMXBean {
           "DecomNodes"));
       Map<String, Map<String, Object>> decomNodes = JsonUtils.parse(decomNodesInfo,
           new TypeReference<Map<String, Map<String, Object>>>() {});
-      assertEquals(fsn.getDecomNodes(), decomNodesInfo);
+      String fsnDecomNodesInfo = fsn.getDecomNodes();
+      long maxDecommissionDuration = Time.monotonicNow() - beforeDecommission;
+      assertNodesInfoEquals("DecomNodes", fsnDecomNodesInfo, decomNodesInfo,
+          DECOM_NODES_VOLATILE_FIELDS);
+      Map<String, Map<String, Object>> fsnDecomNodes = JsonUtils.parse(
+          fsnDecomNodesInfo,
+          new TypeReference<Map<String, Map<String, Object>>>() {});
+      for (Map.Entry<String, Map<String, Object>> entry : decomNodes.entrySet()) {
+        String node = entry.getKey();
+        // decommissionDuration is computed from monotonicNow() at call time,
+        // so it must be in [0, time since decommission was requested], and the
+        // later direct call must not report a smaller value than the JMX read.
+        long jmxDuration = toLong(entry.getValue().get("decommissionDuration"));
+        long fsnDuration =
+            toLong(fsnDecomNodes.get(node).get("decommissionDuration"));
+        assertTrue(jmxDuration >= 0, "decommissionDuration of " + node
+            + " from JMX should be non-negative but was " + jmxDuration);
+        assertTrue(jmxDuration <= fsnDuration, "decommissionDuration of " + node
+            + " from JMX (" + jmxDuration + ") should not be greater than the"
+            + " later FSNamesystem value (" + fsnDuration + ")");
+        assertTrue(fsnDuration <= maxDecommissionDuration,
+            "decommissionDuration of " + node + " (" + fsnDuration
+            + ") should not exceed the time since decommission was requested ("
+            + maxDecommissionDuration + ")");
+      }
       assertEquals(fsn.getNumDecommissioningDataNodes(), decomNodes.size());
       assertEquals(0, fsn.getNumDecomLiveDataNodes());
       assertEquals(0, fsn.getNumDecomDeadDataNodes());
@@ -466,7 +515,8 @@ public class TestNameNodeMXBean {
           JsonUtils.parse(decomNodesInfo,
               new TypeReference<Map<String, Map<String, Object>>>() {});
       assertEquals(0, decomNodes.size());
-      assertEquals(fsn.getDecomNodes(), decomNodesInfo);
+      assertNodesInfoEquals("DecomNodes", fsn.getDecomNodes(), decomNodesInfo,
+          DECOM_NODES_VOLATILE_FIELDS);
       assertEquals(1, fsn.getNumDecomLiveDataNodes());
       assertEquals(0, fsn.getNumDecomDeadDataNodes());
     } finally {
@@ -614,7 +664,8 @@ public class TestNameNodeMXBean {
       Map<String, Map<String, Object>> liveNodes =
           JsonUtils.parse(liveNodesInfo,
               new TypeReference<Map<String, Map<String, Object>>>() {});
-      assertEquals(fsn.getLiveNodes(), liveNodesInfo);
+      assertNodesInfoEquals("LiveNodes", fsn.getLiveNodes(), liveNodesInfo,
+          LIVE_NODES_VOLATILE_FIELDS);
       assertEquals(fsn.getNumLiveDataNodes(), liveNodes.size());
 
       for (Map<String, Object> liveNode : liveNodes.values()) {
@@ -1109,14 +1160,12 @@ public class TestNameNodeMXBean {
 
       // delete replicated files
       fs.delete(replDirPath, true);
-      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
-          cluster.getNamesystem(0).getBlockManager());
+      waitForTotalBlocks(activeNn, 0L, 3L);
       verifyTotalBlocksMetrics(0L, 3L, activeNn.getTotalBlocks());
 
       // delete ec files
       fs.delete(ecDirPath, true);
-      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
-          cluster.getNamesystem(0).getBlockManager());
+      waitForTotalBlocks(activeNn, 0L, 0L);
       verifyTotalBlocksMetrics(0L, 0L, activeNn.getTotalBlocks());
       verifyTotalBlocksMetrics(0L, 0L, standbyNn.getTotalBlocks());
     } finally {
@@ -1188,7 +1237,8 @@ public class TestNameNodeMXBean {
       // get attribute DeadNodes
       String deadNodeInfo = (String) (mbs.getAttribute(mxbeanName,
           "DeadNodes"));
-      assertEquals(fsn.getDeadNodes(), deadNodeInfo);
+      assertNodesInfoEquals("DeadNodes", fsn.getDeadNodes(), deadNodeInfo,
+          DEAD_NODES_VOLATILE_FIELDS);
       LOG.info("Get deadNode info: {}", deadNodeInfo);
       Map<String, Map<String, Object>> deadNodes =
           JsonUtils.parse(deadNodeInfo,
@@ -1206,6 +1256,27 @@ public class TestNameNodeMXBean {
       }
       hostsFileWriter.cleanup();
     }
+  }
+
+  /**
+   * Blocks of deleted files are removed asynchronously by the
+   * MarkedDeleteBlockScrubber. The marked-delete queue becomes empty as soon as
+   * the scrubber polls a batch from it, before the blocks are actually removed
+   * from the blocks map, so waiting for an empty queue is not enough. Wait for
+   * the block counts themselves instead.
+   */
+  private static void waitForTotalBlocks(FSNamesystem fsn,
+      long expectedTotalReplicatedBlocks, long expectedTotalECBlockGroups)
+      throws Exception {
+    GenericTestUtils.waitFor(
+        () -> fsn.getTotalReplicatedBlocks() == expectedTotalReplicatedBlocks
+            && fsn.getTotalECBlockGroups() == expectedTotalECBlockGroups
+            && fsn.getTotalBlocks()
+                == expectedTotalReplicatedBlocks + expectedTotalECBlockGroups,
+        100, 60000,
+        "Timed out waiting for " + expectedTotalReplicatedBlocks
+            + " replicated blocks and " + expectedTotalECBlockGroups
+            + " EC block groups after deleting files");
   }
 
   void verifyTotalBlocksMetrics(long expectedTotalReplicatedBlocks,
@@ -1255,6 +1326,37 @@ public class TestNameNodeMXBean {
     assertTrue(resultMessage.contains("3 racks are required for " +
         "the erasure coding policies: RS-6-3-1024k. " +
         "The number of racks is only 1."));
+  }
+
+  /**
+   * Compares the node info JSON returned directly by FSNamesystem with the
+   * value read earlier from JMX. The two calls happen at different times, so
+   * the given time-dependent fields are only checked for presence; all other
+   * fields must be equal.
+   */
+  private static void assertNodesInfoEquals(String attribute,
+      String expectedJson, String actualJson, Set<String> volatileFields) {
+    Map<String, Map<String, Object>> expected = JsonUtils.parse(expectedJson,
+        new TypeReference<Map<String, Map<String, Object>>>() {});
+    Map<String, Map<String, Object>> actual = JsonUtils.parse(actualJson,
+        new TypeReference<Map<String, Map<String, Object>>>() {});
+    String message = "Mismatch in " + attribute + " (ignoring "
+        + volatileFields + "): expected " + expectedJson + " but was "
+        + actualJson;
+    assertEquals(expected.keySet(), actual.keySet(), message);
+    for (Map.Entry<String, Map<String, Object>> entry : expected.entrySet()) {
+      Map<String, Object> expectedNode = new HashMap<>(entry.getValue());
+      Map<String, Object> actualNode = new HashMap<>(actual.get(entry.getKey()));
+      for (String field : volatileFields) {
+        assertEquals(expectedNode.containsKey(field),
+            actualNode.containsKey(field),
+            "Field " + field + " present on only one side. " + message);
+        expectedNode.remove(field);
+        actualNode.remove(field);
+      }
+      assertEquals(expectedNode, actualNode,
+          "Node " + entry.getKey() + ": " + message);
+    }
   }
 
   private static long toLong(Object value) {

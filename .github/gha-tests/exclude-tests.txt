@@ -48,7 +48,6 @@
 **/org/apache/hadoop/hdfs/server/datanode/TestDirectoryScanner.java
 **/org/apache/hadoop/hdfs/server/namenode/TestEditLogRace.java
 **/org/apache/hadoop/hdfs/server/namenode/TestFsck.java
-**/org/apache/hadoop/hdfs/server/namenode/TestNameNodeMXBean.java
 **/org/apache/hadoop/hdfs/server/namenode/ha/TestUpdateBlockTailing.java
 **/org/apache/hadoop/hdfs/server/datanode/TestIncrementalBlockReports.java
 **/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/TestFsVolumeList.java
