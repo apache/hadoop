@@ -386,6 +386,11 @@ public final class AbfsClientTestUtil {
     Mockito.doReturn(staticRetryPolicy).when(abfsClient).getRetryPolicy(CONNECTION_TIMEOUT_ABBREVIATION);
     Mockito.doReturn(exponentialRetryPolicy).when(abfsClient).getRetryPolicy(
             AdditionalMatchers.not(eq(CONNECTION_TIMEOUT_ABBREVIATION)));
+    Mockito.doReturn(staticRetryPolicy).when(abfsClient).getRetryPolicy(
+            any(TracingContext.class), eq(CONNECTION_TIMEOUT_ABBREVIATION));
+    Mockito.doReturn(exponentialRetryPolicy).when(abfsClient).getRetryPolicy(
+            any(TracingContext.class),
+            AdditionalMatchers.not(eq(CONNECTION_TIMEOUT_ABBREVIATION)));
 
     // Defining behavior of static retry policy
     Mockito.doReturn(true).when(staticRetryPolicy)
