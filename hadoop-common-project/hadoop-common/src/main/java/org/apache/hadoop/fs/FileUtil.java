@@ -447,7 +447,9 @@ public class FileUtil {
    * <p>
    * The operation is recursive, and the deleteSource operation takes place
    * as each subdirectory is copied. Therefore, if an operation fails partway
-   * through, the source tree may be partially deleted.
+   * through, the source tree may be partially deleted. If copying any entry
+   * of a directory returns false, the directory itself is not deleted and
+   * false is returned.
    * </p>
    * @param srcFS source filesystem
    * @param srcStatus status of source
@@ -472,11 +474,17 @@ public class FileUtil {
         return false;
       }
       RemoteIterator<FileStatus> contents = srcFS.listStatusIterator(src);
+      boolean copiedAll = true;
       while (contents.hasNext()) {
         FileStatus next = contents.next();
-        copy(srcFS, next, dstFS,
+        if (!copy(srcFS, next, dstFS,
             new Path(dst, next.getPath().getName()),
-            deleteSource, overwrite, conf);
+            deleteSource, overwrite, conf)) {
+          copiedAll = false;
+        }
+      }
+      if (!copiedAll) {
+        return false;
       }
     } else {
       InputStream in = null;
@@ -525,9 +533,15 @@ public class FileUtil {
         return false;
       }
       File contents[] = listFiles(src);
+      boolean copiedAll = true;
       for (int i = 0; i < contents.length; i++) {
-        copy(contents[i], dstFS, new Path(dst, contents[i].getName()),
-             deleteSource, conf);
+        if (!copy(contents[i], dstFS, new Path(dst, contents[i].getName()),
+            deleteSource, conf)) {
+          copiedAll = false;
+        }
+      }
+      if (!copiedAll) {
+        return false;
       }
     } else if (src.isFile()) {
       InputStream in = null;
@@ -584,10 +598,16 @@ public class FileUtil {
         return false;
       }
       FileStatus contents[] = srcFS.listStatus(src);
+      boolean copiedAll = true;
       for (int i = 0; i < contents.length; i++) {
-        copy(srcFS, contents[i],
-             new File(dst, contents[i].getPath().getName()),
-             deleteSource, conf);
+        if (!copy(srcFS, contents[i],
+            new File(dst, contents[i].getPath().getName()),
+            deleteSource, conf)) {
+          copiedAll = false;
+        }
+      }
+      if (!copiedAll) {
+        return false;
       }
     } else {
       InputStream in = awaitFuture(srcFS.openFile(src)
