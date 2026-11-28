@@ -201,6 +201,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       // Ensure queue hierarchy in the new XML file is proper.
       CapacitySchedulerConfigValidator
               .validateQueueHierarchy(queues, newQueues, newConf);
+      CapacitySchedulerConfigValidator.validateQueueAccessibleLabels(newConf);
     }
 
     // Add new queues and delete OldQeueus only after validation.

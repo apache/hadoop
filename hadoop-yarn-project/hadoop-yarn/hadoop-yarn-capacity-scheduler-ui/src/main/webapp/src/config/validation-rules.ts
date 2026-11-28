@@ -24,6 +24,7 @@ import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 import type { StagedChange, ValidationIssue, SchedulerInfo } from '~/types';
 import { findQueueByPath, getSiblingQueues } from '~/utils/treeUtils';
 import { isTemplateQueuePath } from '~/utils/templateUtils';
+import { getAccessibleLabelRemovalIssues } from '~/features/queue-management/utils/capacityValidation';
 
 export interface ValidationContext {
   queuePath: string;
@@ -87,6 +88,19 @@ export const QUEUE_VALIDATION_RULES: ValidationRule[] = [
     level: 'error',
     triggers: ['capacity'],
     evaluate: (context) => evaluateWeightModeTransitionFlexibleAQC(context),
+  },
+  {
+    id: 'LABEL_PARTITION_CAPACITY_REQUIRES_ACCESS',
+    description:
+      'Prevents removing a label from accessible-node-labels while label partition capacity remains configured.',
+    level: 'error',
+    triggers: ['accessible-node-labels'],
+    evaluate: (context) =>
+      getAccessibleLabelRemovalIssues(
+        context.queuePath,
+        typeof context.fieldValue === 'string' ? context.fieldValue : '',
+        context.config,
+      ),
   },
 ];
 

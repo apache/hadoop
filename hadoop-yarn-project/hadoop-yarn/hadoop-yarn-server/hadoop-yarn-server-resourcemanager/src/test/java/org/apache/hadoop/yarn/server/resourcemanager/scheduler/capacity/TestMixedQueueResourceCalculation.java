@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
@@ -465,6 +466,9 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
     mockRM.registerNode("h2:1234", H2_MEMORY, H2_VCORES); // label = y
     mockRM.registerNode("h3:1234", H3_MEMORY, H3_VCORES); // label = y
     mockRM.registerNode("h4:1234", H4_MEMORY, H4_VCORES); // label = z
+
+    csConf.setAccessibleNodeLabels(A, Set.of(RMNodeLabelsManager.ANY));
+    csConf.setAccessibleNodeLabels(B, Set.of(RMNodeLabelsManager.ANY));
 
     csConf.setCapacityVector(A, NO_LABEL, A_VECTOR_NO_LABEL);
     csConf.setCapacityVector(A1, NO_LABEL, A1_VECTOR_NO_LABEL);
