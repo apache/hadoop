@@ -231,6 +231,7 @@ public class TestRouterWebServiceUtil {
 
     int value = 1000;
     setAppInfoRunning(am, value);
+    am.setReservedVCores(2);
 
     apps.add(am);
 
@@ -240,6 +241,7 @@ public class TestRouterWebServiceUtil {
     apps.add(uam1);
 
     setAppInfoRunning(uam1, value);
+    uam1.setReservedVCores(3);
 
     AppInfo uam2 = new AppInfo();
     uam2.setAppId(APPID2.toString());
@@ -247,6 +249,7 @@ public class TestRouterWebServiceUtil {
     apps.add(uam2);
 
     setAppInfoRunning(uam2, value);
+    uam2.setReservedVCores(5);
 
     // in this case the result does not change if we enable partial result
     AppsInfo result = RouterWebServiceUtil.mergeAppsInfo(apps.getApps(), false);
@@ -260,7 +263,7 @@ public class TestRouterWebServiceUtil {
     assertEquals(value * 3, app.getAllocatedMB());
     assertEquals(value * 3, app.getAllocatedVCores());
     assertEquals(value * 3, app.getReservedMB());
-    assertEquals(value * 3, app.getReservedVCores());
+    assertEquals(10, app.getReservedVCores());
     assertEquals(value * 3, app.getRunningContainers());
     assertEquals(value * 3, app.getMemorySeconds());
     assertEquals(value * 3, app.getVcoreSeconds());
