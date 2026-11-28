@@ -63,6 +63,7 @@ public class OfflineImageViewerPB {
       + "  * XML: This processor creates an XML document with all elements of\n"
       + "    the fsimage enumerated, suitable for further analysis by XML\n"
       + "    tools.\n"
+      + "    -m  defines multiThread to process sub-sections.\n"
       + "  * ReverseXML: This processor takes an XML file and creates a\n"
       + "    binary fsimage containing the same elements.\n"
       + "  * FileDistribution: This processor analyzes the file size\n"
@@ -81,8 +82,7 @@ public class OfflineImageViewerPB {
       + "    changed via the -delimiter argument.\n"
       + "    -sp print storage policy, used by delimiter only.\n"
       + "    -ec print erasure coding policy, used by delimiter only.\n"
-      + "    -m  defines multiThread to process sub-sections, \n"
-      + "    used by delimiter only.\n"
+      + "    -m  defines multiThread to process sub-sections.\n"
       + "  * DetectCorruption: Detect potential corruption of the image by\n"
       + "    selectively loading parts of it and actively searching for\n"
       + "    inconsistencies. Outputs a summary of the found corruptions\n"
@@ -127,6 +127,8 @@ public class OfflineImageViewerPB {
       + "                       constructs the namespace in memory \n"
       + "                       before outputting text.\n"
       + "-m,--multiThread <arg> Use multiThread to process sub-sections.\n"
+      + "                       This option is used with XML and Delimited\n"
+      + "                       processors.\n"
       + "-h,--help              Display usage information and exit\n";
 
   /**
@@ -223,9 +225,7 @@ public class OfflineImageViewerPB {
         }
         break;
       case "XML":
-        try (RandomAccessFile r = new RandomAccessFile(inputFile, "r")) {
-          new PBImageXmlWriter(conf, out).visit(r);
-        }
+        new PBImageXmlWriter(conf, out, threads, outputFile).visit(inputFile);
         break;
       case "REVERSEXML":
         try {
