@@ -156,6 +156,32 @@ public class TestFileSystemCaching extends HadoopTestBase {
     FileSystem fs2 = FileSystem.get(new URI("uncachedfile://a"), conf);
     assertNotSame(fs1, fs2);
   }
+
+  @Test
+  public void testCaseInsensitiveScheme() throws Exception {
+    Configuration conf = newConf();
+    assertSame(FileSystem.getFileSystemClass("file", null),
+        FileSystem.getFileSystemClass("FILE", null));
+    assertSame(FileSystem.getFileSystemClass("cachedfile", conf),
+        FileSystem.getFileSystemClass("CACHEDFILE", conf));
+
+    FileSystem fs1 = FileSystem.get(new URI("CACHEDFILE://case-host"), conf);
+    FileSystem fs2 = FileSystem.get(new URI("cachedfile://case-host"), conf);
+    assertSame(fs1, fs2);
+
+    conf.set("fs.uncachedfile.impl",
+        FileSystem.getFileSystemClass("file", null).getName());
+    conf.setBoolean("fs.uncachedfile.impl.disable.cache", true);
+    FileSystem uncached1 = FileSystem.get(new URI("UNCACHEDFILE://a"), conf);
+    FileSystem uncached2 = FileSystem.get(new URI("uncachedfile://a"), conf);
+    assertNotSame(uncached1, uncached2);
+
+    conf.set("fs.defaultfs.impl", DefaultFs.class.getName());
+    URI defaultUri = URI.create("defaultfs://host");
+    FileSystem.setDefaultUri(conf, defaultUri);
+    FileSystem defaultFs = FileSystem.get(conf);
+    assertSame(defaultFs, FileSystem.get(URI.create("DEFAULTFS:/"), conf));
+  }
   
   @SuppressWarnings("unchecked")
   @Test

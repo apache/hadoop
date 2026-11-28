@@ -541,11 +541,14 @@ public abstract class FileSystem extends Configured
       return get(conf);
     }
 
-    if (scheme != null && authority == null) {     // no authority
-      URI defaultUri = getDefaultUri(conf);
-      if (scheme.equals(defaultUri.getScheme())    // if scheme matches default
-          && defaultUri.getAuthority() != null) {  // & default has authority
-        return get(defaultUri, conf);              // return default
+    if (scheme != null) {
+      scheme = StringUtils.toLowerCase(scheme);
+      if (authority == null) {                     // no authority
+        URI defaultUri = getDefaultUri(conf);
+        if (scheme.equalsIgnoreCase(defaultUri.getScheme())
+            && defaultUri.getAuthority() != null) {  // & default has authority
+          return get(defaultUri, conf);              // return default
+        }
       }
     }
     String disableCacheName = String.format("fs.%s.impl.disable.cache", scheme);
@@ -602,7 +605,7 @@ public abstract class FileSystem extends Configured
 
     if (authority == null) {                       // no authority
       URI defaultUri = getDefaultUri(config);
-      if (scheme.equals(defaultUri.getScheme())    // if scheme matches default
+      if (scheme.equalsIgnoreCase(defaultUri.getScheme())
           && defaultUri.getAuthority() != null) {  // & default has authority
         return newInstance(defaultUri, config);              // return default
       }
@@ -3528,7 +3531,8 @@ public abstract class FileSystem extends Configured
             }
             fs = it.next();
             try {
-              SERVICE_FILE_SYSTEMS.put(fs.getScheme(), fs.getClass());
+              SERVICE_FILE_SYSTEMS.put(
+                  StringUtils.toLowerCase(fs.getScheme()), fs.getClass());
               if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("{}:// = {} from {}",
                     fs.getScheme(), fs.getClass(),
@@ -3564,6 +3568,9 @@ public abstract class FileSystem extends Configured
       Configuration conf) throws IOException {
     if (!FILE_SYSTEMS_LOADED) {
       loadFileSystems();
+    }
+    if (scheme != null) {
+      scheme = StringUtils.toLowerCase(scheme);
     }
     LOGGER.debug("Looking for FS supporting {}", scheme);
     Class<? extends FileSystem> clazz = null;
