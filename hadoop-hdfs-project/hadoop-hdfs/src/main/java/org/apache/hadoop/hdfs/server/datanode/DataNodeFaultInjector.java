@@ -124,6 +124,13 @@ public class DataNodeFaultInjector {
   public void stripedBlockChecksumReconstruction() throws IOException {}
 
   /**
+   * Used as a hook to capture the target buffer allocated when initializing
+   * a striped block checksum reconstructor.
+   */
+  public void stripedBlockChecksumReconstructorInit(ByteBuffer targetBuffer) {
+  }
+
+  /**
    * Used as a hook to inject latency when read block
    * in erasure coding reconstruction process.
    */

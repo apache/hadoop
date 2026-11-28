@@ -60,6 +60,8 @@ public abstract class StripedBlockChecksumReconstructor
     getStripedReader().init();
     // allocate buffer to keep the reconstructed block data
     targetBuffer = allocateBuffer(getBufferSize());
+    DataNodeFaultInjector.get().stripedBlockChecksumReconstructorInit(
+        targetBuffer);
     long maxTargetLen = 0L;
     for (int targetIndex : targetIndices) {
       maxTargetLen = Math.max(maxTargetLen, getBlockLen(targetIndex));
@@ -233,7 +235,14 @@ public abstract class StripedBlockChecksumReconstructor
 
   @Override
   public void close() throws IOException {
-    getStripedReader().close();
-    cleanup();
+    try {
+      getStripedReader().close();
+    } finally {
+      if (targetBuffer != null) {
+        freeBuffer(targetBuffer);
+        targetBuffer = null;
+      }
+      cleanup();
+    }
   }
 }

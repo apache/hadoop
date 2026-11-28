@@ -29,6 +29,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.hdfs.server.datanode.erasurecode.ErasureCodingTestHelper;
+import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Timeout;
@@ -40,7 +42,13 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.slf4j.event.Level;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -678,6 +686,78 @@ public class TestFileChecksum {
       assertEquals(fileChecksum, fileChecksum1, "checksum should be same");
     } finally {
       DataNodeFaultInjector.set(oldInjector);
+    }
+  }
+
+  @MethodSource("getParameters")
+  @ParameterizedTest
+  @Timeout(value = 90)
+  public void testStripedChecksumReconTargetBufferReleased(String pMode)
+      throws Exception {
+    initTestFileChecksum(pMode);
+    String stripedFile = ecDir + "/stripedFileChecksumBufferRelease";
+    prepareTestFiles(fileSize, new String[] {stripedFile});
+
+    ElasticByteBufferPool bufferPool =
+        (ElasticByteBufferPool) ErasureCodingTestHelper.getBufferPool();
+    Set<ByteBuffer> targetBuffers =
+        Collections.synchronizedSet(
+            Collections.newSetFromMap(new IdentityHashMap<>()));
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+    DataNodeFaultInjector.set(new DataNodeFaultInjector() {
+      @Override
+      public void stripedBlockChecksumReconstructorInit(
+          ByteBuffer targetBuffer) {
+        targetBuffers.add(targetBuffer);
+      }
+    });
+
+    try {
+      // Kill a DN so that the checksum of its internal blocks has to be
+      // recalculated by StripedBlockChecksumReconstructor.
+      getFileChecksum(stripedFile, -1, true);
+    } finally {
+      DataNodeFaultInjector.set(oldInjector);
+    }
+
+    assertFalse(targetBuffers.isEmpty(),
+        "Checksum reconstruction should have been triggered");
+    // Every target buffer should have been returned to the buffer pool.
+    GenericTestUtils.waitFor(() -> {
+      synchronized (targetBuffers) {
+        return poolContainsAll(bufferPool, targetBuffers, true)
+            && poolContainsAll(bufferPool, targetBuffers, false);
+      }
+    }, 100, 30000);
+  }
+
+  /**
+   * Check whether all the given direct (or heap) buffers are in the pool.
+   */
+  private static boolean poolContainsAll(ElasticByteBufferPool bufferPool,
+      Set<ByteBuffer> buffers, boolean direct) {
+    Set<ByteBuffer> expected =
+        Collections.newSetFromMap(new IdentityHashMap<>());
+    for (ByteBuffer buffer : buffers) {
+      if (buffer.isDirect() == direct) {
+        expected.add(buffer);
+      }
+    }
+    if (expected.isEmpty()) {
+      return true;
+    }
+    List<ByteBuffer> taken = new ArrayList<>();
+    try {
+      while (bufferPool.size(direct) > 0) {
+        ByteBuffer buffer = bufferPool.getBuffer(direct, 1);
+        taken.add(buffer);
+        expected.remove(buffer);
+      }
+      return expected.isEmpty();
+    } finally {
+      for (ByteBuffer buffer : taken) {
+        bufferPool.putBuffer(buffer);
+      }
     }
   }
 
