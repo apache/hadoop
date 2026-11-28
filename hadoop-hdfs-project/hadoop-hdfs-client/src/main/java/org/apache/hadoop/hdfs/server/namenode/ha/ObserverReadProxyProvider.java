@@ -26,10 +26,14 @@ import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -51,7 +55,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RpcInvocationHandler;
 import org.apache.hadoop.ipc.StandbyException;
-import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -185,8 +189,36 @@ public class ObserverReadProxyProvider<T>
 
   /**
    * Threadpool to send the getHAServiceState requests.
+   *
+   * <p>This must be an executor that <em>rejects</em> work once saturated
+   * rather than blocking the submitter: {@link #getHAServiceStateWithTimeout}
+   * relies on {@link RejectedExecutionException} to fall back to the active
+   * NameNode. See the constructor for why.
    */
-  private final BlockingThreadPoolExecutorService nnProbingThreadPool;
+  private final ExecutorService nnProbingThreadPool;
+
+  /** Threads kept by {@link #nnProbingThreadPool}. */
+  @VisibleForTesting
+  static final int PROBING_POOL_THREADS = 4;
+
+  /** Depth of the queue backing {@link #nnProbingThreadPool}. */
+  @VisibleForTesting
+  static final int PROBING_POOL_QUEUE_CAPACITY = 128;
+
+  /**
+   * Tasks the pool accepts before {@code submit()} starts rejecting: the
+   * threads that can be busy plus the queue behind them.
+   */
+  @VisibleForTesting
+  static final int PROBING_POOL_CAPACITY =
+      PROBING_POOL_THREADS + PROBING_POOL_QUEUE_CAPACITY;
+
+  /**
+   * Distinguishes the probing pools of the several proxy providers a single
+   * JVM may hold, one per nameservice, so that a thread dump says which one a
+   * thread belongs to.
+   */
+  private static final AtomicInteger PROBING_POOL_NUMBER = new AtomicInteger(1);
 
   /**
    * By default ObserverReadProxyProvider uses
@@ -252,13 +284,31 @@ public class ObserverReadProxyProvider<T>
     }
 
     /*
-     * At most 4 threads will be running and each thread will die after 10
-     * seconds of no use. Up to 132 tasks (4 active + 128 waiting) can be
-     * submitted simultaneously.
+     * At most PROBING_POOL_THREADS threads will be running and each thread
+     * will die after 10 seconds of no use. Up to PROBING_POOL_CAPACITY tasks
+     * (active + waiting) can be submitted simultaneously; past that submit()
+     * throws RejectedExecutionException and the caller falls back to the
+     * active NN.
+     *
+     * This deliberately does not use BlockingThreadPoolExecutorService. That
+     * one wraps the pool in a SemaphoredDelegatingExecutor whose submit()
+     * blocks on queueingPermits.acquire() instead of rejecting, so it can
+     * never throw RejectedExecutionException. The saturation fallback below
+     * was therefore unreachable, and a caller that should have been shed onto
+     * the active NN was instead parked -- while holding this provider's
+     * monitor, since changeProxy() is synchronized.
      */
-    nnProbingThreadPool =
-        BlockingThreadPoolExecutorService.newInstance(4, 128, 10L, TimeUnit.SECONDS,
-            "nn-ha-state-probing");
+    ThreadPoolExecutor probingPool = new ThreadPoolExecutor(
+        PROBING_POOL_THREADS, PROBING_POOL_THREADS, 10L, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<Runnable>(PROBING_POOL_QUEUE_CAPACITY),
+        new ThreadFactoryBuilder()
+            .setDaemon(true)
+            .setNameFormat("nn-ha-state-probing-pool"
+                + PROBING_POOL_NUMBER.getAndIncrement() + "-t%d")
+            .build());
+    // Match the previous behaviour of retiring idle threads after 10s.
+    probingPool.allowCoreThreadTimeOut(true);
+    nnProbingThreadPool = probingPool;
   }
 
   public AlignmentContext getAlignmentContext() {
@@ -327,6 +377,15 @@ public class ObserverReadProxyProvider<T>
         initial == null ? "none" : initial.proxyInfo,
         currentProxy.proxyInfo);
     return currentProxy;
+  }
+
+  /**
+   * The pool the HA state probes are submitted to. Exposed so a test can fill
+   * it and assert that the next submit is rejected rather than parked.
+   */
+  @VisibleForTesting
+  ExecutorService getNnProbingThreadPool() {
+    return nnProbingThreadPool;
   }
 
   /**
