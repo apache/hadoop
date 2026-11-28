@@ -57,16 +57,13 @@ public class TimelineAboutReader implements MessageBodyReader<TimelineAbout> {
     JsonNode rootNode = objectMapper.readTree(entityStream);
     assert rootNode != null;
 
-    JsonNode jsonNode = rootNode.get("about");
-    assert jsonNode != null;
-
-    JsonNode about = jsonNode.get("About");
-    JsonNode hadoopBuildVersion = jsonNode.get("hadoop-build-version");
-    JsonNode hadoopVersion = jsonNode.get("hadoop-version");
-    JsonNode hadoopVersionBuildOn = jsonNode.get("hadoop-version-built-on");
-    JsonNode timelineServiceBuildVersion = jsonNode.get("timeline-service-build-version");
-    JsonNode timelineLineServiceVersion = jsonNode.get("timeline-service-version");
-    JsonNode timelineServiceVersionBuiltOn = jsonNode.get("timeline-service-version-built-on");
+    JsonNode about = rootNode.get("About");
+    JsonNode hadoopBuildVersion = rootNode.get("hadoop-build-version");
+    JsonNode hadoopVersion = rootNode.get("hadoop-version");
+    JsonNode hadoopVersionBuildOn = rootNode.get("hadoop-version-built-on");
+    JsonNode timelineServiceBuildVersion = rootNode.get("timeline-service-build-version");
+    JsonNode timelineLineServiceVersion = rootNode.get("timeline-service-version");
+    JsonNode timelineServiceVersionBuiltOn = rootNode.get("timeline-service-version-built-on");
 
     TimelineAbout timelineAbout = new TimelineAbout();
     timelineAbout.setAbout(about.asText());
