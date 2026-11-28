@@ -146,10 +146,28 @@ public class TimelineReaderServer extends CompositeService {
 
   @Override
   protected void serviceStop() throws Exception {
+    try {
+      stopTimelineReaderWebApp();
+    } catch (Exception webAppFailure) {
+      // super.serviceStop() is what stops the reader and, with it, the
+      // storage monitor's polling executor.  A web server that fails to
+      // stop must not leave those behind, but its failure stays the one
+      // reported; a child service's failure is attached to it.
+      try {
+        super.serviceStop();
+      } catch (Exception childFailure) {
+        webAppFailure.addSuppressed(childFailure);
+      }
+      throw webAppFailure;
+    }
+    super.serviceStop();
+  }
+
+  @VisibleForTesting
+  void stopTimelineReaderWebApp() throws Exception {
     if (readerWebServer != null) {
       readerWebServer.stop();
     }
-    super.serviceStop();
   }
 
   protected void addFilters(Configuration conf) {
