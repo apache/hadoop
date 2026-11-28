@@ -77,7 +77,7 @@ public class TimelineConnector extends AbstractService {
   private static final Logger LOG =
       LoggerFactory.getLogger(TimelineConnector.class);
 
-  private int socketTimeOut = 60_000;
+  private int socketTimeOut;
 
   private SSLFactory sslFactory;
   Client client;
@@ -105,6 +105,9 @@ public class TimelineConnector extends AbstractService {
     ClientConfig cc = new ClientConfig();
     cc.register(YarnJacksonJaxbJsonProvider.class);
 
+    socketTimeOut = conf.getInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_TIMEOUT_MS,
+      YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_TIMEOUT_MS);
+
     if (YarnConfiguration.useHttps(conf)) {
       // If https is chosen, configures SSL client.
       sslFactory = getSSLFactory(conf);
@@ -131,6 +134,15 @@ public class TimelineConnector extends AbstractService {
             authUgi, authenticator, connConfigurator, token, doAsUser)));
 
     client = ClientBuilder.newClient(cc);
+  }
+
+  @Override
+  public String toString() {
+    return String.format(
+            "timeout=%dms, max-retries=%d, retry-interval=%dms",
+            socketTimeOut,
+            retryPolicy.getMaxRetries(),
+            retryPolicy.getDelay().toMillis());
   }
 
   private ConnectionConfigurator defaultTimeoutConnConfigurator = conn -> {
