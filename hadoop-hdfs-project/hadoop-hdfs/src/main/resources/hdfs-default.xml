@@ -1052,6 +1052,21 @@
 </property>
 
 <property>
+  <name>dfs.namenode.replqueue.threshold-pct</name>
+  <value></value>
+  <description>
+    Specifies the percentage of blocks that should satisfy the minimal
+    replication requirement, at which point the NameNode starts
+    populating replication/redundancy work queues while still in safe
+    mode, rather than waiting until safe mode is fully exited. Set this
+    to a value slightly smaller than dfs.namenode.safemode.threshold-pct
+    so that replication work can begin before the cluster leaves safe
+    mode. If unset, it defaults to the value of
+    dfs.namenode.safemode.threshold-pct.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.safemode.min.datanodes</name>
   <value>0</value>
   <description>
@@ -1812,6 +1827,17 @@
 </property>
 
 <property>
+  <name>dfs.datanode.synconclose</name>
+  <value>false</value>
+  <description>Whether to force a fsync of the block file and its metadata
+    file when the DataNode finishes receiving and closes a block replica.
+    Enabling this improves durability, guaranteeing block data is flushed
+    to the underlying disk before the write is finalized, at the cost of
+    additional I/O and potentially slower writes.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.failover.max.attempts</name>
   <value>15</value>
   <description>
@@ -2000,6 +2026,31 @@
   <name>dfs.ha.tail-edits.rolledits.timeout</name>
   <value>60</value>
   <description>The timeout in seconds of calling rollEdits RPC on Active NN.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.log-roll.rpc.timeout</name>
+  <value>20000</value>
+  <description>The timeout in milliseconds used when a Standby NameNode's
+    EditLogTailer establishes the RPC connection to the Active NameNode
+    that is used to trigger edit log rolls. This is separate from, and
+    typically much smaller than, dfs.ha.tail-edits.rolledits.timeout,
+    which bounds the rollEdits call itself once the connection is made.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.tail-edits.max-txns-per-lock</name>
+  <value>9223372036854775807</value>
+  <description>
+    While tailing edit logs, the Standby NameNode holds its namesystem
+    write lock while applying at most this many transactions, then
+    releases and re-acquires the lock to load more. Setting this to a
+    value lower than the default (Long.MAX_VALUE, which holds the lock
+    for the entire journal segment) allows read requests on the Standby
+    to make progress during long tailing operations, at the cost of
+    releasing and re-acquiring the lock more often.
   </description>
 </property>
 
@@ -2270,6 +2321,21 @@
 </property>
 
 <property>
+  <name>dfs.namenode.tolerate.heartbeat.multiplier</name>
+  <value>4</value>
+  <description>
+    When choosing which replica of an over-replicated block to delete,
+    the default block placement policy scales dfs.heartbeat.interval by
+    this multiplier to define a tolerance window for heartbeat lag. If
+    any candidate datanode's last heartbeat is older than
+    dfs.heartbeat.interval * dfs.namenode.tolerate.heartbeat.multiplier,
+    the replica on the datanode with the oldest heartbeat is deleted.
+    Only when all candidates' heartbeats fall within the window is the
+    replica on the datanode with the least free space deleted instead.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.write.stale.datanode.ratio</name>
   <value>0.5f</value>
   <description>
@@ -2326,7 +2392,38 @@
   </description>
 </property>
 
-<property>    
+<property>
+  <name>nfs.http.address</name>
+  <value>0.0.0.0:50079</value>
+  <description>
+    The HTTP address (host:port) for the NFS gateway web UI. If the port
+    is 0, then the server will start on a free port. If the port is
+    omitted, the default port 50079 is used.
+  </description>
+</property>
+
+<property>
+  <name>nfs.https.address</name>
+  <value>0.0.0.0:50579</value>
+  <description>
+    The HTTPS address (host:port) for the NFS gateway web UI. If the port
+    is 0, then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>nfs.file.dump</name>
+  <value>true</value>
+  <description>
+    Whether to enable dumping large, non-sequential writes to a local dump
+    directory (see nfs.dump.dir) while waiting for the missing, earlier
+    part of the write sequence to arrive. When disabled, out-of-order
+    writes accumulate in the NFS gateway's memory instead, which can
+    significantly increase the gateway's memory usage.
+  </description>
+</property>
+
+<property>
   <name>nfs.dump.dir</name>
   <value>/tmp/.hdfs-nfs</value>
   <description>
@@ -2352,8 +2449,78 @@
   <value>1048576</value>
   <description>This is the maximum size in bytes of a WRITE request
     supported by the NFS gateway. If you change this, make sure you
-    also update the nfs mount's wsize(add wsize= # of bytes to the 
+    also update the nfs mount's wsize(add wsize= # of bytes to the
     mount directive).
+  </description>
+</property>
+
+<property>
+  <name>nfs.dtmax</name>
+  <value>65536</value>
+  <description>
+    This is the maximum size in bytes of a READDIR/READDIRPLUS response
+    supported by the NFS gateway.
+  </description>
+</property>
+
+<property>
+  <name>nfs.export.point</name>
+  <value>/</value>
+  <description>
+    The HDFS path to be exported by the NFS gateway, relative to the
+    HDFS root. Only a single export point is currently supported.
+  </description>
+</property>
+
+<property>
+  <name>nfs.max.open.files</name>
+  <value>256</value>
+  <description>
+    The maximum number of files the NFS gateway can hold concurrently
+    open. When exceeded, the least recently used open file is closed
+    and evicted to make room for the new one.
+  </description>
+</property>
+
+<property>
+  <name>nfs.stream.timeout</name>
+  <value>600000</value>
+  <description>
+    The timeout in milliseconds after which an inactive open file stream
+    on the NFS gateway is closed. The minimum accepted value is 10000
+    (10 seconds).
+  </description>
+</property>
+
+<property>
+  <name>nfs.large.file.upload</name>
+  <value>true</value>
+  <description>
+    Whether the NFS gateway should optimize the upload of large files by
+    allowing out-of-order writes to be committed to HDFS before the whole
+    file has been written. Has no effect when nfs.aix.compatibility.mode.enabled
+    is true.
+  </description>
+</property>
+
+<property>
+  <name>nfs.aix.compatibility.mode.enabled</name>
+  <value>false</value>
+  <description>
+    Whether to enable AIX NFS client compatibility mode. Some AIX NFS
+    clients rely on write ordering behavior that differs from the default,
+    Linux-oriented handling used by the NFS gateway; enable this when
+    serving AIX clients.
+  </description>
+</property>
+
+<property>
+  <name>nfs.metrics.percentiles.intervals</name>
+  <value></value>
+  <description>
+    Comma-delimited set of integers denoting the desired rollover intervals
+    (in seconds) for percentile latency metrics on the NFS gateway.
+    By default, percentile latency metrics are disabled.
   </description>
 </property>
 
@@ -2379,13 +2546,48 @@
 </property>
 
 <property>
-  <name>nfs.allow.insecure.ports</name>
+  <name>nfs.superuser</name>
+  <value></value>
+  <description>
+    The name of the HDFS superuser allowed to access any file on HDFS
+    through the NFS gateway, bypassing normal permission checks. By
+    default no superuser is configured. Note that even when configured,
+    nfs.exports.allowed.hosts still applies, so the superuser will not
+    gain write access from an NFS client host that is not allowed write
+    access there.
+  </description>
+</property>
+
+<property>
+  <name>nfs.registration.port</name>
+  <value>40</value>
+  <description>
+    The port used by the standalone privileged NFS client socket (started
+    via PrivilegedNfsGatewayStarter) that registers the actual NFS server
+    port with the system portmapper. Must be a privileged port
+    (1-1023) since the gateway needs to bind to it before dropping root
+    privileges.
+  </description>
+</property>
+
+<property>
+  <name>nfs.udp.client.portmap.timeout.millis</name>
+  <value>500</value>
+  <description>
+    Timeout in milliseconds for the UDP RPC connection the NFS gateway
+    uses to register itself with the system portmapper.
+  </description>
+</property>
+
+<property>
+  <name>nfs.port.monitoring.disabled</name>
   <value>true</value>
   <description>
     When set to false, client connections originating from unprivileged ports
     (those above 1023) will be rejected. This is to ensure that clients
     connecting to this NFS Gateway must have had root privilege on the machine
-    where they're connecting from.
+    where they're connecting from. This property was previously named
+    nfs.allow.insecure.ports, which is now deprecated.
   </description>
 </property>
 
@@ -2438,9 +2640,21 @@
   <name>dfs.metrics.percentiles.intervals</name>
   <value></value>
   <description>
-    Comma-delimited set of integers denoting the desired rollover intervals 
+    Comma-delimited set of integers denoting the desired rollover intervals
     (in seconds) for percentile latency metrics on the Namenode and Datanode.
     By default, percentile latency metrics are disabled.
+  </description>
+</property>
+
+<property>
+  <name>dfs.metrics.session-id</name>
+  <value></value>
+  <description>
+    An optional identifier that HDFS daemons (NameNode, DataNode,
+    JournalNode, Balancer, Mover and others) record in the metrics they
+    emit, to correlate those metrics with a particular session or
+    workload. Empty by default. This property replaces the deprecated
+    session.id.
   </description>
 </property>
 
@@ -2650,8 +2864,192 @@
       invoked on both client and server side. If the resolver indicates 
       that the channel is trusted, then the data transfer will not be 
       encrypted even if dfs.encrypt.data.transfer is set to true. The
-      default implementation returns false indicating that the channel 
+      default implementation returns false indicating that the channel
       is not trusted.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.server.fixedBlackList.file</name>
+  <value>/etc/hadoop/fixedBlackList</value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    BlackListBasedTrustedChannelResolver. Server-side path to the file
+    containing a fixed list of subnets and IP addresses that are never
+    trusted, regardless of dfs.datatransfer.server.variableBlackList.*.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.server.variableBlackList.enable</name>
+  <value>false</value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    BlackListBasedTrustedChannelResolver. Enables/disables the
+    server-side variable (periodically reloaded) blacklist, in addition
+    to the fixed blacklist.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.server.variableBlackList.file</name>
+  <value>/etc/hadoop/blackList</value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    BlackListBasedTrustedChannelResolver and
+    dfs.datatransfer.server.variableBlackList.enable is true. Server-side
+    path to the file containing subnets and IP addresses that form the
+    variable blacklist.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.server.variableBlackList.cache.secs</name>
+  <value>3600</value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    BlackListBasedTrustedChannelResolver and
+    dfs.datatransfer.server.variableBlackList.enable is true. Time in
+    seconds after which the server-side variable blacklist file is
+    checked for updates.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.client.fixedBlackList.file</name>
+  <value></value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    BlackListBasedTrustedChannelResolver. Client-side path to the fixed
+    blacklist file. If unset, falls back to the value resolved for
+    dfs.datatransfer.server.fixedBlackList.file.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.client.variableBlackList.enable</name>
+  <value>false</value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    BlackListBasedTrustedChannelResolver. Enables/disables the
+    client-side variable (periodically reloaded) blacklist, in addition
+    to the fixed blacklist.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.client.variableBlackList.file</name>
+  <value></value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    BlackListBasedTrustedChannelResolver and
+    dfs.datatransfer.client.variableBlackList.enable is true. Client-side
+    path to the variable blacklist file. If unset, falls back to the
+    value resolved for dfs.datatransfer.server.variableBlackList.file.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.client.variableBlackList.cache.secs</name>
+  <value>3600</value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    BlackListBasedTrustedChannelResolver and
+    dfs.datatransfer.client.variableBlackList.enable is true. Time in
+    seconds after which the client-side variable blacklist file is
+    checked for updates.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.server.fixedwhitelist.file</name>
+  <value>/etc/hadoop/fixedwhitelist</value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    WhitelistBasedTrustedChannelResolver. Server-side path to the file
+    containing a fixed list of subnets and IP addresses that are always
+    trusted, regardless of dfs.datatransfer.server.variablewhitelist.*.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.server.variablewhitelist.enable</name>
+  <value>false</value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    WhitelistBasedTrustedChannelResolver. Enables/disables the
+    server-side variable (periodically reloaded) whitelist, in addition
+    to the fixed whitelist.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.server.variablewhitelist.file</name>
+  <value>/etc/hadoop/whitelist</value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    WhitelistBasedTrustedChannelResolver and
+    dfs.datatransfer.server.variablewhitelist.enable is true. Server-side
+    path to the file containing subnets and IP addresses that form the
+    variable whitelist.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.server.variablewhitelist.cache.secs</name>
+  <value>3600</value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    WhitelistBasedTrustedChannelResolver and
+    dfs.datatransfer.server.variablewhitelist.enable is true. Time in
+    seconds after which the server-side variable whitelist file is
+    checked for updates.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.client.fixedwhitelist.file</name>
+  <value></value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    WhitelistBasedTrustedChannelResolver. Client-side path to the fixed
+    whitelist file. If unset, falls back to the value resolved for
+    dfs.datatransfer.server.fixedwhitelist.file.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.client.variablewhitelist.enable</name>
+  <value>false</value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    WhitelistBasedTrustedChannelResolver. Enables/disables the
+    client-side variable (periodically reloaded) whitelist, in addition
+    to the fixed whitelist.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.client.variablewhitelist.file</name>
+  <value></value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    WhitelistBasedTrustedChannelResolver and
+    dfs.datatransfer.client.variablewhitelist.enable is true. Client-side
+    path to the variable whitelist file. If unset, falls back to the
+    value resolved for dfs.datatransfer.server.variablewhitelist.file.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datatransfer.client.variablewhitelist.cache.secs</name>
+  <value>3600</value>
+  <description>
+    Used only when dfs.trustedchannel.resolver.class is set to
+    WhitelistBasedTrustedChannelResolver and
+    dfs.datatransfer.client.variablewhitelist.enable is true. Time in
+    seconds after which the client-side variable whitelist file is
+    checked for updates.
   </description>
 </property>
 
@@ -3308,6 +3706,17 @@
     This controls the minimum amount of time
     file descriptors need to sit in the client cache context
     before they can be closed for being inactive for too long.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.read.shortcircuit.metrics.sampling.percentage</name>
+  <value>0</value>
+  <description>
+    The percentage of short-circuit read operations for which the client
+    collects latency metrics. Values less than or equal to 0 disable
+    short-circuit read metrics entirely; values greater than 100 are
+    treated as 100.
   </description>
 </property>
 
@@ -5064,6 +5473,20 @@
 </property>
 
 <property>
+  <name>dfs.datanode.non.local.lazy.persist</name>
+  <value>false</value>
+  <description>
+    Whether to allow LAZY_PERSIST writes (writes to memory backed by a
+    RAM disk, later flushed to persistent storage) from clients that are
+    not co-located with the DataNode. By default, lazy persist writes are
+    only honored for local clients, since a non-local client cannot
+    guarantee the same data placement/locality benefits the feature is
+    meant to provide; when disabled, writes from remote clients silently
+    fall back to normal, non-memory-backed writes.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.restart.replica.expiration</name>
   <value>50</value>
   <description>
@@ -6076,6 +6499,37 @@
   <description>
     URL against which to post for obtaining bearer token with
     either credential or refresh token.
+  </description>
+</property>
+
+<property>
+  <name>dfs.webhdfs.oauth2.credential</name>
+  <value></value>
+  <description>
+    Credential used to obtain the initial and subsequent refresh tokens
+    when using the credential-based OAuth2 workflow
+    (ConfCredentialBasedAccessTokenProvider).
+  </description>
+</property>
+
+<property>
+  <name>dfs.webhdfs.oauth2.refresh.token</name>
+  <value></value>
+  <description>
+    Refresh token used to obtain new access tokens when using the
+    refresh-token-based OAuth2 workflow
+    (ConfRefreshTokenBasedAccessTokenProvider).
+  </description>
+</property>
+
+<property>
+  <name>dfs.webhdfs.oauth2.refresh.token.expires.ms.since.epoch</name>
+  <value></value>
+  <description>
+    Expiry time of the OAuth2 access token, expressed in milliseconds
+    since the epoch. A new access token is fetched via the refresh token
+    once this time is reached. Used with the refresh-token-based OAuth2
+    workflow (ConfRefreshTokenBasedAccessTokenProvider).
   </description>
 </property>
 
