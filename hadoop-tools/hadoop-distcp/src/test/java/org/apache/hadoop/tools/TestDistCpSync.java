@@ -949,6 +949,51 @@ public class TestDistCpSync {
                  dfs.getFileStatus(target), false);
   }
 
+  private void initDataTrashCheckpoint(Path dir) throws Exception {
+    dfs.mkdirs(new Path(dir, ".Trash/Current/user"));
+    DFSTestUtil.createFile(dfs, new Path(dir, "tbl/pt1/f1"),
+        BLOCK_SIZE, DATA_NUM, 0L);
+  }
+
+  /**
+   * Modify a dir, move it into a dir newly created under .Trash/Current,
+   * then checkpoint the trash, which renames .Trash/Current and creates a
+   * new .Trash/Current. The snapshot diff reports the new dir under the old
+   * name .Trash/Current while the moved dir is reported under the
+   * checkpoint name.
+   */
+  private int changeDataTrashCheckpoint(Path dir) throws Exception {
+    final Path pt1 = new Path(dir, "tbl/pt1");
+    final Path userTrash = new Path(dir, ".Trash/Current/user");
+    final Path dm = new Path(userTrash, "dm");
+
+    DFSTestUtil.createFile(dfs, new Path(pt1, "f2"), BLOCK_SIZE, DATA_NUM, 0L);
+    dfs.mkdirs(dm);
+    dfs.rename(pt1, new Path(dm, "pt1_1"));
+    dfs.rename(new Path(dir, ".Trash/Current"), new Path(dir, ".Trash/ckpt"));
+    dfs.mkdirs(new Path(dir, ".Trash/Current"));
+    // M ./.Trash, + ./.Trash/Current, M ./.Trash/Current/user,
+    // + ./.Trash/Current/user/dm, M ./tbl, M ./tbl/pt1, + ./tbl/pt1/f2
+    return 7;
+  }
+
+  /**
+   * The rename target under the created dir must be excluded when the
+   * created dir is traversed, otherwise it is listed twice and the listing
+   * fails with DuplicateFileException.
+   */
+  @Test
+  public void testSyncRenameIntoCreatedDirUnderRenamedParent()
+      throws Exception {
+    initDataTrashCheckpoint(source);
+    initDataTrashCheckpoint(target);
+    enableAndCreateFirstSnapshot();
+    int numCreatedModified = changeDataTrashCheckpoint(source);
+    dfs.createSnapshot(source, "s2");
+
+    testAndVerify(numCreatedModified);
+  }
+
   @Test
   public void testSyncSnapshotTimeStampChecking() throws Exception {
     initData(source);
