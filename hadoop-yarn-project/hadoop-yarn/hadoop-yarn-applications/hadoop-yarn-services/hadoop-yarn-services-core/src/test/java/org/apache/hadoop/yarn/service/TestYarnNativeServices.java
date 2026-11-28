@@ -24,6 +24,7 @@ import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
 import org.apache.hadoop.yarn.api.records.*;
@@ -67,6 +68,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.apache.hadoop.yarn.api.records.YarnApplicationState.FINISHED;
@@ -588,25 +590,18 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     compCounts.put("compa", 5L);
     exampleApp.getComponent("compa").setNumberOfContainers(5L);
     client.flexByRestService(exampleApp.getName(), compCounts);
-    try {
-      // 10 secs is enough for the container to be started. The down side of
-      // this test is that it has to wait that long. Setting a higher wait time
-      // will add to the total time taken by tests to run.
-      waitForServiceToBeStable(client, exampleApp, 10000);
-      fail("Service should not be in a stable state. It should throw "
-          + "a timeout exception.");
-    } catch (Exception e) {
-      // Check that service state is not STABLE and only 3 containers are
-      // running and the fourth one should not get allocated.
-      service = client.getStatus(exampleApp.getName());
-      component = service.getComponent("compa");
-      assertNotEquals(ServiceState.STABLE, service.getState(),
-          "Service state should not be STABLE");
-      assertEquals(ComponentState.FLEXING, component.getState(),
-          "Component state should be FLEXING");
-      assertEquals(3, component.getContainers().size(),
-          "3 containers are expected to be running");
-    }
+    waitForComponentToFlex(client, exampleApp, "compa", 5L);
+    // Anti-affinity prevents the extra containers from being allocated.
+    assertThrows(TimeoutException.class,
+        () -> waitForServiceToBeStable(client, exampleApp, 10_000));
+    service = client.getStatus(exampleApp.getName());
+    component = service.getComponent("compa");
+    assertNotEquals(ServiceState.STABLE, service.getState(),
+        "Service state should not be STABLE");
+    assertEquals(ComponentState.FLEXING, component.getState(),
+        "Component state should be FLEXING");
+    assertEquals(3, component.getContainers().size(),
+        "3 containers are expected to be running");
 
     // Flex compa down to 4 now, which is still more containers than the no of
     // NMs. This tests the usecase that flex down does not kill any of the
@@ -617,25 +612,18 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     compCounts.put("compa", 4L);
     exampleApp.getComponent("compa").setNumberOfContainers(4L);
     client.flexByRestService(exampleApp.getName(), compCounts);
-    try {
-      // 10 secs is enough for the container to be started. The down side of
-      // this test is that it has to wait that long. Setting a higher wait time
-      // will add to the total time taken by tests to run.
-      waitForServiceToBeStable(client, exampleApp, 10000);
-      fail("Service should not be in a stable state. It should throw "
-          + "a timeout exception.");
-    } catch (Exception e) {
-      // Check that service state is not STABLE and only 3 containers are
-      // running and the fourth one should not get allocated.
-      service = client.getStatus(exampleApp.getName());
-      component = service.getComponent("compa");
-      assertNotEquals(ServiceState.STABLE, service.getState(),
-          "Service state should not be STABLE");
-      assertEquals(ComponentState.FLEXING, component.getState(),
-          "Component state should be FLEXING");
-      assertEquals(3, component.getContainers().size(),
-          "3 containers are expected to be running");
-    }
+    waitForComponentToFlex(client, exampleApp, "compa", 4L);
+    // Anti-affinity prevents the extra containers from being allocated.
+    assertThrows(TimeoutException.class,
+        () -> waitForServiceToBeStable(client, exampleApp, 10_000));
+    service = client.getStatus(exampleApp.getName());
+    component = service.getComponent("compa");
+    assertNotEquals(ServiceState.STABLE, service.getState(),
+        "Service state should not be STABLE");
+    assertEquals(ComponentState.FLEXING, component.getState(),
+        "Component state should be FLEXING");
+    assertEquals(3, component.getContainers().size(),
+        "3 containers are expected to be running");
 
     // Finally flex compa down to 3, which is exactly the number of containers
     // currently running. This will bring the component and service states to
@@ -860,6 +848,20 @@ public class TestYarnNativeServices extends ServiceTestUtils {
         index++;
       }
     }
+  }
+
+  private void waitForComponentToFlex(ServiceClient client, Service service,
+      String componentName, long desiredContainers) throws Exception {
+    // The flex RPC only queues an event. Wait for the AM to apply it before
+    // checking stability. The desired count also distinguishes successive
+    // flex operations that leave the component in FLEXING state.
+    LambdaTestUtils.await(10_000, 500, () -> {
+      Service status = client.getStatus(service.getName());
+      Component component = status.getComponent(componentName);
+      return component.getNumberOfContainers() == desiredContainers
+          && component.getState() == ComponentState.FLEXING
+          && status.getState() != ServiceState.STABLE;
+    });
   }
 
   /**
