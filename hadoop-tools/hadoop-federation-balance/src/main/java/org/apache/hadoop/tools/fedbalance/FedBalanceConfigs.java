@@ -44,6 +44,16 @@ public final class FedBalanceConfigs {
       "hdfs.fedbalance.procedure.scheduler.journal.uri";
   public static final String JOB_PREFIX = "JOB-";
   public static final String TMP_TAIL = ".tmp";
+  /**
+   * Whether FedBalance should run content summary verification after the final
+   * DistCp succeeds.
+   */
+  public static final String VERIFY_ENABLED =
+      "hdfs.fedbalance.verify.enabled";
+  /**
+   * Default value for {@link #VERIFY_ENABLED}.
+   */
+  public static final boolean VERIFY_ENABLED_DEFAULT = false;
 
   private FedBalanceConfigs(){}
 }
