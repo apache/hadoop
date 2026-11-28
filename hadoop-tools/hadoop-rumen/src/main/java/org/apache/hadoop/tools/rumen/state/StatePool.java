@@ -173,7 +173,7 @@ public class StatePool {
     
     // now set the timestamp
     DateFormat formatter = 
-      new SimpleDateFormat("dd-MMM-yyyy-hh'H'-mm'M'-ss'S'");
+      new SimpleDateFormat("dd-MMM-yyyy-HH'H'-mm'M'-ss'S'");
     Calendar calendar = Calendar.getInstance();
     calendar.setTimeInMillis(System.currentTimeMillis());
     timeStamp = formatter.format(calendar.getTime());

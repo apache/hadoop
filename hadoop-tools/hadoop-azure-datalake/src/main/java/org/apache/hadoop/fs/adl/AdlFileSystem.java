@@ -635,7 +635,7 @@ public class AdlFileSystem extends FileSystem {
     int index = 0;
     for (DirectoryEntry entry : entries) {
       FileStatus status = toFileStatus(entry, parent);
-      if (!(entry.name == null || entry.name == "")) {
+      if (!(entry.name == null || entry.name.isEmpty())) {
         status.setPath(
             new Path(parent.makeQualified(uri, workingDirectory), entry.name));
       }
