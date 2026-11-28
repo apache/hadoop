@@ -19,6 +19,7 @@
 
 import { useState } from 'react';
 import { FileDown } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '~/components/ui/button';
 import { Checkbox } from '~/components/ui/checkbox';
@@ -31,8 +32,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '~/components/ui/dialog';
+import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
+import {
+  DEFAULT_DIAGNOSTIC_BULK_ACTIVITIES_COUNT,
+  DEFAULT_DIAGNOSTIC_RM_JSTACK_COUNT,
+  MAX_DIAGNOSTIC_BULK_ACTIVITIES_COUNT,
+  MAX_DIAGNOSTIC_RM_JSTACK_COUNT,
+} from '~/lib/api/YarnApiClient';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 
 type DiagnosticDatasetId =
@@ -40,13 +48,20 @@ type DiagnosticDatasetId =
   | 'schedulerInfo'
   | 'nodeLabels'
   | 'nodeToLabels'
-  | 'nodes';
+  | 'nodes'
+  | 'bulkActivities'
+  | 'rmJstack';
 
 interface DiagnosticOption {
   id: DiagnosticDatasetId;
   label: string;
   description: string;
-  data: unknown;
+  data?: unknown;
+  live?: {
+    countLabel: string;
+    maxCount: number;
+    fetch: (count: number) => Promise<unknown>;
+  };
 }
 
 const DEFAULT_SELECTED: DiagnosticDatasetId[] = ['schedulerConf', 'schedulerInfo'];
@@ -58,9 +73,15 @@ export function DiagnosticsDialog() {
   const nodeLabels = useSchedulerStore((state) => state.nodeLabels);
   const nodeToLabels = useSchedulerStore((state) => state.nodeToLabels);
   const nodes = useSchedulerStore((state) => state.nodes);
+  const apiClient = useSchedulerStore((state) => state.apiClient);
 
   const [open, setOpen] = useState(false);
   const [selectedDatasets, setSelectedDatasets] = useState<DiagnosticDatasetId[]>(DEFAULT_SELECTED);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [counts, setCounts] = useState<Partial<Record<DiagnosticDatasetId, string>>>({
+    bulkActivities: String(DEFAULT_DIAGNOSTIC_BULK_ACTIVITIES_COUNT),
+    rmJstack: String(DEFAULT_DIAGNOSTIC_RM_JSTACK_COUNT),
+  });
 
   const entries = Array.from(configData.entries()).sort(([a], [b]) => a.localeCompare(b));
   const schedulerConfiguration = {
@@ -99,7 +120,32 @@ export function DiagnosticsDialog() {
       description: 'Node metadata returned by /nodes.',
       data: nodes,
     },
+    {
+      id: 'bulkActivities',
+      label: 'Scheduler Bulk Activities',
+      description: 'Live response from /scheduler/bulk-activities.',
+      live: {
+        countLabel: 'Bulk activities count',
+        maxCount: MAX_DIAGNOSTIC_BULK_ACTIVITIES_COUNT,
+        fetch: (count) => apiClient.getBulkSchedulerActivities(count),
+      },
+    },
+    {
+      id: 'rmJstack',
+      label: 'ResourceManager JStack',
+      description: 'Live thread dump from /jstack (ResourceManager JVM).',
+      live: {
+        countLabel: 'ResourceManager jstack count',
+        maxCount: MAX_DIAGNOSTIC_RM_JSTACK_COUNT,
+        fetch: (count) => apiClient.getResourceManagerJstack(count),
+      },
+    },
   ];
+
+  const isValidCount = (option: DiagnosticOption) => {
+    const count = Number(counts[option.id]);
+    return Number.isInteger(count) && count >= 1 && count <= (option.live?.maxCount ?? 0);
+  };
 
   const toggleDataset = (datasetId: DiagnosticDatasetId, checked: boolean) => {
     setSelectedDatasets((prev) => {
@@ -110,7 +156,7 @@ export function DiagnosticsDialog() {
     });
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (selectedDatasets.length === 0) {
       return;
     }
@@ -123,7 +169,9 @@ export function DiagnosticsDialog() {
 
     for (const option of datasetOptions) {
       if (selectedDatasets.includes(option.id)) {
-        (payload.datasets as Record<string, unknown>)[option.id] = option.data;
+        (payload.datasets as Record<string, unknown>)[option.id] = option.live
+          ? await option.live.fetch(Number(counts[option.id]))
+          : option.data;
       }
     }
 
@@ -139,7 +187,22 @@ export function DiagnosticsDialog() {
     setOpen(false);
   };
 
-  const isDownloadDisabled = selectedDatasets.length === 0;
+  const handleDownloadClick = () => {
+    setIsDownloading(true);
+    handleDownload()
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        toast.error(`Failed to download diagnostics: ${message}`);
+      })
+      .finally(() => setIsDownloading(false));
+  };
+
+  const isDownloadDisabled =
+    selectedDatasets.length === 0 ||
+    isDownloading ||
+    datasetOptions.some(
+      (option) => option.live && selectedDatasets.includes(option.id) && !isValidCount(option),
+    );
 
   return (
     <TooltipProvider>
@@ -184,6 +247,20 @@ export function DiagnosticsDialog() {
                       {option.label}
                     </Label>
                     <p className="text-sm text-muted-foreground">{option.description}</p>
+                    {option.live && isChecked ? (
+                      <Input
+                        type="number"
+                        min={1}
+                        max={option.live.maxCount}
+                        step={1}
+                        aria-label={option.live.countLabel}
+                        value={counts[option.id] ?? ''}
+                        onChange={(event) =>
+                          setCounts((prev) => ({ ...prev, [option.id]: event.target.value }))
+                        }
+                        className="h-8 w-32"
+                      />
+                    ) : null}
                   </div>
                 </div>
               );
@@ -192,10 +269,11 @@ export function DiagnosticsDialog() {
 
           <DialogFooter className="sm:justify-between">
             <p className="text-xs text-muted-foreground">
-              Data reflects the current in-memory store values.
+              Data reflects the current in-memory store values; bulk activities and RM jstack are
+              fetched live.
             </p>
-            <Button onClick={handleDownload} disabled={isDownloadDisabled}>
-              Download
+            <Button onClick={handleDownloadClick} disabled={isDownloadDisabled}>
+              {isDownloading ? 'Downloading…' : 'Download'}
             </Button>
           </DialogFooter>
         </DialogContent>
