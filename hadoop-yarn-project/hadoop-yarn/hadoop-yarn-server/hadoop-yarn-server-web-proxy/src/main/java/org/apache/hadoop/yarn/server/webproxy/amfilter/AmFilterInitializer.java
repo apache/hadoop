@@ -22,6 +22,8 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.conf.HAUtil;
@@ -45,7 +47,7 @@ public class AmFilterInitializer extends FilterInitializer {
     List<String> proxies = WebAppUtils.getProxyHostsAndPortsForAmFilter(conf);
     StringBuilder sb = new StringBuilder();
     for (String proxy : proxies) {
-      sb.append(proxy.split(":")[0]).append(AmIpFilter.PROXY_HOSTS_DELIMITER);
+      sb.append(HostAndPort.fromString(proxy).getHost()).append(AmIpFilter.PROXY_HOSTS_DELIMITER);
     }
     sb.setLength(sb.length() - 1);
     params.put(AmIpFilter.PROXY_HOSTS, sb.toString());
@@ -87,7 +89,16 @@ public class AmFilterInitializer extends FilterInitializer {
         YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS :
         YarnConfiguration.RM_WEBAPP_ADDRESS;
     String host = conf.get(HAUtil.addSuffix(addressPropertyPrefix, rmId));
-    return host;
+    if (host == null) {
+      return null;
+    }
+    // Resolve like WebAppUtils.getProxyHostsAndPortsForAmFilter, so AmIpFilter can match
+    // this entry against the host:port of the PROXY_URI_BASES URLs.
+    try {
+      return WebAppUtils.getResolvedAddress(NetUtils.createSocketAddr(host));
+    } catch (IllegalArgumentException e) {
+      return host;
+    }
   }
 
   @VisibleForTesting

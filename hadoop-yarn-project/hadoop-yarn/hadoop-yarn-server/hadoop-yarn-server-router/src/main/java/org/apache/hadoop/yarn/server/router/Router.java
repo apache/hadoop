@@ -43,6 +43,7 @@ import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
@@ -256,8 +257,8 @@ public class Router extends CompositeService {
           WebAppProxyServlet.class);
       builder.withAttribute(WebAppProxy.FETCHER_ATTRIBUTE, fetcher);
       String proxyHostAndPort = getProxyHostAndPort(conf);
-      String[] proxyParts = proxyHostAndPort.split(":");
-      builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE, proxyParts[0]);
+      builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE,
+          HostAndPort.fromString(proxyHostAndPort).getHost());
     }
     RouterWebApp routerWebApp = new RouterWebApp(this);
     builder.withResourceConfig(routerWebApp.resourceConfig());
