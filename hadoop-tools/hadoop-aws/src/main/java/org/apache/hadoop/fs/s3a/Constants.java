@@ -1360,16 +1360,21 @@ public final class Constants {
    */
   public static final String CUSTOM_HEADERS_POSTFIX = ".custom.headers";
 
+  /** Custom per-request headers postfix.
+   * value: {@value}
+   */
+  public static final String CUSTOM_PER_REQUEST_HEADERS_POSTFIX = ".request";
+
   /**
    * List of custom headers to be set on the service client.
    * Multiple parameters can be used to specify custom headers.
    * <pre>
    * Usage:
-   * fs.s3a.client.s3.custom.headers - Headers to add on all the S3 requests.
-   * fs.s3a.client.sts.custom.headers - Headers to add on all the STS requests.
+   * fs.s3a.client.s3.custom.headers - Headers to add to all S3 requests.
+   * fs.s3a.client.sts.custom.headers - Headers to add to all STS requests.
    *
    * Examples:
-   * CustomHeader {@literal ->} 'Header1:Value1'
+   * CustomHeader {@literal ->} 'Header1=Value1'
    * CustomHeaders {@literal ->} 'Header1=Value1;Value2,Header2=Value1'
    * </pre>
    */
@@ -1380,6 +1385,31 @@ public final class Constants {
   public static final String CUSTOM_HEADERS_S3 =
       FS_S3A_CLIENT_PREFIX + AWS_SERVICE_IDENTIFIER_S3.toLowerCase(Locale.ROOT)
           + CUSTOM_HEADERS_POSTFIX;
+
+  /**
+   * List of custom per-request-type headers to be set on the service client.
+   * Multiple parameters can be used to specify custom headers.
+   * <pre>
+   * Usage:
+   * fs.s3a.client.s3.custom.headers.request.REQUEST - Headers to add to all S3 REQUEST requests.
+   * fs.s3a.client.sts.custom.headers.request.REQUEST - Headers to add to all STS REQUEST requests.
+   *
+   * Note: REQUEST refers to the AWS S3 request name.
+   * See <a href="https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/model/S3Request.html">subclasses of S3Request</a>
+   * and <a href="https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/sts/model/StsRequest.html">subclasses of StsRequest</a>
+   * for all existing requests.
+   *
+   * Examples:
+   * fs.s3a.client.s3.custom.headers.request.DeleteObjectRequest
+   * CustomHeader {@literal ->} 'Header1=Value1'
+   * CustomHeaders {@literal ->} 'Header1=Value1;Value2,Header2=Value1'
+   * </pre>
+   */
+  public static final String CUSTOM_REQUEST_HEADERS_STS_PREFIX =
+          CUSTOM_HEADERS_STS + CUSTOM_PER_REQUEST_HEADERS_POSTFIX + ".";
+
+  public static final String CUSTOM_REQUEST_HEADERS_S3_PREFIX =
+          CUSTOM_HEADERS_S3 + CUSTOM_PER_REQUEST_HEADERS_POSTFIX + ".";
 
   /**
    * How long to wait for the thread pool to terminate when cleaning up.
