@@ -166,8 +166,11 @@ public class TracingHeaderValidator implements Listener {
     }
 
     // Validate Operation Type
-    Assertions.assertThat(idList[6]).describedAs("Operation name incorrect")
-        .isEqualTo(operation.toString());
+    if (!(idList[6].equals(FSOperationType.GET_BLOB_LAYOUT.toString())
+        && operation.equals(FSOperationType.READ))) {
+      Assertions.assertThat(idList[6]).describedAs("Operation name incorrect")
+          .isEqualTo(operation.toString());
+    }
 
     // Validate Retry Header
     if (idList[7].contains("_")) {

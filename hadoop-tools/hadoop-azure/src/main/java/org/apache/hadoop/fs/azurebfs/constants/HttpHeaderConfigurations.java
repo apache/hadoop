@@ -26,6 +26,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class HttpHeaderConfigurations {
+
+  /**
+   * Http Request Header for denoting the host in layout based reads.
+   */
+  public static final String HOST = "Host";
   public static final String ACCEPT = "Accept";
   public static final String ACCEPT_CHARSET = "Accept-Charset";
   public static final String AUTHORIZATION = "Authorization";
