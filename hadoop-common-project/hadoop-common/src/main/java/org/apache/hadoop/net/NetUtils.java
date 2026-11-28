@@ -37,6 +37,7 @@ import java.net.UnknownHostException;
 import java.net.ConnectException;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.UnresolvedAddressException;
+import java.nio.channels.UnsupportedAddressTypeException;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -619,6 +620,13 @@ public class NetUtils {
       throw new ConnectTimeoutException(ste.getMessage());
     }  catch (UnresolvedAddressException uae) {
       throw new UnknownHostException(endpoint.toString());
+    } catch (UnsupportedAddressTypeException uate) {
+      // Unchecked and message-less, so name the endpoint the socket cannot use.
+      SocketException se = new SocketException("Cannot connect to " + endpoint
+          + ": address type not supported by this socket. A common cause is an"
+          + " IPv6 address used from a JVM with java.net.preferIPv4Stack=true.");
+      se.initCause(uate);
+      throw se;
     }
 
     // There is a very rare case allowed by the TCP specification, such that
