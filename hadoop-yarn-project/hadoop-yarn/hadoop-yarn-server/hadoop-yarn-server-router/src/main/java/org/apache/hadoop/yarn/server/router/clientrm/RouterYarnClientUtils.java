@@ -433,20 +433,20 @@ public final class RouterYarnClientUtils {
               response.getQueueInfo().getMinResourceMemory());
 
           // set max resourceVCore
-          queueInfo.setMinResourceVCore(queueInfo.getMaxResourceVCore() +
+          queueInfo.setMaxResourceVCore(queueInfo.getMaxResourceVCore() +
               response.getQueueInfo().getMaxResourceVCore());
 
           // set max resourceMemory
-          queueInfo.setMinResourceMemory(queueInfo.getMaxResourceMemory() +
+          queueInfo.setMaxResourceMemory(queueInfo.getMaxResourceMemory() +
               response.getQueueInfo().getMaxResourceMemory());
 
           // set reserved resourceVCore
           queueInfo.setReservedResourceVCore(queueInfo.getReservedResourceVCore() +
-              response.getQueueInfo().getMaxResourceVCore());
+              response.getQueueInfo().getReservedResourceVCore());
 
           // set reserved resourceMemory
           queueInfo.setReservedResourceMemory(queueInfo.getReservedResourceMemory() +
-              response.getQueueInfo().getMaxResourceMemory());
+              response.getQueueInfo().getReservedResourceMemory());
 
           // set maxRunningApp
           queueInfo.setMaxRunningApp(queueInfo.getMaxRunningApp() +
