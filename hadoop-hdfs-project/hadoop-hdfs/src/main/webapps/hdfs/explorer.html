@@ -98,11 +98,15 @@
     </div>
     <div class="container">
       <div class="page-header">
-	<h1>Browse Directory</h1>
+        <h1 style="display: inline;">Browse Directory</h1>
       </div>
       <div class="alert alert-danger" id="alert-panel" style="display:none">
 	<button type="button" class="close" onclick="$('#alert-panel').hide();">&times;</button>
 	<div class="alert-body" id="alert-panel-body"></div>
+      </div>
+      <div class="alert alert-success" id="info-panel" style="display:none">
+        <button type="button" class="close" onclick="$('#info-panel').hide();">&times;</button>
+        <div class="alert-body" id="info-panel-body"></div>
       </div>
     <div class="modal" id="btn-create-directory" tabindex="-1" role="dialog"
       aria-hidden="true">
@@ -143,6 +147,9 @@
            <div class="modal-body" id="file-upload-body">
              <input id="modal-upload-file-input" type="file" class="file" multiple>
            </div>
+           <div id="progress" style="margin-left: 17px; margin-right: 17px;" >
+             <!-- <div class="progress-bar-success" id="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div> -->
+           </div>
            <div class="modal-footer">
              <button type="button" class="btn btn-success" data-dismiss="modal">Close</button>
              <button type="button" class="btn btn-success" id="modal-upload-file-button" data-complete-text="Uploading...">Upload</button>
@@ -156,7 +163,7 @@
         <div class="modal-header">
           <button type="button" class="close" data-dismiss="modal"
             aria-hidden="true">&times;</button>
-          <h4 class="modal-title" id="delete-modal-title">Delete</h4>
+          <h4 class="modal-title" id="delete-modal-title">Trash</h4>
         </div>
         <div class="modal-body">
           <div class="panel-body">
@@ -166,19 +173,53 @@
         <div class="modal-footer">
           <button type="button" class="btn" data-dismiss="modal">Cancel</button>
           <button type="button" class="btn btn-success" id="delete-button"
-            data-complete-text="Deleting...">Delete</button>
+            data-complete-text="Trashing...">Trash</button>
         </div>
       </div>
     </div>
   </div>
 
+      <div class="modal" id="modal-rename-file" tabindex="-1" role="dialog"
+           aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close"
+                      data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title">Rename File</h4>
+            </div>
+            <div class="modal-body">
+              <div class="form-group">
+                <div class="input-group">
+                  <input type="text" class="form-control" id="new_filename" size="100%"
+                         placeholder="New File Name" />
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn" data-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-success"
+                      id="btn-rename-file-send" data-complete-text="Renaming...">
+                Rename
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="row">
       <div class="col-xs-9 col-md-9">
         <form onsubmit="return false;">
           <div class="input-group">
+             <div class="input-group-btn">
+                <button id="namespace-btn" class="btn btn-default" type="button"><span id="namespace"></span></button>
+            </div>
             <input type="text" class="form-control" id="directory"/>
             <span class="input-group-btn">
               <button class="btn btn-default" type="button" id="btn-nav-directory">Go!</button>
+            </span>
+            <span class="input-group-btn">
+              <button class="btn btn-default" type="button" id="btn-copy-clipboard">Copy</button>
             </span>
           </div>
         </form>
@@ -203,6 +244,14 @@
         <button type="button" class="btn btn-default"  data-toggle="modal"
           aria-label="Parent Directory" title="Parent Directory" id="parentDir">
           <span class="glyphicon glyphicon-level-up"></span>
+        </button>
+        <button type="button" class="btn btn-default"  data-toggle="modal"
+                aria-label="Home Directory" title="Home Directory" id="homeDir">
+          <span class="glyphicon glyphicon-home"></span>
+        </button>
+        <button type="button" class="btn btn-default"  data-toggle="modal"
+                aria-label="Move to trash" title="Move to trash" id="btn-to-trash">
+          <span class="glyphicon glyphicon-trash"></span>
         </button>
       </div>
     </div>
@@ -267,6 +316,7 @@
             <th>Group</th>
             <th>Size</th>
             <th title="Last Modified">Last Modified</th>
+            <th title="Last Accessed">Last Accessed</th>
             <th title="Replication">Replication</th>
             <th>Block Size</th>
             <th>Name</th>
@@ -286,10 +336,19 @@
             <td><span class="explorer-group-links">{group}</span></td>
             <td>{length}</td>
             <td>{modificationTime}</td>
+            <td>{accessTime}</td>
             <td><span class="explorer-replication-links">{replication}</span></td>
             <td>{blockSize|fmt_bytes}</td>
             <td><a inode-type="{type}" class="explorer-browse-links">{pathSuffix}</a></td>
-            <td><span class="glyphicon glyphicon-trash"></span></td>
+            <td>
+              <div class="dropdown show">
+              <a class="btn btn-secondary dropdown-toggle" href="#" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" ><span class="glyphicon glyphicon-menu-hamburger"></span></a>
+                <div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+                <li><a class="explorer-rename-links" data-toggle="modal" data-target="#modal-rename-file">Rename</a></li>
+                <li><a class="explorer-trash-links">Move to Trash</a></li>
+                </div>
+              </div>
+            </td>
           </tr>
           {/FileStatus}
         </tbody>
