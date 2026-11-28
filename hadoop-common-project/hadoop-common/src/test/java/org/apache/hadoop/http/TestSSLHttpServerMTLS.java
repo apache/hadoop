@@ -18,7 +18,9 @@
 package org.apache.hadoop.http;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.SocketException;
 import java.net.URI;
 import java.net.URL;
 import java.security.KeyPair;
@@ -42,6 +44,7 @@ import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests that HttpServer2 enforces mutual TLS (mTLS) when
@@ -56,6 +59,7 @@ public class TestSSLHttpServerMTLS extends HttpServerFunctionalTest {
 
   private static final String BASEDIR =
       GenericTestUtils.getTempPath(TestSSLHttpServerMTLS.class.getSimpleName());
+  private static final int CONNECTION_TIMEOUT_MS = 10_000;
 
   private static HttpServer2 server;
   private static SSLFactory clientSslFactory;
@@ -131,20 +135,48 @@ public class TestSSLHttpServerMTLS extends HttpServerFunctionalTest {
 
   @Test
   public void testTrustedClientCanConnect() throws Exception {
+    assertTrustedClientCanConnect();
+  }
+
+  private static HttpsURLConnection openConnection() throws IOException {
     URL url = new URL(baseUrl, "/echo?a=b");
     HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
-    conn.setSSLSocketFactory(clientSslFactory.createSSLSocketFactory());
-    conn.setHostnameVerifier((h, s) -> true);
-    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
-    conn.disconnect();
+    conn.setConnectTimeout(CONNECTION_TIMEOUT_MS);
+    conn.setReadTimeout(CONNECTION_TIMEOUT_MS);
+    return conn;
+  }
+
+  private static void assertTrustedClientCanConnect() throws Exception {
+    HttpsURLConnection conn = openConnection();
+    try {
+      conn.setSSLSocketFactory(clientSslFactory.createSSLSocketFactory());
+      conn.setHostnameVerifier((h, s) -> true);
+      assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    } finally {
+      conn.disconnect();
+    }
   }
 
   @Test
   public void testUntrustedClientIsRejected() throws Exception {
-    URL url = new URL(baseUrl, "/echo?a=b");
-    HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
-    // presents untrustedCert; server cert is trusted via no-op TrustManager
-    KeyStoreTestUtil.setAllowAllSSL(conn, untrustedCert, untrustedKeyPair);
-    assertThrows(SSLHandshakeException.class, () -> conn.getInputStream());
+    // Verify server availability independently of test execution order.
+    assertTrustedClientCanConnect();
+    HttpsURLConnection conn = openConnection();
+    try {
+      // presents untrustedCert; server cert is trusted via no-op TrustManager
+      KeyStoreTestUtil.setAllowAllSSL(conn, untrustedCert, untrustedKeyPair);
+      IOException failure = assertThrows(IOException.class, conn::getResponseCode);
+      // The server can close the connection before the client reads the TLS
+      // alert, resulting in a broken pipe or connection reset instead.
+      // Require the exact SocketException type to exclude ConnectException
+      // and NoRouteToHostException; timeouts must also fail this test.
+      assertTrue(failure instanceof SSLHandshakeException
+              || failure.getClass() == SocketException.class,
+          "Expected a TLS handshake rejection or a closed connection, but got: "
+              + failure);
+    } finally {
+      conn.disconnect();
+    }
+    assertTrustedClientCanConnect();
   }
 }
