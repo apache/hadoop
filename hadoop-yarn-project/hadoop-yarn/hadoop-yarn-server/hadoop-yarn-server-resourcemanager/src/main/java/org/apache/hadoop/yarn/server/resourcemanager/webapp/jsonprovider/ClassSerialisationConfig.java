@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.QueueAclsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
@@ -153,7 +154,8 @@ public class ClassSerialisationConfig {
           CapacitySchedulerQueueInfo.class, CapacitySchedulerQueueInfoList.class, ClusterInfo.class,
           ClusterMetricsInfo.class, ConfigVersionInfo.class, ContainerInfo.class,
           FairSchedulerQueueInfoList.class, FifoSchedulerInfo.class, NewReservation.class,
-          NodeInfo.class, NodesInfo.class, QueueAclInfo.class, QueueAclsInfo.class,
+          NodeInfo.class, NodesInfo.class, PartitionClusterMetricsInfo.class,
+          QueueAclInfo.class, QueueAclsInfo.class,
           RemoteExceptionData.class, ReservationDeleteRequestInfo.class,
           ReservationDeleteResponseInfo.class, ReservationSubmissionRequestInfo.class,
           ReservationUpdateRequestInfo.class, ReservationUpdateResponseInfo.class,
