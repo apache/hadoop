@@ -80,6 +80,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -211,6 +213,13 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
   private static final Pattern DOCKER_DIGEST_PATTERN = Pattern.compile("^sha256:[a-z0-9]{12,64}$");
 
   private static final String DEFAULT_PROCFS = "/proc";
+
+  private final ConcurrentMap<String, ImagePullLock> imagePullLocks =
+      new ConcurrentHashMap<>();
+
+  private static final class ImagePullLock {
+    private int referenceCount;
+  }
 
   @InterfaceAudience.Private
   private static final String RUNTIME_TYPE = "DOCKER";
@@ -1218,6 +1227,38 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
   }
 
   public void pullImageFromRemote(String containerIdStr, String imageName)
+      throws ContainerExecutionException {
+    ImagePullLock imagePullLock = acquireImagePullLock(imageName);
+    try {
+      synchronized (imagePullLock) {
+        doPullImageFromRemote(containerIdStr, imageName);
+      }
+    } finally {
+      releaseImagePullLock(imageName);
+    }
+  }
+
+  private ImagePullLock acquireImagePullLock(String imageName) {
+    return imagePullLocks.compute(imageName, (key, lock) -> {
+      ImagePullLock imagePullLock = lock == null ? new ImagePullLock() : lock;
+      imagePullLock.referenceCount++;
+      return imagePullLock;
+    });
+  }
+
+  private void releaseImagePullLock(String imageName) {
+    imagePullLocks.computeIfPresent(imageName, (key, lock) -> {
+      lock.referenceCount--;
+      return lock.referenceCount == 0 ? null : lock;
+    });
+  }
+
+  @VisibleForTesting
+  int getImagePullLockCount() {
+    return imagePullLocks.size();
+  }
+
+  private void doPullImageFromRemote(String containerIdStr, String imageName)
       throws ContainerExecutionException {
     long start = System.currentTimeMillis();
     DockerPullCommand dockerPullCommand = new DockerPullCommand(imageName);
