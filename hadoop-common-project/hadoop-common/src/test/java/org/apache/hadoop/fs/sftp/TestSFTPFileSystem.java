@@ -24,6 +24,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -32,6 +33,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
@@ -232,6 +234,39 @@ public class TestSFTPFileSystem {
         is.close();
       }
     }
+    assertTrue(sftpFs.delete(file, false));
+    assertThat(
+        ((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount())
+        .isEqualTo(1);
+  }
+
+  /**
+   * Test reading a big file with bulk reads.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testReadFileInBulk(TestInfo testInfo) throws Exception {
+    byte[] data = new byte[1024 * 1024];
+    new Random().nextBytes(data);
+    Path file = touch(localFs, testInfo.getDisplayName().toLowerCase(), data);
+    StorageStatistics stats =
+        FileSystem.getGlobalStorageStatistics().get("sftp");
+    long bytesReadBefore = stats.getLong("bytesRead");
+    FSDataInputStream is = null;
+    try {
+      is = sftpFs.open(file);
+      byte[] b = new byte[data.length];
+      is.readFully(b);
+      assertArrayEquals(data, b);
+      assertEquals(data.length, is.getPos());
+      assertEquals(-1, is.read(b));
+    } finally {
+      if (is != null) {
+        is.close();
+      }
+    }
+    assertEquals(data.length, stats.getLong("bytesRead") - bytesReadBefore);
     assertTrue(sftpFs.delete(file, false));
     assertThat(
         ((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount())
