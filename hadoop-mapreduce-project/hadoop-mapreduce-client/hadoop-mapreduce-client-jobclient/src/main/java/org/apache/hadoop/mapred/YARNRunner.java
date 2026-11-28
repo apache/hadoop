@@ -503,7 +503,9 @@ public class YARNRunner implements ClientProtocol {
       }
     }
 
-    vargs.add(MRJobConfig.APPLICATION_MASTER_CLASS);
+    String amClass = jobConf.get("yarn.app.mapreduce.am",
+        MRJobConfig.APPLICATION_MASTER_CLASS);
+    vargs.add(amClass);
     vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR +
         Path.SEPARATOR + ApplicationConstants.STDOUT);
     vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR +
