@@ -261,6 +261,12 @@ public class DFSStripedInputStream extends DFSInputStream {
         DFSClientFaultInjector.get().onCreateBlockReader(block, chunkIndex, offsetInBlock,
             readTo - offsetInBlock);
       } catch (IOException e) {
+        // dnInfo.addr is null if the exception occurred before getBestNodeDNAddrPair()
+        // was called (e.g. in refreshLocatedBlock()). In that case, DataNode-specific
+        // error handling cannot proceed, so rethrow immediately.
+        if (dnInfo.addr == null) {
+          throw e;
+        }
         if (e instanceof InvalidEncryptionKeyException &&
             retry.shouldRefetchEncryptionKey()) {
           DFSClient.LOG.info("Will fetch a new encryption key and retry, "
