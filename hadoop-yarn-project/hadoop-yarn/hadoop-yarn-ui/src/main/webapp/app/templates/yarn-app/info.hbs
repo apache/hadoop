@@ -55,6 +55,47 @@
   </div>
 {{/if}}
 
+<div class="col-md-12 margin-bottom-20">
+  <div class="panel panel-default application-diagnostic-bundle">
+    <div class="panel-heading">
+      Collect Application Diagnostic bundle
+    </div>
+    <div class="panel-body">
+      <p class="text-muted">
+        Collects diagnostic data for this application on the Resource Manager and downloads it as a ZIP
+        file. This may take several minutes. Requires YARN admin privileges when ACLs are enabled.
+        See <a href="https://issues.apache.org/jira/browse/YARN-10461" target="_blank" rel="noopener noreferrer">YARN-10461</a>
+        for what is collected and how to configure it.
+      </p>
+
+      {{#if diagnosticCollectError}}
+        <div class="alert alert-danger alert-dismissible" role="alert">
+          <button type="button" class="close" aria-label="Close" {{action "dismissDiagnosticCollectError"}}>
+            <span aria-hidden="true">&times;</span>
+          </button>
+          <strong>{{diagnosticCollectError}}</strong>
+        </div>
+      {{/if}}
+
+      {{#if isCollectingApplicationDiagnostic}}
+        <div class="collect-progress">
+          <img src="assets/images/spinner.gif" alt="Loading...">
+          <span>Collecting diagnostics on the Resource Manager…</span>
+        </div>
+      {{/if}}
+
+      <button
+        type="button"
+        class="btn btn-primary"
+        disabled={{isCollectingApplicationDiagnostic}}
+        {{action "collectApplicationDiagnostic"}}
+      >
+        Download Application Diagnostic bundle (ZIP)
+      </button>
+    </div>
+  </div>
+</div>
+
 {{#unless model.serviceName}}
   <div class="col-md-12">
     <div class="panel panel-default">
