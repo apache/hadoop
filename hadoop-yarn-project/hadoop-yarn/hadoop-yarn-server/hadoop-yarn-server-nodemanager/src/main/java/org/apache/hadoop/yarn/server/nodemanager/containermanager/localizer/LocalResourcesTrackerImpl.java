@@ -461,6 +461,21 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
   @Override
   public Path getPathForLocalization(LocalResourceRequest req,
       Path localDirPath, DeletionService delService) {
+    LocalizedResource prevRsrc = localrsrc.get(req);
+    if (prevRsrc != null && prevRsrc.getLocalPath() != null) {
+      // A previous attempt was abandoned (container killed while
+      // downloading). Drop its bookkeeping before allocating a new path,
+      // otherwise the stale started/ record removes the good copy on
+      // recovery.
+      decrementFileCountForLocalCacheDirectory(req, prevRsrc);
+      try {
+        stateStore.removeLocalizedResource(user, appId,
+            prevRsrc.getLocalPath());
+      } catch (IOException e) {
+        LOG.error("Unable to remove stale localization record for "
+            + prevRsrc, e);
+      }
+    }
     Path rPath = localDirPath;
     if (useLocalCacheDirectoryManager && localDirPath != null) {
 

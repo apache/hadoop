@@ -1294,29 +1294,52 @@ public class ResourceLocalizationService extends CompositeService
           // On error, report failure to Container and signal ABORT
           // Notify resource of failed localization
           ContainerId cId = context.getContainerId();
-          dispatcher.getEventHandler().handle(new ContainerResourceFailedEvent(
-              cId, null, exception.getMessage()));
+          try {
+            dispatcher.getEventHandler().handle(new ContainerResourceFailedEvent(
+                cId, null, exception.getMessage()));
+          } catch (Exception e) {
+            if (e instanceof YarnRuntimeException
+                && e.getCause() instanceof InterruptedException) {
+              // Interrupted by container kill or re-init. The event is
+              // intentionally not delivered: in REINITIALIZING, RESOURCE_FAILED
+              // would abort the re-init. AsyncDispatcher already logged the
+              // stack trace.
+              LOG.info("Localizer {} interrupted, skip sending resource failed"
+                  + " event for {}", localizerId, cId);
+              Thread.currentThread().interrupt();
+            } else {
+              LOG.error("Failed to send resource failed event for {}", cId, e);
+            }
+          }
         }
         List<Path> paths = new ArrayList<Path>();
-        for (LocalizerResourceRequestEvent event : scheduled.values()) {
-          // This means some resources were in downloading state. Schedule
-          // deletion task for localization dir and tmp dir used for downloading
-          Path locRsrcPath = event.getResource().getLocalPath();
-          if (locRsrcPath != null) {
-            Path locRsrcDirPath = locRsrcPath.getParent();
-            paths.add(locRsrcDirPath);
-            paths.add(new Path(locRsrcDirPath + "_tmp"));
+        // processHeartbeat mutates scheduled and unlocks the same resources
+        // while holding the privLocalizers monitor.
+        synchronized (localizerTracker.privLocalizers) {
+          for (LocalizerResourceRequestEvent event : scheduled.values()) {
+            // This means some resources were in downloading state. Schedule
+            // deletion task for localization dir and tmp dir used for
+            // downloading
+            Path locRsrcPath = event.getResource().getLocalPath();
+            if (locRsrcPath != null) {
+              Path locRsrcDirPath = locRsrcPath.getParent();
+              paths.add(locRsrcDirPath);
+              paths.add(new Path(locRsrcDirPath + "_tmp"));
+            }
+            event.getResource().unlock();
           }
-          event.getResource().unlock();
+          scheduled.clear();
         }
         if (!paths.isEmpty()) {
           FileDeletionTask deletionTask = new FileDeletionTask(delService,
               context.getUser(), null, paths);
           delService.delete(deletionTask);
         }
-        FileDeletionTask deletionTask = new FileDeletionTask(delService, null,
-            nmPrivateCTokensPath, null);
-        delService.delete(deletionTask);
+        if (nmPrivateCTokensPath != null) {
+          FileDeletionTask deletionTask = new FileDeletionTask(delService,
+              null, nmPrivateCTokensPath, null);
+          delService.delete(deletionTask);
+        }
       }
     }
 
