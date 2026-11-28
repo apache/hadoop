@@ -1531,11 +1531,16 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     String valueString = getTrimmed(name);
     if (valueString == null)
       return defaultValue;
-    String hexString = getHexDigits(valueString);
-    if (hexString != null) {
-      return Integer.parseInt(hexString, 16);
+    try {
+      String hexString = getHexDigits(valueString);
+      if (hexString != null) {
+        return Integer.parseInt(hexString, 16);
+      }
+      return Integer.parseInt(valueString);
+    } catch (NumberFormatException e) {
+      throw new NumberFormatException("Failed to parse value of " + name
+          + ", got \"" + valueString + "\", expect a valid integer.");
     }
-    return Integer.parseInt(valueString);
   }
   
   /**
@@ -1552,7 +1557,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     String[] strings = getTrimmedStrings(name);
     int[] ints = new int[strings.length];
     for (int i = 0; i < strings.length; i++) {
-      ints[i] = Integer.parseInt(strings[i]);
+      try {
+        ints[i] = Integer.parseInt(strings[i]);
+      } catch (NumberFormatException e) {
+        throw new NumberFormatException("Failed to parse value of " + name
+            + "[" + i + "], got \"" + strings[i]
+            + "\", expect a valid integer.");
+      }
     }
     return ints;
   }
@@ -1584,11 +1595,16 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     String valueString = getTrimmed(name);
     if (valueString == null)
       return defaultValue;
-    String hexString = getHexDigits(valueString);
-    if (hexString != null) {
-      return Long.parseLong(hexString, 16);
+    try {
+      String hexString = getHexDigits(valueString);
+      if (hexString != null) {
+        return Long.parseLong(hexString, 16);
+      }
+      return Long.parseLong(valueString);
+    } catch (NumberFormatException e) {
+      throw new NumberFormatException("Failed to parse value of " + name
+          + ", got \"" + valueString + "\", expect a valid long.");
     }
-    return Long.parseLong(valueString);
   }
 
   /**
@@ -1656,7 +1672,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     String valueString = getTrimmed(name);
     if (valueString == null)
       return defaultValue;
-    return Float.parseFloat(valueString);
+    try {
+      return Float.parseFloat(valueString);
+    } catch (NumberFormatException e) {
+      throw new NumberFormatException("Failed to parse value of " + name
+          + ", got \"" + valueString + "\", expect a valid float.");
+    }
   }
 
   /**
