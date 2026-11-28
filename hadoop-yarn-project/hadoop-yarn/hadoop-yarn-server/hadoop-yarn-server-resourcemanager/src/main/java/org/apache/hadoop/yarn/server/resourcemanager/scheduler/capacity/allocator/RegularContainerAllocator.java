@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityLevel;
@@ -840,7 +841,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     return allocationResult;
   }
 
-  private ContainerAllocation allocate(Resource clusterResource,
+  @VisibleForTesting
+  ContainerAllocation allocate(Resource clusterResource,
       CandidateNodeSet<FiCaSchedulerNode> candidates,
       SchedulingMode schedulingMode, ResourceLimits resourceLimits,
       SchedulerRequestKey schedulerKey, RMContainer reservedContainer) {
@@ -848,6 +850,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     // Directly return if this check fails.
     ContainerAllocation result;
     ContainerAllocation lastReservation = null;
+    FiCaSchedulerNode lastReservationNode = null;
 
     AppPlacementAllocator<FiCaSchedulerNode> schedulingPS =
         application.getAppSchedulingInfo().getAppPlacementAllocator(
@@ -911,8 +914,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
           resourceLimits, schedulerKey, reservedContainer);
 
       if (AllocationState.ALLOCATED == result.getAllocationState()) {
-        result = doAllocation(result, node, schedulerKey, reservedContainer);
-        break;
+        return doAllocation(result, node, schedulerKey, reservedContainer);
       }
 
       // In MultiNodePlacement, Try Allocate on other Available nodes
@@ -920,14 +922,22 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // Allocate of new containers when the first node in the
       // iterator could not fit and returns RESERVED allocation.
       if (AllocationState.RESERVED == result.getAllocationState()) {
-        lastReservation = result;
-        if (iter.hasNext()) {
+        if (nodeReservedContainer != null
+            && nodeReservedContainer != reservedContainer) {
+          // A new reservation cannot commit on an already-reserved node.
+          LOG.debug("Skipping reservation on node {} already reserved by {}",
+              node.getNodeID(), nodeReservedContainer.getContainerId());
+          result = ContainerAllocation.PRIORITY_SKIPPED;
           continue;
-        } else {
-          result = doAllocation(lastReservation, node, schedulerKey,
-              reservedContainer);
         }
+        lastReservation = result;
+        lastReservationNode = node;
       }
+    }
+
+    if (lastReservation != null) {
+      return doAllocation(lastReservation, lastReservationNode, schedulerKey,
+          reservedContainer);
     }
 
     return result;
