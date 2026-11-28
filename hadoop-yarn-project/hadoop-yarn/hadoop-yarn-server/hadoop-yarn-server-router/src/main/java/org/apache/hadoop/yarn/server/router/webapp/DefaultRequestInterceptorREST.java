@@ -138,6 +138,14 @@ public class DefaultRequestInterceptorREST
   }
 
   @Override
+  public Response getResourceManagerThreadDump(HttpServletRequest req,
+      int numberOfJStack) {
+    String path = RMWSConsts.RM_WEB_SERVICE_PATH + "/jstack/" + numberOfJStack;
+    return RouterWebServiceUtil.genericForward(webAppAddress, null,
+        Response.class, HTTPMethods.GET, path, null, null, getConf(), client);
+  }
+
+  @Override
   public SchedulerTypeInfo getSchedulerInfo() {
     return RouterWebServiceUtil.genericForward(webAppAddress, null,
         SchedulerTypeInfo.class, HTTPMethods.GET,
