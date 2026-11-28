@@ -5312,6 +5312,20 @@
   </property>
 
   <property>
+    <name>yarn.router.application-probe.timeout</name>
+    <value>10s</value>
+    <description>
+      When the home SubCluster of an application is not in the Federation
+      StateStore, e.g. after its RM removed the completed application, the
+      Router asks the RMs of all the active SubClusters for it at once. This is
+      how long it waits for their answers, and the RPC timeout towards each RM.
+      If some RM does not answer in time, the Router fails the request instead
+      of telling the client that the application does not exist.
+      Default is 10s.
+    </description>
+  </property>
+
+  <property>
     <name>yarn.router.interceptor.allow-partial-result.enable</name>
     <value>false</value>
     <description>

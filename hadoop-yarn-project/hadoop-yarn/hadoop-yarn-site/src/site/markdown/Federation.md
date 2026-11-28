@@ -624,6 +624,27 @@ This ensures that we can obtain at least some correct results.
 
 **Note** It is important to note that even if we configure the parameters, if all sub-clusters return failures, the Router will still throw an exception. This is because there are no available results to return, making it impossible to provide a valid response.
 
+#### How to configure finding applications without a home SubCluster
+
+The RM removes a completed application once it keeps more than `yarn.resourcemanager.max-completed-applications`, and the home SubCluster of the application is deleted from the StateStore with it. When the StateStore has no home SubCluster for an application, the Router asks the RMs of all the active SubClusters for it at once, and records the SubCluster whose RM knows it again. This applies to the client RPC interface, to the REST interface and to the web proxy of the Router.
+
+| Property                                 | Example | Description                                                                                       |
+|:-----------------------------------------|:--------|:--------------------------------------------------------------------------------------------------|
+| `yarn.router.application-probe.timeout` | `10s`   | How long the Router waits for the RMs to answer, which is also the RPC timeout towards each RM. |
+
+**Note** The Router reports an application missing with `ApplicationNotFoundException`, so that clients fall back to their history server, only when every RM answered that it does not know the application. If some RM could not be asked or did not answer in time, the Router fails the request so that the client retries, as the application may be running there.
+
+#### How to configure the history servers of the SubClusters
+
+Once no RM knows an application any more, the Router asks the Application History Servers for it, the one of its home SubCluster first if known. Each SubCluster can have its own history server, configured on the Router with the SubCluster ID as suffix. Without any, the client RPC and REST interfaces of the Router use the Router's own `yarn.timeline-service.address` if `yarn.timeline-service.generic-application-history.enabled` is true, and the web proxy uses its history server as without federation.
+
+| Property                                                      | Example          | Description                                                                                                       |
+|:--------------------------------------------------------------|:-----------------|:------------------------------------------------------------------------------------------------------------------|
+| `yarn.router.application-history.address.<subClusterId>`        | `ahs-sc1:10200`  | RPC address of the history server of a SubCluster.                                                                |
+| `yarn.router.application-history.webapp.address.<subClusterId>` | `ahs-sc1:8188`   | Web address of the history server of a SubCluster, which the web proxy redirects to for the applications found there. |
+
+**Note** The Router asks the history servers as the client of the Router, as it asks the RMs, so that they apply their application ACLs to that user. The history servers must therefore allow the Router's user to impersonate the clients (`hadoop.proxyuser.<router user>.hosts` and `.groups`), as the RMs do. The web proxy asks them as its login user, as it asks the RMs.
+
 #### How to use Router Command Line
 
 ##### Cmd1: deregisterSubCluster
