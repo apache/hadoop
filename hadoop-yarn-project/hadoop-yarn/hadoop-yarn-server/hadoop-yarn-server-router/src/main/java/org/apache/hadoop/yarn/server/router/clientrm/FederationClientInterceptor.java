@@ -1342,7 +1342,7 @@ public class FederationClientInterceptor
         return response;
       }
     } catch (Exception ex) {
-      routerMetrics.incrUpdateReservationFailedRetrieved();
+      routerMetrics.incrDeleteReservationFailedRetrieved();
       String msg = "Unable to reservation delete due to exception.";
       RouterAuditLogger.logFailure(user.getShortUserName(), DELETE_RESERVATION, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, msg);
@@ -1885,7 +1885,7 @@ public class FederationClientInterceptor
     try {
       response = clientRMProxy.updateApplicationPriority(request);
     } catch (Exception e) {
-      routerMetrics.incrFailAppAttemptFailedRetrieved();
+      routerMetrics.incrUpdateAppPriorityFailedRetrieved();
       String msg = "Unable to update application priority for " +
           applicationId + " to SubCluster " + subClusterId;
       RouterAuditLogger.logFailure(user.getShortUserName(), UPDATE_APPLICATIONPRIORITY, UNKNOWN,
@@ -1976,7 +1976,7 @@ public class FederationClientInterceptor
     try {
       subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException e) {
-      routerMetrics.incrFailAppAttemptFailedRetrieved();
+      routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
       String msg = "Application " + applicationId + " does not exist in FederationStateStore.";
       RouterAuditLogger.logFailure(user.getShortUserName(), UPDATE_APPLICATIONTIMEOUTS, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, msg);
@@ -1988,7 +1988,7 @@ public class FederationClientInterceptor
     try {
       response = clientRMProxy.updateApplicationTimeouts(request);
     } catch (Exception e) {
-      routerMetrics.incrFailAppAttemptFailedRetrieved();
+      routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
       String msg = "Unable to update application timeout for " + applicationId +
           " to SubCluster " + subClusterId;
       RouterAuditLogger.logFailure(user.getShortUserName(), UPDATE_APPLICATIONTIMEOUTS, UNKNOWN,
