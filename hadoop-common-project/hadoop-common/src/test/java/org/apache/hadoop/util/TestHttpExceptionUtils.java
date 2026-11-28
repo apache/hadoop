@@ -37,6 +37,9 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -113,6 +116,27 @@ public class TestHttpExceptionUtils {
         Arrays.asList(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), "msg",
         "com.fasterxml.jackson.core.JsonParseException"),
         () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
+  }
+
+  @Test
+  public void testValidateResponseJsonMissingErrorKey() throws Exception {
+    // A proxy or gateway may return a well-formed JSON error body that does
+    // not follow the {"error": {...}} schema. The NPE raised while parsing
+    // it must not leak into the exception message shown to the user.
+    String msg = "{\"reason\":\"bad request\"}";
+    InputStream is = new ByteArrayInputStream(msg.getBytes(StandardCharsets.UTF_8));
+    HttpURLConnection conn = mock(HttpURLConnection.class);
+    when(conn.getErrorStream()).thenReturn(is);
+    when(conn.getResponseMessage()).thenReturn("Bad Request");
+    when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
+    IOException ioe = assertThrows(IOException.class,
+        () -> HttpExceptionUtils.validateResponse(conn,
+            HttpURLConnection.HTTP_CREATED));
+    assertFalse(ioe.getMessage().contains("NullPointerException"),
+        "NPE leaked into error message: " + ioe.getMessage());
+    assertTrue(ioe.getMessage().contains(
+        Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST)),
+        "Missing HTTP status in message: " + ioe.getMessage());
   }
 
   @Test

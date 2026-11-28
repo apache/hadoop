@@ -149,9 +149,16 @@ public class HttpExceptionUtils {
       try {
         es = conn.getErrorStream();
         Map json = JsonSerialization.mapReader().readValue(es);
-        json = (Map) json.get(ERROR_JSON);
-        String exClass = (String) json.get(ERROR_CLASSNAME_JSON);
-        String exMsg = (String) json.get(ERROR_MESSAGE_JSON);
+        Object errorObj = json.get(ERROR_JSON);
+        if (errorObj instanceof Map) {
+          json = (Map) errorObj;
+        } else {
+          json = null;
+        }
+        String exClass = (json != null)
+            ? (String) json.get(ERROR_CLASSNAME_JSON) : null;
+        String exMsg = (json != null)
+            ? (String) json.get(ERROR_MESSAGE_JSON) : null;
         if (exClass != null) {
           try {
             ClassLoader cl = HttpExceptionUtils.class.getClassLoader();
