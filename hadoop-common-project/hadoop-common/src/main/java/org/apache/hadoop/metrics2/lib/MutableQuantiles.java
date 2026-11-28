@@ -26,6 +26,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -58,7 +59,15 @@ public class MutableQuantiles extends MutableMetric {
   private int intervalSecs;
   private static DecimalFormat decimalFormat = new DecimalFormat("###.####");
 
-  private QuantileEstimator estimator;
+  private volatile QuantileEstimator estimator;
+  // Lock order: estimatorLock (write) before this object's monitor.
+  // Producers hold the read lock while inserting into a SampleQuantiles
+  // (which is internally thread-safe). Rollover holds the write lock while
+  // draining and publishing a window. Other estimators insert under the
+  // write lock plus the monitor, so callers must not hold this monitor
+  // while calling add().
+  private final ReentrantReadWriteLock estimatorLock =
+      new ReentrantReadWriteLock();
   private long previousCount = 0;
   private ScheduledFuture<?> scheduledTask = null;
 
@@ -133,7 +142,7 @@ public class MutableQuantiles extends MutableMetric {
       builder.addGauge(numInfo, previousCount);
       for (int i = 0; i < quantilesArray.length; i++) {
         long newValue = 0;
-        // If snapshot is null, we failed to update since the window was empty
+        // If snapshot is null, we failed to update since the window was empty.
         if (previousSnapshot != null) {
           newValue = previousSnapshot.get(quantilesArray[i]);
         }
@@ -145,8 +154,26 @@ public class MutableQuantiles extends MutableMetric {
     }
   }
 
-  public synchronized void add(long value) {
-    estimator.insert(value);
+  public void add(long value) {
+    estimatorLock.readLock().lock();
+    try {
+      QuantileEstimator current = estimator;
+      if (current instanceof SampleQuantiles) {
+        current.insert(value);
+        return;
+      }
+    } finally {
+      estimatorLock.readLock().unlock();
+    }
+
+    estimatorLock.writeLock().lock();
+    try {
+      synchronized (this) {
+        estimator.insert(value);
+      }
+    } finally {
+      estimatorLock.writeLock().unlock();
+    }
   }
 
   /**
@@ -221,8 +248,32 @@ public class MutableQuantiles extends MutableMetric {
     return estimator;
   }
 
-  public synchronized void setEstimator(QuantileEstimator quantileEstimator) {
-    this.estimator = quantileEstimator;
+  @VisibleForTesting
+  long getPreviousCount() {
+    synchronized (this) {
+      return previousCount;
+    }
+  }
+
+  @VisibleForTesting
+  synchronized Map<Quantile, Long> getPreviousSnapshot() {
+    return previousSnapshot;
+  }
+
+  @VisibleForTesting
+  void runRolloverForTesting() {
+    new RolloverSample(this).run();
+  }
+
+  public void setEstimator(QuantileEstimator quantileEstimator) {
+    estimatorLock.writeLock().lock();
+    try {
+      synchronized (this) {
+        this.estimator = quantileEstimator;
+      }
+    } finally {
+      estimatorLock.writeLock().unlock();
+    }
   }
 
   /**
@@ -239,12 +290,18 @@ public class MutableQuantiles extends MutableMetric {
 
     @Override
     public void run() {
-      synchronized (parent) {
-        parent.previousCount = parent.estimator.getCount();
-        parent.previousSnapshot = parent.estimator.snapshot();
-        parent.estimator.clear();
+      parent.estimatorLock.writeLock().lock();
+      try {
+        synchronized (parent) {
+          QuantileEstimator current = parent.estimator;
+          parent.previousCount = current.getCount();
+          parent.previousSnapshot = current.snapshot();
+          current.clear();
+          parent.setChanged();
+        }
+      } finally {
+        parent.estimatorLock.writeLock().unlock();
       }
-      parent.setChanged();
     }
 
   }
