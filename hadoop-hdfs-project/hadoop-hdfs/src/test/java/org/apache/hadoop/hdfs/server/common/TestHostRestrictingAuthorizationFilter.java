@@ -39,6 +39,8 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 /**
  * Test Host Restriction Filter.
  */
@@ -261,6 +263,68 @@ public class TestHostRestrictingAuthorizationFilter {
     filter.init(fc);
     filter.doFilter(request, response, (servletRequest, servletResponse) -> {});
     filter.destroy();
+  }
+
+  /*
+   * Test IPv4 and IPv6 clients against IPv4 and IPv6 rules. A rule of the
+   * other address family does not match.
+   */
+  @Test
+  public void testIPv4AndIPv6Rules() throws Exception {
+    Filter filter = new HostRestrictingAuthorizationFilter();
+    filter.init(newFilterConfig("*,192.168.0.0/16,/v4|*,2001:db8::/32,/v6"));
+
+    assertOpenAllowed(filter, "192.168.1.2", "/v4/foo", true);
+    assertOpenAllowed(filter, "10.0.0.1", "/v4/foo", false);
+    assertOpenAllowed(filter, "192.168.1.2", "/v6/foo", false);
+    assertOpenAllowed(filter, "2001:db8:0:0:0:0:0:1", "/v6/foo", true);
+    // Jetty returns an IPv6 client address in brackets
+    assertOpenAllowed(filter, "[2001:db8::1]", "/v6/foo", true);
+    assertOpenAllowed(filter, "2001:db9:0:0:0:0:0:1", "/v6/foo", false);
+    assertOpenAllowed(filter, "2001:db8:0:0:0:0:0:1", "/v4/foo", false);
+    filter.destroy();
+  }
+
+  /*
+   * Test that a rule network other than "*" or network/bits fails the filter
+   * initialization.
+   */
+  @Test
+  public void testRejectsInvalidNetwork() {
+    for (String network : new String[] {"2001:db8::/129", "2001:db8::1", "192.168.0.1"}) {
+      Filter filter = new HostRestrictingAuthorizationFilter();
+      assertThatThrownBy(() -> filter.init(newFilterConfig("*," + network + ",/")))
+          .as(network)
+          .isInstanceOf(IllegalArgumentException.class);
+    }
+  }
+
+  private static FilterConfig newFilterConfig(String allowRules) {
+    Map<String, String> configs = new HashMap<>();
+    configs.put("host.allow.rules", allowRules);
+    configs.put(AuthenticationFilter.AUTH_TYPE, "simple");
+    return new DummyFilterConfig(configs);
+  }
+
+  /*
+   * Sends an op=OPEN request and checks that it either proceeds or gets 403.
+   */
+  private static void assertOpenAllowed(Filter filter, String remoteAddr,
+      String path, boolean allowed) throws IOException, ServletException {
+    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(request.getMethod()).thenReturn("GET");
+    Mockito.when(request.getRequestURI())
+        .thenReturn(WebHdfsFileSystem.PATH_PREFIX + path);
+    Mockito.when(request.getQueryString()).thenReturn("op=OPEN");
+    Mockito.when(request.getRemoteAddr()).thenReturn(remoteAddr);
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    FilterChain chain = Mockito.mock(FilterChain.class);
+
+    filter.doFilter(request, response, chain);
+    Mockito.verify(chain, Mockito.times(allowed ? 1 : 0))
+        .doFilter(request, response);
+    Mockito.verify(response, Mockito.times(allowed ? 0 : 1))
+        .sendError(Mockito.eq(HttpServletResponse.SC_FORBIDDEN), Mockito.anyString());
   }
 
   private static class DummyFilterConfig implements FilterConfig {

@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.MachineList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,15 +114,12 @@ public class HostRestrictingAuthorizationFilter implements Filter {
         .flatMap(l -> l.stream()).collect(Collectors.toList());
 
     for (Rule rule : rules) {
-      SubnetUtils.SubnetInfo subnet = rule.getSubnet();
       String rulePath = rule.getPath();
-      LOG.trace("Evaluating rule, subnet: {}, path: {}",
-          subnet != null ? subnet.getCidrSignature() : "*", rulePath);
-      if ((subnet == null || subnet.isInRange(remoteIp))
+      LOG.trace("Evaluating rule, subnet: {}, path: {}", rule.getNetwork(), rulePath);
+      if (rule.matchesNetwork(remoteIp)
           && FilenameUtils.directoryContains(rulePath, path)) {
         LOG.debug("Found matching rule, subnet: {}, path: {}; returned true",
-            rule.getSubnet() != null ? subnet.getCidrSignature() : null,
-            rulePath);
+            rule.getNetwork(), rulePath);
         return true;
       }
     }
@@ -184,9 +182,7 @@ public class HostRestrictingAuthorizationFilter implements Filter {
       for (String[] split : splits.get(3)) {
         LOG.debug("Loaded rule: user: {}, network/bits: {} path: {}",
             split[user], split[cidr], split[path]);
-        Rule rule = (split[cidr].trim().equals("*") ? new Rule(null,
-            split[path]) : new Rule(new SubnetUtils(split[cidr]).getInfo(),
-            split[path]));
+        Rule rule = new Rule(split[cidr], split[path]);
         // Rule map is {"user": [rule1, rule2, ...]}, update the user's array
         CopyOnWriteArrayList<Rule> arrayListRule =
             new CopyOnWriteArrayList<Rule>() {
@@ -350,23 +346,43 @@ public class HostRestrictingAuthorizationFilter implements Filter {
   }
 
   private static class Rule {
-    private final SubnetUtils.SubnetInfo subnet;
+    private final String network;
+    private final Predicate<String> networkMatcher;
     private final String path;
 
     /*
      * A class for holding dropbox filter rules
      *
-     * @param subnet - the IPv4 subnet for which this rule is valid (pass
-     * null for any network location)
+     * @param network - the IPv4 or IPv6 network/bits for which this rule is
+     * valid (pass "*" for any network location)
      * @param path - the HDFS path for which this rule is valid
+     * @throws IllegalArgumentException - when the network can not be parsed
      */
-    Rule(SubnetUtils.SubnetInfo subnet, String path) {
-      this.subnet = subnet;
+    Rule(String network, String path) {
+      this.network = network;
       this.path = path;
+      if (network.trim().equals("*")) {
+        networkMatcher = remoteIp -> true;
+      } else if (network.indexOf(':') < 0) {
+        SubnetUtils.SubnetInfo subnet = new SubnetUtils(network).getInfo();
+        // SubnetUtils cannot parse an IPv6 client, which never matches an IPv4 network.
+        networkMatcher = remoteIp -> remoteIp.indexOf(':') < 0 && subnet.isInRange(remoteIp);
+      } else if (network.indexOf('/') < 0) {
+        // MachineList would also accept a bare address, but a rule needs network/bits.
+        throw new IllegalArgumentException("Could not parse [" + network + "]");
+      } else {
+        MachineList subnet = new MachineList(Collections.singletonList(network));
+        // An IPv4 client never matches an IPv6 network; MachineList would resolve "" as loopback.
+        networkMatcher = remoteIp -> remoteIp.indexOf(':') >= 0 && subnet.includes(remoteIp);
+      }
     }
 
-    public SubnetUtils.SubnetInfo getSubnet() {
-      return (subnet);
+    public String getNetwork() {
+      return (network);
+    }
+
+    public boolean matchesNetwork(String remoteIp) {
+      return networkMatcher.test(remoteIp);
     }
 
     public String getPath() {
