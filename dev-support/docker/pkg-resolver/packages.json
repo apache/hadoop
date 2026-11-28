@@ -359,6 +359,13 @@
     "ubuntu:noble::arch64": "sudo",
     "rockylinux:8": "sudo"
   },
+  "unzip": {
+    "debian:12": "unzip",
+    "debian:13": "unzip",
+    "ubuntu:noble": "unzip",
+    "ubuntu:noble::arch64": "unzip",
+    "rockylinux:8": "unzip"
+  },
   "valgrind": {
     "debian:12": "valgrind",
     "debian:13": "valgrind",
