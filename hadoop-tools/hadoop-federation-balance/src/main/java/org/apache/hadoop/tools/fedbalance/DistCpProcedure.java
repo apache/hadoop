@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
@@ -91,9 +92,21 @@ public class DistCpProcedure extends BalanceProcedure {
   private boolean useMountReadOnly;
   /* The threshold of diff entries. */
   private int diffThreshold;
+  /* Whether to preserve ACLs in submitted DistCp jobs. */
+  private boolean preserveAcl;
+  /* Whether to preserve modification/access times in submitted DistCp jobs. */
+  private boolean preserveTimes;
+  /* DistCp copy strategy. */
+  private String distCpStrategy;
+  /* Number of DistCp listStatus threads. */
+  private int numListstatusThreads;
 
   private FsPermission fPerm; // the permission of the src.
   private AclStatus acl; // the acl of the src.
+  /* Cached result of whether ACL is supported on srcFs. Null until checked. */
+  private Boolean srcAclSupported;
+  /* Cached result of whether ACL is supported on dstFs. Null until checked. */
+  private Boolean dstAclSupported;
 
   private JobClient client;
   private DistributedFileSystem srcFs; // fs of the src cluster.
@@ -145,6 +158,10 @@ public class DistCpProcedure extends BalanceProcedure {
     this.forceCloseOpenFiles = context.getForceCloseOpenFiles();
     this.useMountReadOnly = context.getUseMountReadOnly();
     this.diffThreshold = context.getDiffThreshold();
+    this.preserveAcl = context.getPreserveAcl();
+    this.preserveTimes = context.getPreserveTimes();
+    this.distCpStrategy = context.getDistCpStrategy();
+    this.numListstatusThreads = context.getNumListstatusThreads();
     srcFs = (DistributedFileSystem) context.getSrc().getFileSystem(conf);
     dstFs = (DistributedFileSystem) context.getDst().getFileSystem(conf);
   }
@@ -255,7 +272,7 @@ public class DistCpProcedure extends BalanceProcedure {
     // Save and cancel permission.
     FileStatus status = srcFs.getFileStatus(src);
     fPerm = status.getPermission();
-    acl = srcFs.getAclStatus(src);
+    acl = getAclStatusIfSupported();
     srcFs.setPermission(src, FsPermission.createImmutable((short) 0));
     updateStage(Stage.FINAL_DISTCP);
   }
@@ -273,13 +290,88 @@ public class DistCpProcedure extends BalanceProcedure {
    */
   void restorePermission() throws IOException {
     // restore permission.
-    dstFs.removeAcl(dst);
-    if (acl != null) {
-      dstFs.modifyAclEntries(dst, acl.getEntries());
+    removeAclIfSupported();
+    if (preserveAcl && acl != null) {
+      try {
+        dstFs.modifyAclEntries(dst, acl.getEntries());
+      } catch (AclException e) {
+        LOG.info("ACL is not enabled for {}. Skip ACL restore.", dst, e);
+      }
     }
     if (fPerm != null) {
       dstFs.setPermission(dst, fPerm);
     }
+  }
+
+  private AclStatus getAclStatusIfSupported() throws IOException {
+    if (!shouldPreserveAcl()) {
+      return null;
+    }
+    return srcFs.getAclStatus(src);
+  }
+
+  private void removeAclIfSupported() throws IOException {
+    if (!preserveAcl || acl == null || !isDstAclSupported()) {
+      return;
+    }
+    try {
+      dstFs.removeAcl(dst);
+    } catch (AclException e) {
+      LOG.info("ACL is not enabled for {}. Skip ACL restore.", dst, e);
+    }
+  }
+
+  /**
+   * Whether ACL is supported on the source filesystem. The result is cached
+   * after the first check since ACL support doesn't change during a job.
+   */
+  private boolean isSrcAclSupported() throws IOException {
+    if (srcAclSupported == null) {
+      try {
+        srcFs.getAclStatus(src);
+        srcAclSupported = true;
+      } catch (AclException e) {
+        LOG.info("ACL is not enabled for {}. Skip ACL preserve.", src, e);
+        srcAclSupported = false;
+      }
+    }
+    return srcAclSupported;
+  }
+
+  /**
+   * Whether ACL is supported on the destination filesystem. The destination
+   * path may not exist before the initial DistCp, so probe the nearest
+   * existing parent path.
+   */
+  private boolean isDstAclSupported() throws IOException {
+    if (dstAclSupported == null) {
+      Path probePath = getAclProbePath(dstFs, dst);
+      try {
+        dstFs.getAclStatus(probePath);
+        dstAclSupported = true;
+      } catch (AclException e) {
+        LOG.info("ACL is not enabled for {}. Skip ACL preserve.", probePath,
+            e);
+        dstAclSupported = false;
+      }
+    }
+    return dstAclSupported;
+  }
+
+  private Path getAclProbePath(DistributedFileSystem fs, Path path)
+      throws IOException {
+    Path probePath = path;
+    while (probePath != null) {
+      if (fs.exists(probePath)) {
+        return probePath;
+      }
+      probePath = probePath.getParent();
+    }
+    return new Path(Path.SEPARATOR);
+  }
+
+  private boolean shouldPreserveAcl() throws IOException {
+    return preserveAcl && isSrcAclSupported() && isDstAclSupported();
   }
 
   /**
@@ -475,8 +567,8 @@ public class DistCpProcedure extends BalanceProcedure {
   private String submitDistCpJob(String srcParam, String dstParam,
       boolean useSnapshotDiff) throws IOException {
     List<String> command = new ArrayList<>();
-    command.addAll(Arrays
-        .asList(new String[] {"-async", "-update", "-append", "-pruxgpcab"}));
+    command.addAll(Arrays.asList(
+        new String[] {"-async", "-update", "-append", getPreserveOption()}));
     if (useSnapshotDiff) {
       command.add("-diff");
       command.add(LAST_SNAPSHOT_NAME);
@@ -486,6 +578,14 @@ public class DistCpProcedure extends BalanceProcedure {
     command.add(mapNum + "");
     command.add("-bandwidth");
     command.add(bandWidth + "");
+    if (numListstatusThreads > 0) {
+      command.add("-numListstatusThreads");
+      command.add(numListstatusThreads + "");
+    }
+    if (distCpStrategy != null && !distCpStrategy.isEmpty()) {
+      command.add("-strategy");
+      command.add(distCpStrategy);
+    }
     command.add(srcParam);
     command.add(dstParam);
 
@@ -503,6 +603,18 @@ public class DistCpProcedure extends BalanceProcedure {
     } catch (Exception e) {
       throw new IOException("Submit job failed.", e);
     }
+  }
+
+  @VisibleForTesting
+  String getPreserveOption() throws IOException {
+    StringBuilder preserve = new StringBuilder("-pruxgpcb");
+    if (shouldPreserveAcl()) {
+      preserve.append('a');
+    }
+    if (preserveTimes) {
+      preserve.append('t');
+    }
+    return preserve.toString();
   }
 
   @Override
@@ -564,6 +676,11 @@ public class DistCpProcedure extends BalanceProcedure {
     bandWidth = context.getBandwidthLimit();
     forceCloseOpenFiles = context.getForceCloseOpenFiles();
     useMountReadOnly = context.getUseMountReadOnly();
+    diffThreshold = context.getDiffThreshold();
+    preserveAcl = context.getPreserveAcl();
+    preserveTimes = context.getPreserveTimes();
+    distCpStrategy = context.getDistCpStrategy();
+    numListstatusThreads = context.getNumListstatusThreads();
     this.client = new JobClient(conf);
   }
 
