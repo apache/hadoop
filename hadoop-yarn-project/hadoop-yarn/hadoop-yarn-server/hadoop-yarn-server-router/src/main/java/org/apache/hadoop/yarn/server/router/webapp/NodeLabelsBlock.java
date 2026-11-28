@@ -126,12 +126,14 @@ public class NodeLabelsBlock extends RouterBlock {
   private NodeLabelsInfo getSubClusterNodeLabelsByWebAddress(String webAddress) {
     Configuration conf = this.router.getConfig();
     Client client = RouterWebServiceUtil.createJerseyClient(conf);
-    NodeLabelsInfo nodes = RouterWebServiceUtil
-        .genericForward(webAddress, null, NodeLabelsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.GET_RM_NODE_LABELS, null, null, conf,
-        client);
-    client.close();
-    return nodes;
+    try {
+      return RouterWebServiceUtil
+          .genericForward(webAddress, null, NodeLabelsInfo.class, HTTPMethods.GET,
+          RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.GET_RM_NODE_LABELS, null, null, conf,
+          client);
+    } finally {
+      client.close();
+    }
   }
 
   /**

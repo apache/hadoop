@@ -72,13 +72,18 @@ import static org.apache.hadoop.yarn.webapp.util.WebAppUtils.getRouterWebAppURLW
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -154,6 +159,8 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 /**
@@ -342,6 +349,17 @@ public class TestRouterWebServicesREST {
   private static Response performCall(final String webAddress,
       final String queryKey, final String queryValue, final Object context,
       final HTTPMethods method) throws IOException, InterruptedException {
+    return performCall(webAddress, queryKey, queryValue, context, method,
+        APPLICATION_XML);
+  }
+
+  /**
+   * Performs a POST/PUT/DELETE call to Router and returns the ClientResponse.
+   */
+  private static Response performCall(final String webAddress,
+      final String queryKey, final String queryValue, final Object context,
+      final HTTPMethods method, final String accept) throws IOException,
+      InterruptedException {
 
     return UserGroupInformation.createRemoteUser(userName)
         .doAs((PrivilegedExceptionAction<Response>) () -> {
@@ -355,7 +373,7 @@ public class TestRouterWebServicesREST {
             toRouterWR = toRouterWR.queryParam(queryKey, queryValue);
           }
 
-          Invocation.Builder builder = toRouterWR.request(APPLICATION_XML);
+          Invocation.Builder builder = toRouterWR.request(accept);
 
           Response response = null;
 
@@ -364,10 +382,10 @@ public class TestRouterWebServicesREST {
             response = builder.delete(Response.class);
             break;
           case POST:
-            response = builder.post(Entity.entity(context, APPLICATION_XML));
+            response = builder.post(Entity.entity(context, accept));
             break;
           case PUT:
-            response = builder.put(Entity.entity(context, APPLICATION_XML));
+            response = builder.put(Entity.entity(context, accept));
             break;
           default:
             break;
@@ -702,6 +720,61 @@ public class TestRouterWebServicesREST {
     assertEquals(SC_OK, response.getStatus());
     NewApplication ci = response.readEntity(NewApplication.class);
     assertNotNull(ci);
+  }
+
+  /**
+   * Router forwards {@link RMWebServiceProtocol#createNewApplication} with
+   * the caller's Accept header and then reads the RM's answer, as
+   * FederationInterceptorREST does. Its client must read both JSON and XML
+   * answers and stay open for the next call.
+   */
+  @Test
+  @Timeout(value = 5)
+  public void testNewApplicationJSONThroughRouterClient() throws Exception {
+    Client client = RouterWebServiceUtil.createJerseyClient(conf);
+    try {
+      for (String accept : new String[] {APPLICATION_JSON, APPLICATION_XML}) {
+        HttpServletRequest hsr = mock(HttpServletRequest.class);
+        when(hsr.getUserPrincipal()).thenReturn((Principal) () -> userName);
+        when(hsr.getHeader(HttpHeaders.ACCEPT)).thenReturn(accept);
+        when(hsr.getParameterMap()).thenReturn(
+            Collections.singletonMap("user.name", new String[] {userName}));
+
+        Response response = RouterWebServiceUtil.genericForward(rmAddress, hsr,
+            Response.class, POST, RM_WEB_SERVICE_PATH + APPS_NEW_APPLICATION,
+            null, null, conf, client);
+        try {
+          assertEquals(SC_OK, response.getStatus(), "Accept " + accept);
+          NewApplication newApp = response.readEntity(NewApplication.class);
+          assertNotNull(newApp.getApplicationId(), "Accept " + accept);
+        } finally {
+          response.close();
+        }
+      }
+    } finally {
+      client.close();
+    }
+  }
+
+  /**
+   * End-to-end: the Router REST endpoint forwards createNewApplication with
+   * Accept application/json through the federation interceptor chain. The
+   * chain's own client must read the RM's JSON answer; when it could not,
+   * the caller got an error response instead of a new application.
+   */
+  @Test
+  @Timeout(value = 5)
+  public void testNewApplicationJSONThroughRouter() throws Exception {
+    Response response = performCall(
+        RM_WEB_SERVICE_PATH + APPS_NEW_APPLICATION, null,
+        null, null, POST, APPLICATION_JSON);
+    assertEquals(SC_OK, response.getStatus());
+    assertNotNull(response.getMediaType());
+    assertTrue(MediaType.APPLICATION_JSON_TYPE.isCompatible(response.getMediaType()),
+        "expected a JSON answer, got: " + response.getMediaType());
+    String body = response.readEntity(String.class);
+    assertTrue(body.contains("application-id"),
+        "JSON body must carry the application id: " + body);
   }
 
   /**

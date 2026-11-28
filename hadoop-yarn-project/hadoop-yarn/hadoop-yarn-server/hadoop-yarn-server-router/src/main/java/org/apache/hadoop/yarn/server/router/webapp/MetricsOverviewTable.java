@@ -234,20 +234,24 @@ public class MetricsOverviewTable extends RouterBlock {
       Hamlet.TBODY<Hamlet.TABLE<Hamlet.DIV<Hamlet>>> fsMetricsScheduleTr) {
     // configuration
     Configuration config = this.router.getConfig();
-    Client client = RouterWebServiceUtil.createJerseyClient(config);
     String webAppAddress = WebAppUtils.getRMWebAppURLWithScheme(config);
 
     // Get the name of the local cluster.
     String localClusterName = config.get(YarnConfiguration.RM_CLUSTER_ID, UNAVAILABLE);
-    SchedulerOverviewInfo schedulerOverviewInfo =
-        getSchedulerOverviewInfo(webAppAddress, config, client);
-    if (schedulerOverviewInfo != null) {
-      RouterSchedulerMetrics rsMetrics =
-          new RouterSchedulerMetrics(localClusterName, schedulerOverviewInfo);
-      // Basic information
-      showRouterSchedulerMetricsData(rsMetrics, fsMetricsScheduleTr);
-    } else {
-      showRouterSchedulerMetricsData(localClusterName, fsMetricsScheduleTr);
+    Client client = RouterWebServiceUtil.createJerseyClient(config);
+    try {
+      SchedulerOverviewInfo schedulerOverviewInfo =
+          getSchedulerOverviewInfo(webAppAddress, config, client);
+      if (schedulerOverviewInfo != null) {
+        RouterSchedulerMetrics rsMetrics =
+            new RouterSchedulerMetrics(localClusterName, schedulerOverviewInfo);
+        // Basic information
+        showRouterSchedulerMetricsData(rsMetrics, fsMetricsScheduleTr);
+      } else {
+        showRouterSchedulerMetricsData(localClusterName, fsMetricsScheduleTr);
+      }
+    } finally {
+      client.close();
     }
   }
 
@@ -267,28 +271,30 @@ public class MetricsOverviewTable extends RouterBlock {
 
     Client client = RouterWebServiceUtil.createJerseyClient(config);
 
-    // Traverse all SubClusters to get cluster information.
-    for (SubClusterInfo subcluster : subClusters) {
-      // We need to make sure subCluster is not null
-      if (subcluster != null && subcluster.getSubClusterId() != null) {
-        // Call the RM interface to obtain schedule information
-        String webAppAddress =  WebAppUtils.getHttpSchemePrefix(config) +
-            subcluster.getRMWebServiceAddress();
-        SchedulerOverviewInfo schedulerOverviewInfo =
-            getSchedulerOverviewInfo(webAppAddress, config, client);
+    try {
+      // Traverse all SubClusters to get cluster information.
+      for (SubClusterInfo subcluster : subClusters) {
+        // We need to make sure subCluster is not null
+        if (subcluster != null && subcluster.getSubClusterId() != null) {
+          // Call the RM interface to obtain schedule information
+          String webAppAddress =  WebAppUtils.getHttpSchemePrefix(config) +
+              subcluster.getRMWebServiceAddress();
+          SchedulerOverviewInfo schedulerOverviewInfo =
+              getSchedulerOverviewInfo(webAppAddress, config, client);
 
-        // If schedulerOverviewInfo is not null,
-        // We will display information from rsMetrics, otherwise we will not display information.
-        if (schedulerOverviewInfo != null) {
-          RouterSchedulerMetrics rsMetrics =
-              new RouterSchedulerMetrics(subcluster, metrics, schedulerOverviewInfo);
-          // Basic information
-          showRouterSchedulerMetricsData(rsMetrics, fsMetricsScheduleTr);
+          // If schedulerOverviewInfo is not null,
+          // We will display information from rsMetrics, otherwise we will not display information.
+          if (schedulerOverviewInfo != null) {
+            RouterSchedulerMetrics rsMetrics =
+                new RouterSchedulerMetrics(subcluster, metrics, schedulerOverviewInfo);
+            // Basic information
+            showRouterSchedulerMetricsData(rsMetrics, fsMetricsScheduleTr);
+          }
         }
       }
+    } finally {
+      client.close();
     }
-
-    client.close();
   }
 
   /**

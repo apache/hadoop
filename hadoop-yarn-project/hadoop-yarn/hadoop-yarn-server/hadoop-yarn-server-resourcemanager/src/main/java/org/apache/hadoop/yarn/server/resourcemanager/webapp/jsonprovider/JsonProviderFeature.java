@@ -45,6 +45,16 @@ import javax.ws.rs.core.FeatureContext;
 public class JsonProviderFeature implements Feature {
 
   /**
+   * Registration priority of {@link IncludeRootJSONProvider}.
+   */
+  public static final int INCLUDE_ROOT_PRIORITY = 2001;
+
+  /**
+   * Registration priority of {@link ExcludeRootJSONProvider}.
+   */
+  public static final int EXCLUDE_ROOT_PRIORITY = 2002;
+
+  /**
    * Do not use default constructor.
    */
   public JsonProviderFeature() {
@@ -60,8 +70,8 @@ public class JsonProviderFeature implements Feature {
   public boolean configure(FeatureContext context) {
     // Priorities are used to maintain order between the JSONProviders.
     // This way, we can improve the determinism of the app.
-    context.register(IncludeRootJSONProvider.class, 2001);
-    context.register(ExcludeRootJSONProvider.class, 2002);
+    context.register(IncludeRootJSONProvider.class, INCLUDE_ROOT_PRIORITY);
+    context.register(ExcludeRootJSONProvider.class, EXCLUDE_ROOT_PRIORITY);
     return true;
   }
 }

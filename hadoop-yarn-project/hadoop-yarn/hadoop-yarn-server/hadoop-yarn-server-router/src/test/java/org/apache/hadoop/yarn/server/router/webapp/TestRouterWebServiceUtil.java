@@ -25,6 +25,8 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.client.Client;
+import javax.ws.rs.ext.MessageBodyReader;
+import javax.ws.rs.ext.MessageBodyWriter;
 import org.glassfish.jersey.client.ClientProperties;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -38,6 +40,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceRequestI
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.ExcludeRootJSONProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.IncludeRootJSONProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.jsonprovider.JsonProviderFeature;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -735,6 +740,28 @@ public class TestRouterWebServiceUtil {
     assertEquals(30000, readTimeOut03);
     assertEquals(30000, connectTimeOut03);
     client03.close();
+
+    // Case4, the client reads and writes JSON as the RM web services do:
+    // the MOXy providers must be registered with the RM's priorities.
+    YarnConfiguration configuration4 = new YarnConfiguration();
+    Client client04 = RouterWebServiceUtil.createJerseyClient(configuration4);
+    assertTrue(client04.getConfiguration().isRegistered(IncludeRootJSONProvider.class),
+        "IncludeRootJSONProvider must be registered");
+    assertTrue(client04.getConfiguration().isRegistered(ExcludeRootJSONProvider.class),
+        "ExcludeRootJSONProvider must be registered");
+    assertEquals(Integer.valueOf(JsonProviderFeature.INCLUDE_ROOT_PRIORITY),
+        client04.getConfiguration().getContracts(IncludeRootJSONProvider.class)
+            .get(MessageBodyReader.class));
+    assertEquals(Integer.valueOf(JsonProviderFeature.INCLUDE_ROOT_PRIORITY),
+        client04.getConfiguration().getContracts(IncludeRootJSONProvider.class)
+            .get(MessageBodyWriter.class));
+    assertEquals(Integer.valueOf(JsonProviderFeature.EXCLUDE_ROOT_PRIORITY),
+        client04.getConfiguration().getContracts(ExcludeRootJSONProvider.class)
+            .get(MessageBodyReader.class));
+    assertEquals(Integer.valueOf(JsonProviderFeature.EXCLUDE_ROOT_PRIORITY),
+        client04.getConfiguration().getContracts(ExcludeRootJSONProvider.class)
+            .get(MessageBodyWriter.class));
+    client04.close();
   }
 
   @Test
