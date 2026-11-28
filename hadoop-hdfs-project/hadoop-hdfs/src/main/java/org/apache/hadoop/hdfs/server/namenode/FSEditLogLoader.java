@@ -496,6 +496,10 @@ public class FSEditLogLoader {
       ErasureCodingPolicy ecPolicy =
           FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(
               fsDir.getFSNamesystem(), iip);
+      BlockInfo truncateTarget = file.getLastBlock();
+      BlockInfo truncateSource =
+          truncateTarget == null || truncateTarget.isComplete() ? null
+              : truncateTarget.getUnderConstructionFeature().getTruncateBlock();
       updateBlocks(fsDir, addCloseOp, iip, file, ecPolicy);
 
       // Now close the file
@@ -513,6 +517,18 @@ public class FSEditLogLoader {
         fsNamesys.getLeaseManager().removeLease(file.getId());
         file.toCompleteFile(file.getModificationTime(), 0,
             fsNamesys.getBlockManager().getMinReplication());
+      }
+      // Match active-side copy-truncate completion: a source retained during
+      // replay is no longer needed after CLOSE if no snapshot references it.
+      if (truncateSource != null
+          && truncateSource.getBlockId() != truncateTarget.getBlockId()
+          && !file.isBlockInLatestSnapshot(truncateSource)) {
+        BlockInfo storedSource = fsNamesys.getBlockManager()
+            .getStoredBlock(truncateSource);
+        if (storedSource != null) {
+          storedSource.delete();
+          fsNamesys.getBlockManager().removeBlock(storedSource);
+        }
       }
       break;
     }
