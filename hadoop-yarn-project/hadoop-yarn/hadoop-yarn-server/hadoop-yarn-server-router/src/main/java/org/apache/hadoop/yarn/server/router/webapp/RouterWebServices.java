@@ -138,8 +138,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   }
 
   private void init() {
-    // clear content type
-    response.setContentType(null);
+    JettyUtils.clearContentType(response);
   }
 
   @VisibleForTesting
