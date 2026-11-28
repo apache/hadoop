@@ -467,12 +467,14 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
       implements EventHandler<SchedulerEvent> {
     Map<NodeId, Set<String>> updatedNodeToLabels = new HashMap<>();
     boolean receivedEvent;
+    private int eventCount;
 
     @Override
     public void handle(SchedulerEvent event) {
       switch (event.getType()) {
       case NODE_LABELS_UPDATE:
         receivedEvent = true;
+        eventCount++;
         updatedNodeToLabels =
             ((NodeLabelsUpdateSchedulerEvent) event).getUpdatedNodeToLabels();
         break;
@@ -480,6 +482,47 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
         break;
       }
     }
+  }
+
+  @Test
+  public void testSkipEmptyNodeLabelUpdates() throws Exception {
+    RMContext rmContext = mock(RMContext.class);
+    Dispatcher dispatcher = new InlineDispatcher();
+    SchedulerEventHandler handler = new SchedulerEventHandler();
+    dispatcher.register(SchedulerEventType.class, handler);
+    when(rmContext.getDispatcher()).thenReturn(dispatcher);
+    mgr.setRMContext(rmContext);
+
+    NodeId nodeId = toNodeId("n1:1");
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p1"));
+    mgr.replaceLabelsOnNode(ImmutableMap.of(nodeId, toSet("p1")));
+    assertEquals(0, handler.eventCount,
+        "An inactive node has no scheduler label mapping to update");
+
+    mgr.activateNode(nodeId, SMALL_RESOURCE);
+    assertEquals(1, handler.eventCount);
+    assertEquals(ImmutableMap.of(nodeId, toSet("p1")),
+        handler.updatedNodeToLabels);
+    assertEquals(SMALL_RESOURCE, mgr.getResourceByLabel("p1", null));
+
+    mgr.updateNodeResource(nodeId, LARGE_NODE);
+    assertEquals(2, handler.eventCount,
+        "Resource updates should only publish the active node mapping");
+    assertEquals(LARGE_NODE, mgr.getResourceByLabel("p1", null));
+
+    mgr.replaceLabelsOnNode(ImmutableMap.of(nodeId, ImmutableSet.of()));
+    assertEquals(3, handler.eventCount,
+        "Removing a live node's label must still notify the scheduler");
+    assertEquals(ImmutableMap.of(nodeId, ImmutableSet.of()),
+        handler.updatedNodeToLabels);
+    assertEquals(EMPTY_RESOURCE, mgr.getResourceByLabel("p1", null));
+    assertEquals(LARGE_NODE,
+        mgr.getResourceByLabel(CommonNodeLabelsManager.NO_LABEL, null));
+
+    mgr.deactivateNode(nodeId);
+    assertEquals(3, handler.eventCount);
+    assertEquals(EMPTY_RESOURCE,
+        mgr.getResourceByLabel(CommonNodeLabelsManager.NO_LABEL, null));
   }
 
   @Test
