@@ -55,9 +55,9 @@ public enum AddBlockFlag {
 
   /**
    * Advise that a block replica NOT be written to the local rack DataNode where
-   * 'local' means the same host as the client is being run on.
+   * 'local' means the same rack as the client is being run on.
    *
-   * @see CreateFlag#NO_LOCAL_WRITE
+   * @see CreateFlag#NO_LOCAL_RACK
    */
   NO_LOCAL_RACK((short) 0x03);
 
