@@ -107,10 +107,15 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolerant;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -2788,6 +2793,52 @@ public class TestDistributedFileSystem {
           () ->
           DFSTestUtil.createFile(fs, new Path("/testFile"),
               1024L, (short) 3, 1024L));
+    }
+  }
+
+  @Test
+  public void testECAddExpectedReplicasToPending() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY, 0);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, 10);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 3);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      Path dir = new Path("/dir");
+      dfs.mkdirs(dir);
+      dfs.enableErasureCodingPolicy("XOR-2-1-1024k");
+      dfs.setErasureCodingPolicy(dir, "XOR-2-1-1024k");
+
+      try (FSDataOutputStream str = dfs.create(new Path("/dir/file"))) {
+        DataNodeTestUtils.pauseIBR(cluster.getDataNodes().get(0));
+        DataNodeTestUtils.pauseIBR(cluster.getDataNodes().get(1));
+        str.write(new byte[1024 * 1024]);
+        str.flush();
+      }
+
+      LocatedBlocks locatedBlocks = dfs.getClient().getBlockLocations("/dir/file", 1024 * 1024);
+      BlockManager blockManager = cluster.getNamesystem().getBlockManager();
+      final BlockInfoStriped blockInfo = (BlockInfoStriped) blockManager.getStoredBlock(
+          locatedBlocks.getLocatedBlocks().get(0).getBlock().getLocalBlock());
+
+      // Only dn2's IBR is enabled, so wait until its replica is reported and
+      // assert that the remaining two expected locations are pending.
+      GenericTestUtils.waitFor(() -> blockInfo.numNodes() == 1, 500, 10000);
+      assertEquals(1, blockInfo.numNodes());
+      assertEquals(2, BlockManagerTestUtil.getNumReplicasInPendingReconstruction(
+          blockManager, blockInfo));
+
+      DataNodeTestUtils.resumeIBR(cluster.getDataNodes().get(0));
+      DataNodeTestUtils.resumeIBR(cluster.getDataNodes().get(1));
+      // Wait for dn0 and dn1 IBRs to be processed and the stale pending
+      // reconstruction entries to be cleaned up.
+      GenericTestUtils.waitFor(
+          () -> BlockManagerTestUtil.getNumReplicasInPendingReconstruction(
+              blockManager, blockInfo) == 0, 500, 10000);
+
+      assertEquals(2, blockInfo.numNodes());
+      assertEquals(BlockUCState.COMPLETE, blockInfo.getBlockUCState());
     }
   }
 
