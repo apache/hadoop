@@ -1398,8 +1398,12 @@ public class MockDefaultRequestInterceptorREST
 
   @Override
   public Response getSchedulerConfiguration(HttpServletRequest req) throws AuthorizationException {
-    return Response.status(Status.OK).entity(new ConfInfo(mockRM.getConfig()))
-        .build();
+    // Like the RM's answer forwarded by DefaultRequestInterceptorREST, whose
+    // entity is the unread stream and must be read with readEntity.
+    Response response = mock(Response.class);
+    when(response.getStatus()).thenReturn(Status.OK.getStatusCode());
+    when(response.readEntity(ConfInfo.class)).thenReturn(new ConfInfo(mockRM.getConfig()));
+    return response;
   }
 
   public ClusterInfo getClusterInfo() {
