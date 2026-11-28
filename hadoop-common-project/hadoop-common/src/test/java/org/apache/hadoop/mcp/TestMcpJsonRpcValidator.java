@@ -82,7 +82,27 @@ public class TestMcpJsonRpcValidator {
   public void testNullParamsOnNotificationIsInvalid() throws Exception {
     JsonNode request = OBJECT_MAPPER.readTree(
         "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\",\"params\":null}");
-    assertInvalid(request, null);
+    assertTransportError(request, McpJsonRpc.INVALID_REQUEST_MESSAGE);
+  }
+
+  @Test
+  public void testWrongJsonRpcVersionOnNotificationReturns400() throws Exception {
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"1.0\",\"method\":\"notifications/initialized\"}");
+    assertTransportError(request, McpJsonRpc.INVALID_REQUEST_MESSAGE);
+  }
+
+  @Test
+  public void testClientResultResponseReturns400() throws Exception {
+    JsonNode request = OBJECT_MAPPER.readTree("{\"jsonrpc\":\"2.0\",\"id\":5,\"result\":{}}");
+    assertTransportError(request, McpJsonRpc.UNEXPECTED_RESPONSE_MESSAGE);
+  }
+
+  @Test
+  public void testClientErrorResponseReturns400() throws Exception {
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"id\":5,\"error\":{\"code\":-1,\"message\":\"x\"}}");
+    assertTransportError(request, McpJsonRpc.UNEXPECTED_RESPONSE_MESSAGE);
   }
 
   @Test
@@ -110,6 +130,15 @@ public class TestMcpJsonRpcValidator {
   public void testNullRequestIdIsInvalid() throws Exception {
     JsonNode request = OBJECT_MAPPER.readTree(
         "{\"jsonrpc\":\"2.0\",\"id\":null,\"method\":\"tools/list\"}");
+    assertInvalid(request, null);
+  }
+
+  @Test
+  public void testTooLongRequestIdIsInvalid() throws Exception {
+    String id = new String(new char[McpJsonRpcValidator.MAX_REQUEST_ID_LENGTH + 1])
+        .replace('\0', 'a');
+    JsonNode request = OBJECT_MAPPER.readTree(
+        "{\"jsonrpc\":\"2.0\",\"id\":\"" + id + "\",\"method\":\"tools/list\"}");
     assertInvalid(request, null);
   }
 
@@ -172,5 +201,12 @@ public class TestMcpJsonRpcValidator {
     } else {
       assertEquals(expectedId.intValue(), body.get("id").asInt());
     }
+  }
+
+  private void assertTransportError(JsonNode request, String expectedMessage) {
+    McpHttpResponse response = McpJsonRpcValidator.validate(request, responses);
+    assertNotNull(response, "response should not be null");
+    assertEquals(400, response.status());
+    assertEquals(expectedMessage, response.body().get("message").asText());
   }
 }

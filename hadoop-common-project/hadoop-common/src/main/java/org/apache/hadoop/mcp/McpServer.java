@@ -22,11 +22,14 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServlet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.mcp.McpSchema.CallToolResult;
 import org.apache.hadoop.mcp.McpSchema.ServerCapabilities;
 import org.apache.hadoop.mcp.McpSchema.Tool;
@@ -36,9 +39,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * Minimal MCP server for streamable HTTP transport.
  *
- * <p>Host {@link #getServlet()} with {@link McpHttpServer} on a dedicated port:
+ * <p>Host {@link #getServlet()} with {@link McpHttpServer} on a dedicated port. The session
+ * and rate-limit settings are read from the {@code hadoop.mcp.*} keys of the configuration
+ * passed to {@link #sync(McpJsonMapper, Configuration)}:
  * <pre>{@code
- * McpServer mcpServer = McpServer.sync(jsonMapper)
+ * McpServer mcpServer = McpServer.sync(jsonMapper, conf)
  *     .serverInfo("yarn-resourcemanager", version)
  *     .capabilities(ServerCapabilities.withTools())
  *     .toolCall(tool, handler)
@@ -48,6 +53,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *   // ...
  * }
  * }</pre>
+ *
+ * <p>Clients must follow the MCP session lifecycle: {@code initialize}, which returns an
+ * {@code Mcp-Session-Id} header; then {@code notifications/initialized}; then other requests,
+ * each carrying that header and {@code MCP-Protocol-Version}. {@code DELETE} ends the
+ * session. The only supported protocol version is {@link McpJsonRpc#PROTOCOL_VERSION}.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -61,8 +71,8 @@ public final class McpServer implements Closeable {
     this.servlet = servlet;
   }
 
-  public static Builder sync(McpJsonMapper jsonMapper) {
-    return new Builder(jsonMapper);
+  public static Builder sync(McpJsonMapper jsonMapper, Configuration conf) {
+    return new Builder(jsonMapper, conf);
   }
 
   /**
@@ -87,12 +97,37 @@ public final class McpServer implements Closeable {
     private String serverVersion = "1.0.0";
     private ServerCapabilities capabilities = ServerCapabilities.withoutTools();
     private final Map<String, RegisteredTool> tools = new LinkedHashMap<>();
+    private final long sessionTimeoutMs;
+    private final int maxSessions;
+    private final int toolCallLimit;
+    private final long toolCallWindowMs;
+    private final int maxToolOutputChars;
+    private final int maxRequestIds;
 
-    private Builder(McpJsonMapper jsonMapper) {
+    private Builder(McpJsonMapper jsonMapper, Configuration conf) {
       if (!(jsonMapper instanceof JacksonMcpJsonMapper)) {
         throw new IllegalArgumentException("McpServer requires JacksonMcpJsonMapper");
       }
       this.objectMapper = ((JacksonMcpJsonMapper) jsonMapper).getObjectMapper();
+      this.sessionTimeoutMs = conf.getTimeDuration(
+          CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_TIMEOUT_MS_KEY,
+          CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_TIMEOUT_MS_DEFAULT,
+          TimeUnit.MILLISECONDS);
+      this.maxSessions = conf.getInt(CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_MAX_KEY,
+          CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_MAX_DEFAULT);
+      this.toolCallLimit = conf.getInt(
+          CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_TOOL_CALL_LIMIT_KEY,
+          CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_TOOL_CALL_LIMIT_DEFAULT);
+      this.toolCallWindowMs = conf.getTimeDuration(
+          CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_TOOL_CALL_WINDOW_MS_KEY,
+          CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_TOOL_CALL_WINDOW_MS_DEFAULT,
+          TimeUnit.MILLISECONDS);
+      this.maxToolOutputChars = conf.getInt(
+          CommonConfigurationKeysPublic.HADOOP_MCP_TOOL_CALL_MAX_OUTPUT_CHARS_KEY,
+          CommonConfigurationKeysPublic.HADOOP_MCP_TOOL_CALL_MAX_OUTPUT_CHARS_DEFAULT);
+      this.maxRequestIds = conf.getInt(
+          CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_MAX_REQUEST_IDS_KEY,
+          CommonConfigurationKeysPublic.HADOOP_MCP_SESSION_MAX_REQUEST_IDS_DEFAULT);
     }
 
     public Builder serverInfo(String name, String version) {
@@ -112,8 +147,11 @@ public final class McpServer implements Closeable {
     }
 
     public McpServer build() {
+      McpSessionStore sessionStore = new McpSessionStore(sessionTimeoutMs, maxSessions,
+          toolCallLimit, toolCallWindowMs, maxRequestIds);
       McpRequestHandler handler = new McpRequestHandler(objectMapper, serverName,
-          serverVersion, capabilities, tools);
+          serverVersion, capabilities, tools, sessionStore,
+          new McpOutputSanitizer(maxToolOutputChars));
       McpHttpServlet httpServlet = new McpHttpServlet(objectMapper, handler);
       return new McpServer(handler, httpServlet);
     }
