@@ -105,11 +105,7 @@ public class MappingRuleCreator {
     MappingRuleMatcher matcher = null;
     switch (type) {
     case USER:
-      if (ALL_USER.equals(matches)) {
-        matcher = MappingRuleMatchers.createAllMatcher();
-      } else {
-        matcher = MappingRuleMatchers.createUserMatcher(matches);
-      }
+      matcher = MappingRuleMatchers.createUserMatcherFromMatches(matches);
       break;
     case GROUP:
       checkArgument(!ALL_USER.equals(matches), "Cannot match '*' for groups");
