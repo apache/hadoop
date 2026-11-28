@@ -581,7 +581,7 @@ public class QueueInfoPBImpl extends QueueInfo {
   @Override
   public long getMinResourceMemory() {
     QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.hasMaxResourceVCore()) ? p.getMaxResourceVCore() : 0;
+    return (p.hasMinResourceMemory()) ? p.getMinResourceMemory() : 0;
   }
 
   @Override
@@ -599,7 +599,7 @@ public class QueueInfoPBImpl extends QueueInfo {
   @Override
   public void setMaxResourceVCore(int vCore) {
     maybeInitBuilder();
-    builder.setMinResourceVCore(vCore);
+    builder.setMaxResourceVCore(vCore);
   }
 
   @Override
