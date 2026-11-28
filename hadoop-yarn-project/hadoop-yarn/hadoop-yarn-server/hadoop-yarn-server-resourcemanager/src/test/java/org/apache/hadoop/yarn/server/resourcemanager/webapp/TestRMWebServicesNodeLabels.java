@@ -598,7 +598,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     Response response = addNodeLabels(Lists.newArrayList(Pair.of("a&",
         DEFAULT_NL_EXCLUSIVITY)));
     String expectedMessage =
-        "label name should only contains"
+        "java.io.IOException: label name should only contains"
             + " {0-9, a-z, A-Z, -, _} and should not started with"
             + " {-,_}, now it is= a&";
     validateJsonExceptionContent(response, expectedMessage);
@@ -613,7 +613,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // new info and change exclusivity
     response = addNodeLabels(Lists.newArrayList(Pair.of("newLabel", false)));
     String expectedMessage =
-        "Exclusivity cannot be modified for an existing"
+        "java.io.IOException: Exclusivity cannot be modified for an existing"
             + " label with : <newLabel:exclusivity=false>";
     validateJsonExceptionContent(response, expectedMessage);
   }
@@ -655,7 +655,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     Response response;
     response = removeNodeLabel("ireallydontexist");
     String expectedMessage =
-        "Node label=ireallydontexist to be"
+        "java.io.IOException: Node label=ireallydontexist to be"
             + " removed doesn't existed in cluster node labels"
             + " collection.";
     validateJsonExceptionContent(response, expectedMessage);
