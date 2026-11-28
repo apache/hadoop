@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.qjournal.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -372,6 +374,53 @@ public class TestQuorumJournalManagerUnit {
         .setTxnCount(numTxns)
         .setEditLog(ByteString.copyFrom(byteStream.toByteArray()))
         .build();
+  }
+
+  /**
+   * HDFS-17869: IOException thrown from catch(InterruptedException) and
+   * catch(TimeoutException) blocks in QuorumJournalManager must chain the
+   * original exception as the cause so that stack traces are not lost.
+   *
+   * Verifies the TimeoutException path by using a very short operations
+   * timeout combined with loggers that never resolve their format() future.
+   */
+  @Test
+  public void testFormatTimeoutExceptionIsCauseChained() throws Exception {
+    Configuration shortTimeoutConf = new Configuration(conf);
+    // Set an extremely short operations timeout so waitFor() times out quickly.
+    shortTimeoutConf.set(DFSConfigKeys.DFS_QJM_OPERATIONS_TIMEOUT, "50ms");
+
+    List<AsyncLogger> neverResolvingLoggers = ImmutableList.of(
+        mockLogger(), mockLogger(), mockLogger());
+
+    QuorumJournalManager shortQjm = new QuorumJournalManager(
+        shortTimeoutConf, new URI("qjournal://host/jid"), FAKE_NSINFO) {
+      @Override
+      protected List<AsyncLogger> createLoggers(AsyncLogger.Factory factory) {
+        return neverResolvingLoggers;
+      }
+    };
+
+    // Make every logger return a future that never completes, so waitFor() is
+    // forced to time out.
+    for (AsyncLogger logger : neverResolvingLoggers) {
+      SettableFuture<Void> neverDone = SettableFuture.create();
+      Mockito.doReturn(neverDone).when(logger)
+          .format(Mockito.<NamespaceInfo>any(), anyBoolean());
+    }
+
+    try {
+      shortQjm.format(FAKE_NSINFO, true);
+      fail("Expected IOException from timeout");
+    } catch (IOException ioe) {
+      assertNotNull(ioe.getCause(),
+          "IOException must chain the root cause (HDFS-17869)");
+      assertInstanceOf(java.util.concurrent.TimeoutException.class,
+          ioe.getCause(),
+          "Root cause must be the TimeoutException, not swallowed");
+    } finally {
+      shortQjm.close();
+    }
   }
 
   private EditLogOutputStream createLogSegment() throws IOException {

@@ -255,9 +255,9 @@ public class QuorumJournalManager implements JournalManager {
       call.waitFor(loggers.size(), loggers.size(), 0, timeoutMs,
           "format");
     } catch (InterruptedException e) {
-      throw new IOException("Interrupted waiting for format() response");
+      throw new IOException("Interrupted waiting for format() response", e);
     } catch (TimeoutException e) {
-      throw new IOException("Timed out waiting for format() response");
+      throw new IOException("Timed out waiting for format() response", e);
     }
     
     if (call.countExceptions() > 0) {
@@ -273,9 +273,9 @@ public class QuorumJournalManager implements JournalManager {
     try {
       call.waitFor(loggers.size(), 0, 0, timeoutMs, "hasSomeData");
     } catch (InterruptedException e) {
-      throw new IOException("Interrupted while determining if JNs have data");
+      throw new IOException("Interrupted while determining if JNs have data", e);
     } catch (TimeoutException e) {
-      throw new IOException("Timed out waiting for response from loggers");
+      throw new IOException("Timed out waiting for response from loggers", e);
     }
     
     if (call.countExceptions() > 0) {
@@ -676,9 +676,9 @@ public class QuorumJournalManager implements JournalManager {
         call.rethrowException("Could not do pre-upgrade of one or more JournalNodes");
       }
     } catch (InterruptedException e) {
-      throw new IOException("Interrupted waiting for doPreUpgrade() response");
+      throw new IOException("Interrupted waiting for doPreUpgrade() response", e);
     } catch (TimeoutException e) {
-      throw new IOException("Timed out waiting for doPreUpgrade() response");
+      throw new IOException("Timed out waiting for doPreUpgrade() response", e);
     }
   }
 
@@ -693,9 +693,9 @@ public class QuorumJournalManager implements JournalManager {
         call.rethrowException("Could not perform upgrade of one or more JournalNodes");
       }
     } catch (InterruptedException e) {
-      throw new IOException("Interrupted waiting for doUpgrade() response");
+      throw new IOException("Interrupted waiting for doUpgrade() response", e);
     } catch (TimeoutException e) {
-      throw new IOException("Timed out waiting for doUpgrade() response");
+      throw new IOException("Timed out waiting for doUpgrade() response", e);
     }
   }
   
@@ -710,12 +710,12 @@ public class QuorumJournalManager implements JournalManager {
         call.rethrowException("Could not finalize one or more JournalNodes");
       }
     } catch (InterruptedException e) {
-      throw new IOException("Interrupted waiting for doFinalize() response");
+      throw new IOException("Interrupted waiting for doFinalize() response", e);
     } catch (TimeoutException e) {
-      throw new IOException("Timed out waiting for doFinalize() response");
+      throw new IOException("Timed out waiting for doFinalize() response", e);
     }
   }
-  
+
   @Override
   public boolean canRollBack(StorageInfo storage, StorageInfo prevStorage,
       int targetLayoutVersion) throws IOException {
@@ -742,10 +742,10 @@ public class QuorumJournalManager implements JournalManager {
       }
     } catch (InterruptedException e) {
       throw new IOException("Interrupted waiting for lockSharedStorage() " +
-          "response");
+          "response", e);
     } catch (TimeoutException e) {
       throw new IOException("Timed out waiting for lockSharedStorage() " +
-          "response");
+          "response", e);
     }
     
     throw new AssertionError("Unreachable code.");
@@ -762,12 +762,12 @@ public class QuorumJournalManager implements JournalManager {
         call.rethrowException("Could not perform rollback of one or more JournalNodes");
       }
     } catch (InterruptedException e) {
-      throw new IOException("Interrupted waiting for doFinalize() response");
+      throw new IOException("Interrupted waiting for doRollback() response", e);
     } catch (TimeoutException e) {
-      throw new IOException("Timed out waiting for doFinalize() response");
+      throw new IOException("Timed out waiting for doRollback() response", e);
     }
   }
-  
+
   @Override
   public void discardSegments(long startTxId) throws IOException {
     QuorumCall<AsyncLogger, Void> call = loggers.discardSegments(startTxId);
@@ -780,10 +780,10 @@ public class QuorumJournalManager implements JournalManager {
       }
     } catch (InterruptedException e) {
       throw new IOException(
-          "Interrupted waiting for discardSegments() response");
+          "Interrupted waiting for discardSegments() response", e);
     } catch (TimeoutException e) {
       throw new IOException(
-          "Timed out waiting for discardSegments() response");
+          "Timed out waiting for discardSegments() response", e);
     }
   }
   
@@ -811,10 +811,10 @@ public class QuorumJournalManager implements JournalManager {
       }
     } catch (InterruptedException e) {
       throw new IOException("Interrupted waiting for getJournalCTime() " +
-          "response");
+          "response", e);
     } catch (TimeoutException e) {
       throw new IOException("Timed out waiting for getJournalCTime() " +
-          "response");
+          "response", e);
     }
     
     throw new AssertionError("Unreachable code.");
