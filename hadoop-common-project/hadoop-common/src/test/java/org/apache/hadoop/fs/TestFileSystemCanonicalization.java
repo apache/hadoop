@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.URI;
@@ -289,11 +290,42 @@ public class TestFileSystemCanonicalization {
       assertEquals(pathAuthority, fqPath.toUri().getAuthority());
     } else {
       assertNotNull(e, "did not fail");
-      assertEquals("Wrong FS: "+rawPath+", expected: "+fs.getUri(),
-          e.getMessage());
+      String expectedPrefix = "Wrong FS: "+rawPath+", expected: "+fs.getUri();
+      assertTrue(e.getMessage().startsWith(expectedPrefix),
+          "expected message to start with '" + expectedPrefix
+              + "' but was: " + e.getMessage());
     }
   }
-    
+
+  /**
+   * When the input path's URI has no authority (typically because a stray
+   * "//" caused java.net.URI to drop it) and this FileSystem does have an
+   * authority, {@link FileSystem#checkPath(Path)} should still report the
+   * primary "Wrong FS" mismatch, and the message should also include a
+   * diagnostic hint explaining the likely cause (HADOOP-19577 / HADOOP-8087).
+   */
+  @Test
+  public void testWrongFsHintOnMissingAuthority() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs://host.a.b:123", "myfs://host.a.b:123");
+    Path rawPath = new Path(URI.create("myfs:////file"));
+    assertEquals(null, rawPath.toUri().getAuthority(),
+        "precondition: rawPath authority should be null");
+    Exception e = null;
+    try {
+      fs.makeQualified(rawPath);
+    } catch (IllegalArgumentException iae) {
+      e = iae;
+    }
+    assertNotNull(e, "did not fail");
+    String msg = e.getMessage();
+    assertTrue(msg.startsWith("Wrong FS: "),
+        "unexpected message: " + msg);
+    assertTrue(msg.contains("HADOOP-8087"),
+        "expected HADOOP-8087 hint in message but was: " + msg);
+    assertTrue(msg.contains("no authority"),
+        "expected 'no authority' hint in message but was: " + msg);
+  }
+
   static class DummyFileSystem extends FileSystem {
     URI uri;
     static int defaultPort = 123;
