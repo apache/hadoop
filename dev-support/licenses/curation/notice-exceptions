@@ -1,0 +1,64 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# NOTICE-coverage exceptions (requirement 14, gate in
+# check-asset-manifest.py). "artifactId<TAB>justification": the
+# component is in an attribution-required LICENSE-binary section, is
+# not mentioned in NOTICE-binary, and its shipped license text carries
+# no copyright line; the justification records why that is accepted.
+# Rows self-clean both directions: a row whose component gained a
+# NOTICE mention or a copyright-carrying text is stale (drop it), and
+# an uncovered component without a row fails the gate. Burn-down: the
+# lasting fix for every row is a component text carrying the
+# component's own copyright line, or a NOTICE-binary entry.
+hdrhistogram	legacy gap: the shipped BSD-2-Clause section text carries no per-component copyright line; accepted until a component text with the copyright line lands
+api-common	legacy gap: the shipped BSD-3-Clause section text carries no per-component copyright line; accepted until a component text with the copyright line lands
+gax	legacy gap: the shipped BSD-3-Clause section text carries no per-component copyright line; accepted until a component text with the copyright line lands
+gax-grpc	legacy gap: the shipped BSD-3-Clause section text carries no per-component copyright line; accepted until a component text with the copyright line lands
+gax-httpjson	legacy gap: the shipped BSD-3-Clause section text carries no per-component copyright line; accepted until a component text with the copyright line lands
+stax2-api	legacy gap: the shipped BSD-3-Clause section text carries no per-component copyright line; accepted until a component text with the copyright line lands
+animal-sniffer-annotations	legacy gap: the shipped MIT section text carries no per-component copyright line; accepted until a component text with the copyright line lands
+jcodings	legacy gap: the shipped MIT section text carries no per-component copyright line; accepted until a component text with the copyright line lands
+codemodel	legacy gap: the shipped CDDL + GPLv2-CE section text carries no per-component copyright line; burn down by adding a component text with the copyright line
+javax.json	legacy gap: the shipped CDDL + GPLv2-CE section text carries no per-component copyright line, and the JSON.org component text does not ship (the bare 'json' word inside the coordinate false-matches — texts-generic, R53); burn down by adding a component text with the copyright line
+javax.websocket-client-api	legacy gap: the shipped CDDL + GPLv2-CE section text carries no per-component copyright line; burn down by adding a component text with the copyright line
+eclipse-collections	legacy gap: the shipped EDL-1.0 section text carries no per-component copyright line and EDL mandates no NOTICE attribution; burn down by adding a component text with the copyright line
+eclipse-collections-api	legacy gap: the shipped EDL-1.0 section text carries no per-component copyright line and EDL mandates no NOTICE attribution; burn down by adding a component text with the copyright line
+istack-commons-runtime	legacy gap: the shipped EDL-1.0 section text carries no per-component copyright line and EDL mandates no NOTICE attribution; burn down by adding a component text with the copyright line
+jakarta.xml.bind-api	legacy gap: the shipped EDL-1.0 section text carries no per-component copyright line and EDL mandates no NOTICE attribution; burn down by adding a component text with the copyright line
+jaxb-runtime	legacy gap: the shipped EDL-1.0 section text carries no per-component copyright line and EDL mandates no NOTICE attribution; burn down by adding a component text with the copyright line
+org.eclipse.persistence.core	legacy gap: the shipped EDL-1.0 section text carries no per-component copyright line and EDL mandates no NOTICE attribution; burn down by adding a component text with the copyright line
+org.eclipse.persistence.moxy	legacy gap: the shipped EDL-1.0 section text carries no per-component copyright line and EDL mandates no NOTICE attribution; burn down by adding a component text with the copyright line
+txw2	legacy gap: the shipped EDL-1.0 section text carries no per-component copyright line and EDL mandates no NOTICE attribution; burn down by adding a component text with the copyright line
+jakarta.annotation-api	legacy gap: the shipped EPL-2.0 section text carries no per-component copyright line and EPL mandates no NOTICE attribution; burn down by adding a component text with the copyright line
+jakarta.servlet-api	legacy gap: the shipped EPL-2.0 section text carries no per-component copyright line and EPL mandates no NOTICE attribution; burn down by adding a component text with the copyright line
+jakarta.servlet.jsp-api	legacy gap: the shipped EPL-2.0 section text carries no per-component copyright line and EPL mandates no NOTICE attribution; burn down by adding a component text with the copyright line
+jakarta.ws.rs-api	legacy gap: the shipped EPL-2.0 section text carries no per-component copyright line and EPL mandates no NOTICE attribution; burn down by adding a component text with the copyright line
+jakarta.json-api	legacy gap: the shipped EPL-2.0 section text carries no per-component copyright line and EPL mandates no NOTICE attribution; burn down by adding a component text with the copyright line
+org.jacoco.agent	legacy gap: the shipped EPL-2.0 section text carries no per-component copyright line and EPL mandates no NOTICE attribution; burn down by adding a component text with the copyright line
+aopalliance-repackaged	jersey/hk2 runtime: attribution carried by the combined LICENSE-binary section (R28 keeps the mixed EPL-2.0/GPLv2-CE/Apache/PD statement with the NOTICE.md reference); burn down by quoting that statement in NOTICE-binary or adding component texts
+hk2-api	jersey/hk2 runtime: attribution carried by the combined LICENSE-binary section (R28 keeps the mixed EPL-2.0/GPLv2-CE/Apache/PD statement with the NOTICE.md reference); burn down by quoting that statement in NOTICE-binary or adding component texts
+hk2-locator	jersey/hk2 runtime: attribution carried by the combined LICENSE-binary section (R28 keeps the mixed EPL-2.0/GPLv2-CE/Apache/PD statement with the NOTICE.md reference); burn down by quoting that statement in NOTICE-binary or adding component texts
+hk2-utils	jersey/hk2 runtime: attribution carried by the combined LICENSE-binary section (R28 keeps the mixed EPL-2.0/GPLv2-CE/Apache/PD statement with the NOTICE.md reference); burn down by quoting that statement in NOTICE-binary or adding component texts
+jakarta.inject	jersey/hk2 runtime: attribution carried by the combined LICENSE-binary section (R28 keeps the mixed EPL-2.0/GPLv2-CE/Apache/PD statement with the NOTICE.md reference); burn down by quoting that statement in NOTICE-binary or adding component texts
+jersey-client	jersey/hk2 runtime: attribution carried by the combined LICENSE-binary section (R28 keeps the mixed EPL-2.0/GPLv2-CE/Apache/PD statement with the NOTICE.md reference); burn down by quoting that statement in NOTICE-binary or adding component texts
+jersey-common	jersey/hk2 runtime: attribution carried by the combined LICENSE-binary section (R28 keeps the mixed EPL-2.0/GPLv2-CE/Apache/PD statement with the NOTICE.md reference); burn down by quoting that statement in NOTICE-binary or adding component texts
+jersey-container-servlet	jersey/hk2 runtime: attribution carried by the combined LICENSE-binary section (R28 keeps the mixed EPL-2.0/GPLv2-CE/Apache/PD statement with the NOTICE.md reference); burn down by quoting that statement in NOTICE-binary or adding component texts
+jersey-container-servlet-core	jersey/hk2 runtime: attribution carried by the combined LICENSE-binary section (R28 keeps the mixed EPL-2.0/GPLv2-CE/Apache/PD statement with the NOTICE.md reference); burn down by quoting that statement in NOTICE-binary or adding component texts
+jersey-hk2	jersey/hk2 runtime: attribution carried by the combined LICENSE-binary section (R28 keeps the mixed EPL-2.0/GPLv2-CE/Apache/PD statement with the NOTICE.md reference); burn down by quoting that statement in NOTICE-binary or adding component texts
+jersey-media-jaxb	jersey/hk2 runtime: attribution carried by the combined LICENSE-binary section (R28 keeps the mixed EPL-2.0/GPLv2-CE/Apache/PD statement with the NOTICE.md reference); burn down by quoting that statement in NOTICE-binary or adding component texts
+jersey-media-json-jettison	jersey/hk2 runtime: attribution carried by the combined LICENSE-binary section (R28 keeps the mixed EPL-2.0/GPLv2-CE/Apache/PD statement with the NOTICE.md reference); burn down by quoting that statement in NOTICE-binary or adding component texts
+jersey-server	jersey/hk2 runtime: attribution carried by the combined LICENSE-binary section (R28 keeps the mixed EPL-2.0/GPLv2-CE/Apache/PD statement with the NOTICE.md reference); burn down by quoting that statement in NOTICE-binary or adding component texts
+osgi-resource-locator	jersey/hk2 runtime: attribution carried by the combined LICENSE-binary section (R28 keeps the mixed EPL-2.0/GPLv2-CE/Apache/PD statement with the NOTICE.md reference); burn down by quoting that statement in NOTICE-binary or adding component texts
