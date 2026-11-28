@@ -49,6 +49,7 @@ import org.apache.hadoop.mapred.QueueACL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_DEFAULT;
 import static org.apache.hadoop.mapred.QueueManager.toFullPropertyName;
 
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
@@ -70,7 +71,8 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 class JobSubmitter {
   protected static final Logger LOG =
       LoggerFactory.getLogger(JobSubmitter.class);
-  private static final String SHUFFLE_KEYGEN_ALGORITHM = "HmacSHA1";
+  private static final String SHUFFLE_KEYGEN_ALGORITHM =
+      HADOOP_SECURITY_SECRET_MANAGER_KEY_GENERATOR_ALGORITHM_DEFAULT;
   private FileSystem jtFs;
   private ClientProtocol submitClient;
   private String submitHostName;
