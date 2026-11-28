@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.protobuf.UninitializedMessageException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -381,7 +382,10 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UpdateNodeResou
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UpdateNodeResourceResponsePBImpl;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Test class for YARN API protocol records.
@@ -681,6 +685,23 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
   void testMoveApplicationAcrossQueuesRequestPBImpl() throws Exception {
     validatePBImplRecord(MoveApplicationAcrossQueuesRequestPBImpl.class,
         MoveApplicationAcrossQueuesRequestProto.class);
+    MoveApplicationAcrossQueuesRequestPBImpl request =
+        new MoveApplicationAcrossQueuesRequestPBImpl();
+    request.setApplicationId(ApplicationId.newInstance(1L, 1));
+    request.setTargetQueue("root.a");
+    request.getProto();
+    request.setTargetQueue(null);
+    assertNull(request.getTargetQueue());
+    assertThrows(UninitializedMessageException.class, request::getProto);
+    request.setTargetQueue("root.b");
+    request.setApplicationId(null);
+    assertNull(request.getApplicationId());
+    assertThrows(UninitializedMessageException.class, request::getProto);
+    MoveApplicationAcrossQueuesRequestPBImpl copy =
+        new MoveApplicationAcrossQueuesRequestPBImpl(
+            MoveApplicationAcrossQueuesRequestProto.newBuilder()
+                .setTargetQueue("root.b").buildPartial());
+    assertEquals("root.b", copy.getTargetQueue());
   }
 
   @Test

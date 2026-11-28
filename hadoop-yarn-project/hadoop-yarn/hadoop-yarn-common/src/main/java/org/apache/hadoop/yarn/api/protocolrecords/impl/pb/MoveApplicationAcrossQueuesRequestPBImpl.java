@@ -72,7 +72,7 @@ public class MoveApplicationAcrossQueuesRequestPBImpl extends MoveApplicationAcr
   @Override
   public void setApplicationId(ApplicationId appId) {
     maybeInitBuilder();
-    if (applicationId == null) {
+    if (appId == null) {
       builder.clearApplicationId();
     }
     applicationId = appId;
@@ -85,7 +85,7 @@ public class MoveApplicationAcrossQueuesRequestPBImpl extends MoveApplicationAcr
     }
     
     MoveApplicationAcrossQueuesRequestProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasApplicationId()) {
+    if (!p.hasTargetQueue()) {
       return null;
     }
     
@@ -96,7 +96,7 @@ public class MoveApplicationAcrossQueuesRequestPBImpl extends MoveApplicationAcr
   @Override
   public void setTargetQueue(String queue) {
     maybeInitBuilder();
-    if (applicationId == null) {
+    if (queue == null) {
       builder.clearTargetQueue();
     }
     targetQueue = queue;
