@@ -4374,6 +4374,15 @@ public class YarnConfiguration extends Configuration {
       TimeUnit.MILLISECONDS.toMillis(10);
 
   /**
+   * Time to ask the RMs of all the active SubClusters for an application
+   * whose home SubCluster is not in the Federation StateStore.
+   */
+  public static final String ROUTER_APPLICATION_PROBE_TIMEOUT =
+      ROUTER_PREFIX + "application-probe.timeout";
+  public static final long DEFAULT_ROUTER_APPLICATION_PROBE_TIMEOUT =
+      TimeUnit.SECONDS.toMillis(10);
+
+  /**
    * The interceptor class used in FederationClientInterceptor should return
    * partial ApplicationReports.
    */

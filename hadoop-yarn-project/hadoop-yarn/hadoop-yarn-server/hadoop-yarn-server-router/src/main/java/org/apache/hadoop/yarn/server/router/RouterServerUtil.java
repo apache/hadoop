@@ -25,11 +25,13 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.thirdparty.protobuf.GeneratedMessageV3;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
@@ -42,6 +44,9 @@ import org.apache.hadoop.yarn.proto.YarnProtos.StringStringMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringBytesMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringLocalResourceMapProto;
+import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.utils.FederationApplicationRMProbe;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
@@ -579,6 +584,44 @@ public final class RouterServerUtil {
       throw RouterServerUtil.logAndReturnYarnRunTimeException(e,
           "Error while creating Router Service for user : %s.", user);
     }
+  }
+
+  /**
+   * Get the user the Router asks the SubClusters as on behalf of a client:
+   * with service level authorization, a proxy user of the Router's login user.
+   *
+   * @param conf the Router configuration.
+   * @param user the client user, from {@link #setupUser}.
+   * @return the user to call the SubClusters as.
+   * @throws IOException if the login user cannot be got.
+   */
+  public static UserGroupInformation getUserForSubClusters(Configuration conf,
+      UserGroupInformation user) throws IOException {
+    boolean serviceAuthEnabled = conf.getBoolean(
+        CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false);
+    if (serviceAuthEnabled) {
+      return UserGroupInformation.createProxyUser(
+          user.getShortUserName(), UserGroupInformation.getLoginUser());
+    }
+    return user;
+  }
+
+  /**
+   * Create the proxy, with short timeouts, to ask the RM of a SubCluster for
+   * an application whose home SubCluster is not in the StateStore.
+   *
+   * @param conf the Router configuration.
+   * @param subClusterId the SubCluster.
+   * @param user the client user, from {@link #setupUser}.
+   * @return the RM proxy.
+   * @throws IOException if the proxy cannot be created.
+   */
+  public static ApplicationClientProtocol createProbeRMProxy(Configuration conf,
+      SubClusterId subClusterId, UserGroupInformation user) throws IOException {
+    return FederationProxyProviderUtil.createRMProxy(
+        FederationApplicationRMProbe.createProbeConf(conf),
+        ApplicationClientProtocol.class, subClusterId,
+        getUserForSubClusters(conf, user));
   }
 
   /**

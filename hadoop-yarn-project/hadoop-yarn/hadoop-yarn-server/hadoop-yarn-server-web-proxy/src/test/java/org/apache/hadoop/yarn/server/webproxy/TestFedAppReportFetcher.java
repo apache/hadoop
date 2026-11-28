@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.webproxy;
 
 import java.io.IOException;
+import java.net.ConnectException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -26,6 +27,7 @@ import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -38,6 +40,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -143,6 +146,64 @@ public class TestFedAppReportFetcher {
         StringHelper.pjoin(scheme + clusterInfo1.getRMWebServiceAddress(), "cluster", "app"));
     Assertions.assertEquals(fetcher.getRmAppPageUrlBase(appId2),
         StringHelper.pjoin(scheme + clusterInfo2.getRMWebServiceAddress(), "cluster", "app"));
+  }
+
+  /**
+   * The home SubCluster is not in the StateStore, but the RM of another
+   * SubCluster still knows the application.
+   */
+  @Test
+  public void testFetchReportWithoutHomeSubCluster() throws Exception {
+    testHelper(true);
+    ApplicationId appId3 = ApplicationId.newInstance(0, 3);
+    ApplicationReport report = Records.newRecord(ApplicationReport.class);
+    report.setApplicationId(appId3);
+    Mockito.doReturn(GetApplicationReportResponse.newInstance(report))
+        .when(appManager2).getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
+
+    AppReportFetcher.FetchedAppReport fetched = fetcher.getApplicationReport(appId3);
+    Assertions.assertEquals(AppReportFetcher.AppReportSource.RM, fetched.getAppReportSource());
+    Assertions.assertEquals(appId3, fetched.getApplicationReport().getApplicationId());
+    String scheme = WebAppUtils.getHttpSchemePrefix(conf);
+    Assertions.assertEquals(
+        StringHelper.pjoin(scheme + clusterInfo2.getRMWebServiceAddress(), "cluster", "app"),
+        fetcher.getRmAppPageUrlBase(appId3));
+    Mockito.verify(history, Mockito.never())
+        .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
+  }
+
+  /**
+   * No RM knows the application: it is fetched from the history server, or
+   * reported missing if the history server is disabled.
+   */
+  @Test
+  public void testFetchReportInNoSubCluster() throws Exception {
+    ApplicationId appId3 = ApplicationId.newInstance(0, 3);
+    testHelper(true);
+    Assertions.assertEquals(AppReportFetcher.AppReportSource.AHS,
+        fetcher.getApplicationReport(appId3).getAppReportSource());
+
+    testHelper(false);
+    LambdaTestUtils.intercept(ApplicationNotFoundException.class,
+        "Application " + appId3 + " does not exist in any SubCluster.",
+        () -> fetcher.getApplicationReport(appId3));
+  }
+
+  /**
+   * No RM knows the application but one cannot be asked: the application may
+   * be running there, so the fetcher must not report it missing.
+   */
+  @Test
+  public void testFetchReportWithUnreachableSubCluster() throws Exception {
+    testHelper(false);
+    Mockito.doThrow(new ConnectException("RM is down"))
+        .when(appManager2).getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
+    ApplicationId appId3 = ApplicationId.newInstance(0, 3);
+    YarnException e = Assertions.assertThrows(YarnException.class,
+        () -> fetcher.getApplicationReport(appId3));
+    Assertions.assertFalse(e instanceof ApplicationNotFoundException, e.toString());
+    Assertions.assertTrue(e.getMessage().startsWith("Unable to ask every SubCluster"),
+        e.getMessage());
   }
 
   static class FedAppReportFetcherForTest extends FedAppReportFetcher {

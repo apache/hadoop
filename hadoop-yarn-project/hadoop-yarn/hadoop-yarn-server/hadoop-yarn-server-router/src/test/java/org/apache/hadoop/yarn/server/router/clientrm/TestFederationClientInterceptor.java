@@ -19,13 +19,17 @@
 package org.apache.hadoop.yarn.server.router.clientrm;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -142,10 +146,12 @@ import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -474,8 +480,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     KillApplicationRequest requestKill =
         KillApplicationRequest.newInstance(appId);
 
-    LambdaTestUtils.intercept(YarnException.class,
-        "Application " + appId + " does not exist in FederationStateStore.",
+    LambdaTestUtils.intercept(ApplicationNotFoundException.class,
+        "Application " + appId + " does not exist in any SubCluster.",
         () -> interceptor.forceKillApplication(requestKill));
   }
 
@@ -539,9 +545,64 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
     GetApplicationReportRequest requestGet = GetApplicationReportRequest.newInstance(appId);
-    LambdaTestUtils.intercept(YarnException.class,
-        "Application " + appId + " does not exist in FederationStateStore.",
+    // Same as the RM, so that clients fall back to their history server
+    LambdaTestUtils.intercept(ApplicationNotFoundException.class,
+        "Application " + appId + " does not exist in any SubCluster.",
         () -> interceptor.getApplicationReport(requestGet));
+  }
+
+  /**
+   * GetApplicationReport finds an application in its RM when its home
+   * SubCluster is not in the StateStore, and records it again.
+   */
+  @Test
+  public void testGetApplicationReportWithoutHomeSubCluster() throws Exception {
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    interceptor.submitApplication(mockSubmitApplicationRequest(appId));
+    SubClusterId home = stateStoreUtil.queryApplicationHomeSC(appId);
+    stateStore.deleteApplicationHomeSubCluster(
+        DeleteApplicationHomeSubClusterRequest.newInstance(appId));
+
+    GetApplicationReportResponse responseGet = interceptor.getApplicationReport(
+        GetApplicationReportRequest.newInstance(appId));
+    assertEquals(appId, responseGet.getApplicationReport().getApplicationId());
+    assertEquals(home, stateStoreUtil.queryApplicationHomeSC(appId));
+  }
+
+  /**
+   * When an RM cannot be asked, an application that no other RM knows may be
+   * running there: the client gets an error to retry instead of
+   * ApplicationNotFoundException.
+   */
+  @Test
+  public void testGetApplicationReportWithUnreachableSubCluster() throws Exception {
+    interceptor.shutdown();
+    interceptor = new TestableFederationClientInterceptor() {
+      @Override
+      protected ApplicationClientProtocol getProbeRMProxyForSubCluster(
+          SubClusterId subClusterId) throws IOException {
+        if (subClusterId.getId().equals("0")) {
+          ApplicationClientProtocol down = mock(ApplicationClientProtocol.class);
+          try {
+            when(down.getApplicationReport(any(GetApplicationReportRequest.class)))
+                .thenThrow(new ConnectException("RM is down"));
+          } catch (YarnException e) {
+            throw new IOException(e);
+          }
+          return down;
+        }
+        return super.getProbeRMProxyForSubCluster(subClusterId);
+      }
+    };
+    interceptor.setConf(getConf());
+    interceptor.init(user);
+
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    YarnException e = assertThrows(YarnException.class, () -> interceptor.getApplicationReport(
+        GetApplicationReportRequest.newInstance(appId)));
+    assertFalse(e instanceof ApplicationNotFoundException,
+        "Must not claim " + appId + " does not exist: " + e);
+    assertTrue(e.getMessage().startsWith("Unable to ask every SubCluster"), e.getMessage());
   }
 
   /**

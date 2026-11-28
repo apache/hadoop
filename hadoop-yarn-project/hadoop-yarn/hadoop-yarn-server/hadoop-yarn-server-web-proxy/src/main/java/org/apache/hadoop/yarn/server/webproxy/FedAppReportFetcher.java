@@ -28,18 +28,27 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.utils.FederationApplicationRMProbe;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FedAppReportFetcher extends AppReportFetcher {
 
+  private static final Logger LOG = LoggerFactory.getLogger(FedAppReportFetcher.class);
+
   private final Map<SubClusterId, Pair<SubClusterInfo, ApplicationClientProtocol>> subClusters;
   private FederationStateStoreFacade federationFacade;
+  private final FederationApplicationRMProbe applicationProbe;
+  private final Map<SubClusterId, ApplicationClientProtocol> probeRMProxies =
+      new ConcurrentHashMap<>();
 
   /**
    * Create a new Connection to the RM/Application History Server to fetch
@@ -51,6 +60,8 @@ public class FedAppReportFetcher extends AppReportFetcher {
     super(conf);
     subClusters = new ConcurrentHashMap<>();
     federationFacade = FederationStateStoreFacade.getInstance(conf);
+    applicationProbe = new FederationApplicationRMProbe(this::getProbeRMProxy,
+        FederationApplicationRMProbe.getTimeout(conf));
   }
 
   /**
@@ -65,8 +76,17 @@ public class FedAppReportFetcher extends AppReportFetcher {
   @Override
   public FetchedAppReport getApplicationReport(ApplicationId appId)
       throws YarnException, IOException {
-    SubClusterId scid = federationFacade.getApplicationHomeSubCluster(appId);
-    createSubclusterIfAbsent(scid);
+    SubClusterId scid;
+    try {
+      scid = getHomeSubCluster(appId);
+    } catch (YarnException e) {
+      // No RM knows the application any more, or some could not be asked
+      FetchedAppReport fetchedAppReport = getApplicationReportFromAHS(appId);
+      if (fetchedAppReport == null) {
+        throw e;
+      }
+      return fetchedAppReport;
+    }
     ApplicationClientProtocol applicationsManager = subClusters.get(scid).getRight();
 
     return super.getApplicationReport(applicationsManager, appId);
@@ -75,12 +95,61 @@ public class FedAppReportFetcher extends AppReportFetcher {
   @Override
   public String getRmAppPageUrlBase(ApplicationId appId)
       throws IOException, YarnException {
-    SubClusterId scid = federationFacade.getApplicationHomeSubCluster(appId);
-    createSubclusterIfAbsent(scid);
+    SubClusterId scid = getHomeSubCluster(appId);
 
     SubClusterInfo subClusterInfo = subClusters.get(scid).getLeft();
     String scheme = WebAppUtils.getHttpSchemePrefix(getConf());
     return StringHelper.pjoin(scheme + subClusterInfo.getRMWebServiceAddress(), "cluster", "app");
+  }
+
+  /**
+   * Get the home SubCluster of an application from the StateStore, or else
+   * from the RMs of all the active SubClusters, e.g. after the RM removed the
+   * completed application and its home SubCluster with it.
+   *
+   * @param appId the application.
+   * @return the home SubCluster.
+   * @throws ApplicationNotFoundException if every RM answered that it does
+   *           not know the application.
+   * @throws YarnException if no RM knows it but some did not answer.
+   * @throws IOException if the RM proxy cannot be created.
+   */
+  private SubClusterId getHomeSubCluster(ApplicationId appId)
+      throws YarnException, IOException {
+    SubClusterId scid = null;
+    try {
+      scid = federationFacade.getApplicationHomeSubCluster(appId);
+    } catch (YarnException e) {
+      LOG.debug("{} is not in the StateStore, asking every SubCluster.", appId);
+    }
+    if (scid == null) {
+      scid = applicationProbe.find(appId, federationFacade.getSubClusters(true).keySet());
+      if (scid == null) {
+        throw new ApplicationNotFoundException(
+            "Application " + appId + " does not exist in any SubCluster.");
+      }
+    }
+    createSubclusterIfAbsent(scid);
+    return scid;
+  }
+
+  /**
+   * Get the proxy, with short timeouts, to ask the RM of a SubCluster for an
+   * application whose home SubCluster is not in the StateStore.
+   */
+  private ApplicationClientProtocol getProbeRMProxy(SubClusterId scId) throws IOException {
+    ApplicationClientProtocol proxy = probeRMProxies.get(scId);
+    if (proxy == null) {
+      Configuration probeConf = FederationApplicationRMProbe.createProbeConf(getConf());
+      FederationProxyProviderUtil.updateConfForFederation(probeConf, scId.getId());
+      proxy = ClientRMProxy.createRMProxy(probeConf, ApplicationClientProtocol.class);
+      ApplicationClientProtocol existing = probeRMProxies.putIfAbsent(scId, proxy);
+      if (existing != null) {
+        RPC.stopProxy(proxy);
+        proxy = existing;
+      }
+    }
+    return proxy;
   }
 
   private void createSubclusterIfAbsent(SubClusterId scId) throws YarnException, IOException {
@@ -101,10 +170,15 @@ public class FedAppReportFetcher extends AppReportFetcher {
     for (Pair pair : this.subClusters.values()) {
       RPC.stopProxy(pair.getRight());
     }
+    applicationProbe.close();
+    for (ApplicationClientProtocol proxy : probeRMProxies.values()) {
+      RPC.stopProxy(proxy);
+    }
   }
 
   @VisibleForTesting
   public void registerSubCluster(SubClusterInfo info, ApplicationClientProtocol proxy) {
     subClusters.put(info.getSubClusterId(), Pair.of(info, proxy));
+    probeRMProxies.put(info.getSubClusterId(), proxy);
   }
 }

@@ -43,7 +43,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
@@ -124,6 +124,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
@@ -136,6 +137,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSub
 import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.utils.FederationApplicationRMProbe;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.router.RouterAuditLogger;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
@@ -209,6 +211,8 @@ public class FederationClientInterceptor
   private boolean returnPartialReport;
   private long submitIntervalTime;
   private boolean allowPartialResult;
+  private FederationApplicationRMProbe applicationProbe;
+  private Map<SubClusterId, ApplicationClientProtocol> probeRMProxies;
 
   @Override
   public void init(String userName) {
@@ -268,6 +272,11 @@ public class FederationClientInterceptor
     allowPartialResult = conf.getBoolean(
         YarnConfiguration.ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED,
         YarnConfiguration.DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED);
+
+    probeRMProxies = new ConcurrentHashMap<>();
+    applicationProbe = new FederationApplicationRMProbe(
+        this::getProbeRMProxyForSubCluster,
+        FederationApplicationRMProbe.getTimeout(conf));
   }
 
   @Override
@@ -288,21 +297,39 @@ public class FederationClientInterceptor
 
     ApplicationClientProtocol clientRMProxy = null;
     try {
-      boolean serviceAuthEnabled = getConf().getBoolean(
-          CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false);
-      UserGroupInformation realUser = user;
-      if (serviceAuthEnabled) {
-        realUser = UserGroupInformation.createProxyUser(
-            user.getShortUserName(), UserGroupInformation.getLoginUser());
-      }
       clientRMProxy = FederationProxyProviderUtil.createRMProxy(getConf(),
-          ApplicationClientProtocol.class, subClusterId, realUser);
+          ApplicationClientProtocol.class, subClusterId,
+          RouterServerUtil.getUserForSubClusters(getConf(), user));
     } catch (Exception e) {
       RouterServerUtil.logAndThrowException(
           "Unable to create the interface to reach the SubCluster " + subClusterId, e);
     }
     clientRMProxies.put(subClusterId, clientRMProxy);
     return clientRMProxy;
+  }
+
+  /**
+   * Get the proxy, with short timeouts, to ask the RM of a SubCluster for an
+   * application whose home SubCluster is not in the StateStore.
+   *
+   * @param subClusterId the SubCluster.
+   * @return the RM proxy.
+   * @throws IOException if the proxy cannot be created.
+   */
+  @VisibleForTesting
+  protected ApplicationClientProtocol getProbeRMProxyForSubCluster(
+      SubClusterId subClusterId) throws IOException {
+    ApplicationClientProtocol proxy = probeRMProxies.get(subClusterId);
+    if (proxy == null) {
+      proxy = RouterServerUtil.createProbeRMProxy(getConf(), subClusterId, user);
+      ApplicationClientProtocol existing =
+          probeRMProxies.putIfAbsent(subClusterId, proxy);
+      if (existing != null) {
+        RPC.stopProxy(proxy);
+        proxy = existing;
+      }
+    }
+    return proxy;
   }
 
   private SubClusterId getRandomActiveSubCluster(
@@ -646,15 +673,12 @@ public class FederationClientInterceptor
     SubClusterId subClusterId = null;
 
     try {
-      subClusterId = federationFacade
-          .getApplicationHomeSubCluster(request.getApplicationId());
+      subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException e) {
       routerMetrics.incrAppsFailedKilled();
-      String msg =
-          String.format("Application %s does not exist in FederationStateStore.", applicationId);
       RouterAuditLogger.logFailure(user.getShortUserName(), FORCE_KILL_APP, UNKNOWN,
-          TARGET_CLIENT_RM_SERVICE, msg, applicationId);
-      RouterServerUtil.logAndThrowException(msg, e);
+          TARGET_CLIENT_RM_SERVICE, e.getMessage(), applicationId);
+      throw e;
     }
 
     ApplicationClientProtocol clientRMProxy =
@@ -729,15 +753,15 @@ public class FederationClientInterceptor
     SubClusterId subClusterId = null;
 
     try {
-      subClusterId = federationFacade
-          .getApplicationHomeSubCluster(request.getApplicationId());
+      // Asks every SubCluster if the home SubCluster is not in the StateStore
+      subClusterId = getApplicationHomeSubCluster(request.getApplicationId());
     } catch (YarnException e) {
+      // ApplicationNotFoundException as is, so that clients fall back to
+      // their history server
       routerMetrics.incrAppsFailedRetrieved();
-      String errMsg = String.format("Application %s does not exist in FederationStateStore.",
-          request.getApplicationId());
       RouterAuditLogger.logFailure(user.getShortUserName(), GET_APP_REPORT, UNKNOWN,
-          TARGET_CLIENT_RM_SERVICE, errMsg, request.getApplicationId());
-      RouterServerUtil.logAndThrowException(errMsg, e);
+          TARGET_CLIENT_RM_SERVICE, e.getMessage(), request.getApplicationId());
+      throw e;
     }
 
     ApplicationClientProtocol clientRMProxy =
@@ -746,6 +770,12 @@ public class FederationClientInterceptor
 
     try {
       response = clientRMProxy.getApplicationReport(request);
+    } catch (ApplicationNotFoundException e) {
+      // The RM removed the completed application
+      routerMetrics.incrAppsFailedRetrieved();
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APP_REPORT, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, e.getMessage(), request.getApplicationId(), subClusterId);
+      throw e;
     } catch (Exception e) {
       routerMetrics.incrAppsFailedRetrieved();
       String errMsg = String.format("Unable to get the application report for %s to SubCluster %s.",
@@ -2105,6 +2135,15 @@ public class FederationClientInterceptor
   @Override
   public void shutdown() {
     executorService.shutdown();
+    if (applicationProbe != null) {
+      applicationProbe.close();
+    }
+    if (probeRMProxies != null) {
+      for (ApplicationClientProtocol proxy : probeRMProxies.values()) {
+        RPC.stopProxy(proxy);
+      }
+      probeRMProxies.clear();
+    }
     super.shutdown();
   }
 
@@ -2224,38 +2263,20 @@ public class FederationClientInterceptor
       return resultSubClusterId;
     }
 
-    // if applicationId not found in Home SubCluster,
-    // foreach Clusters
-    Map<SubClusterId, SubClusterInfo> subClusters =
-        federationFacade.getSubClusters(true);
-    for (SubClusterId subClusterId : subClusters.keySet()) {
-      try {
-        ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
-        if(clientRMProxy == null) {
-          continue;
-        }
-        GetApplicationReportRequest appReportRequest =
-            GetApplicationReportRequest.newInstance(applicationId);
-        GetApplicationReportResponse appReportResponse =
-            clientRMProxy.getApplicationReport(appReportRequest);
-
-        if(appReportResponse!=null && applicationId.equals(
-            appReportResponse.getApplicationReport().getApplicationId())){
-          resultSubClusterId = federationFacade.addApplicationHomeSubCluster(
-               ApplicationHomeSubCluster.newInstance(applicationId, subClusterId));
-          return resultSubClusterId;
-        }
-
-      } catch (Exception ex) {
-        if(LOG.isDebugEnabled()){
-          LOG.debug("Can't find applicationId = {} in Sub Cluster!", applicationId);
-        }
-      }
+    // Not in the StateStore, e.g. the RM removed the completed application
+    // and its home SubCluster with it: ask the RMs of all active SubClusters
+    SubClusterId found = applicationProbe.find(applicationId,
+        federationFacade.getSubClusters(true).keySet());
+    if (found != null) {
+      return federationFacade.addApplicationHomeSubCluster(
+          ApplicationHomeSubCluster.newInstance(applicationId, found));
     }
 
-    String errorMsg =
-        String.format("Can't find applicationId = %s in any sub clusters", applicationId);
-    throw new YarnException(errorMsg);
+    // Every RM answered: same exception as the RM, so that clients fall back
+    // to their history server
+    String errorMsg = String.format(
+        "Application %s does not exist in any SubCluster.", applicationId);
+    throw new ApplicationNotFoundException(errorMsg);
   }
 
   protected SubClusterId getReservationHomeSubCluster(ReservationId reservationId)
